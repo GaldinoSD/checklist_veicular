@@ -1,0 +1,144 @@
+{% extends 'layout.html' %}
+{% set page_title = "Checklists" %}
+{% block content %}
+
+<div class="bg-white/5 border border-white/10 rounded-2xl shadow p-5">
+
+  <div class="flex items-center justify-between mb-4">
+    <h2 class="text-lg font-semibold">Checklists</h2>
+
+    <form method="get" class="flex gap-2">
+      <input name="q" value="{{ q }}" 
+             placeholder="Buscar placa/técnico/status..." 
+             class="border border-white/20 bg-gray-900/50 rounded-lg px-3 py-2">
+      <button class="bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg px-4">
+        Buscar
+      </button>
+    </form>
+  </div>
+
+  <form method="post" action="{{ url_for('checklists_import') }}" class="mb-4">
+    <button class="bg-green-700 text-white rounded-lg px-4 py-2">
+      Importar JSONs da pasta inbox/
+    </button>
+  </form>
+
+  <!-- ======================= TABELA ======================= -->
+  <div class="overflow-x-auto rounded-lg">
+    <table class="min-w-full text-sm">
+      
+      <thead>
+        <tr class="text-gray-300 border-b border-white/10 text-left">
+          <th class="px-4 py-2 w-40">Data</th>
+          <th class="px-4 py-2 w-32">Placa</th>
+          <th class="px-4 py-2 w-40">Técnico</th>
+          <th class="px-4 py-2 w-24 text-right">KM</th>
+          <th class="px-4 py-2 w-32">Status</th>
+          <th class="px-4 py-2 w-28 text-center">Detalhes</th>
+        </tr>
+      </thead>
+
+      <tbody class="text-gray-200">
+
+        {# variável de controle do grupo (mês/ano) #}
+        {% set last_group = None %}
+
+        {% for c in itens %}
+
+          {# pega mês em número #}
+          {% set mes_num = c.date.strftime('%m') %}
+          {% if mes_num == '01' %}
+            {% set mes_pt = 'Janeiro' %}
+          {% elif mes_num == '02' %}
+            {% set mes_pt = 'Fevereiro' %}
+          {% elif mes_num == '03' %}
+            {% set mes_pt = 'Março' %}
+          {% elif mes_num == '04' %}
+            {% set mes_pt = 'Abril' %}
+          {% elif mes_num == '05' %}
+            {% set mes_pt = 'Maio' %}
+          {% elif mes_num == '06' %}
+            {% set mes_pt = 'Junho' %}
+          {% elif mes_num == '07' %}
+            {% set mes_pt = 'Julho' %}
+          {% elif mes_num == '08' %}
+            {% set mes_pt = 'Agosto' %}
+          {% elif mes_num == '09' %}
+            {% set mes_pt = 'Setembro' %}
+          {% elif mes_num == '10' %}
+            {% set mes_pt = 'Outubro' %}
+          {% elif mes_num == '11' %}
+            {% set mes_pt = 'Novembro' %}
+          {% elif mes_num == '12' %}
+            {% set mes_pt = 'Dezembro' %}
+          {% else %}
+            {% set mes_pt = mes_num %}
+          {% endif %}
+
+          {% set grupo = mes_pt ~ ' de ' ~ c.date.strftime('%Y') %}
+
+          {# quando muda o mês/ano, mostra linha de separação #}
+          {% if grupo != last_group %}
+            <tr class="bg-white/5">
+              <td colspan="6" class="px-4 py-2 text-blue-300 font-semibold uppercase tracking-wide">
+                📅 {{ grupo }}
+              </td>
+            </tr>
+            {% set last_group = grupo %}
+          {% endif %}
+
+          <tr class="border-b border-white/10 hover:bg-white/5 transition">
+            
+            <!-- Data -->
+            <td class="px-4 py-2 whitespace-nowrap">
+              {{ c.date.strftime('%d/%m/%Y %H:%M') }}
+            </td>
+
+            <!-- Placa -->
+            <td class="px-4 py-2">
+              {{ c.vehicle.plate if c.vehicle else '-' }}
+            </td>
+
+            <!-- Técnico -->
+            <td class="px-4 py-2">
+              {{ c.technician or '-' }}
+            </td>
+
+            <!-- KM - alinhado à direita -->
+            <td class="px-4 py-2 text-right">
+              {{ c.km }}
+            </td>
+
+            <!-- Status -->
+            <td class="px-4 py-2">
+              <span class="px-2 py-1 rounded-lg text-xs 
+                          bg-green-900/40 text-green-200 border border-green-700/40">
+                {{ c.status }}
+              </span>
+            </td>
+
+            <!-- Detalhes -->
+            <td class="px-4 py-2 text-center">
+              <a class="text-blue-400 underline" 
+                 href="{{ url_for('checklist_detail', cid=c.id) }}">
+                 Ver
+              </a>
+            </td>
+
+          </tr>
+
+        {% else %}
+          <tr>
+            <td class="py-3 text-gray-400 text-center" colspan="6">
+              Sem registros.
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+
+    </table>
+  </div>
+
+</div>
+
+{% endblock %}

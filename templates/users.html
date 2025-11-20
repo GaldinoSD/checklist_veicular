@@ -1,0 +1,87 @@
+{% extends 'layout.html' %}
+{% set page_title = "Usuários" %}
+{% block content %}
+
+<!-- 🔹 Formulário de Criação -->
+<div class="bg-white/5 rounded-2xl p-5 border border-white/10 shadow-md">
+  <h2 class="text-lg font-semibold mb-4">Cadastrar Novo Usuário</h2>
+  <form method="post" action="{{ url_for('users_new') }}" class="grid md:grid-cols-4 gap-3 items-end">
+    <div>
+      <label class="block text-xs opacity-70 mb-1">Usuário</label>
+      <input name="username" class="w-full bg-gray-900/50 border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600" required>
+    </div>
+    <div>
+      <label class="block text-xs opacity-70 mb-1">Senha</label>
+      <input name="password" class="w-full bg-gray-900/50 border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600" required>
+    </div>
+    <div>
+      <label class="block text-xs opacity-70 mb-1">Perfil</label>
+      <select name="role" class="w-full bg-gray-900/50 border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600">
+        <option value="tech">Técnico</option>
+        <option value="supervisor">Supervisor</option>
+        <option value="admin">Administrador</option>
+      </select>
+    </div>
+    <button class="bg-gradient-to-r from-green-600 to-green-500 hover:from-green-500 hover:to-green-400 rounded-lg px-5 py-2 text-sm text-white font-semibold transition-all shadow">
+      Criar Usuário
+    </button>
+  </form>
+</div>
+
+<!-- 🔹 Lista de Usuários -->
+<div class="mt-8 grid md:grid-cols-2 lg:grid-cols-3 gap-5">
+  {% for u in items %}
+  <div class="bg-white/5 rounded-2xl p-5 border border-white/10 shadow-md hover:shadow-blue-500/10 transition">
+    <div class="flex items-center justify-between mb-3">
+      <h3 class="font-semibold text-lg">{{ u.username }}</h3>
+      <span class="px-3 py-1 text-xs font-medium rounded-full
+        {% if u.role == 'admin' %}
+          bg-blue-900/40 text-blue-200 border border-blue-700/40
+        {% elif u.role == 'supervisor' %}
+          bg-yellow-900/40 text-yellow-200 border border-yellow-700/40
+        {% else %}
+          bg-gray-800/60 text-gray-300 border border-gray-600/40
+        {% endif %}">
+        {{ u.role | capitalize }}
+      </span>
+    </div>
+
+    <div class="space-y-3 mt-3">
+      <!-- Alterar Senha -->
+      <form method="post" action="{{ url_for('users_pwd', uid=u.id) }}" class="flex items-center gap-2">
+        <input name="password" placeholder="Nova senha" type="text"
+               class="flex-1 bg-gray-900/50 border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600">
+        <button class="bg-blue-700 hover:bg-blue-600 rounded-lg px-4 py-2 text-sm text-white font-medium transition-all">
+          Atualizar Senha
+        </button>
+      </form>
+
+      <!-- Alterar Papel -->
+      <form method="post" action="{{ url_for('users_role', uid=u.id) }}" class="flex items-center gap-2">
+        <select name="role" class="flex-1 bg-gray-900/50 border border-white/10 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-600">
+          <option value="tech" {% if u.role == 'tech' %}selected{% endif %}>Técnico</option>
+          <option value="supervisor" {% if u.role == 'supervisor' %}selected{% endif %}>Supervisor</option>
+          <option value="admin" {% if u.role == 'admin' %}selected{% endif %}>Administrador</option>
+        </select>
+        <button class="bg-indigo-600 hover:bg-indigo-500 rounded-lg px-4 py-2 text-sm text-white font-medium transition-all">
+          Alterar Perfil
+        </button>
+      </form>
+
+      <!-- Excluir Usuário -->
+      <form method="post" action="{{ url_for('users_del', uid=u.id) }}" 
+            onsubmit="return confirm('Deseja realmente excluir {{ u.username }}?');">
+        <button class="w-full bg-red-700 hover:bg-red-600 rounded-lg px-4 py-2 text-sm text-white font-medium transition-all mt-2">
+          Excluir Usuário
+        </button>
+      </form>
+    </div>
+  </div>
+  {% else %}
+    <div class="text-gray-400 col-span-full text-center py-6 border border-dashed border-white/10 rounded-xl">
+      Nenhum usuário cadastrado ainda.
+    </div>
+  {% endfor %}
+</div>
+
+{% endblock %}

@@ -1,0 +1,204 @@
+{% extends 'layout.html' %}
+{% set page_title = "Configurações do Checklist" %}
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-6">
+
+  <!-- 🔹 Adicionar nova pergunta -->
+  <div class="bg-gradient-to-br from-gray-900/70 to-gray-800/60 border border-white/10 rounded-2xl shadow-lg p-6 backdrop-blur">
+    <h2 class="text-xl font-bold mb-4 text-white">Adicionar Pergunta</h2>
+
+    <form method="post" action="{{ url_for('config_checklist_new') }}" class="space-y-4" id="new-item-form">
+      <div class="grid md:grid-cols-2 gap-3">
+        <input name="text" placeholder="Texto da pergunta"
+          class="border border-white/20 bg-gray-900/40 text-white rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
+
+        <select name="type" class="border border-white/20 bg-gray-900/40 text-white rounded-lg px-3 py-2 type-select"
+          onchange="toggleOptions(this)">
+          <option value="texto_curto">Texto curto</option>
+          <option value="paragrafo">Parágrafo</option>
+          <option value="numero">Número</option>
+          <option value="data">Data</option>
+          <option value="sim_nao_na">Sim / Não / N/A</option>
+          <option value="dropdown">Lista suspensa</option>
+          <option value="radio">Seleção única</option>
+          <option value="checkboxes">Seleção múltipla</option>
+        </select>
+      </div>
+
+      <!-- 🔸 Campo dinâmico de opções -->
+      <div class="hidden options-box">
+        <label class="text-sm text-gray-400 mb-2 block">Opções</label>
+        <div class="space-y-2" id="option-list"></div>
+
+        <button type="button" onclick="addOptionField(this)"
+          class="mt-2 bg-blue-700 hover:bg-blue-600 text-white rounded px-3 py-1 text-sm transition">
+          ➕ Adicionar opção
+        </button>
+        <input type="hidden" name="options" id="options-hidden">
+      </div>
+
+      <!-- 🔸 Configurações extras -->
+      <div class="flex flex-wrap gap-4 items-center">
+        <label class="inline-flex items-center gap-2 text-sm text-gray-300">
+          <input type="checkbox" name="required" class="accent-blue-600"> Obrigatória
+        </label>
+        <label class="inline-flex items-center gap-2 text-sm text-gray-300">
+          <input type="checkbox" name="require_justif_no" class="accent-yellow-500">
+          Exigir justificativa se 'Não'
+        </label>
+        <button onclick="prepareOptions(this)"
+          class="ml-auto bg-green-700 hover:bg-green-600 text-white rounded-lg px-5 py-2 transition-all shadow-lg hover:shadow-green-700/40">
+          ➕ Adicionar
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- 🔹 Perguntas existentes -->
+  {% for it in items %}
+  <div
+    class="bg-gradient-to-br from-gray-900/60 to-gray-800/60 border border-white/10 rounded-2xl shadow-lg p-6 space-y-3 backdrop-blur">
+    <div class="flex items-start justify-between gap-3">
+      <div class="flex-1">
+        <form method="post" action="{{ url_for('config_checklist_edit', iid=it.id) }}" class="space-y-3">
+
+          <!-- Campos principais -->
+          <div class="grid md:grid-cols-2 gap-3">
+            <input name="text" value="{{ it.text }}"
+              class="border border-white/20 bg-gray-900/40 text-white rounded px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
+
+            <select name="type" class="border border-white/20 bg-gray-900/40 text-white rounded px-3 py-2 type-select"
+              onchange="toggleOptions(this)">
+              <option value="texto_curto" {% if it.type=='texto_curto' %}selected{% endif %}>Texto curto</option>
+              <option value="paragrafo" {% if it.type=='paragrafo' %}selected{% endif %}>Parágrafo</option>
+              <option value="numero" {% if it.type=='numero' %}selected{% endif %}>Número</option>
+              <option value="data" {% if it.type=='data' %}selected{% endif %}>Data</option>
+              <option value="sim_nao_na" {% if it.type=='sim_nao_na' %}selected{% endif %}>Sim / Não / N/A</option>
+              <option value="dropdown" {% if it.type=='dropdown' %}selected{% endif %}>Lista suspensa</option>
+              <option value="radio" {% if it.type=='radio' %}selected{% endif %}>Seleção única</option>
+              <option value="checkboxes" {% if it.type=='checkboxes' %}selected{% endif %}>Seleção múltipla</option>
+            </select>
+          </div>
+
+          <!-- 🔸 Opções dinâmicas (edição) -->
+          <div class="{% if it.type in ['dropdown', 'radio', 'checkboxes'] %}{% else %}hidden{% endif %} options-box">
+            <label class="text-sm text-gray-400">Opções</label>
+            <div class="space-y-2 option-list-edit">
+              {% for opt in (it.options.split(',') if it.options else []) %}
+              <div class="flex gap-2 items-center">
+                <input type="text" name="option_inputs" value="{{ opt }}"
+                  class="border border-white/20 bg-gray-900/40 text-white rounded px-3 py-1 flex-1">
+                <button type="button" onclick="this.parentNode.remove()"
+                  class="bg-red-700 hover:bg-red-600 text-white rounded px-2">🗑</button>
+              </div>
+              {% endfor %}
+            </div>
+            <button type="button" onclick="addOptionFieldEdit(this)"
+              class="mt-2 bg-blue-700 hover:bg-blue-600 text-white rounded px-3 py-1 text-sm">
+              ➕ Adicionar opção
+            </button>
+            <input type="hidden" name="options" class="options-hidden-edit">
+          </div>
+
+          <!-- 🔸 Campo de justificativa sempre presente -->
+          <div>
+            <label class="block text-sm text-gray-400 mb-1">Campo de justificativa (opcional)</label>
+            <input type="text" disabled placeholder="Este campo será exibido no checklist"
+              class="w-full bg-gray-900/40 border border-gray-700 text-gray-400 italic rounded px-3 py-2 text-sm">
+          </div>
+
+          <!-- 🔸 Ações -->
+          <div class="flex flex-wrap items-center gap-4">
+            <label class="inline-flex items-center gap-2 text-sm text-gray-300">
+              <input type="checkbox" name="required" {% if it.required %}checked{% endif %}
+                class="accent-blue-600"> Obrigatória
+            </label>
+            <label class="inline-flex items-center gap-2 text-sm text-gray-300">
+              <input type="checkbox" name="require_justif_no" {% if it.require_justif_no %}checked{% endif %}
+                class="accent-yellow-500"> Exigir justificativa se 'Não'
+            </label>
+            <button onclick="prepareOptions(this)"
+              class="ml-auto bg-indigo-600 hover:bg-indigo-500 text-white rounded px-4 py-1.5 transition-all shadow-lg hover:shadow-indigo-700/40">
+              💾 Salvar
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- 🔸 Botões laterais -->
+      <div class="flex flex-col gap-2 shrink-0">
+        <form method="post" action="{{ url_for('config_checklist_move', iid=it.id) }}">
+          <input type="hidden" name="dir" value="up">
+          <button title="Mover para cima"
+            class="bg-white/10 border border-white/20 text-white rounded px-2 py-1 hover:bg-white/20">▲</button>
+        </form>
+        <form method="post" action="{{ url_for('config_checklist_move', iid=it.id) }}">
+          <input type="hidden" name="dir" value="down">
+          <button title="Mover para baixo"
+            class="bg-white/10 border border-white/20 text-white rounded px-2 py-1 hover:bg-white/20">▼</button>
+        </form>
+        <form method="post" action="{{ url_for('config_checklist_del', iid=it.id) }}"
+          onsubmit="return confirm('Excluir item?');">
+          <button
+            class="bg-red-700 hover:bg-red-600 text-white rounded px-3 py-1 transition-all shadow-lg hover:shadow-red-700/40">
+            🗑 Excluir
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+  {% else %}
+  <div class="text-center text-gray-400 text-sm mt-10">Nenhuma pergunta cadastrada ainda.</div>
+  {% endfor %}
+</div>
+
+<!-- ======================= JAVASCRIPT ======================= -->
+<script>
+function toggleOptions(selectEl) {
+  const form = selectEl.closest('form');
+  if (!form) return;
+  const box = form.querySelector('.options-box');
+  if (!box) return;
+  const type = selectEl.value;
+  if (['dropdown', 'radio', 'checkboxes'].includes(type)) {
+    box.classList.remove('hidden');
+  } else {
+    box.classList.add('hidden');
+  }
+}
+
+// ➕ Adicionar campo (novo item)
+function addOptionField(btn) {
+  const list = btn.parentElement.querySelector('#option-list');
+  const div = document.createElement('div');
+  div.className = 'flex gap-2 items-center';
+  div.innerHTML = `
+    <input type="text" class="border border-white/20 bg-gray-900/40 text-white rounded px-3 py-1 flex-1 option-input" placeholder="Digite uma opção...">
+    <button type="button" onclick="this.parentNode.remove()" class="bg-red-700 hover:bg-red-600 text-white rounded px-2">🗑</button>
+  `;
+  list.appendChild(div);
+}
+
+// ➕ Adicionar campo (edição)
+function addOptionFieldEdit(btn) {
+  const list = btn.parentElement.querySelector('.option-list-edit');
+  const div = document.createElement('div');
+  div.className = 'flex gap-2 items-center';
+  div.innerHTML = `
+    <input type="text" name="option_inputs" class="border border-white/20 bg-gray-900/40 text-white rounded px-3 py-1 flex-1" placeholder="Digite uma opção...">
+    <button type="button" onclick="this.parentNode.remove()" class="bg-red-700 hover:bg-red-600 text-white rounded px-2">🗑</button>
+  `;
+  list.appendChild(div);
+}
+
+// 🔄 Monta todas as opções antes de enviar
+function prepareOptions(btn) {
+  const form = btn.closest('form');
+  if (!form) return;
+  const allInputs = form.querySelectorAll('.option-input, [name="option_inputs"]');
+  const opts = Array.from(allInputs).map(i => i.value.trim()).filter(v => v !== '');
+  const hidden = form.querySelector('input[name="options"], .options-hidden-edit');
+  if (hidden) hidden.value = opts.join(',');
+}
+</script>
+{% endblock %}

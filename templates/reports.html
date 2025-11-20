@@ -1,0 +1,97 @@
+{% extends 'layout.html' %}
+{% set page_title = "Relatórios" %}
+{% block content %}
+
+<div class="bg-white/5 border border-white/10 rounded-2xl shadow p-5">
+
+  <h2 class="text-lg font-semibold mb-4">Relatórios (PDF)</h2>
+
+  {% set last_group = "" %}
+
+  <div class="overflow-x-auto rounded-lg">
+    <table class="min-w-full text-sm">
+
+      <thead>
+        <tr class="text-gray-300 border-b border-white/10 text-left">
+          <th class="px-4 py-2 w-[45%]">Nome</th>
+          <th class="px-4 py-2 w-[15%] text-right">Tamanho</th>
+          <th class="px-4 py-2 w-[20%]">Modificado</th>
+          <th class="px-4 py-2 w-[20%] text-center">Ações</th>
+        </tr>
+      </thead>
+
+      <tbody class="text-gray-200">
+
+        {% for f in items %}
+
+        {# AGRUPAMENTO POR MÊS/ANO EM PORTUGUÊS #}
+        {% set meses = {
+          'January':'Janeiro','February':'Fevereiro','March':'Março',
+          'April':'Abril','May':'Maio','June':'Junho',
+          'July':'Julho','August':'Agosto','September':'Setembro',
+          'October':'Outubro','November':'Novembro','December':'Dezembro'
+        } %}
+
+        {% set mes_original = f.mtime.strftime('%B') %}
+        {% set mes_pt = meses.get(mes_original, mes_original) %}
+        {% set grupo = mes_pt ~ ' de ' ~ f.mtime.strftime('%Y') %}
+
+        {% if grupo != last_group %}
+          <tr class="bg-white/5">
+            <td colspan="4" class="px-4 py-2 text-blue-300 font-semibold uppercase tracking-wide">
+              📁 {{ grupo }}
+            </td>
+          </tr>
+          {% set last_group = grupo %}
+        {% endif %}
+
+        <tr class="border-b border-white/10 hover:bg-white/5 transition">
+
+          <td class="px-4 py-2 break-all">
+            {{ f.name }}
+          </td>
+
+          <td class="px-4 py-2 text-right whitespace-nowrap">
+            {{ (f.size // 1024) }} KB
+          </td>
+
+          <td class="px-4 py-2 whitespace-nowrap">
+            {{ f.mtime.strftime('%d/%m/%Y %H:%M') }}
+          </td>
+
+          <td class="px-4 py-2 text-center whitespace-nowrap">
+
+            <a class="bg-emerald-700 hover:bg-emerald-600 text-white rounded px-3 py-1 transition"
+               href="{{ url_for('report_download', nome=f.name) }}">
+               Baixar
+            </a>
+
+            <form method="post"
+                  action="{{ url_for('report_delete', nome=f.name) }}"
+                  class="inline-block ml-2"
+                  onsubmit="return confirm('Excluir relatório {{ f.name }}?');">
+              <button class="bg-red-700 hover:bg-red-600 text-white rounded px-3 py-1 transition">
+                Excluir
+              </button>
+            </form>
+
+          </td>
+
+        </tr>
+
+        {% else %}
+        <tr>
+          <td class="py-3 text-gray-400 text-center" colspan="4">
+            Nenhum arquivo encontrado.
+          </td>
+        </tr>
+        {% endfor %}
+
+      </tbody>
+
+    </table>
+  </div>
+
+</div>
+
+{% endblock %}

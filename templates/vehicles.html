@@ -1,0 +1,139 @@
+{% extends 'layout.html' %}
+{% set page_title = "Veículos" %}
+{% block content %}
+
+  {% if ROLE_ADMIN %}
+  <div class="mb-6 bg-white/5 border border-white/10 rounded-2xl p-5">
+    <h2 class="text-lg font-semibold mb-4">Cadastrar novo veículo</h2>
+    <form method="post" action="{{ url_for('vehicle_new') }}" class="grid md:grid-cols-8 gap-3">
+      <input name="plate" placeholder="Placa" class="border border-white/20 bg-gray-900/50 rounded-lg px-3 py-2" required>
+      <input name="brand" placeholder="Marca" class="border border-white/20 bg-gray-900/50 rounded-lg px-3 py-2">
+      <input name="model" placeholder="Modelo" class="border border-white/20 bg-gray-900/50 rounded-lg px-3 py-2">
+      <input name="year" placeholder="Ano" class="border border-white/20 bg-gray-900/50 rounded-lg px-3 py-2">
+      <input name="km" placeholder="KM" value="0" class="border border-white/20 bg-gray-900/50 rounded-lg px-3 py-2">
+
+      <!-- ✅ Tipo (sem emojis) -->
+      <select name="type" class="border border-white/20 bg-gray-900/50 rounded-lg px-3 py-2" required>
+        <option value="carro">Carro</option>
+        <option value="moto">Moto</option>
+        <option value="caminhao">Caminhão</option>
+        <option value="van">Van</option>
+      </select>
+
+      <select name="status" class="border border-white/20 bg-gray-900/50 rounded-lg px-3 py-2">
+        <option value="ATIVO">ATIVO</option>
+        <option value="MANUTENCAO">MANUTENÇÃO</option>
+        <option value="INATIVO">INATIVO</option>
+      </select>
+      <button class="bg-green-700 hover:bg-green-600 text-white rounded-lg px-4">Cadastrar</button>
+    </form>
+  </div>
+  {% endif %}
+
+  <div class="flex items-center justify-between mb-4">
+    <h2 class="text-lg font-semibold">Veículos</h2>
+    <form method="get" class="flex gap-2">
+      <input name="q" value="{{ q }}" placeholder="Buscar..." class="border border-white/20 bg-gray-900/50 rounded-lg px-3 py-2">
+      <button class="bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg px-4">Buscar</button>
+    </form>
+  </div>
+
+  <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+    {% for v in veiculos %}
+    {% set tipo = (v.type or 'carro')|lower %}
+
+    {# 🔵 Cores por tipo #}
+    {% if tipo == 'caminhao' %}
+      {% set card_bg = 'bg-orange-900/20 border-orange-800/30 hover:bg-orange-900/30' %}
+      {% set icon_class = 'fa-truck text-orange-400' %}
+    {% elif tipo == 'moto' %}
+      {% set card_bg = 'bg-yellow-900/20 border-yellow-800/30 hover:bg-yellow-900/30' %}
+      {% set icon_class = 'fa-motorcycle text-yellow-400' %}
+    {% elif tipo == 'van' %}
+      {% set card_bg = 'bg-teal-900/20 border-teal-800/30 hover:bg-teal-900/30' %}
+      {% set icon_class = 'fa-van-shuttle text-teal-400' %}
+    {% else %}
+      {% set card_bg = 'bg-blue-900/20 border-blue-800/30 hover:bg-blue-900/30' %}
+      {% set icon_class = 'fa-car text-blue-400' %}
+    {% endif %}
+
+    <div class="rounded-2xl border {{ card_bg }} shadow p-5 relative overflow-hidden transition-all duration-200">
+
+      <!-- Ícone (Font Awesome) -->
+      <div class="absolute right-4 top-4 text-3xl opacity-90">
+        <i class="fas {{ icon_class }}"></i>
+      </div>
+
+      <!-- Cabeçalho -->
+      <div class="flex items-center justify-between">
+        <div>
+          <div class="text-xs text-gray-400">Placa</div>
+          <div class="text-xl font-bold tracking-wide">{{ v.plate }}</div>
+        </div>
+        <div>
+          {% set badge = 'bg-green-900/40 text-green-200 border-green-700/40' if v.status=='ATIVO' else ('bg-red-900/40 text-red-200 border-red-700/40' if v.status=='INATIVO' else 'bg-yellow-900/40 text-yellow-200 border-yellow-700/40') %}
+          <span class="px-3 py-1 rounded-full text-xs border {{ badge }}">{{ v.status }}</span>
+        </div>
+      </div>
+
+      <!-- Informações -->
+      <div class="mt-4 grid grid-cols-2 gap-3 text-sm">
+        <div><span class="opacity-70">Marca</span><div class="font-medium">{{ v.brand or '-' }}</div></div>
+        <div><span class="opacity-70">Modelo</span><div class="font-medium">{{ v.model or '-' }}</div></div>
+        <div><span class="opacity-70">Ano</span><div class="font-medium">{{ v.year or '-' }}</div></div>
+        <div><span class="opacity-70">KM</span><div class="font-medium">{{ v.km or 0 }}</div></div>
+        <div class="col-span-2"><span class="opacity-70">Tipo</span><div class="font-medium capitalize">{{ v.type or 'Não definido' }}</div></div>
+      </div>
+
+      {% if ROLE_ADMIN %}
+      <div class="mt-4 flex items-center justify-between gap-2">
+
+        <!-- ✅ Atualizar status (fica fora do Editar) -->
+        <form method="post" action="{{ url_for('vehicle_status', vid=v.id) }}" class="flex items-center gap-2">
+          <select name="status" class="border border-white/20 bg-gray-900/60 rounded-lg px-2 py-1 text-sm">
+            <option value="ATIVO" {% if v.status=='ATIVO' %}selected{% endif %}>ATIVO</option>
+            <option value="MANUTENCAO" {% if v.status=='MANUTENCAO' %}selected{% endif %}>MANUTENÇÃO</option>
+            <option value="INATIVO" {% if v.status=='INATIVO' %}selected{% endif %}>INATIVO</option>
+          </select>
+          <button class="bg-amber-600 hover:bg-amber-500 text-white rounded px-3 py-1 text-sm">Atualizar</button>
+        </form>
+
+        <!-- Editar / Excluir -->
+        <details class="w-auto">
+          <summary class="cursor-pointer text-blue-300 hover:text-blue-200 text-sm">Editar</summary>
+          <div class="mt-2 space-y-2">
+            <form method="post" action="{{ url_for('vehicle_edit', vid=v.id) }}" class="grid grid-cols-2 gap-2">
+              <input name="brand" value="{{ v.brand }}" class="border border-white/20 bg-gray-900/60 rounded px-2 py-1 text-sm" placeholder="Marca">
+              <input name="model" value="{{ v.model }}" class="border border-white/20 bg-gray-900/60 rounded px-2 py-1 text-sm" placeholder="Modelo">
+              <input name="year" value="{{ v.year }}" class="border border-white/20 bg-gray-900/60 rounded px-2 py-1 text-sm" placeholder="Ano">
+              <input name="km" value="{{ v.km }}" class="border border-white/20 bg-gray-900/60 rounded px-2 py-1 text-sm" placeholder="KM">
+
+              <!-- ✅ Tipo dentro do Editar (sem status aqui) -->
+              <select name="type" class="border border-white/20 bg-gray-900/60 rounded px-2 py-1 text-sm col-span-2">
+                <option value="carro" {% if tipo == 'carro' %}selected{% endif %}>Carro</option>
+                <option value="moto" {% if tipo == 'moto' %}selected{% endif %}>Moto</option>
+                <option value="caminhao" {% if tipo == 'caminhao' %}selected{% endif %}>Caminhão</option>
+                <option value="van" {% if tipo == 'van' %}selected{% endif %}>Van</option>
+              </select>
+
+              <button class="col-span-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded px-3 py-1 text-sm">Salvar</button>
+            </form>
+
+            <form method="post" action="{{ url_for('vehicle_delete', vid=v.id) }}"
+                  onsubmit="return confirm('Excluir {{ v.plate }}?');">
+              <button class="bg-red-700 hover:bg-red-600 text-white rounded px-3 py-1 text-sm w-full" type="submit">
+                Excluir
+              </button>
+            </form>
+          </div>
+        </details>
+      </div>
+
+      {% elif ROLE_SUPERVISOR %}
+      <div class="mt-4 text-sm text-gray-400 italic">🔒 Supervisor — somente visualização</div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+
+{% endblock %}

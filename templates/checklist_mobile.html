@@ -1,0 +1,137 @@
+{% extends 'layout.html' %}
+{% set page_title = "Checklist Técnico" %}
+{% block content %}
+<div class="max-w-3xl mx-auto space-y-6">
+
+  <!-- Cabeçalho com acesso ao perfil -->
+  <div class="flex items-center justify-between bg-gradient-to-r from-blue-800/40 to-blue-600/20 p-4 rounded-2xl border border-white/10 shadow">
+    <h2 class="text-xl font-semibold text-white flex items-center gap-2">
+       Checklist 
+    </h2>
+    <div class="flex items-center gap-3">
+      <span class="text-gray-300 text-sm">👷 {{ current_user.username }}</span>
+      <a href="{{ url_for('perfil') }}" title="Meu Perfil"
+         class="bg-gray-800 hover:bg-gray-700 text-white text-sm px-3 py-1.5 rounded-lg border border-white/10 transition">
+        ⚙️ Perfil
+      </a>
+    </div>
+  </div>
+
+  <!-- Formulário -->
+  <div class="bg-gradient-to-br from-gray-900/80 to-gray-800/70 border border-white/10 rounded-2xl shadow-xl p-6">
+    <form method="post" enctype="multipart/form-data" class="space-y-6">
+
+      <!-- Cabeçalho -->
+      <div class="grid md:grid-cols-2 gap-4">
+        <div>
+          <label class="text-sm text-gray-300">Veículo</label>
+          <select name="vehicle_id" required
+            class="w-full bg-gray-900/60 border border-gray-700 text-white rounded-lg px-3 py-2">
+            <option value="">Selecione...</option>
+            {% for v in vehicles %}
+              <option value="{{ v.id }}">{{ v.plate }} — {{ v.brand }} {{ v.model }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div>
+          <label class="text-sm text-gray-300">KM atual</label>
+          <input type="number" name="km" min="0"
+            class="w-full bg-gray-900/60 border border-gray-700 text-white rounded-lg px-3 py-2" required>
+        </div>
+      </div>
+
+      <hr class="border-gray-700 my-4">
+
+      <!-- Perguntas -->
+      {% for q in items %}
+      {% set q_index = loop.index %}
+      <div class="bg-gray-900/60 border border-gray-700 rounded-xl p-4 shadow-md">
+        <label class="block text-gray-100 font-semibold mb-2">{{ q_index }}. {{ q.text }}</label>
+
+        {% if q.type == 'texto_curto' %}
+          <input type="text" name="item{{ q_index }}" class="w-full bg-gray-800 border border-gray-700 text-white rounded px-3 py-2">
+
+        {% elif q.type == 'paragrafo' %}
+          <textarea name="item{{ q_index }}" rows="3" class="w-full bg-gray-800 border border-gray-700 text-white rounded px-3 py-2"></textarea>
+
+        {% elif q.type == 'numero' %}
+          <input type="number" name="item{{ q_index }}" class="w-full bg-gray-800 border border-gray-700 text-white rounded px-3 py-2">
+
+        {% elif q.type == 'data' %}
+          <input type="date" name="item{{ q_index }}" class="w-full bg-gray-800 border border-gray-700 text-white rounded px-3 py-2">
+
+        {% elif q.type == 'sim_nao_na' %}
+          <div class="flex gap-4 text-white">
+            <label><input type="radio" name="item{{ q_index }}" value="Sim"> Sim</label>
+            <label><input type="radio" name="item{{ q_index }}" value="Não"> Não</label>
+            <label><input type="radio" name="item{{ q_index }}" value="N/A"> N/A</label>
+          </div>
+
+        {% elif q.type == 'dropdown' %}
+          <select name="item{{ q_index }}" class="w-full bg-gray-800 border border-gray-700 text-white rounded px-3 py-2">
+            <option value="">Selecione...</option>
+            {% for opt in (q.options.split(',') if q.options else []) %}
+              <option value="{{ opt }}">{{ opt }}</option>
+            {% endfor %}
+          </select>
+
+        {% elif q.type == 'radio' %}
+          <div class="flex flex-col gap-1 text-white">
+            {% for opt in (q.options.split(',') if q.options else []) %}
+              {% set opt_id = "item" ~ q_index ~ "_opt" ~ loop.index %}
+              <label for="{{ opt_id }}">
+                <input type="radio" id="{{ opt_id }}" name="item{{ q_index }}" value="{{ opt }}">
+                {{ opt }}
+              </label>
+            {% endfor %}
+          </div>
+
+        {% elif q.type == 'checkboxes' %}
+          <div class="flex flex-col gap-1 text-white">
+            {% for opt in (q.options.split(',') if q.options else []) %}
+              {% set chk_id = "item" ~ q_index ~ "_chk" ~ loop.index %}
+              <label for="{{ chk_id }}">
+                <input type="checkbox" id="{{ chk_id }}" name="item{{ q_index }}" value="{{ opt }}">
+                {{ opt }}
+              </label>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        <!-- ✅ Campo de justificativa (em todos, exceto DATA) -->
+        {% if q.type != 'data' %}
+        <div class="mt-3">
+          <label class="block text-gray-400 text-sm mb-1">Justificativa (opcional)</label>
+          <textarea name="item{{ q_index }}_just" rows="2"
+            placeholder="Escreva uma justificativa ou observação..."
+            class="w-full bg-gray-800 border border-gray-700 text-gray-200 rounded px-3 py-2 text-sm"></textarea>
+        </div>
+        {% endif %}
+      </div>
+      {% endfor %}
+
+      <!-- Upload de fotos -->
+      <div class="mt-6">
+        <label class="block text-gray-300 text-sm mb-2">Fotos (opcional)</label>
+        <input type="file" name="fotos" multiple accept="image/*"
+          class="block w-full text-gray-200 text-sm bg-gray-900/60 border border-gray-700 rounded-lg p-2">
+      </div>
+
+      <!-- Botão enviar -->
+      <div class="mt-8 text-right">
+        <button
+          class="bg-green-700 hover:bg-green-600 text-white rounded-lg px-6 py-2 text-sm font-semibold shadow-md hover:shadow-green-700/40 transition">
+          📤 Enviar Checklist
+        </button>
+      </div>
+    </form>
+
+    {% if success %}
+    <div class="mt-6 text-center text-green-400 font-semibold">
+      ✅ Checklist enviado com sucesso!
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

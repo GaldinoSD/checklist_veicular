@@ -1,0 +1,52 @@
+
+{% extends 'layout.html' %}
+{% set page_title = "Detalhe do Checklist" %}
+{% block content %}
+<div class="bg-white/5 border border-white/10 rounded-2xl shadow p-6">
+  <div class="flex items-center justify-between mb-4">
+    <h2 class="text-lg font-semibold">Checklist #{{ c.id }} • {{ c.date.strftime('%d/%m/%Y %H:%M') }}</h2>
+    <a class="text-blue-400 underline" href="{{ url_for('checklists') }}">Voltar</a>
+  </div>
+  <div class="grid md:grid-cols-3 gap-4">
+    <div class="p-3 rounded border border-white/10 bg-white/5">
+      <p><strong>Placa:</strong> {{ c.vehicle.plate if c.vehicle else '-' }}</p>
+      <p><strong>Técnico:</strong> {{ c.technician }}</p>
+      <p><strong>KM:</strong> {{ c.km }}</p>
+      <p><strong>Status:</strong> {{ c.status }}</p>
+    </div>
+    <div class="md:col-span-2 p-3 rounded border border-white/10 bg-white/5 overflow-auto max-h-[60vh]">
+      <table class="min-w-full text-sm">
+        <thead><tr class="text-gray-300"><th class="py-2 pr-4">Item</th><th class="py-2 pr-4">Resposta</th><th class="py-2 pr-4">Justificativa</th></tr></thead>
+        <tbody>
+          {% for nome, val in items.items() %}
+          <tr class="border-t border-white/10">
+            <td class="py-2 pr-4">{{ nome }}</td>
+            <td class="py-2 pr-4">
+              {% if val.resposta is iterable and val.resposta is not string %}
+                {{ val.resposta | join(', ') }}
+              {% else %}
+                {{ val.resposta }}
+              {% endif %}
+            </td>
+            <td class="py-2 pr-4">{{ val.justificativa }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {% if photos and photos|length %}
+  <div class="mt-6">
+    <h3 class="text-md font-semibold mb-2">Fotos</h3>
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+      {% for p in photos %}
+      <a href="{{ p }}" target="_blank">
+        <img src="{{ p }}" class="w-full h-40 object-cover rounded-lg border border-white/10" alt="Foto checklist">
+      </a>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

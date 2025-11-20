@@ -1,0 +1,102 @@
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+
+    <!-- TÍTULO -->
+    <div class="flex items-center justify-between mb-6">
+        <h1 class="text-3xl font-semibold text-gray-100 flex items-center gap-3">
+            <i class="fas fa-clipboard-list text-blue-400 text-2xl"></i>
+            Logs do Sistema
+        </h1>
+
+        <!-- CAIXA DE BUSCA -->
+        <div class="relative">
+            <input id="filtro" type="text" placeholder="Filtrar logs..."
+                class="bg-gray-800 border border-gray-700 text-gray-200 px-4 py-2 rounded-lg w-64 focus:ring-2 focus:ring-blue-500 outline-none">
+            <i class="fas fa-search absolute right-3 top-3 text-gray-400"></i>
+        </div>
+    </div>
+
+    <!-- CARD -->
+    <div class="bg-gray-900/60 backdrop-blur rounded-xl border border-gray-700 shadow-xl p-5">
+
+        <table id="tabelaLogs" class="min-w-full divide-y divide-gray-700">
+            <thead class="bg-gray-800/60">
+                <tr>
+                    <th class="px-4 py-3 text-left text-gray-300 uppercase text-xs tracking-wider">Usuário</th>
+                    <th class="px-4 py-3 text-left text-gray-300 uppercase text-xs tracking-wider">Ação</th>
+                    <th class="px-4 py-3 text-left text-gray-300 uppercase text-xs tracking-wider">Data/Hora</th>
+                </tr>
+            </thead>
+
+            <tbody class="divide-y divide-gray-800 text-gray-200">
+                {% for r in registros %}
+                <tr class="hover:bg-gray-800/40 transition">
+                    <td class="px-4 py-3 font-medium">{{ r.usuario }}</td>
+
+                    <td class="px-4 py-3">
+                        {% set text = r.acao.lower() %}
+
+                        {% if "criado" in text %}
+                            <span class="text-green-400 font-semibold">
+                                <i class="fas fa-plus-circle mr-1"></i> {{ r.acao }}
+                            </span>
+
+                        {% elif "excluído" in text or "delet" in text %}
+                            <span class="text-red-400 font-semibold">
+                                <i class="fas fa-trash-alt mr-1"></i> {{ r.acao }}
+                            </span>
+
+                        {% elif "edit" in text or "alter" in text %}
+                            <span class="text-yellow-400 font-semibold">
+                                <i class="fas fa-edit mr-1"></i> {{ r.acao }}
+                            </span>
+
+                        {% elif "login" in text %}
+                            <span class="text-blue-400 font-semibold">
+                                <i class="fas fa-sign-in-alt mr-1"></i> {{ r.acao }}
+                            </span>
+
+                        {% elif "logout" in text %}
+                            <span class="text-purple-400 font-semibold">
+                                <i class="fas fa-sign-out-alt mr-1"></i> {{ r.acao }}
+                            </span>
+
+                        {% else %}
+                            <span class="text-gray-300">{{ r.acao }}</span>
+                        {% endif %}
+                    </td>
+
+                    <td class="px-4 py-3 text-gray-400">
+                        {{ r.data_hora.strftime('%d/%m/%Y %H:%M') }}
+                    </td>
+                </tr>
+                {% endfor %}
+
+                {% if registros|length == 0 %}
+                <tr>
+                    <td colspan="3" class="px-4 py-4 text-center text-gray-500">
+                        Nenhum log registrado.
+                    </td>
+                </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- FILTRO JS -->
+<script>
+document.getElementById("filtro").addEventListener("keyup", function() {
+    let filtro = this.value.toLowerCase();
+    let linhas = document.querySelectorAll("#tabelaLogs tbody tr");
+
+    linhas.forEach(linha => {
+        let texto = linha.innerText.toLowerCase();
+        linha.style.display = texto.includes(filtro) ? "" : "none";
+    });
+});
+</script>
+
+{% endblock %}
