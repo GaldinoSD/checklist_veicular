@@ -2,17 +2,10 @@
 """
 Painel de Gerenciamento de Frota – app.py (versão com papéis: admin/supervisor/tech)
 
-- Modelos: User / Vehicle / Checklist / ChecklistItem / Log
-- Papel do usuário em 'User.role' (admin/supervisor/tech)
-- Decoradores: @admin_required, @supervisor_allowed
-- Login unificado com redirecionamento por papel
-- Dashboard (admin+supervisor)
-- Veículos (admin+supervisor; supervisor readonly)
-- Usuários (apenas admin)
-- Checklists + geração de PDF
-- Relatórios (admin+supervisor; exclusão só admin)
-- Perfil (troca de senha para técnico)
-- Logs de sistema (admin): login, logout, CRUD geral
+Inclui:
+- SystemConfig (modo do checklist)
+- Funções: desativado / somente início / início e chegada
+- Rotas atualizadas
 """
 
 import os, json, uuid, sqlite3
@@ -45,6 +38,7 @@ from reportlab.lib.styles import getSampleStyleSheet
 
 # Imagem (upload)
 from PIL import Image
+
 
 # ----------------- CONFIG BÁSICA -----------------
 BASE_DIR = Path(__file__).resolve().parent
@@ -79,11 +73,10 @@ class User(UserMixin, db.Model):
     username = db.Column(db.String(80), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
 
-    # campo legado
+    # legado
     is_admin_legacy = db.Column("is_admin", db.Boolean, default=False)
 
-    # novo campo de papel
-    # valores: "admin", "supervisor", "tech"
+    # novo campo
     role = db.Column(db.String(20), default=None)
 
     def set_password(self, pwd: str):
@@ -93,17 +86,17 @@ class User(UserMixin, db.Model):
         return check_password_hash(self.password_hash, pwd)
 
     @property
-    def is_admin(self) -> bool:
+    def is_admin(self):
         if self.role is None:
             return bool(self.is_admin_legacy)
         return self.role == "admin"
 
     @property
-    def is_supervisor(self) -> bool:
+    def is_supervisor(self):
         return self.role == "supervisor"
 
     @property
-    def is_tech(self) -> bool:
+    def is_tech(self):
         if self.role is None and not self.is_admin_legacy:
             return True
         return self.role == "tech"
@@ -117,20 +110,20 @@ class Vehicle(db.Model):
     model = db.Column(db.String(80))
     year = db.Column(db.Integer)
     km = db.Column(db.Integer, default=0)
-    status = db.Column(db.String(20), default="ATIVO")  # ATIVO, INATIVO, MANUTENCAO
+    status = db.Column(db.String(20), default="ATIVO")
 
 
 class Checklist(db.Model):
     __tablename__ = "checklist"
     id = db.Column(db.Integer, primary_key=True)
-    vehicle_id = db.Column(db.Integer, db.ForeignKey('vehicle.id'))
-    vehicle = db.relationship('Vehicle', backref='checklists')
+    vehicle_id = db.Column(db.Integer, db.ForeignKey("vehicle.id"))
+    vehicle = db.relationship("Vehicle", backref="checklists")
     technician = db.Column(db.String(120))
     date = db.Column(db.DateTime, default=datetime.utcnow)
     km = db.Column(db.Integer, default=0)
     status = db.Column(db.String(40), default="OK")
     notes = db.Column(db.Text)
-    raw_json = db.Column(db.Text)  # itens + fotos
+    raw_json = db.Column(db.Text)
 
 
 class ChecklistItem(db.Model):
@@ -140,8 +133,8 @@ class ChecklistItem(db.Model):
     text = db.Column(db.String(255), nullable=False)
     required = db.Column(db.Boolean, default=True)
     require_justif_no = db.Column(db.Boolean, default=False)
-    type = db.Column(db.String(50), default="texto_curto")  # texto_curto, paragrafo, numero, data, sim_nao_na, dropdown, radio, checkboxes
-    options = db.Column(db.Text)  # opções separadas por vírgula
+    type = db.Column(db.String(50), default="texto_curto")
+    options = db.Column(db.Text)
 
 
 class Log(db.Model):
@@ -152,54 +145,66 @@ class Log(db.Model):
     data_hora = db.Column(db.DateTime, default=datetime.utcnow)
 
 
+# --------------------------------------------------------
+# 🔥 NOVO MODELO — CONFIGURAÇÃO GLOBAL DO CHECKLIST 🔥
+# --------------------------------------------------------
+class SystemConfig(db.Model):
+    __tablename__ = "system_config"
+    id = db.Column(db.Integer, primary_key=True)
+    mode = db.Column(db.String(20), default="start_only")
+    # valores permitidos:
+    #   disabled      → checklist não aparece
+    #   start_only    → 1 checklist por dia
+    #   start_end     → início e chegada (2 checklists)
+
+
 @login_manager.user_loader
-def load_user(user_id):
-    return User.query.get(int(user_id))
+def load_user(uid):
+    return User.query.get(int(uid))
 
 
-# ----------------- MIGRAÇÃO LEVE (SQLite) -----------------
-def column_exists(table: str, column: str) -> bool:
+# ----------------- MIGRAÇÃO LEVE -----------------
+def column_exists(table, column):
     con = sqlite3.connect(DB_PATH)
     cur = con.cursor()
-    try:
-        cur.execute(f"PRAGMA table_info({table});")
-        cols = [r[1] for r in cur.fetchall()]
-        return column in cols
-    finally:
-        con.close()
+    cur.execute(f"PRAGMA table_info({table})")
+    cols = [r[1] for r in cur.fetchall()]
+    con.close()
+    return column in cols
 
 
 def migrate_db():
-    # já existe db.create_all() fora – aqui só ajustes extras
-    # Garantir colunas em checklist_item
+    # garantir colunas padrão
     con = sqlite3.connect(DB_PATH)
     cur = con.cursor()
-    try:
-        cur.execute("PRAGMA table_info(checklist_item);")
-        cols = [r[1] for r in cur.fetchall()]
-        if "type" not in cols:
-            cur.execute("ALTER TABLE checklist_item ADD COLUMN type TEXT DEFAULT 'texto_curto';")
-        if "options" not in cols:
-            cur.execute("ALTER TABLE checklist_item ADD COLUMN options TEXT;")
-        con.commit()
-    except Exception:
-        pass
-    finally:
-        con.close()
+    cur.execute("PRAGMA table_info(checklist_item)")
+    cols = [r[1] for r in cur.fetchall()]
+    if "type" not in cols:
+        cur.execute("ALTER TABLE checklist_item ADD COLUMN type TEXT DEFAULT 'texto_curto'")
+    if "options" not in cols:
+        cur.execute("ALTER TABLE checklist_item ADD COLUMN options TEXT")
+    con.commit()
+    con.close()
 
-    # Garantir coluna role em user
+    # role
     if not column_exists("user", "role"):
         con2 = sqlite3.connect(DB_PATH)
         cur2 = con2.cursor()
-        try:
-            cur2.execute("ALTER TABLE user ADD COLUMN role TEXT;")
-            con2.commit()
-        except Exception:
-            pass
-        finally:
-            con2.close()
+        cur2.execute("ALTER TABLE user ADD COLUMN role TEXT")
+        con2.commit()
+        con2.close()
 
-    # Migrar valores legados para role (apenas se user.role for NULL)
+    # garantir tabela system_config
+    if not os.path.exists(DB_PATH):
+        return
+
+    try:
+        if not column_exists("system_config", "mode"):
+            pass  # será criado pelo create_all()
+    except:
+        pass
+
+    # migrar legados
     with app.app_context():
         users = User.query.all()
         changed = False
@@ -208,7 +213,7 @@ def migrate_db():
                 if bool(u.is_admin_legacy):
                     u.role = "admin"
                 else:
-                    if u.username.lower().startswith("supervisor"):
+                    if u.username.lower().startswith("super"):
                         u.role = "supervisor"
                     else:
                         u.role = "tech"
@@ -220,8 +225,8 @@ def migrate_db():
 # ----------------- SEED DEFAULTS -----------------
 DEFAULT_ITEMS = [
     ("Pneus (calibragem/estado)", "sim_nao_na"),
-    ("Luzes frontais (farol/alto/baixo)", "sim_nao_na"),
-    ("Luzes traseiras (freio/placa)", "sim_nao_na"),
+    ("Luzes frontais", "sim_nao_na"),
+    ("Luzes traseiras", "sim_nao_na"),
     ("Setas e alerta", "sim_nao_na"),
     ("Extintor (validade)", "sim_nao_na"),
     ("Painel sem avisos críticos", "sim_nao_na"),
@@ -231,7 +236,6 @@ DEFAULT_ITEMS = [
 
 
 def seed_defaults():
-    # Usuários padrão
     if not User.query.filter_by(username="admin").first():
         u = User(username="admin", role="admin")
         u.set_password("admin")
@@ -247,41 +251,32 @@ def seed_defaults():
         u.set_password("1234")
         db.session.add(u)
 
-    # Itens de checklist padrão
+    # sistema config inicial
+    if SystemConfig.query.count() == 0:
+        db.session.add(SystemConfig(mode="start_only"))
+
     if ChecklistItem.query.count() == 0:
-        for idx, (txt, typ) in enumerate(DEFAULT_ITEMS, start=1):
-            db.session.add(
-                ChecklistItem(
-                    order=idx,
-                    text=txt,
-                    required=True,
-                    require_justif_no=("Luzes" in txt),
-                    type=typ,
-                    options=None
-                )
-            )
+        for i, (txt, typ) in enumerate(DEFAULT_ITEMS, start=1):
+            db.session.add(ChecklistItem(order=i, text=txt, type=typ))
+
     db.session.commit()
 
 
 with app.app_context():
-    # cria TODAS as tabelas (incluindo Log) antes de mexer em qualquer coisa
     db.create_all()
     migrate_db()
     seed_defaults()
 
 
-# ----------------- LOG DE SISTEMA -----------------
-def registrar_log(acao: str):
-    """Grava a ação feita por um usuário no sistema."""
+
+# ----------------- LOG -----------------
+def registrar_log(acao):
     try:
-        usuario = current_user.username if current_user.is_authenticated else "Sistema"
-        novo = Log(usuario=usuario, acao=acao)
-        db.session.add(novo)
+        user = current_user.username if current_user.is_authenticated else "Sistema"
+        db.session.add(Log(usuario=user, acao=acao))
         db.session.commit()
-    except Exception as e:
-        print(f"⚠️ Erro ao registrar log: {e}")
-
-
+    except:
+        pass
 # ----------------- HELPERS -----------------
 def admin_required(view):
     @wraps(view)
@@ -292,25 +287,25 @@ def admin_required(view):
             flash("Acesso restrito ao administrador.", "error")
             if current_user.is_supervisor:
                 return redirect(url_for("dashboard"))
-            else:
-                return redirect(url_for("checklist_mobile"))
+            return redirect(url_for("checklist_mobile"))
         return view(*args, **kwargs)
     return wrapper
 
 
 def supervisor_allowed(view):
-    """Permite Admin e Supervisor. Técnicos são barrados."""
+    """Admin + Supervisor podem acessar; técnico NÃO."""
     @wraps(view)
     def wrapper(*args, **kwargs):
         if not current_user.is_authenticated:
             return redirect(url_for("login"))
         if current_user.is_admin or current_user.is_supervisor:
             return view(*args, **kwargs)
-        flash("Acesso restrito a supervisor/administrador.", "error")
+        flash("Acesso restrito a supervisor ou administrador.", "error")
         return redirect(url_for("checklist_mobile"))
     return wrapper
 
 
+# Variáveis globais para o template
 @app.context_processor
 def inject_role_flags():
     return dict(
@@ -320,9 +315,10 @@ def inject_role_flags():
     )
 
 
-def count_files(dirpath: Path):
+# ----------------- FUNÇÕES AUXILIARES -----------------
+def count_files(directory: Path):
     try:
-        return len([f for f in dirpath.iterdir() if f.is_file()])
+        return len([f for f in directory.iterdir() if f.is_file()])
     except FileNotFoundError:
         return 0
 
@@ -358,6 +354,8 @@ def weekly_km_series(weeks_back=WEEKS_WINDOW):
     end = datetime.utcnow()
     rows = Checklist.query.all()
     per_week_vehicle = {}
+
+    # agrupar por semana
     for c in rows:
         wk = iso_week(c.date)
         key = (wk, c.vehicle_id)
@@ -366,15 +364,18 @@ def weekly_km_series(weeks_back=WEEKS_WINDOW):
         else:
             lo, hi = per_week_vehicle[key]
             per_week_vehicle[key] = [min(lo, c.km), max(hi, c.km)]
+
     weekly = defaultdict(int)
     for (wk, vid), (lo, hi) in per_week_vehicle.items():
         if hi >= lo:
             weekly[wk] += (hi - lo)
+
     weeks = []
     for i in range(weeks_back - 1, -1, -1):
         dt = end - timedelta(weeks=i)
         monday = dt - timedelta(days=dt.weekday())
         weeks.append(iso_week(monday + timedelta(days=3)))
+
     labels = weeks
     values = [weekly.get(wk, 0) for wk in weeks]
     return labels, values
@@ -394,9 +395,631 @@ def save_photos(files):
         f.save(path)
         saved.append(f"/static/checklist_fotos/{fname}")
     return saved
+# ----------------- LOGIN -----------------
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        username = request.form.get("username", "").strip()
+        password = request.form.get("password", "").strip()
+
+        u = User.query.filter_by(username=username).first()
+        if u and u.check_password(password):
+            login_user(u)
+            registrar_log(f"Login efetuado: {u.username}")
+
+            # Redirecionamento por papel
+            if u.is_admin or u.is_supervisor:
+                return redirect(url_for("dashboard"))
+            return redirect(url_for("checklist_mobile"))
+
+        flash("Usuário ou senha inválidos.", "error")
+
+    return render_template("login.html")
 
 
-def generate_checklist_pdf(checklist_obj: 'Checklist', raw: dict) -> str:
+@app.route("/logout")
+@login_required
+def logout():
+    registrar_log(f"Logout efetuado: {current_user.username}")
+    logout_user()
+    return redirect(url_for("login"))
+
+
+@app.route("/")
+def index():
+    if current_user.is_authenticated:
+        if current_user.is_admin or current_user.is_supervisor:
+            return redirect(url_for("dashboard"))
+        return redirect(url_for("checklist_mobile"))
+    return redirect(url_for("login"))
+
+
+# ----------------- DASHBOARD -----------------
+@app.route("/dashboard")
+@supervisor_allowed
+def dashboard():
+    total_veiculos = Vehicle.query.count()
+    total_checklists = Checklist.query.count()
+    total_relatorios = count_files(RELATORIOS_DIR)
+
+    lr = list_reports()
+    ultimo_relatorio = lr[0]["name"] if lr else "—"
+
+    recentes = Checklist.query.order_by(Checklist.date.desc()).limit(5).all()
+
+    # verifica revisões
+    veiculos = Vehicle.query.all()
+    alerts = []
+    for v in veiculos:
+        alert, next_rev, remaining = km_alert(v.km or 0)
+        if alert:
+            alerts.append({
+                "plate": v.plate,
+                "km": v.km or 0,
+                "next_rev": next_rev,
+                "remaining": remaining
+            })
+
+    labels, values = weekly_km_series(WEEKS_WINDOW)
+
+    return render_template(
+        "dashboard.html",
+        total_veiculos=total_veiculos,
+        total_checklists=total_checklists,
+        total_relatorios=total_relatorios,
+        ultimo_relatorio=ultimo_relatorio,
+        recentes=recentes,
+        alerts=alerts,
+        rev_interval=REV_INTERVAL,
+        rev_margin=REV_ALERT_MARGIN,
+        wk_labels=labels,
+        wk_values=values
+    )
+
+
+# ----------------- USUÁRIOS (admin) -----------------
+@app.route("/usuarios")
+@admin_required
+def users():
+    items = User.query.order_by(User.username.asc()).all()
+    return render_template("users.html", items=items)
+
+
+@app.route("/usuarios/novo", methods=["POST"])
+@admin_required
+def users_new():
+    username = request.form.get("username", "").strip()
+    password = request.form.get("password", "").strip()
+    role = request.form.get("role", "tech").strip().lower()
+
+    if not username or not password:
+        flash("Usuário e senha obrigatórios.", "error")
+        return redirect(url_for("users"))
+
+    if role not in {"admin", "supervisor", "tech"}:
+        flash("Papel inválido.", "error")
+        return redirect(url_for("users"))
+
+    if User.query.filter_by(username=username).first():
+        flash("Usuário já existe.", "error")
+        return redirect(url_for("users"))
+
+    u = User(username=username, role=role)
+    u.set_password(password)
+    db.session.add(u)
+    db.session.commit()
+
+    registrar_log(f"Usuário criado: {username} ({role})")
+    flash("Usuário cadastrado.", "success")
+    return redirect(url_for("users"))
+
+
+@app.route("/usuarios/<int:uid>/senha", methods=["POST"])
+@admin_required
+def users_pwd(uid):
+    u = User.query.get_or_404(uid)
+    pwd = request.form.get("password", "").strip()
+
+    if not pwd:
+        flash("Senha inválida.", "error")
+        return redirect(url_for("users"))
+
+    u.set_password(pwd)
+    db.session.commit()
+
+    registrar_log(f"Senha atualizada: {u.username}")
+    flash("Senha atualizada.", "success")
+    return redirect(url_for("users"))
+
+
+@app.route("/usuarios/<int:uid>/papel", methods=["POST"])
+@admin_required
+def users_role(uid):
+    u = User.query.get_or_404(uid)
+    role = request.form.get("role", "tech").strip().lower()
+
+    if role not in {"admin", "supervisor", "tech"}:
+        flash("Papel inválido.", "error")
+        return redirect(url_for("users"))
+
+    u.role = role
+    db.session.commit()
+
+    registrar_log(f"Papel alterado: {u.username} -> {role}")
+    flash("Papel atualizado.", "success")
+    return redirect(url_for("users"))
+
+
+@app.route("/usuarios/<int:uid>/excluir", methods=["POST"])
+@admin_required
+def users_del(uid):
+    if current_user.id == uid:
+        flash("Você não pode excluir seu próprio usuário.", "error")
+        return redirect(url_for("users"))
+
+    u = User.query.get_or_404(uid)
+    nome = u.username
+
+    db.session.delete(u)
+    db.session.commit()
+
+    registrar_log(f"Usuário excluído: {nome}")
+    flash("Usuário excluído.", "success")
+    return redirect(url_for("users"))
+# ----------------- VEÍCULOS (admin + supervisor) -----------------
+def ensure_vehicle_type_column():
+    db_path = str(app.config["SQLALCHEMY_DATABASE_URI"]).replace("sqlite:///", "")
+    if not os.path.exists(db_path):
+        return
+
+    try:
+        con = sqlite3.connect(db_path)
+        cur = con.cursor()
+        cur.execute("PRAGMA table_info(vehicle)")
+        cols = [r[1] for r in cur.fetchall()]
+
+        if "type" not in cols:
+            print("🆕 Adicionando coluna 'type' em vehicle...")
+            cur.execute("ALTER TABLE vehicle ADD COLUMN type TEXT DEFAULT 'carro'")
+            con.commit()
+
+        con.close()
+    except Exception as e:
+        print("[ERRO] ensure_vehicle_type_column:", e)
+
+
+@app.route("/veiculos")
+@supervisor_allowed
+def vehicles():
+    ensure_vehicle_type_column()
+
+    q = request.args.get("q", "").strip().lower()
+    query = Vehicle.query
+
+    if q:
+        query = query.filter(
+            db.or_(
+                Vehicle.plate.ilike(f"%{q}%"),
+                Vehicle.brand.ilike(f"%{q}%"),
+                Vehicle.model.ilike(f"%{q}%"),
+            )
+        )
+
+    veiculos = query.order_by(Vehicle.plate.asc()).all()
+
+    # busca tipo extra via SQLite (porque foi adicionado depois)
+    db_path = str(app.config["SQLALCHEMY_DATABASE_URI"]).replace("sqlite:///", "")
+    con = sqlite3.connect(db_path)
+    cur = con.cursor()
+
+    try:
+        tipos = dict(cur.execute("SELECT id, type FROM vehicle").fetchall())
+    except:
+        tipos = {}
+
+    con.close()
+
+    for v in veiculos:
+        v.type = tipos.get(v.id, "carro")
+
+    return render_template("vehicles.html", veiculos=veiculos, q=q)
+
+
+@app.route("/veiculos/novo", methods=["POST"])
+@login_required
+def vehicle_new():
+    if not current_user.is_admin:
+        abort(403)
+
+    ensure_vehicle_type_column()
+
+    plate = (request.form.get("plate") or "").upper().strip()
+    brand = (request.form.get("brand") or "").strip()
+    model = (request.form.get("model") or "").strip()
+    year_raw = request.form.get("year")
+    km_raw = request.form.get("km")
+    type_ = (request.form.get("type") or "carro").strip().lower()
+    status = request.form.get("status", "ATIVO")
+
+    if not plate:
+        flash("Placa é obrigatória.", "error")
+        return redirect(url_for("vehicles"))
+
+    if Vehicle.query.filter_by(plate=plate).first():
+        flash("Já existe um veículo com essa placa.", "error")
+        return redirect(url_for("vehicles"))
+
+    year = int(year_raw) if year_raw and year_raw.isdigit() else None
+    km = int(km_raw) if km_raw and km_raw.isdigit() else 0
+
+    v = Vehicle(
+        plate=plate,
+        brand=brand,
+        model=model,
+        year=year,
+        km=km,
+        status=status,
+    )
+
+    db.session.add(v)
+    db.session.commit()
+
+    # gravar type na tabela SQLite
+    db_path = str(app.config["SQLALCHEMY_DATABASE_URI"]).replace("sqlite:///", "")
+    con = sqlite3.connect(db_path)
+    cur = con.cursor()
+    cur.execute("UPDATE vehicle SET type = ? WHERE id = ?", (type_, v.id))
+    con.commit()
+    con.close()
+
+    registrar_log(f"Veículo criado: {plate} ({brand} {model}, tipo={type_})")
+    flash(f"Veículo {plate} cadastrado!", "success")
+    return redirect(url_for("vehicles"))
+
+
+@app.route("/veiculos/<int:vid>/status", methods=["POST"])
+@login_required
+def vehicle_status(vid):
+    if not current_user.is_admin:
+        abort(403)
+
+    v = Vehicle.query.get_or_404(vid)
+    old = v.status
+    v.status = request.form.get("status", v.status)
+    db.session.commit()
+
+    registrar_log(f"Status veículo {v.plate}: {old} -> {v.status}")
+    flash("Status atualizado!", "success")
+    return redirect(url_for("vehicles"))
+
+
+@app.route("/veiculos/<int:vid>/editar", methods=["POST"])
+@login_required
+def vehicle_edit(vid):
+    if not current_user.is_admin:
+        abort(403)
+
+    ensure_vehicle_type_column()
+
+    v = Vehicle.query.get_or_404(vid)
+
+    v.brand = (request.form.get("brand") or "").strip()
+    v.model = (request.form.get("model") or "").strip()
+
+    year_raw = request.form.get("year")
+    km_raw = request.form.get("km")
+    type_raw = (request.form.get("type") or "carro").strip().lower()
+
+    v.year = int(year_raw) if year_raw and year_raw.isdigit() else None
+    v.km = int(km_raw) if km_raw and km_raw.isdigit() else v.km
+
+    db.session.commit()
+
+    # atualizar type via SQLite
+    db_path = str(app.config["SQLALCHEMY_DATABASE_URI"]).replace("sqlite:///", "")
+    con = sqlite3.connect(db_path)
+    cur = con.cursor()
+    cur.execute("UPDATE vehicle SET type = ? WHERE id = ?", (type_raw, v.id))
+    con.commit()
+    con.close()
+
+    registrar_log(f"Veículo editado: {v.plate} (tipo={type_raw})")
+    flash("Veículo atualizado!", "success")
+    return redirect(url_for("vehicles"))
+
+
+@app.route("/veiculos/<int:vid>/excluir", methods=["POST"])
+@login_required
+def vehicle_delete(vid):
+    if not current_user.is_admin:
+        abort(403)
+
+    v = Vehicle.query.get_or_404(vid)
+    plate = v.plate
+
+    db.session.delete(v)
+    db.session.commit()
+
+    registrar_log(f"Veículo excluído: {plate}")
+    flash("Veículo excluído com sucesso!", "success")
+    return redirect(url_for("vehicles"))
+
+
+# ----------------- IMPORTAÇÃO DE CHECKLISTS -----------------
+@app.route("/checklists/importar", methods=["POST"])
+@admin_required
+def checklists_import():
+    INBOX_DIR.mkdir(exist_ok=True)
+
+    files = [p for p in INBOX_DIR.iterdir() if p.suffix.lower() == ".json"]
+    count = 0
+
+    for p in files:
+        try:
+            data = p.read_text(encoding="utf-8")
+            j = json.loads(data)
+
+            plate = (j.get("placa") or j.get("plate") or "").upper()
+            v = Vehicle.query.filter_by(plate=plate).first()
+
+            if not v:
+                v = Vehicle(
+                    plate=plate,
+                    brand=j.get("marca", ""),
+                    model=j.get("modelo", ""),
+                    km=int(j.get("km", 0)),
+                )
+                db.session.add(v)
+                db.session.commit()
+
+            item = Checklist(
+                vehicle_id=v.id,
+                technician=j.get("tecnico") or j.get("technician"),
+                date=datetime.fromisoformat(j.get("data")) if j.get("data") else datetime.utcnow(),
+                km=int(j.get("km", v.km or 0)),
+                status=j.get("status", "OK"),
+                notes=j.get("observacoes") or j.get("notes"),
+                raw_json=data
+            )
+            db.session.add(item)
+
+            if item.km and (not v.km or item.km > v.km):
+                v.km = item.km
+
+            db.session.commit()
+
+            try:
+                generate_checklist_pdf(item, json.loads(item.raw_json))
+            except Exception as e:
+                print("Erro gerando PDF importado:", e)
+
+            p.rename(p.with_suffix(".imported.json"))
+            count += 1
+
+        except Exception as e:
+            print("Erro importando", p, e)
+
+    registrar_log(f"Importação: {count} arquivo(s) JSON")
+    flash(f"Importação concluída: {count} checklist(s).", "success")
+    return redirect(url_for("checklists"))
+
+
+# ----------------- RELATÓRIOS -----------------
+@app.route("/relatorios")
+@supervisor_allowed
+def reports():
+    return render_template("reports.html", items=list_reports())
+
+
+@app.route("/relatorios/download/<path:nome>")
+@supervisor_allowed
+def report_download(nome):
+    return send_from_directory(RELATORIOS_DIR, nome, as_attachment=True)
+
+
+@app.route("/relatorios/excluir/<path:nome>", methods=["POST"])
+@login_required
+def report_delete(nome):
+    if not current_user.is_admin:
+        abort(403)
+
+    p = RELATORIOS_DIR / nome
+    if p.exists():
+        p.unlink()
+        registrar_log(f"Relatório excluído: {nome}")
+        flash("Relatório excluído!", "success")
+    else:
+        flash("Arquivo não encontrado.", "error")
+
+    return redirect(url_for("reports"))
+
+
+@app.route("/relatorios/upload", methods=["POST"])
+@login_required
+def report_upload():
+    if not current_user.is_admin:
+        abort(403)
+
+    f = request.files.get("arquivo")
+    if not f or f.filename == "":
+        flash("Selecione um arquivo.", "error")
+        return redirect(url_for("reports"))
+
+    name = secure_filename(f.filename)
+
+    RELATORIOS_DIR.mkdir(exist_ok=True)
+    f.save(RELATORIOS_DIR / name)
+
+    registrar_log(f"Relatório enviado: {name}")
+    flash("Relatório enviado!", "success")
+    return redirect(url_for("reports"))
+# ----------------- LISTAGEM / DETALHE DE CHECKLISTS -----------------
+@app.route("/checklists")
+@supervisor_allowed
+def checklists():
+    q = request.args.get("q", "").strip().lower()
+
+    query = Checklist.query.join(Vehicle, Checklist.vehicle_id == Vehicle.id)
+
+    if q:
+        query = query.filter(
+            db.or_(
+                Vehicle.plate.ilike(f"%{q}%"),
+                Checklist.technician.ilike(f"%{q}%"),
+                Checklist.status.ilike(f"%{q}%"),
+            )
+        )
+
+    itens = query.order_by(Checklist.date.desc()).all()
+    return render_template("checklists.html", itens=itens, q=q)
+
+
+@app.route("/checklists/<int:cid>")
+@supervisor_allowed
+def checklist_detail(cid):
+    c = Checklist.query.get_or_404(cid)
+    try:
+        data = json.loads(c.raw_json) if c.raw_json else {}
+    except Exception:
+        data = {}
+
+    photos = data.get("photos", [])
+    items = data.get("items", {})
+    return render_template("checklist_detail.html", c=c, items=items, photos=photos)
+
+
+# ----------------- CONFIGURAÇÃO DO CHECKLIST (ITENS + MODO) -----------------
+@app.route("/config-checklist")
+@admin_required
+def config_checklist():
+    items = ChecklistItem.query.order_by(ChecklistItem.order.asc()).all()
+    config = SystemConfig.query.first()
+    if not config:
+        config = SystemConfig(mode="start_only")
+        db.session.add(config)
+        db.session.commit()
+    return render_template("config_checklist.html", items=items, config=config)
+
+
+@app.route("/config-checklist/mode", methods=["POST"])
+@admin_required
+def config_checklist_mode():
+    mode = request.form.get("mode", "start_only")
+
+    allowed = {"disabled", "start_only", "start_end"}
+    if mode not in allowed:
+        mode = "start_only"
+
+    config = SystemConfig.query.first()
+    if not config:
+        config = SystemConfig(mode=mode)
+        db.session.add(config)
+    else:
+        config.mode = mode
+
+    db.session.commit()
+    registrar_log(f"Modo do checklist atualizado para: {mode}")
+    flash("Modo do checklist atualizado.", "success")
+    return redirect(url_for("config_checklist"))
+
+
+@app.route("/config-checklist/novo", methods=["POST"])
+@admin_required
+def config_checklist_new():
+    text = request.form.get("text", "").strip()
+    required = request.form.get("required") == "on"
+    require_justif_no = request.form.get("require_justif_no") == "on"
+    typ = request.form.get("type", "texto_curto")
+    opts_raw = (request.form.get("options") or "").strip()
+
+    if not text:
+        flash("Texto é obrigatório.", "error")
+        return redirect(url_for("config_checklist"))
+
+    # aqui as opções já vêm separadas por vírgula do JS (prepareOptions)
+    opts = opts_raw or None
+
+    last = db.session.query(db.func.max(ChecklistItem.order)).scalar() or 0
+    db.session.add(
+        ChecklistItem(
+            order=last + 1,
+            text=text,
+            required=required,
+            require_justif_no=require_justif_no,
+            type=typ,
+            options=opts,
+        )
+    )
+    db.session.commit()
+
+    registrar_log(f"Item de checklist adicionado: {text}")
+    flash("Item adicionado.", "success")
+    return redirect(url_for("config_checklist"))
+
+
+@app.route("/config-checklist/<int:iid>/editar", methods=["POST"])
+@admin_required
+def config_checklist_edit(iid):
+    it = ChecklistItem.query.get_or_404(iid)
+
+    it.text = request.form.get("text", "").strip()
+    it.required = request.form.get("required") == "on"
+    it.require_justif_no = request.form.get("require_justif_no") == "on"
+    it.type = request.form.get("type", "texto_curto")
+
+    opts_raw = (request.form.get("options") or "").strip()
+    it.options = opts_raw or None
+
+    db.session.commit()
+
+    registrar_log(f"Item de checklist editado: {it.text} (id={iid})")
+    flash("Item atualizado.", "success")
+    return redirect(url_for("config_checklist"))
+
+
+@app.route("/config-checklist/<int:iid>/excluir", methods=["POST"])
+@admin_required
+def config_checklist_del(iid):
+    it = ChecklistItem.query.get_or_404(iid)
+    texto = it.text
+
+    db.session.delete(it)
+    db.session.commit()
+
+    # reajustar ordem
+    items = ChecklistItem.query.order_by(ChecklistItem.order.asc()).all()
+    for idx, x in enumerate(items, start=1):
+        x.order = idx
+    db.session.commit()
+
+    registrar_log(f"Item de checklist excluído: {texto} (id={iid})")
+    flash("Item excluído.", "success")
+    return redirect(url_for("config_checklist"))
+
+
+@app.route("/config-checklist/<int:iid>/mover", methods=["POST"])
+@admin_required
+def config_checklist_move(iid):
+    direction = request.form.get("dir", "up")
+    it = ChecklistItem.query.get_or_404(iid)
+
+    items = ChecklistItem.query.order_by(ChecklistItem.order.asc()).all()
+    pos = items.index(it)
+
+    if direction == "up" and pos > 0:
+        items[pos].order, items[pos - 1].order = items[pos - 1].order, items[pos].order
+    elif direction == "down" and pos < len(items) - 1:
+        items[pos].order, items[pos + 1].order = items[pos + 1].order, items[pos].order
+
+    db.session.commit()
+
+    registrar_log(f"Item de checklist movido: {it.text} (id={iid}, dir={direction})")
+    flash("Ordem atualizada.", "success")
+    return redirect(url_for("config_checklist"))
+
+
+# ----------------- GERADOR DE PDF -----------------
+def generate_checklist_pdf(checklist_obj: Checklist, raw: dict) -> str:
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.units import mm
     from reportlab.lib import colors
@@ -493,7 +1116,7 @@ def generate_checklist_pdf(checklist_obj: 'Checklist', raw: dict) -> str:
 
     elements = []
 
-    # Informações principais
+    # Cabeçalho / meta
     elements.append(Paragraph("<b>Informações do Checklist</b>", styles["SectionTitle"]))
     meta_data = [
         ["Técnico", checklist_obj.technician or "-"],
@@ -525,6 +1148,7 @@ def generate_checklist_pdf(checklist_obj: 'Checklist', raw: dict) -> str:
         if isinstance(resp, list):
             resp = ", ".join(map(str, resp))
         just = val.get("justificativa", "") or "-"
+
         data_tbl.append([
             Paragraph(nome, styles["BodyJustify"]),
             Paragraph(str(resp), styles["BodyJustify"]),
@@ -578,564 +1202,27 @@ def generate_checklist_pdf(checklist_obj: 'Checklist', raw: dict) -> str:
     return str(out_path)
 
 
-# ----------------- LOGIN UNIFICADO -----------------
-@app.route("/login", methods=["GET", "POST"])
-def login():
-    if request.method == "POST":
-        username = request.form.get("username", "").strip()
-        password = request.form.get("password", "").strip()
-        u = User.query.filter_by(username=username).first()
-        if u and u.check_password(password):
-            login_user(u)
-            registrar_log(f"Login efetuado: {u.username}")
-
-            if u.is_admin or u.is_supervisor:
-                return redirect(url_for("dashboard"))
-            else:
-                return redirect(url_for("checklist_mobile"))
-
-        flash("Usuário ou senha inválidos.", "error")
-    return render_template("login.html")
-
-
-@app.route("/logout")
-@login_required
-def logout():
-    registrar_log(f"Logout efetuado: {current_user.username}")
-    logout_user()
-    return redirect(url_for("login"))
-
-
-@app.route("/")
-def index():
-    if current_user.is_authenticated:
-        if current_user.is_admin or current_user.is_supervisor:
-            return redirect(url_for("dashboard"))
-        return redirect(url_for("checklist_mobile"))
-    return redirect(url_for("login"))
-
-
-# ----------------- DASHBOARD (admin+supervisor) -----------------
-@app.route("/dashboard")
-@supervisor_allowed
-def dashboard():
-    total_veiculos = Vehicle.query.count()
-    total_checklists = Checklist.query.count()
-    total_relatorios = count_files(RELATORIOS_DIR)
-
-    lr = list_reports()
-    ultimo_relatorio = lr[0]["name"] if lr else "—"
-
-    recentes = Checklist.query.order_by(Checklist.date.desc()).limit(5).all()
-    veiculos = Vehicle.query.all()
-    alerts = []
-    for v in veiculos:
-        alert, next_rev, remaining = km_alert(v.km or 0)
-        if alert:
-            alerts.append({
-                "plate": v.plate,
-                "km": v.km or 0,
-                "next_rev": next_rev,
-                "remaining": remaining
-            })
-
-    labels, values = weekly_km_series(WEEKS_WINDOW)
-
-    return render_template(
-        "dashboard.html",
-        total_veiculos=total_veiculos,
-        total_checklists=total_checklists,
-        total_relatorios=total_relatorios,
-        ultimo_relatorio=ultimo_relatorio,
-        recentes=recentes,
-        alerts=alerts,
-        rev_interval=REV_INTERVAL,
-        rev_margin=REV_ALERT_MARGIN,
-        wk_labels=labels,
-        wk_values=values
-    )
-
-
-# ----------------- USUÁRIOS (apenas admin) -----------------
-@app.route("/usuarios")
-@admin_required
-def users():
-    items = User.query.order_by(User.username.asc()).all()
-    return render_template("users.html", items=items)
-
-
-@app.route("/usuarios/novo", methods=["POST"])
-@admin_required
-def users_new():
-    username = request.form.get("username", "").strip()
-    password = request.form.get("password", "").strip()
-    role = request.form.get("role", "tech").strip().lower()
-
-    if not username or not password:
-        flash("Usuário e senha obrigatórios.", "error")
-        return redirect(url_for("users"))
-
-    if role not in {"admin", "supervisor", "tech"}:
-        flash("Papel inválido.", "error")
-        return redirect(url_for("users"))
-
-    if User.query.filter_by(username=username).first():
-        flash("Nome de usuário já existe.", "error")
-        return redirect(url_for("users"))
-
-    u = User(username=username, role=role)
-    u.set_password(password)
-    db.session.add(u)
-    db.session.commit()
-    registrar_log(f"Usuário criado: {username} (papel={role})")
-    flash("Usuário criado.", "success")
-    return redirect(url_for("users"))
-
-
-@app.route("/usuarios/<int:uid>/senha", methods=["POST"])
-@admin_required
-def users_pwd(uid):
-    u = User.query.get_or_404(uid)
-    pwd = request.form.get("password", "").strip()
-    if not pwd:
-        flash("Senha inválida.", "error")
-        return redirect(url_for("users"))
-    u.set_password(pwd)
-    db.session.commit()
-    registrar_log(f"Senha alterada para usuário: {u.username}")
-    flash("Senha atualizada.", "success")
-    return redirect(url_for("users"))
-
-
-@app.route("/usuarios/<int:uid>/papel", methods=["POST"])
-@admin_required
-def users_role(uid):
-    u = User.query.get_or_404(uid)
-    role = request.form.get("role", "tech").strip().lower()
-    if role not in {"admin", "supervisor", "tech"}:
-        flash("Papel inválido.", "error")
-        return redirect(url_for("users"))
-    u.role = role
-    db.session.commit()
-    registrar_log(f"Papel alterado: {u.username} -> {role}")
-    flash("Papel atualizado.", "success")
-    return redirect(url_for("users"))
-
-
-@app.route("/usuarios/<int:uid>/excluir", methods=["POST"])
-@admin_required
-def users_del(uid):
-    if current_user.id == uid:
-        flash("Você não pode se excluir.", "error")
-        return redirect(url_for("users"))
-    u = User.query.get_or_404(uid)
-    nome = u.username
-    db.session.delete(u)
-    db.session.commit()
-    registrar_log(f"Usuário excluído: {nome}")
-    flash("Usuário excluído.", "success")
-    return redirect(url_for("users"))
-
-
-
-
-# ----------------- VEÍCULOS (admin+supervisor; supervisor readonly) -----------------
-def ensure_vehicle_type_column():
-    db_path = str(app.config.get("SQLALCHEMY_DATABASE_URI", "")).replace("sqlite:///", "")
-    if not db_path or not os.path.exists(db_path):
-        return
-    try:
-        con = sqlite3.connect(db_path)
-        cur = con.cursor()
-        cur.execute("PRAGMA table_info(vehicle);")
-        cols = [r[1] for r in cur.fetchall()]
-        if "type" not in cols:
-            print("🆕 Adicionando coluna 'type' à tabela vehicle...")
-            cur.execute("ALTER TABLE vehicle ADD COLUMN type TEXT DEFAULT 'carro';")
-            con.commit()
-        con.close()
-    except Exception as e:
-        print(f"⚠️ Erro ao garantir coluna 'type': {e}")
-
-
-@app.route("/veiculos")
-@supervisor_allowed
-def vehicles():
-    ensure_vehicle_type_column()
-    q = request.args.get("q", "").strip().lower()
-    query = Vehicle.query
-    if q:
-        query = query.filter(
-            db.or_(
-                Vehicle.plate.ilike(f"%{q}%"),
-                Vehicle.brand.ilike(f"%{q}%"),
-                Vehicle.model.ilike(f"%{q}%")
-            )
-        )
-    veiculos = query.order_by(Vehicle.plate.asc()).all()
-
-    db_path = str(app.config.get("SQLALCHEMY_DATABASE_URI", "")).replace("sqlite:///", "")
-    con = sqlite3.connect(db_path)
-    cur = con.cursor()
-    try:
-        tipos = dict(cur.execute("SELECT id, type FROM vehicle").fetchall())
-    except Exception:
-        tipos = {}
-    finally:
-        con.close()
-
-    for v in veiculos:
-        v.type = tipos.get(v.id, "carro")
-
-    return render_template("vehicles.html", veiculos=veiculos, q=q)
-
-
-@app.route("/veiculos/novo", methods=["POST"])
-@login_required
-def vehicle_new():
-    if not current_user.is_admin:
-        abort(403)
-
-    ensure_vehicle_type_column()
-
-    plate = (request.form.get("plate") or "").upper().strip()
-    brand = (request.form.get("brand") or "").strip()
-    model = (request.form.get("model") or "").strip()
-    year_raw = request.form.get("year")
-    km_raw = request.form.get("km")
-    type_ = (request.form.get("type") or "carro").strip().lower()
-    status = request.form.get("status", "ATIVO")
-
-    if not plate:
-        flash("Placa é obrigatória.", "error")
-        return redirect(url_for("vehicles"))
-
-    if Vehicle.query.filter_by(plate=plate).first():
-        flash("Já existe um veículo com essa placa.", "error")
-        return redirect(url_for("vehicles"))
-
-    year = int(year_raw) if year_raw and year_raw.isdigit() else None
-    km = int(km_raw) if km_raw and km_raw.isdigit() else 0
-
-    v = Vehicle(
-        plate=plate,
-        brand=brand,
-        model=model,
-        year=year,
-        km=km,
-        status=status,
-    )
-
-    db.session.add(v)
-    db.session.commit()
-
-    db_path = str(app.config.get("SQLALCHEMY_DATABASE_URI", "")).replace("sqlite:///", "")
-    con = sqlite3.connect(db_path)
-    cur = con.cursor()
-    cur.execute("UPDATE vehicle SET type = ? WHERE id = ?", (type_, v.id))
-    con.commit()
-    con.close()
-
-    registrar_log(f"Veículo criado: {plate} ({brand} {model}, tipo={type_})")
-    flash(f"Veículo {plate} cadastrado com sucesso!", "success")
-    return redirect(url_for("vehicles"))
-
-
-@app.route("/veiculos/<int:vid>/status", methods=["POST"])
-@login_required
-def vehicle_status(vid):
-    if not current_user.is_admin:
-        abort(403)
-
-    v = Vehicle.query.get_or_404(vid)
-    old = v.status
-    v.status = request.form.get("status", v.status)
-    db.session.commit()
-    registrar_log(f"Status do veículo {v.plate} alterado: {old} -> {v.status}")
-    flash(f"Status do veículo {v.plate} atualizado para {v.status}.", "success")
-    return redirect(url_for("vehicles"))
-
-
-@app.route("/veiculos/<int:vid>/editar", methods=["POST"])
-@login_required
-def vehicle_edit(vid):
-    if not current_user.is_admin:
-        abort(403)
-
-    ensure_vehicle_type_column()
-
-    v = Vehicle.query.get_or_404(vid)
-    v.brand = (request.form.get("brand") or "").strip()
-    v.model = (request.form.get("model") or "").strip()
-    year_raw = request.form.get("year")
-    km_raw = request.form.get("km")
-    type_raw = (request.form.get("type") or "carro").strip().lower()
-
-    v.year = int(year_raw) if year_raw and year_raw.isdigit() else None
-    v.km = int(km_raw) if km_raw and km_raw.isdigit() else (v.km or 0)
-    db.session.commit()
-
-    db_path = str(app.config.get("SQLALCHEMY_DATABASE_URI", "")).replace("sqlite:///", "")
-    con = sqlite3.connect(db_path)
-    cur = con.cursor()
-    cur.execute("UPDATE vehicle SET type = ? WHERE id = ?", (type_raw, v.id))
-    con.commit()
-    con.close()
-
-    registrar_log(f"Veículo editado: {v.plate} (tipo={type_raw})")
-    flash(f"Veículo {v.plate} atualizado com sucesso!", "success")
-    return redirect(url_for("vehicles"))
-
-
-@app.route("/veiculos/<int:vid>/excluir", methods=["POST"])
-@login_required
-def vehicle_delete(vid):
-    if not current_user.is_admin:
-        abort(403)
-
-    v = Vehicle.query.get_or_404(vid)
-    plate = v.plate
-    db.session.delete(v)
-    db.session.commit()
-    registrar_log(f"Veículo excluído: {plate}")
-    flash(f"Veículo {plate} excluído com sucesso!", "success")
-    return redirect(url_for("vehicles"))
-
-
-# ----------------- CHECKLISTS (admin e supervisor: leitura; admin: ações) -----------------
-@app.route("/checklists")
-@supervisor_allowed
-def checklists():
-    q = request.args.get("q", "").strip().lower()
-    query = Checklist.query.join(Vehicle, Checklist.vehicle_id == Vehicle.id)
-    if q:
-        query = query.filter(
-            db.or_(
-                Vehicle.plate.ilike(f"%{q}%"),
-                Checklist.technician.ilike(f"%{q}%"),
-                Checklist.status.ilike(f"%{q}%")
-            )
-        )
-    itens = query.order_by(Checklist.date.desc()).all()
-    return render_template("checklists.html", itens=itens, q=q)
-
-
-@app.route("/checklists/<int:cid>")
-@supervisor_allowed
-def checklist_detail(cid):
-    c = Checklist.query.get_or_404(cid)
-    try:
-        data = json.loads(c.raw_json) if c.raw_json else {}
-    except Exception:
-        data = {}
-    photos = data.get("photos", [])
-    items = data.get("items", {})
-    return render_template("checklist_detail.html", c=c, items=items, photos=photos)
-
-
-@app.route("/checklists/importar", methods=["POST"])
-@admin_required
-def checklists_import():
-    INBOX_DIR.mkdir(exist_ok=True)
-    files = [p for p in INBOX_DIR.iterdir() if p.suffix.lower() == ".json"]
-    count = 0
-    for p in files:
-        try:
-            data = p.read_text(encoding="utf-8")
-            j = json.loads(data)
-            plate = (j.get("placa") or j.get("plate") or "").upper()
-            v = Vehicle.query.filter_by(plate=plate).first()
-            if not v:
-                v = Vehicle(
-                    plate=plate,
-                    brand=j.get("marca", ""),
-                    model=j.get("modelo", ""),
-                    km=int(j.get("km", 0))
-                )
-                db.session.add(v)
-                db.session.commit()
-
-            item = Checklist(
-                vehicle_id=v.id,
-                technician=j.get("tecnico") or j.get("technician"),
-                date=datetime.fromisoformat(j.get("data")) if j.get("data") else datetime.utcnow(),
-                km=int(j.get("km", v.km or 0)),
-                status=j.get("status", "OK"),
-                notes=j.get("observacoes") or j.get("notes"),
-                raw_json=data
-            )
-            db.session.add(item)
-            if item.km and (not v.km or item.km > v.km):
-                v.km = item.km
-            db.session.commit()
-            try:
-                generate_checklist_pdf(item, json.loads(item.raw_json))
-            except Exception as e:
-                print("Erro gerando PDF importado:", e)
-            p.rename(p.with_suffix(".imported.json"))
-            count += 1
-        except Exception as e:
-            print("Erro importando", p, e)
-    registrar_log(f"Importação de checklists: {count} arquivo(s) JSON")
-    flash(f"Importação concluída: {count} checklist(s).", "success")
-    return redirect(url_for("checklists"))
-
-
-# ----------------- RELATÓRIOS (admin+supervisor; exclusão só admin) -----------------
-@app.route("/relatorios")
-@supervisor_allowed
-def reports():
-    return render_template("reports.html", items=list_reports())
-
-
-@app.route("/relatorios/download/<path:nome>")
-@supervisor_allowed
-def report_download(nome):
-    return send_from_directory(RELATORIOS_DIR, nome, as_attachment=True)
-
-
-@app.route("/relatorios/excluir/<path:nome>", methods=["POST"])
-@login_required
-def report_delete(nome):
-    if not current_user.is_admin:
-        abort(403)
-    p = RELATORIOS_DIR / nome
-    if p.exists():
-        p.unlink()
-        registrar_log(f"Relatório excluído: {nome}")
-        flash("Relatório excluído.", "success")
-    else:
-        flash("Arquivo não encontrado.", "error")
-    return redirect(url_for("reports"))
-
-
-@app.route("/relatorios/upload", methods=["POST"])
-@login_required
-def report_upload():
-    if not current_user.is_admin:
-        abort(403)
-    f = request.files.get("arquivo")
-    if not f or f.filename == "":
-        flash("Selecione um arquivo.", "error")
-        return redirect(url_for("reports"))
-    name = secure_filename(f.filename)
-    RELATORIOS_DIR.mkdir(exist_ok=True)
-    f.save(RELATORIOS_DIR / name)
-    registrar_log(f"Relatório enviado: {name}")
-    flash("Relatório enviado.", "success")
-    return redirect(url_for("reports"))
-
-
-# ----------------- CONFIGURAÇÃO DO CHECKLIST (apenas admin) -----------------
-@app.route("/config-checklist")
-@admin_required
-def config_checklist():
-    items = ChecklistItem.query.order_by(ChecklistItem.order.asc()).all()
-    return render_template("config_checklist.html", items=items)
-
-
-@app.route("/config-checklist/novo", methods=["POST"])
-@admin_required
-def config_checklist_new():
-    text = request.form.get("text", "").strip()
-    required = request.form.get("required") == "on"
-    require_justif_no = request.form.get("require_justif_no") == "on"
-    typ = request.form.get("type", "texto_curto")
-    opts_raw = request.form.get("options", "").strip()
-
-    if opts_raw:
-        opts_list = [o.strip() for o in opts_raw.splitlines() if o.strip()]
-        opts = ",".join(opts_list) if opts_list else None
-    else:
-        opts = None
-
-    if not text:
-        flash("Texto é obrigatório.", "error")
-        return redirect(url_for("config_checklist"))
-
-    last = db.session.query(db.func.max(ChecklistItem.order)).scalar() or 0
-    db.session.add(
-        ChecklistItem(
-            order=last + 1,
-            text=text,
-            required=required,
-            require_justif_no=require_justif_no,
-            type=typ,
-            options=opts,
-        )
-    )
-    db.session.commit()
-    registrar_log(f"Item de checklist adicionado: {text}")
-    flash("Item adicionado.", "success")
-    return redirect(url_for("config_checklist"))
-
-
-@app.route("/config-checklist/<int:iid>/editar", methods=["POST"])
-@admin_required
-def config_checklist_edit(iid):
-    it = ChecklistItem.query.get_or_404(iid)
-    it.text = request.form.get("text", "").strip()
-    it.required = request.form.get("required") == "on"
-    it.require_justif_no = request.form.get("require_justif_no") == "on"
-    it.type = request.form.get("type", "texto_curto")
-
-    opts_raw = request.form.get("options", "").strip()
-    if opts_raw:
-        opts_list = [o.strip() for o in opts_raw.splitlines() if o.strip()]
-        it.options = ",".join(opts_list) if opts_list else None
-    else:
-        it.options = None
-
-    db.session.commit()
-    registrar_log(f"Item de checklist editado: {it.text} (id={iid})")
-    flash("Item atualizado.", "success")
-    return redirect(url_for("config_checklist"))
-
-
-@app.route("/config-checklist/<int:iid>/excluir", methods=["POST"])
-@admin_required
-def config_checklist_del(iid):
-    it = ChecklistItem.query.get_or_404(iid)
-    texto = it.text
-    db.session.delete(it)
-    db.session.commit()
-
-    items = ChecklistItem.query.order_by(ChecklistItem.order.asc()).all()
-    for idx, x in enumerate(items, start=1):
-        x.order = idx
-    db.session.commit()
-
-    registrar_log(f"Item de checklist excluído: {texto} (id={iid})")
-    flash("Item excluído.", "success")
-    return redirect(url_for("config_checklist"))
-
-
-@app.route("/config-checklist/<int:iid>/mover", methods=["POST"])
-@admin_required
-def config_checklist_move(iid):
-    direction = request.form.get("dir", "up")
-    it = ChecklistItem.query.get_or_404(iid)
-    items = ChecklistItem.query.order_by(ChecklistItem.order.asc()).all()
-    pos = items.index(it)
-
-    if direction == "up" and pos > 0:
-        items[pos].order, items[pos - 1].order = items[pos - 1].order, items[pos].order
-    elif direction == "down" and pos < len(items) - 1:
-        items[pos].order, items[pos + 1].order = items[pos + 1].order, items[pos].order
-
-    db.session.commit()
-    registrar_log(f"Ordem de item de checklist movida: {it.text} (id={iid}, dir={direction})")
-    flash("Ordem atualizada.", "success")
-    return redirect(url_for("config_checklist"))
-
-
-# ----------------- CHECKLIST TÉCNICO (sem GPS) -----------------
+# ----------------- CHECKLIST TÉCNICO (MODO: DESATIVADO / INÍCIO / INÍCIO+CHEGADA) -----------------
 @app.route("/checklist", methods=["GET", "POST"])
 @login_required
 def checklist_mobile():
     vehicles = Vehicle.query.order_by(Vehicle.plate.asc()).all()
     items_qs = ChecklistItem.query.order_by(ChecklistItem.order.asc()).all()
     success = False
+
+    config = SystemConfig.query.first()
+    mode = config.mode if config else "start_only"
+
+    # se desativado, não permite nem GET nem POST
+    if mode == "disabled":
+        flash("Checklist desativado pelo supervisor.", "error")
+        return render_template(
+            "checklist_mobile.html",
+            vehicles=[],
+            items=[],
+            success=False,
+            disabled=True
+        )
 
     if request.method == "POST":
         vehicle_id = request.form.get("vehicle_id")
@@ -1145,16 +1232,50 @@ def checklist_mobile():
         if not vehicle_id:
             flash("Selecione um veículo.", "error")
             return redirect(url_for("checklist_mobile"))
+
         try:
             km = int(km)
         except ValueError:
             flash("KM inválido.", "error")
             return redirect(url_for("checklist_mobile"))
 
+        # regras por modo
+        today = datetime.utcnow().date()
+        q_today = Checklist.query.filter(
+            Checklist.technician == tech,
+            db.func.date(Checklist.date) == today
+        )
+
+        if mode == "start_only":
+            # apenas 1 checklist por dia
+            if q_today.count() >= 1:
+                flash("Você já realizou o checklist de início hoje.", "error")
+                return redirect(url_for("checklist_mobile"))
+
+        elif mode == "start_end":
+            count_today = q_today.count()
+            v_id_int = int(vehicle_id)
+
+            if count_today >= 2:
+                flash("Você já realizou checklist de início e chegada hoje.", "error")
+                return redirect(url_for("checklist_mobile"))
+
+            if count_today == 1:
+                first = q_today.order_by(Checklist.date.asc()).first()
+                if first.vehicle_id != v_id_int:
+                    flash("O checklist de chegada deve ser feito para o mesmo veículo do início.", "error")
+                    return redirect(url_for("checklist_mobile"))
+            # se 0 → será considerado 'início'; se 1 → 'chegada' (apenas por ordem)
+
+        # monta respostas
         respostas = {}
         for idx, item in enumerate(items_qs, start=1):
             key = f"item{idx}"
-            val = request.form.getlist(key) if item.type == "checkboxes" else request.form.get(key)
+            if item.type == "checkboxes":
+                val = request.form.getlist(key)
+            else:
+                val = request.form.get(key)
+
             just = request.form.get(f"{key}_just", "").strip()
 
             if item.required and ((item.type == "checkboxes" and not val) or (item.type != "checkboxes" and not val)):
@@ -1180,7 +1301,7 @@ def checklist_mobile():
             "tecnico": tech,
             "veiculo": vehicle_id,
             "km": km,
-            "data_envio": datetime.now().strftime("%d/%m/%Y %H:%M")
+            "data_envio": datetime.now().strftime("%d/%m/%Y %H:%M"),
         }
 
         checklist = Checklist(
@@ -1190,7 +1311,7 @@ def checklist_mobile():
             km=km,
             status="OK",
             notes="Checklist via web",
-            raw_json=json.dumps(raw, ensure_ascii=False)
+            raw_json=json.dumps(raw, ensure_ascii=False),
         )
         db.session.add(checklist)
 
@@ -1212,7 +1333,7 @@ def checklist_mobile():
     return render_template("checklist_mobile.html", vehicles=vehicles, items=items_qs, success=success)
 
 
-# ----------------- PERFIL TÉCNICO: alterar senha -----------------
+# ----------------- PERFIL DO TÉCNICO (ALTERAR SENHA) -----------------
 @app.route("/perfil", methods=["GET", "POST"])
 @login_required
 def perfil():
@@ -1221,19 +1342,20 @@ def perfil():
         return redirect(url_for("dashboard"))
 
     if request.method == "POST":
-        nova_senha = request.form.get("nova_senha", "").strip()
+        nova = request.form.get("nova_senha", "").strip()
         confirma = request.form.get("confirma", "").strip()
 
-        if not nova_senha or not confirma:
+        if not nova or not confirma:
             flash("Preencha ambos os campos de senha.", "error")
             return redirect(url_for("perfil"))
 
-        if nova_senha != confirma:
+        if nova != confirma:
             flash("As senhas não coincidem.", "error")
             return redirect(url_for("perfil"))
 
-        current_user.set_password(nova_senha)
+        current_user.set_password(nova)
         db.session.commit()
+
         registrar_log(f"Técnico alterou a própria senha: {current_user.username}")
         flash("Senha atualizada com sucesso!", "success")
         return redirect(url_for("checklist_mobile"))
@@ -1241,9 +1363,8 @@ def perfil():
     return render_template("perfil.html", user=current_user)
 
 
-# ----------------- LOGS DO SISTEMA (somente admin) -----------------
+# ----------------- LOGS DO SISTEMA (ADMIN) -----------------
 @app.route("/logs")
-@login_required
 @admin_required
 def logs():
     registros = Log.query.order_by(Log.data_hora.desc()).all()
