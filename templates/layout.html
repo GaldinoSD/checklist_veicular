@@ -7,7 +7,6 @@
     <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
     <link rel="shortcut icon" type="image/x-icon" href="{{ url_for('static', filename='favicon-v2.ico') }}">
 
-
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
@@ -48,7 +47,8 @@
             ('Dashboard', 'dashboard'),
             ('Veículos', 'vehicles'),
             ('Checklists', 'checklists'),
-            ('Relatórios', 'reports')
+            ('Relatórios', 'reports'),
+            ('Avarias / O.S.', 'avarias_registro')
           ] %}
 
           {% for label, route in menu_items %}

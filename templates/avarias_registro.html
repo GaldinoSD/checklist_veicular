@@ -1,0 +1,285 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<div class="max-w-7xl mx-auto">
+
+  <!-- HEADER -->
+  <div class="flex items-center justify-between mb-8">
+    <h1 class="text-4xl font-bold text-white tracking-wide flex items-center gap-3">
+      <i class="fa-solid fa-car-burst text-red-500"></i>
+      Avarias e Ordens de Serviço
+    </h1>
+
+    <button onclick="document.getElementById('modalNovaAvaria').showModal()"
+            class="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-lg transition">
+      <i class="fa-solid fa-plus mr-1"></i> Nova Avaria
+    </button>
+  </div>
+
+  <!-- ============================
+       LISTA DE ORDENS DE SERVIÇO
+  ============================ -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+
+    {% for os in ordens %}
+    <div class="backdrop-blur-md bg-white/10 p-5 rounded-2xl 
+                border border-white/20 shadow-xl hover:scale-[1.03] transition">
+
+      <div class="flex justify-between items-center mb-3">
+        <h2 class="text-xl font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-file-contract text-blue-400"></i>
+          #{{ os.id }}
+        </h2>
+
+        {% if os.status == 'aberta' %}
+          <span class="px-2 py-1 bg-yellow-500/20 border border-yellow-600/40 rounded-lg 
+                       text-yellow-200 text-[11px] font-semibold">
+            ● Aberta
+          </span>
+        {% else %}
+          <span class="px-2 py-1 bg-green-500/20 border border-green-600/40 rounded-lg 
+                       text-green-200 text-[11px] font-semibold">
+            ✔ Finalizada
+          </span>
+        {% endif %}
+      </div>
+
+      <p class="text-gray-200 text-sm"><b>Veículo:</b> {{ os.vehicle.brand }} {{ os.vehicle.model }} - {{ os.vehicle.plate }}</p>
+      <p class="text-gray-200 text-sm"><b>Responsável:</b> {{ os.responsavel.username }}</p>
+
+      <p class="text-gray-400 text-xs mt-3 border-t border-white/10 pt-2">
+        {{ os.descricao }}
+      </p>
+
+      {% if os.status == 'aberta' %}
+      <button class="w-full mt-3 px-3 py-2 rounded-lg bg-green-600 hover:bg-green-700 
+                     text-white font-semibold text-sm shadow-md"
+              onclick="openFinalizar({{ os.id }})">
+        Finalizar
+      </button>
+      {% else %}
+      <button class="w-full mt-3 px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 
+                     text-white font-semibold text-sm shadow-md"
+              onclick="openDetalhes({{ os.id }})">
+        Ver detalhes
+      </button>
+      {% endif %}
+    </div>
+
+    <!-- JSON INVISÍVEL COM DADOS DA O.S (CORRIGIDO) -->
+    <script type="application/json" id="os_data_{{ os.id }}">
+      {
+        "veiculo": "{{ os.vehicle.brand }} {{ os.vehicle.model }} - {{ os.vehicle.plate }}",
+        "responsavel": "{{ os.responsavel.username }}",
+        "descricao": "{{ os.descricao }}",
+        "gravidade": "{{ os.gravidade }}",
+        "km": "{{ os.km }}",
+        "valor_gasto": "{{ os.valor_gasto if os.valor_gasto else '' }}",
+        "pecas_trocadas": "{{ os.pecas_trocadas|safe if os.pecas_trocadas else '' }}",
+        "servico_realizado": "{{ os.servico_realizado|safe if os.servico_realizado else '' }}",
+        "data_abertura": "{{ os.data_abertura.strftime('%d/%m/%Y %H:%M') if os.data_abertura else '' }}",
+        "data_fechamento": "{{ os.data_fechamento.strftime('%d/%m/%Y %H:%M') if os.data_fechamento else '' }}"
+      }
+    </script>
+
+    {% endfor %}
+
+    {% if ordens|length == 0 %}
+    <p class="text-gray-400 text-center col-span-full text-lg">Nenhuma O.S registrada até o momento.</p>
+    {% endif %}
+
+  </div>
+</div>
+
+<!-- =====================================
+      MODAL: NOVA AVARIA (MENOR)
+===================================== -->
+<dialog id="modalNovaAvaria"
+        class="rounded-2xl bg-gray-900 border border-gray-700 p-5 shadow-2xl w-[380px]">
+
+  <h2 class="text-xl font-bold text-white mb-3">Registrar Nova Avaria</h2>
+
+  <form action="{{ url_for('avarias_registro') }}" method="POST" class="space-y-4">
+    <input type="hidden" name="acao" value="nova">
+
+    <div>
+      <label class="text-sm text-gray-300 font-medium">Veículo</label>
+      <select name="veiculo_id" class="w-full text-white bg-gray-800 border border-gray-600 p-2.5 rounded-lg" required>
+        {% for v in veiculos %}
+        <option value="{{ v.id }}">{{ v.brand }} {{ v.model }} - {{ v.plate }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div>
+      <label class="text-sm text-gray-300 font-medium">KM Atual</label>
+      <input type="number" name="km" class="w-full text-white bg-gray-800 border border-gray-600 p-2.5 rounded-lg" required>
+    </div>
+
+    <div>
+      <label class="text-sm text-gray-300 font-medium">Gravidade</label>
+      <select name="gravidade" class="w-full text-white bg-gray-800 border border-gray-600 p-2.5 rounded-lg" required>
+        <option value="baixa">Baixa</option>
+        <option value="media">Média</option>
+        <option value="alta">Alta</option>
+        <option value="critica">Crítica</option>
+      </select>
+    </div>
+
+    <div>
+      <label class="text-sm text-gray-300 font-medium">Descrição</label>
+      <textarea name="descricao" rows="3"
+                class="w-full text-white bg-gray-800 border border-gray-600 p-2.5 rounded-lg"
+                required></textarea>
+    </div>
+
+    <div>
+      <label class="text-sm text-gray-300 font-medium">Responsável</label>
+      <select name="responsavel_id"
+              class="w-full text-white bg-gray-800 border border-gray-600 p-2.5 rounded-lg" required>
+        {% for c in colaboradores %}
+        <option value="{{ c.id }}">{{ c.username }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="flex justify-end gap-2 pt-1">
+      <button type="button"
+              onclick="document.getElementById('modalNovaAvaria').close()"
+              class="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-white text-sm">
+        Cancelar
+      </button>
+
+      <button type="submit"
+              class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-white font-semibold text-sm">
+        Registrar
+      </button>
+    </div>
+  </form>
+</dialog>
+
+
+<!-- =====================================
+      MODAL FINALIZAR (MENOR)
+===================================== -->
+<dialog id="modalFinalizarOS"
+        class="rounded-2xl bg-gray-900 border border-gray-700 p-5 shadow-2xl w-[380px]">
+
+  <h2 class="text-xl font-bold text-white mb-3">Finalizar O.S</h2>
+
+  <form id="formFinalizarOS" method="POST" action="{{ url_for('avarias_registro') }}" class="space-y-4">
+    <input type="hidden" name="acao" value="finalizar">
+    <input type="hidden" id="os_id_hidden" name="os_id">
+
+    <div>
+      <label class="text-sm text-gray-300 font-medium">Valor gasto</label>
+      <input type="number" name="valor" step="0.01"
+             class="w-full text-white bg-gray-800 border border-gray-600 p-2.5 rounded-lg">
+    </div>
+
+    <div>
+      <label class="text-sm text-gray-300 font-medium">Peças trocadas</label>
+      <textarea name="pecas" rows="2"
+                class="w-full text-white bg-gray-800 border border-gray-600 p-2.5 rounded-lg"></textarea>
+    </div>
+
+    <div>
+      <label class="text-sm text-gray-300 font-medium">Serviço realizado</label>
+      <textarea name="servico" rows="2"
+                class="w-full text-white bg-gray-800 border border-gray-600 p-2.5 rounded-lg"></textarea>
+    </div>
+
+    <div class="flex justify-end gap-2 pt-1">
+      <button type="button"
+              onclick="document.getElementById('modalFinalizarOS').close()"
+              class="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-white text-sm">
+        Cancelar
+      </button>
+
+      <button type="submit"
+              class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg text-white font-semibold text-sm">
+        Finalizar
+      </button>
+    </div>
+  </form>
+</dialog>
+
+
+<!-- =====================================
+      MODAL DETALHES O.S (NOVO)
+===================================== -->
+<dialog id="modalDetalhesOS"
+        class="rounded-2xl bg-gray-900 border border-gray-700 p-6 shadow-2xl w-[420px]">
+
+  <h2 class="text-2xl font-bold text-white mb-4">Detalhes da O.S #<span id="det_id"></span></h2>
+
+  <div class="space-y-3 text-gray-200 text-sm">
+
+    <p><b>Veículo:</b> <span id="det_veiculo"></span></p>
+    <p><b>Responsável:</b> <span id="det_resp"></span></p>
+
+    <p><b>Descrição:</b><br>
+      <span id="det_desc" class="text-gray-300"></span>
+    </p>
+
+    <hr class="border-gray-700">
+
+    <p><b>KM:</b> <span id="det_km"></span></p>
+    <p><b>Gravidade:</b> <span id="det_grav"></span></p>
+
+    <p><b>Valor gasto:</b> R$ <span id="det_valor"></span></p>
+
+    <p><b>Peças trocadas:</b><br>
+      <span id="det_pecas" class="text-gray-300"></span>
+    </p>
+
+    <p><b>Serviço realizado:</b><br>
+      <span id="det_servico" class="text-gray-300"></span>
+    </p>
+
+    <hr class="border-gray-700">
+
+    <p><b>Abertura:</b> <span id="det_abertura"></span></p>
+    <p><b>Fechamento:</b> <span id="det_fechamento"></span></p>
+
+  </div>
+
+  <div class="flex justify-end mt-5">
+    <button onclick="document.getElementById('modalDetalhesOS').close()"
+            class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-white text-sm">
+      Fechar
+    </button>
+  </div>
+
+</dialog>
+
+
+<script>
+function openFinalizar(id) {
+  document.getElementById("os_id_hidden").value = id;
+  document.getElementById("modalFinalizarOS").showModal();
+}
+
+function openDetalhes(id) {
+  const dados = JSON.parse(document.getElementById("os_data_" + id).textContent);
+
+  document.getElementById("det_id").innerText = id;
+  document.getElementById("det_veiculo").innerText = dados.veiculo;
+  document.getElementById("det_resp").innerText = dados.responsavel;
+  document.getElementById("det_desc").innerText = dados.descricao;
+
+  document.getElementById("det_km").innerText = dados.km;
+  document.getElementById("det_grav").innerText = dados.gravidade;
+
+  document.getElementById("det_valor").innerText = dados.valor_gasto || "0,00";
+  document.getElementById("det_pecas").innerText = dados.pecas_trocadas || "-";
+  document.getElementById("det_servico").innerText = dados.servico_realizado || "-";
+
+  document.getElementById("det_abertura").innerText = dados.data_abertura;
+  document.getElementById("det_fechamento").innerText = dados.data_fechamento;
+
+  document.getElementById("modalDetalhesOS").showModal();
+}
+</script>
+
+{% endblock %}

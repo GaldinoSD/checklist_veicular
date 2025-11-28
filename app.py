@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 """
-Painel de Gerenciamento de Frota – app.py (versão com papéis: admin/supervisor/tech)
+Painel de Gerenciamento de Frota – app.py
+Versão com papéis: admin / supervisor / tech / manutencao
 
 Inclui:
 - SystemConfig (modo do checklist)
 - Funções: desativado / somente início / início e chegada
-- Rotas atualizadas
+- Rotas de avarias e manutenção
 """
 
 import os, json, uuid, sqlite3
@@ -101,6 +102,10 @@ class User(UserMixin, db.Model):
             return True
         return self.role == "tech"
 
+    @property
+    def is_manutencao(self):
+        return self.role == "manutencao"
+
 
 class Vehicle(db.Model):
     __tablename__ = "vehicle"
@@ -137,6 +142,34 @@ class ChecklistItem(db.Model):
     options = db.Column(db.Text)
 
 
+# ----------------------------------------
+# 🚗 MODELO AVARIAS / ORDENS DE SERVIÇO
+# ----------------------------------------
+class AvariaOS(db.Model):
+    __tablename__ = "avaria_os"
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    vehicle_id = db.Column(db.Integer, db.ForeignKey("vehicle.id"), nullable=False)
+    vehicle = db.relationship("Vehicle", backref="avarias")
+
+    responsavel_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    responsavel = db.relationship("User", backref="os_avarias")
+
+    gravidade = db.Column(db.String(20))
+    descricao = db.Column(db.Text, nullable=False)
+    km = db.Column(db.Integer)
+
+    status = db.Column(db.String(20), default="aberta")  # aberta / finalizada
+
+    valor_gasto = db.Column(db.Float)
+    pecas_trocadas = db.Column(db.Text)
+    servico_realizado = db.Column(db.Text)
+
+    data_abertura = db.Column(db.DateTime, default=datetime.utcnow)
+    data_fechamento = db.Column(db.DateTime)
+
+
 class Log(db.Model):
     __tablename__ = "log"
     id = db.Column(db.Integer, primary_key=True)
@@ -152,10 +185,6 @@ class SystemConfig(db.Model):
     __tablename__ = "system_config"
     id = db.Column(db.Integer, primary_key=True)
     mode = db.Column(db.String(20), default="start_only")
-    # valores permitidos:
-    #   disabled      → checklist não aparece
-    #   start_only    → 1 checklist por dia
-    #   start_end     → início e chegada (2 checklists)
 
 
 @login_manager.user_loader
@@ -174,7 +203,7 @@ def column_exists(table, column):
 
 
 def migrate_db():
-    # garantir colunas padrão
+    # garantir colunas padrão em checklist_item
     con = sqlite3.connect(DB_PATH)
     cur = con.cursor()
     cur.execute("PRAGMA table_info(checklist_item)")
@@ -186,7 +215,7 @@ def migrate_db():
     con.commit()
     con.close()
 
-    # role
+    # garantir coluna role em user
     if not column_exists("user", "role"):
         con2 = sqlite3.connect(DB_PATH)
         cur2 = con2.cursor()
@@ -194,17 +223,11 @@ def migrate_db():
         con2.commit()
         con2.close()
 
-    # garantir tabela system_config
+    # garantir existência do arquivo de banco
     if not os.path.exists(DB_PATH):
         return
 
-    try:
-        if not column_exists("system_config", "mode"):
-            pass  # será criado pelo create_all()
-    except:
-        pass
-
-    # migrar legados
+    # migrar legados para roles novos
     with app.app_context():
         users = User.query.all()
         changed = False
@@ -236,18 +259,27 @@ DEFAULT_ITEMS = [
 
 
 def seed_defaults():
+    # admin
     if not User.query.filter_by(username="admin").first():
         u = User(username="admin", role="admin")
         u.set_password("admin")
         db.session.add(u)
 
+    # supervisor
     if not User.query.filter_by(username="supervisor").first():
         u = User(username="supervisor", role="supervisor")
         u.set_password("1234")
         db.session.add(u)
 
+    # técnico
     if not User.query.filter_by(username="tecnico").first():
         u = User(username="tecnico", role="tech")
+        u.set_password("1234")
+        db.session.add(u)
+
+    # manutencao
+    if not User.query.filter_by(username="manutencao").first():
+        u = User(username="manutencao", role="manutencao")
         u.set_password("1234")
         db.session.add(u)
 
@@ -255,6 +287,7 @@ def seed_defaults():
     if SystemConfig.query.count() == 0:
         db.session.add(SystemConfig(mode="start_only"))
 
+    # itens de checklist padrão
     if ChecklistItem.query.count() == 0:
         for i, (txt, typ) in enumerate(DEFAULT_ITEMS, start=1):
             db.session.add(ChecklistItem(order=i, text=txt, type=typ))
@@ -266,9 +299,6 @@ with app.app_context():
     db.create_all()
     migrate_db()
     seed_defaults()
-
-
-
 # ----------------- LOG -----------------
 def registrar_log(acao):
     try:
@@ -277,7 +307,9 @@ def registrar_log(acao):
         db.session.commit()
     except:
         pass
-# ----------------- HELPERS -----------------
+
+
+# ----------------- HELPERS DE PERMISSÃO -----------------
 def admin_required(view):
     @wraps(view)
     def wrapper(*args, **kwargs):
@@ -287,13 +319,15 @@ def admin_required(view):
             flash("Acesso restrito ao administrador.", "error")
             if current_user.is_supervisor:
                 return redirect(url_for("dashboard"))
+            if current_user.is_manutencao:
+                return redirect(url_for("manutencao_os"))
             return redirect(url_for("checklist_mobile"))
         return view(*args, **kwargs)
     return wrapper
 
 
 def supervisor_allowed(view):
-    """Admin + Supervisor podem acessar; técnico NÃO."""
+    """Admin + Supervisor podem acessar; técnico e manutenção NÃO."""
     @wraps(view)
     def wrapper(*args, **kwargs):
         if not current_user.is_authenticated:
@@ -301,6 +335,23 @@ def supervisor_allowed(view):
         if current_user.is_admin or current_user.is_supervisor:
             return view(*args, **kwargs)
         flash("Acesso restrito a supervisor ou administrador.", "error")
+        if current_user.is_manutencao:
+            return redirect(url_for("manutencao_os"))
+        return redirect(url_for("checklist_mobile"))
+    return wrapper
+
+
+def manutencao_only(view):
+    """Apenas usuários de manutenção acessam esta rota."""
+    @wraps(view)
+    def wrapper(*args, **kwargs):
+        if not current_user.is_authenticated:
+            return redirect(url_for("login"))
+        if current_user.is_manutencao:
+            return view(*args, **kwargs)
+        flash("Página exclusiva da equipe de manutenção.", "info")
+        if current_user.is_admin or current_user.is_supervisor:
+            return redirect(url_for("dashboard"))
         return redirect(url_for("checklist_mobile"))
     return wrapper
 
@@ -311,7 +362,8 @@ def inject_role_flags():
     return dict(
         ROLE_ADMIN=(current_user.is_authenticated and current_user.is_admin),
         ROLE_SUPERVISOR=(current_user.is_authenticated and current_user.is_supervisor),
-        ROLE_TECH=(current_user.is_authenticated and current_user.is_tech)
+        ROLE_TECH=(current_user.is_authenticated and current_user.is_tech),
+        ROLE_MANUTENCAO=(current_user.is_authenticated and current_user.is_manutencao),
     )
 
 
@@ -410,6 +462,8 @@ def login():
             # Redirecionamento por papel
             if u.is_admin or u.is_supervisor:
                 return redirect(url_for("dashboard"))
+            if u.is_manutencao:
+                return redirect(url_for("manutencao_os"))
             return redirect(url_for("checklist_mobile"))
 
         flash("Usuário ou senha inválidos.", "error")
@@ -430,6 +484,8 @@ def index():
     if current_user.is_authenticated:
         if current_user.is_admin or current_user.is_supervisor:
             return redirect(url_for("dashboard"))
+        if current_user.is_manutencao:
+            return redirect(url_for("manutencao_os"))
         return redirect(url_for("checklist_mobile"))
     return redirect(url_for("login"))
 
@@ -496,7 +552,7 @@ def users_new():
         flash("Usuário e senha obrigatórios.", "error")
         return redirect(url_for("users"))
 
-    if role not in {"admin", "supervisor", "tech"}:
+    if role not in {"admin", "supervisor", "tech", "manutencao"}:
         flash("Papel inválido.", "error")
         return redirect(url_for("users"))
 
@@ -538,7 +594,7 @@ def users_role(uid):
     u = User.query.get_or_404(uid)
     role = request.form.get("role", "tech").strip().lower()
 
-    if role not in {"admin", "supervisor", "tech"}:
+    if role not in {"admin", "supervisor", "tech", "manutencao"}:
         flash("Papel inválido.", "error")
         return redirect(url_for("users"))
 
@@ -566,6 +622,8 @@ def users_del(uid):
     registrar_log(f"Usuário excluído: {nome}")
     flash("Usuário excluído.", "success")
     return redirect(url_for("users"))
+
+
 # ----------------- VEÍCULOS (admin + supervisor) -----------------
 def ensure_vehicle_type_column():
     db_path = str(app.config["SQLALCHEMY_DATABASE_URI"]).replace("sqlite:///", "")
@@ -743,6 +801,89 @@ def vehicle_delete(vid):
     registrar_log(f"Veículo excluído: {plate}")
     flash("Veículo excluído com sucesso!", "success")
     return redirect(url_for("vehicles"))
+# ----------------- AVARIAS / ORDENS DE SERVIÇO -----------------
+@app.route("/avarias/registro", methods=["GET", "POST"])
+@supervisor_allowed
+def avarias_registro():
+    if request.method == "POST":
+        acao = request.form.get("acao")
+
+        # --------------------
+        # CRIAR NOVA AVARIA
+        # --------------------
+        if acao == "nova":
+            nova = AvariaOS(
+                vehicle_id=request.form.get("veiculo_id"),
+                responsavel_id=request.form.get("responsavel_id"),
+                gravidade=request.form.get("gravidade"),
+                descricao=request.form.get("descricao"),
+                km=request.form.get("km"),
+                status="aberta"
+            )
+            db.session.add(nova)
+            db.session.commit()
+            registrar_log(f"Avaria criada para veículo ID={nova.vehicle_id}")
+            return redirect(url_for("avarias_registro"))
+
+        # --------------------
+        # FINALIZAR O.S (admin/supervisor)
+        # --------------------
+        if acao == "finalizar":
+            os_id = request.form.get("os_id")
+            os_finalizar = AvariaOS.query.get(os_id)
+
+            if os_finalizar:
+                os_finalizar.valor_gasto = request.form.get("valor")
+                os_finalizar.pecas_trocadas = request.form.get("pecas")
+                os_finalizar.servico_realizado = request.form.get("servico")
+                os_finalizar.status = "finalizada"
+                os_finalizar.data_fechamento = datetime.utcnow()
+                db.session.commit()
+                registrar_log(f"O.S finalizada (admin/supervisor): ID={os_finalizar.id}")
+
+            return redirect(url_for("avarias_registro"))
+
+    # ------------------------------------
+    # GET — LISTAR TODAS AS AVARIAS / OS
+    # ------------------------------------
+    ordens = AvariaOS.query.order_by(AvariaOS.id.desc()).all()
+    veiculos = Vehicle.query.all()
+    colaboradores = User.query.all()
+
+    return render_template(
+        "avarias_registro.html",
+        ordens=ordens,
+        veiculos=veiculos,
+        colaboradores=colaboradores
+    )
+
+
+# ----------------- TELA DA MANUTENÇÃO (SOMENTE MANUTENÇÃO) -----------------
+@app.route("/manutencao/os", methods=["GET", "POST"])
+@manutencao_only
+def manutencao_os():
+    if request.method == "POST":
+        acao = request.form.get("acao")
+
+        # manutenção só FINALIZA O.S, não cria
+        if acao == "finalizar":
+            os_id = request.form.get("os_id")
+            os_finalizar = AvariaOS.query.get(os_id)
+
+            if os_finalizar:
+                os_finalizar.valor_gasto = request.form.get("valor")
+                os_finalizar.pecas_trocadas = request.form.get("pecas")
+                os_finalizar.servico_realizado = request.form.get("servico")
+                os_finalizar.status = "finalizada"
+                os_finalizar.data_fechamento = datetime.utcnow()
+                db.session.commit()
+                registrar_log(f"O.S finalizada (manutenção): ID={os_finalizar.id}")
+
+            return redirect(url_for("manutencao_os"))
+
+    # GET – lista as O.S para a tela manutencao_os.html
+    ordens = AvariaOS.query.order_by(AvariaOS.id.desc()).all()
+    return render_template("manutencao_os.html", ordens=ordens)
 
 
 # ----------------- IMPORTAÇÃO DE CHECKLISTS -----------------
@@ -853,6 +994,8 @@ def report_upload():
     registrar_log(f"Relatório enviado: {name}")
     flash("Relatório enviado!", "success")
     return redirect(url_for("reports"))
+
+
 # ----------------- LISTAGEM / DETALHE DE CHECKLISTS -----------------
 @app.route("/checklists")
 @supervisor_allowed
@@ -1016,8 +1159,6 @@ def config_checklist_move(iid):
     registrar_log(f"Item de checklist movido: {it.text} (id={iid}, dir={direction})")
     flash("Ordem atualizada.", "success")
     return redirect(url_for("config_checklist"))
-
-
 # ----------------- GERADOR DE PDF -----------------
 def generate_checklist_pdf(checklist_obj: Checklist, raw: dict) -> str:
     from reportlab.lib.pagesizes import A4
@@ -1333,18 +1474,20 @@ def checklist_mobile():
     return render_template("checklist_mobile.html", vehicles=vehicles, items=items_qs, success=success)
 
 
-# ----------------- PERFIL DO TÉCNICO (ALTERAR SENHA) -----------------
+# ----------------- PERFIL DO TÉCNICO / MANUTENÇÃO (ALTERAR SENHA) -----------------
 @app.route("/perfil", methods=["GET", "POST"])
 @login_required
 def perfil():
-    if current_user.is_admin or current_user.is_supervisor:
-        flash("Apenas técnicos usam esta página de perfil.", "info")
-        return redirect(url_for("dashboard"))
+    """
+    Página onde técnicos e equipe de manutenção podem alterar sua própria senha.
+    Admin e Supervisor não usam esta tela — possuem painel próprio.
+    """
 
     if request.method == "POST":
         nova = request.form.get("nova_senha", "").strip()
         confirma = request.form.get("confirma", "").strip()
 
+        # validações
         if not nova or not confirma:
             flash("Preencha ambos os campos de senha.", "error")
             return redirect(url_for("perfil"))
@@ -1353,14 +1496,24 @@ def perfil():
             flash("As senhas não coincidem.", "error")
             return redirect(url_for("perfil"))
 
+        # salvar nova senha
         current_user.set_password(nova)
         db.session.commit()
 
-        registrar_log(f"Técnico alterou a própria senha: {current_user.username}")
+        registrar_log(f"Usuário alterou a própria senha: {current_user.username}")
         flash("Senha atualizada com sucesso!", "success")
+
+        # redirecionamentos por papel
+        if current_user.is_manutencao:
+            return redirect(url_for("manutencao_os"))
+
+        if current_user.is_admin or current_user.is_supervisor:
+            return redirect(url_for("dashboard"))
+
         return redirect(url_for("checklist_mobile"))
 
     return render_template("perfil.html", user=current_user)
+
 
 
 # ----------------- LOGS DO SISTEMA (ADMIN) -----------------
