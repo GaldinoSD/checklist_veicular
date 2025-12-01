@@ -494,6 +494,7 @@ def index():
 @app.route("/dashboard")
 @supervisor_allowed
 def dashboard():
+    # ------ DADOS GERAIS ------
     total_veiculos = Vehicle.query.count()
     total_checklists = Checklist.query.count()
     total_relatorios = count_files(RELATORIOS_DIR)
@@ -503,7 +504,7 @@ def dashboard():
 
     recentes = Checklist.query.order_by(Checklist.date.desc()).limit(5).all()
 
-    # verifica revisões
+    # ------ ALERTAS DE REVISÃO ------
     veiculos = Vehicle.query.all()
     alerts = []
     for v in veiculos:
@@ -516,7 +517,27 @@ def dashboard():
                 "remaining": remaining
             })
 
+    # ------ KM SEMANAL ------
     labels, values = weekly_km_series(WEEKS_WINDOW)
+
+    # ======================================
+    # 🔥 NOVA ÁREA: COLETA DE DADOS DE AVARIAS
+    # ======================================
+
+    # total de avarias
+    total_avarias = AvariaOS.query.count()
+
+    # pendentes e finalizadas
+    avarias_pendentes = AvariaOS.query.filter_by(status="aberta").count()
+    avarias_finalizadas = AvariaOS.query.filter_by(status="finalizada").count()
+
+    # soma total do valor gasto
+    valor_total_gasto = db.session.query(db.func.sum(AvariaOS.valor_gasto)).scalar() or 0
+
+    # últimas 5 avarias
+    recentes_avarias = AvariaOS.query.order_by(AvariaOS.id.desc()).limit(5).all()
+
+    # ======================================
 
     return render_template(
         "dashboard.html",
@@ -524,13 +545,27 @@ def dashboard():
         total_checklists=total_checklists,
         total_relatorios=total_relatorios,
         ultimo_relatorio=ultimo_relatorio,
+
+        # checklists recentes
         recentes=recentes,
+
+        # alertas de revisão
         alerts=alerts,
         rev_interval=REV_INTERVAL,
         rev_margin=REV_ALERT_MARGIN,
+
+        # km semanal
         wk_labels=labels,
-        wk_values=values
+        wk_values=values,
+
+        # >>> AVARIAS (NOVOS CAMPOS)
+        total_avarias=total_avarias,
+        avarias_pendentes=avarias_pendentes,
+        avarias_finalizadas=avarias_finalizadas,
+        valor_total_gasto=valor_total_gasto,
+        recentes_avarias=recentes_avarias
     )
+
 
 
 # ----------------- USUÁRIOS (admin) -----------------
