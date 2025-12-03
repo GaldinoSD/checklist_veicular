@@ -9,7 +9,7 @@ Inclui:
 - Rotas de avarias e manutenção
 """
 
-import os, json, uuid, sqlite3
+import os, json, uuid
 from pathlib import Path
 from datetime import datetime, timedelta
 from functools import wraps
@@ -27,6 +27,8 @@ from flask_login import (
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 
+from sqlalchemy import text  # para migrações leves no PostgreSQL
+
 # PDF
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import mm
@@ -43,7 +45,6 @@ from PIL import Image
 
 # ----------------- CONFIG BÁSICA -----------------
 BASE_DIR = Path(__file__).resolve().parent
-DB_PATH = BASE_DIR / "database.db"
 INBOX_DIR = BASE_DIR / "inbox"
 RELATORIOS_DIR = BASE_DIR / "relatorios"
 UPLOAD_DIR = BASE_DIR / "static" / "checklist_fotos"
@@ -116,6 +117,7 @@ class Vehicle(db.Model):
     year = db.Column(db.Integer)
     km = db.Column(db.Integer, default=0)
     status = db.Column(db.String(20), default="ATIVO")
+    type = db.Column(db.String(20), default="carro")  # tipo: carro / moto / caminhão etc.
 
 
 class Checklist(db.Model):
@@ -179,7 +181,7 @@ class Log(db.Model):
 
 
 # --------------------------------------------------------
-# 🔥 NOVO MODELO — CONFIGURAÇÃO GLOBAL DO CHECKLIST 🔥
+# 🔥 CONFIGURAÇÃO GLOBAL DO CHECKLIST 🔥
 # --------------------------------------------------------
 class SystemConfig(db.Model):
     __tablename__ = "system_config"
@@ -192,57 +194,31 @@ def load_user(uid):
     return User.query.get(int(uid))
 
 
-# ----------------- MIGRAÇÃO LEVE -----------------
-def column_exists(table, column):
-    con = sqlite3.connect(DB_PATH)
-    cur = con.cursor()
-    cur.execute(f"PRAGMA table_info({table})")
-    cols = [r[1] for r in cur.fetchall()]
-    con.close()
-    return column in cols
-
-
-def migrate_db():
-    # garantir colunas padrão em checklist_item
-    con = sqlite3.connect(DB_PATH)
-    cur = con.cursor()
-    cur.execute("PRAGMA table_info(checklist_item)")
-    cols = [r[1] for r in cur.fetchall()]
-    if "type" not in cols:
-        cur.execute("ALTER TABLE checklist_item ADD COLUMN type TEXT DEFAULT 'texto_curto'")
-    if "options" not in cols:
-        cur.execute("ALTER TABLE checklist_item ADD COLUMN options TEXT")
-    con.commit()
-    con.close()
-
-    # garantir coluna role em user
-    if not column_exists("user", "role"):
-        con2 = sqlite3.connect(DB_PATH)
-        cur2 = con2.cursor()
-        cur2.execute("ALTER TABLE user ADD COLUMN role TEXT")
-        con2.commit()
-        con2.close()
-
-    # garantir existência do arquivo de banco
-    if not os.path.exists(DB_PATH):
-        return
-
-    # migrar legados para roles novos
-    with app.app_context():
-        users = User.query.all()
-        changed = False
-        for u in users:
-            if u.role is None:
-                if bool(u.is_admin_legacy):
-                    u.role = "admin"
-                else:
-                    if u.username.lower().startswith("super"):
-                        u.role = "supervisor"
-                    else:
-                        u.role = "tech"
-                changed = True
-        if changed:
-            db.session.commit()
+# ----------------- MIGRAÇÃO LEVE PARA POSTGRES -----------------
+def ensure_min_schema():
+    """
+    Garante colunas mínimas no PostgreSQL (idempotente).
+    NÃO usa mais sqlite3 nem arquivos .db.
+    """
+    stmts = [
+        # role em user
+        text('ALTER TABLE "user" ADD COLUMN IF NOT EXISTS role VARCHAR(20)'),
+        # type em vehicle
+        text('ALTER TABLE vehicle ADD COLUMN IF NOT EXISTS type VARCHAR(20) DEFAULT \'carro\''),
+        # campos em checklist_item
+        text('ALTER TABLE checklist_item ADD COLUMN IF NOT EXISTS type VARCHAR(50) DEFAULT \'texto_curto\''),
+        text('ALTER TABLE checklist_item ADD COLUMN IF NOT EXISTS options TEXT'),
+    ]
+    for stmt in stmts:
+        try:
+            db.session.execute(stmt)
+        except Exception as e:
+            print("⚠️ Erro em ensure_min_schema:", e)
+    try:
+        db.session.commit()
+    except Exception as e:
+        print("⚠️ Erro commit ensure_min_schema:", e)
+        db.session.rollback()
 
 
 # ----------------- SEED DEFAULTS -----------------
@@ -297,16 +273,19 @@ def seed_defaults():
 
 with app.app_context():
     db.create_all()
-    migrate_db()
+    ensure_min_schema()
     seed_defaults()
+
+
 # ----------------- LOG -----------------
 def registrar_log(acao):
     try:
         user = current_user.username if current_user.is_authenticated else "Sistema"
         db.session.add(Log(usuario=user, acao=acao))
         db.session.commit()
-    except:
-        pass
+    except Exception as e:
+        print("⚠️ Erro registrar_log:", e)
+        db.session.rollback()
 
 
 # ----------------- HELPERS DE PERMISSÃO -----------------
@@ -447,6 +426,8 @@ def save_photos(files):
         f.save(path)
         saved.append(f"/static/checklist_fotos/{fname}")
     return saved
+
+
 # ----------------- LOGIN -----------------
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -521,23 +502,14 @@ def dashboard():
     labels, values = weekly_km_series(WEEKS_WINDOW)
 
     # ======================================
-    # 🔥 NOVA ÁREA: COLETA DE DADOS DE AVARIAS
+    # 🔥 ÁREA: COLETA DE DADOS DE AVARIAS
     # ======================================
 
-    # total de avarias
     total_avarias = AvariaOS.query.count()
-
-    # pendentes e finalizadas
     avarias_pendentes = AvariaOS.query.filter_by(status="aberta").count()
     avarias_finalizadas = AvariaOS.query.filter_by(status="finalizada").count()
-
-    # soma total do valor gasto
     valor_total_gasto = db.session.query(db.func.sum(AvariaOS.valor_gasto)).scalar() or 0
-
-    # últimas 5 avarias
     recentes_avarias = AvariaOS.query.order_by(AvariaOS.id.desc()).limit(5).all()
-
-    # ======================================
 
     return render_template(
         "dashboard.html",
@@ -546,26 +518,21 @@ def dashboard():
         total_relatorios=total_relatorios,
         ultimo_relatorio=ultimo_relatorio,
 
-        # checklists recentes
         recentes=recentes,
 
-        # alertas de revisão
         alerts=alerts,
         rev_interval=REV_INTERVAL,
         rev_margin=REV_ALERT_MARGIN,
 
-        # km semanal
         wk_labels=labels,
         wk_values=values,
 
-        # >>> AVARIAS (NOVOS CAMPOS)
         total_avarias=total_avarias,
         avarias_pendentes=avarias_pendentes,
         avarias_finalizadas=avarias_finalizadas,
         valor_total_gasto=valor_total_gasto,
         recentes_avarias=recentes_avarias
     )
-
 
 
 # ----------------- USUÁRIOS (admin) -----------------
@@ -660,32 +627,9 @@ def users_del(uid):
 
 
 # ----------------- VEÍCULOS (admin + supervisor) -----------------
-def ensure_vehicle_type_column():
-    db_path = str(app.config["SQLALCHEMY_DATABASE_URI"]).replace("sqlite:///", "")
-    if not os.path.exists(db_path):
-        return
-
-    try:
-        con = sqlite3.connect(db_path)
-        cur = con.cursor()
-        cur.execute("PRAGMA table_info(vehicle)")
-        cols = [r[1] for r in cur.fetchall()]
-
-        if "type" not in cols:
-            print("🆕 Adicionando coluna 'type' em vehicle...")
-            cur.execute("ALTER TABLE vehicle ADD COLUMN type TEXT DEFAULT 'carro'")
-            con.commit()
-
-        con.close()
-    except Exception as e:
-        print("[ERRO] ensure_vehicle_type_column:", e)
-
-
 @app.route("/veiculos")
 @supervisor_allowed
 def vehicles():
-    ensure_vehicle_type_column()
-
     q = request.args.get("q", "").strip().lower()
     query = Vehicle.query
 
@@ -700,20 +644,10 @@ def vehicles():
 
     veiculos = query.order_by(Vehicle.plate.asc()).all()
 
-    # busca tipo extra via SQLite (porque foi adicionado depois)
-    db_path = str(app.config["SQLALCHEMY_DATABASE_URI"]).replace("sqlite:///", "")
-    con = sqlite3.connect(db_path)
-    cur = con.cursor()
-
-    try:
-        tipos = dict(cur.execute("SELECT id, type FROM vehicle").fetchall())
-    except:
-        tipos = {}
-
-    con.close()
-
+    # garantir valor padrão caso venha nulo
     for v in veiculos:
-        v.type = tipos.get(v.id, "carro")
+        if not v.type:
+            v.type = "carro"
 
     return render_template("vehicles.html", veiculos=veiculos, q=q)
 
@@ -723,8 +657,6 @@ def vehicles():
 def vehicle_new():
     if not current_user.is_admin:
         abort(403)
-
-    ensure_vehicle_type_column()
 
     plate = (request.form.get("plate") or "").upper().strip()
     brand = (request.form.get("brand") or "").strip()
@@ -752,18 +684,11 @@ def vehicle_new():
         year=year,
         km=km,
         status=status,
+        type=type_,
     )
 
     db.session.add(v)
     db.session.commit()
-
-    # gravar type na tabela SQLite
-    db_path = str(app.config["SQLALCHEMY_DATABASE_URI"]).replace("sqlite:///", "")
-    con = sqlite3.connect(db_path)
-    cur = con.cursor()
-    cur.execute("UPDATE vehicle SET type = ? WHERE id = ?", (type_, v.id))
-    con.commit()
-    con.close()
 
     registrar_log(f"Veículo criado: {plate} ({brand} {model}, tipo={type_})")
     flash(f"Veículo {plate} cadastrado!", "success")
@@ -792,8 +717,6 @@ def vehicle_edit(vid):
     if not current_user.is_admin:
         abort(403)
 
-    ensure_vehicle_type_column()
-
     v = Vehicle.query.get_or_404(vid)
 
     v.brand = (request.form.get("brand") or "").strip()
@@ -805,16 +728,9 @@ def vehicle_edit(vid):
 
     v.year = int(year_raw) if year_raw and year_raw.isdigit() else None
     v.km = int(km_raw) if km_raw and km_raw.isdigit() else v.km
+    v.type = type_raw
 
     db.session.commit()
-
-    # atualizar type via SQLite
-    db_path = str(app.config["SQLALCHEMY_DATABASE_URI"]).replace("sqlite:///", "")
-    con = sqlite3.connect(db_path)
-    cur = con.cursor()
-    cur.execute("UPDATE vehicle SET type = ? WHERE id = ?", (type_raw, v.id))
-    con.commit()
-    con.close()
 
     registrar_log(f"Veículo editado: {v.plate} (tipo={type_raw})")
     flash("Veículo atualizado!", "success")
@@ -836,6 +752,8 @@ def vehicle_delete(vid):
     registrar_log(f"Veículo excluído: {plate}")
     flash("Veículo excluído com sucesso!", "success")
     return redirect(url_for("vehicles"))
+
+
 # ----------------- AVARIAS / ORDENS DE SERVIÇO -----------------
 @app.route("/avarias/registro", methods=["GET", "POST"])
 @supervisor_allowed
@@ -843,9 +761,7 @@ def avarias_registro():
     if request.method == "POST":
         acao = request.form.get("acao")
 
-        # --------------------
         # CRIAR NOVA AVARIA
-        # --------------------
         if acao == "nova":
             nova = AvariaOS(
                 vehicle_id=request.form.get("veiculo_id"),
@@ -860,9 +776,7 @@ def avarias_registro():
             registrar_log(f"Avaria criada para veículo ID={nova.vehicle_id}")
             return redirect(url_for("avarias_registro"))
 
-        # --------------------
         # FINALIZAR O.S (admin/supervisor)
-        # --------------------
         if acao == "finalizar":
             os_id = request.form.get("os_id")
             os_finalizar = AvariaOS.query.get(os_id)
@@ -878,9 +792,7 @@ def avarias_registro():
 
             return redirect(url_for("avarias_registro"))
 
-    # ------------------------------------
-    # GET — LISTAR TODAS AS AVARIAS / OS
-    # ------------------------------------
+    # GET — listar avarias
     ordens = AvariaOS.query.order_by(AvariaOS.id.desc()).all()
     veiculos = Vehicle.query.all()
     colaboradores = User.query.all()
@@ -916,7 +828,6 @@ def manutencao_os():
 
             return redirect(url_for("manutencao_os"))
 
-    # GET – lista as O.S para a tela manutencao_os.html
     ordens = AvariaOS.query.order_by(AvariaOS.id.desc()).all()
     return render_template("manutencao_os.html", ordens=ordens)
 
@@ -1104,24 +1015,23 @@ def config_checklist_mode():
 @app.route("/config-checklist/novo", methods=["POST"])
 @admin_required
 def config_checklist_new():
-    text = request.form.get("text", "").strip()
+    text_ = request.form.get("text", "").strip()
     required = request.form.get("required") == "on"
     require_justif_no = request.form.get("require_justif_no") == "on"
     typ = request.form.get("type", "texto_curto")
     opts_raw = (request.form.get("options") or "").strip()
 
-    if not text:
+    if not text_:
         flash("Texto é obrigatório.", "error")
         return redirect(url_for("config_checklist"))
 
-    # aqui as opções já vêm separadas por vírgula do JS (prepareOptions)
     opts = opts_raw or None
 
     last = db.session.query(db.func.max(ChecklistItem.order)).scalar() or 0
     db.session.add(
         ChecklistItem(
             order=last + 1,
-            text=text,
+            text=text_,
             required=required,
             require_justif_no=require_justif_no,
             type=typ,
@@ -1130,7 +1040,7 @@ def config_checklist_new():
     )
     db.session.commit()
 
-    registrar_log(f"Item de checklist adicionado: {text}")
+    registrar_log(f"Item de checklist adicionado: {text_}")
     flash("Item adicionado.", "success")
     return redirect(url_for("config_checklist"))
 
@@ -1194,6 +1104,8 @@ def config_checklist_move(iid):
     registrar_log(f"Item de checklist movido: {it.text} (id={iid}, dir={direction})")
     flash("Ordem atualizada.", "success")
     return redirect(url_for("config_checklist"))
+
+
 # ----------------- GERADOR DE PDF -----------------
 def generate_checklist_pdf(checklist_obj: Checklist, raw: dict) -> str:
     from reportlab.lib.pagesizes import A4
@@ -1378,7 +1290,7 @@ def generate_checklist_pdf(checklist_obj: Checklist, raw: dict) -> str:
     return str(out_path)
 
 
-# ----------------- CHECKLIST TÉCNICO (MODO: DESATIVADO / INÍCIO / INÍCIO+CHEGADA) -----------------
+# ----------------- CHECKLIST TÉCNICO (MODO) -----------------
 @app.route("/checklist", methods=["GET", "POST"])
 @login_required
 def checklist_mobile():
@@ -1423,7 +1335,6 @@ def checklist_mobile():
         )
 
         if mode == "start_only":
-            # apenas 1 checklist por dia
             if q_today.count() >= 1:
                 flash("Você já realizou o checklist de início hoje.", "error")
                 return redirect(url_for("checklist_mobile"))
@@ -1441,7 +1352,6 @@ def checklist_mobile():
                 if first.vehicle_id != v_id_int:
                     flash("O checklist de chegada deve ser feito para o mesmo veículo do início.", "error")
                     return redirect(url_for("checklist_mobile"))
-            # se 0 → será considerado 'início'; se 1 → 'chegada' (apenas por ordem)
 
         # monta respostas
         respostas = {}
@@ -1509,20 +1419,14 @@ def checklist_mobile():
     return render_template("checklist_mobile.html", vehicles=vehicles, items=items_qs, success=success)
 
 
-# ----------------- PERFIL DO TÉCNICO / MANUTENÇÃO (ALTERAR SENHA) -----------------
+# ----------------- PERFIL -----------------
 @app.route("/perfil", methods=["GET", "POST"])
 @login_required
 def perfil():
-    """
-    Página onde técnicos e equipe de manutenção podem alterar sua própria senha.
-    Admin e Supervisor não usam esta tela — possuem painel próprio.
-    """
-
     if request.method == "POST":
         nova = request.form.get("nova_senha", "").strip()
         confirma = request.form.get("confirma", "").strip()
 
-        # validações
         if not nova or not confirma:
             flash("Preencha ambos os campos de senha.", "error")
             return redirect(url_for("perfil"))
@@ -1531,14 +1435,12 @@ def perfil():
             flash("As senhas não coincidem.", "error")
             return redirect(url_for("perfil"))
 
-        # salvar nova senha
         current_user.set_password(nova)
         db.session.commit()
 
         registrar_log(f"Usuário alterou a própria senha: {current_user.username}")
         flash("Senha atualizada com sucesso!", "success")
 
-        # redirecionamentos por papel
         if current_user.is_manutencao:
             return redirect(url_for("manutencao_os"))
 
@@ -1548,7 +1450,6 @@ def perfil():
         return redirect(url_for("checklist_mobile"))
 
     return render_template("perfil.html", user=current_user)
-
 
 
 # ----------------- LOGS DO SISTEMA (ADMIN) -----------------
