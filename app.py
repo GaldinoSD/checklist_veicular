@@ -57,7 +57,7 @@ ALLOWED_EXT = {".png", ".jpg", ".jpeg", ".webp"}
 
 app = Flask(__name__)
 app.config["SECRET_KEY"] = "altere-esta-chave"
-app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{DB_PATH}"
+app.config["SQLALCHEMY_DATABASE_URI"] = "postgresql://jonatas:26828021jJ@localhost/checklist"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["MAX_CONTENT_LENGTH"] = 32 * 1024 * 1024  # 32MB uploads
 
