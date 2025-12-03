@@ -67,6 +67,7 @@ login_manager = LoginManager(app)
 login_manager.login_view = "login"
 
 
+
 # ----------------- MODELOS -----------------
 class User(UserMixin, db.Model):
     __tablename__ = "user"
@@ -1353,6 +1354,19 @@ def checklist_mobile():
                     flash("O checklist de chegada deve ser feito para o mesmo veículo do início.", "error")
                     return redirect(url_for("checklist_mobile"))
 
+        # 🔍 VALIDAÇÃO DE KM
+        v = Vehicle.query.get(vehicle_id)
+        if v:
+            km_atual = v.km or 0
+
+            # 🚫 KM informado menor → BLOQUEIA o checklist
+            if km < km_atual:
+                flash(
+                    f"A quilometragem informada ({km} km) é inferior ao KM atual do veículo ({km_atual} km).",
+                    "error"
+                )
+                return redirect(url_for("checklist_mobile"))
+
         # monta respostas
         respostas = {}
         for idx, item in enumerate(items_qs, start=1):
@@ -1401,9 +1415,9 @@ def checklist_mobile():
         )
         db.session.add(checklist)
 
-        v = Vehicle.query.get(vehicle_id)
-        if v and km and int(km) > (v.km or 0):
-            v.km = int(km)
+        # Atualiza KM APENAS se maior
+        if v and km > (v.km or 0):
+            v.km = km
 
         db.session.commit()
 
@@ -1417,6 +1431,7 @@ def checklist_mobile():
         success = True
 
     return render_template("checklist_mobile.html", vehicles=vehicles, items=items_qs, success=success)
+
 
 
 # ----------------- PERFIL -----------------

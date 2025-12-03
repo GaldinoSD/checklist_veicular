@@ -40,12 +40,12 @@
 
       <tbody class="text-gray-200">
 
-        {# variável de controle do grupo (mês/ano) #}
-        {% set last_group = None %}
+        {# namespace para controlar o grupo mês/ano #}
+        {% set ns = namespace(last_group=None) %}
 
         {% for c in itens %}
 
-          {# pega mês em número #}
+          {# pega mês em número e converte para PT #}
           {% set mes_num = c.date.strftime('%m') %}
           {% if mes_num == '01' %}
             {% set mes_pt = 'Janeiro' %}
@@ -77,14 +77,14 @@
 
           {% set grupo = mes_pt ~ ' de ' ~ c.date.strftime('%Y') %}
 
-          {# quando muda o mês/ano, mostra linha de separação #}
-          {% if grupo != last_group %}
+          {# só mostra o cabeçalho quando mudar mês/ano #}
+          {% if grupo != ns.last_group %}
             <tr class="bg-white/5">
               <td colspan="6" class="px-4 py-2 text-blue-300 font-semibold uppercase tracking-wide">
                 📅 {{ grupo }}
               </td>
             </tr>
-            {% set last_group = grupo %}
+            {% set ns.last_group = grupo %}
           {% endif %}
 
           <tr class="border-b border-white/10 hover:bg-white/5 transition">

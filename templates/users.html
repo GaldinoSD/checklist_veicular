@@ -2,141 +2,165 @@
 {% set page_title = "Usuários" %}
 {% block content %}
 
-<!-- =========================================
-        CABEÇALHO + BOTÃO NOVO USUÁRIO
-========================================= -->
+<!-- =======================================================
+        CABEÇALHO
+======================================================= -->
 <div class="flex items-center justify-between mb-6">
-  <h2 class="text-2xl font-semibold">Usuários</h2>
+  <h2 class="text-2xl font-semibold">Gestão de Usuários</h2>
 
   {% if ROLE_ADMIN %}
   <button onclick="document.getElementById('modalNovoUsuario').showModal()"
           class="px-4 py-2 rounded-lg bg-green-600 hover:bg-green-700 text-white font-semibold shadow-md">
-      <i class="fa-solid fa-user-plus mr-1"></i> Novo Usuário
+      + Novo Usuário
   </button>
   {% endif %}
 </div>
 
-<!-- =========================================
-        LISTA DE USUÁRIOS
-========================================= -->
-<div class="mt-8 grid md:grid-cols-2 lg:grid-cols-3 gap-5">
-  {% for u in items %}
-  <div class="bg-white/5 rounded-2xl p-5 border border-white/10 shadow-md hover:shadow-blue-500/10 transition">
+<!-- =======================================================
+        LISTAGEM DE USUÁRIOS
+======================================================= -->
+<div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
 
-    <div class="flex items-center justify-between mb-3">
+  {% for u in items %}
+  <div class="bg-white/5 backdrop-blur rounded-2xl p-5 border border-white/10 shadow-md hover:shadow-blue-500/20 transition">
+
+    <div class="flex items-center justify-between mb-4">
       <h3 class="font-semibold text-lg">{{ u.username }}</h3>
 
-      <span class="px-3 py-1 text-xs font-medium rounded-full
-        {% if u.role == 'admin' %}
-          bg-blue-900/40 text-blue-200 border border-blue-700/40
-        {% elif u.role == 'supervisor' %}
-          bg-yellow-900/40 text-yellow-200 border border-yellow-700/40
-        {% elif u.role == 'manutencao' %}
-          bg-purple-900/40 text-purple-200 border border-purple-700/40
-        {% else %}
-          bg-gray-800/60 text-gray-300 border border-gray-600/40
+      <span class="px-3 py-1 rounded-full text-xs font-medium
+        {% if u.role == 'admin' %} bg-blue-900/40 text-blue-200 border border-blue-700/40
+        {% elif u.role == 'supervisor' %} bg-yellow-900/40 text-yellow-200 border border-yellow-700/40
+        {% elif u.role == 'manutencao' %} bg-purple-900/40 text-purple-200 border border-purple-700/40
+        {% else %} bg-gray-800/60 text-gray-300 border border-gray-600/40
         {% endif %}">
         {{ u.role | capitalize }}
       </span>
     </div>
 
-    <div class="space-y-3 mt-3">
+    <!-- Botões -->
+    <div class="flex justify-between mt-4">
+      <button onclick="document.getElementById('modalEdit{{ u.id }}').showModal()"
+              class="w-[48%] bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg py-2 text-sm shadow">
+        Editar
+      </button>
 
-      <!-- Alterar Senha -->
-      <form method="post" action="{{ url_for('users_pwd', uid=u.id) }}" class="flex items-center gap-2">
-        <input name="password" placeholder="Nova senha" type="text"
-               class="flex-1 bg-gray-900/50 border border-white/10 rounded-lg px-3 py-2 text-sm 
-                      focus:outline-none focus:ring-2 focus:ring-blue-600">
-        <button class="bg-blue-700 hover:bg-blue-600 rounded-lg px-4 py-2 text-sm text-white font-medium transition-all">
-          Atualizar Senha
+      <form method="post" action="{{ url_for('users_del', uid=u.id) }}" 
+            onsubmit="return confirm('Deseja realmente excluir {{ u.username }}?');"
+            class="w-[48%]">
+        <button class="w-full bg-red-700 hover:bg-red-600 text-white font-semibold rounded-lg py-2 text-sm shadow">
+          Excluir
         </button>
       </form>
+    </div>
+
+  </div>
+
+
+  <!-- =======================================================
+          MODAL DE EDIÇÃO DE USUÁRIO (INDIVIDUAL)
+  ======================================================= -->
+  <dialog id="modalEdit{{ u.id }}"
+          class="rounded-2xl bg-gray-900 border border-gray-700 p-6 shadow-2xl w-[380px]">
+
+    <h2 class="text-xl font-bold text-white mb-4">Editar Usuário</h2>
+
+    <form method="post" action="{{ url_for('users_pwd', uid=u.id) }}" class="space-y-4">
+
+      <!-- Usuário (não editável) -->
+      <div>
+        <label class="text-xs text-gray-300 font-medium">Usuário</label>
+        <input value="{{ u.username }}" disabled
+               class="w-full bg-gray-800 border border-gray-700 rounded-md px-3 py-2 text-gray-400 text-sm">
+      </div>
+
+      <!-- Senha -->
+      <div>
+        <label class="text-xs text-gray-300 font-medium">Nova Senha</label>
+        <input name="password" placeholder="Informe nova senha"
+               class="w-full bg-gray-800 border border-gray-600 rounded-md px-3 py-2 text-white text-sm">
+      </div>
 
       <!-- Alterar Perfil -->
-      <form method="post" action="{{ url_for('users_role', uid=u.id) }}" class="flex items-center gap-2">
-        <select name="role" 
-                class="flex-1 bg-gray-900/50 border border-white/10 rounded-lg px-3 py-2 text-sm 
-                       focus:outline-none focus:ring-2 focus:ring-blue-600">
+      <div>
+        <label class="text-xs text-gray-300 font-medium">Perfil</label>
+        <select name="role"
+                form="formRole{{ u.id }}"
+                class="w-full bg-gray-800 border border-gray-600 rounded-md px-3 py-2 text-white text-sm">
           <option value="tech" {% if u.role == 'tech' %}selected{% endif %}>Técnico</option>
           <option value="supervisor" {% if u.role == 'supervisor' %}selected{% endif %}>Supervisor</option>
           <option value="admin" {% if u.role == 'admin' %}selected{% endif %}>Administrador</option>
           <option value="manutencao" {% if u.role == 'manutencao' %}selected{% endif %}>Manutenção</option>
         </select>
-        <button class="bg-indigo-600 hover:bg-indigo-500 rounded-lg px-4 py-2 text-sm text-white font-medium transition-all">
-          Alterar Perfil
+      </div>
+
+      <!-- BOTÕES -->
+      <div class="flex justify-end gap-2 pt-2">
+        <button type="button"
+                onclick="document.getElementById('modalEdit{{ u.id }}').close()"
+                class="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-md text-sm">
+          Cancelar
         </button>
-      </form>
 
-      <!-- Excluir Usuário -->
-      <form method="post" action="{{ url_for('users_del', uid=u.id) }}" 
-            onsubmit="return confirm('Deseja realmente excluir {{ u.username }}?');">
-        <button class="w-full bg-red-700 hover:bg-red-600 rounded-lg px-4 py-2 text-sm text-white font-medium transition-all mt-2">
-          Excluir Usuário
+        <button formaction="{{ url_for('users_pwd', uid=u.id) }}"
+                class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-md text-sm">
+          Salvar
         </button>
-      </form>
 
-    </div>
-  </div>
+        <button form="formRole{{ u.id }}"
+                class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white font-semibold rounded-md text-sm">
+          Atualizar Perfil
+        </button>
+      </div>
 
-  {% else %}
-    <div class="text-gray-400 col-span-full text-center py-6 border border-dashed border-white/10 rounded-xl">
-      Nenhum usuário cadastrado ainda.
-    </div>
+    </form>
+
+    <!-- Form para alterar perfil separado -->
+    <form id="formRole{{ u.id }}" method="post" action="{{ url_for('users_role', uid=u.id) }}"></form>
+
+  </dialog>
+
   {% endfor %}
+
 </div>
 
 
-<!-- ============================================
+<!-- =======================================================
         MODAL — NOVO USUÁRIO
-============================================ -->
+======================================================= -->
 <dialog id="modalNovoUsuario"
-        class="rounded-2xl bg-gray-900 border border-gray-700 p-5 shadow-2xl 
-               w-[340px] max-h-[90vh] overflow-hidden">
+        class="rounded-2xl bg-gray-900 border border-gray-700 p-6 shadow-2xl w-[380px]">
 
-  <h2 class="text-lg font-bold text-white mb-3">Cadastrar Novo Usuário</h2>
+  <h2 class="text-xl font-bold text-white mb-4">Cadastrar Novo Usuário</h2>
 
-  <form method="post" action="{{ url_for('users_new') }}" class="space-y-3">
+  <form method="post" action="{{ url_for('users_new') }}" class="space-y-4">
 
-    <!-- Usuário -->
     <div>
-      <label class="text-xs text-gray-300 font-medium">Nome de Usuário</label>
-      <input name="username"
-             class="w-full bg-gray-800 border border-gray-600 rounded-md px-2 py-1.5 text-white text-sm
-                    focus:border-blue-500 focus:ring-2 focus:ring-blue-600"
-             required>
+      <label class="text-xs text-gray-300 font-medium">Usuário</label>
+      <input name="username" class="w-full bg-gray-800 border border-gray-700 rounded-md px-3 py-2 text-white text-sm" required>
     </div>
 
-    <!-- Senha -->
     <div>
       <label class="text-xs text-gray-300 font-medium">Senha</label>
-      <input name="password" type="text"
-             class="w-full bg-gray-800 border border-gray-600 rounded-md px-2 py-1.5 text-white text-sm
-                    focus:border-blue-500 focus:ring-2 focus:ring-blue-600"
-             required>
+      <input name="password" type="text" class="w-full bg-gray-800 border border-gray-700 rounded-md px-3 py-2 text-white text-sm" required>
     </div>
 
-    <!-- Perfil -->
     <div>
       <label class="text-xs text-gray-300 font-medium">Perfil</label>
-      <select name="role"
-              class="w-full bg-gray-800 border border-gray-600 rounded-md px-2 py-1.5 text-white text-sm
-                     focus:border-blue-500 focus:ring-2 focus:ring-blue-600">
+      <select name="role" class="w-full bg-gray-800 border border-gray-700 rounded-md px-3 py-2 text-white text-sm">
         <option value="tech">Técnico</option>
         <option value="supervisor">Supervisor</option>
         <option value="admin">Administrador</option>
-        <option value="manutencao">Manutenção</option> <!-- NOVA ROLE -->
+        <option value="manutencao">Manutenção</option>
       </select>
     </div>
 
-    <!-- Botões -->
-    <div class="flex justify-end gap-2 pt-1">
-      <button type="button"
-              onclick="document.getElementById('modalNovoUsuario').close()"
-              class="px-3 py-1.5 bg-gray-700 hover:bg-gray-600 text-white rounded-md text-sm">
+    <div class="flex justify-end gap-2 pt-2">
+      <button type="button" onclick="document.getElementById('modalNovoUsuario').close()"
+              class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-md text-white text-sm">
         Cancelar
       </button>
 
-      <button class="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-md text-sm">
+      <button class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-md text-sm">
         Criar Usuário
       </button>
     </div>

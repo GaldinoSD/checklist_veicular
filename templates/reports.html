@@ -6,7 +6,7 @@
 
   <h2 class="text-lg font-semibold mb-4">Relatórios (PDF)</h2>
 
-  {% set last_group = "" %}
+  {% set ns = namespace(last_group=None) %}
 
   <div class="overflow-x-auto rounded-lg">
     <table class="min-w-full text-sm">
@@ -24,7 +24,7 @@
 
         {% for f in items %}
 
-        {# AGRUPAMENTO POR MÊS/ANO EM PORTUGUÊS #}
+        {# DICIONÁRIO DE MESES PT-BR #}
         {% set meses = {
           'January':'Janeiro','February':'Fevereiro','March':'Março',
           'April':'Abril','May':'Maio','June':'Junho',
@@ -36,13 +36,14 @@
         {% set mes_pt = meses.get(mes_original, mes_original) %}
         {% set grupo = mes_pt ~ ' de ' ~ f.mtime.strftime('%Y') %}
 
-        {% if grupo != last_group %}
+        {# SOMENTE MOSTRA O BLOCO SE O MÊS MUDAR #}
+        {% if grupo != ns.last_group %}
           <tr class="bg-white/5">
             <td colspan="4" class="px-4 py-2 text-blue-300 font-semibold uppercase tracking-wide">
               📁 {{ grupo }}
             </td>
           </tr>
-          {% set last_group = grupo %}
+          {% set ns.last_group = grupo %}
         {% endif %}
 
         <tr class="border-b border-white/10 hover:bg-white/5 transition">
