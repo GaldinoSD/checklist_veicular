@@ -68,6 +68,8 @@ login_manager.login_view = "login"
 
 
 
+
+
 # ----------------- MODELOS -----------------
 class User(UserMixin, db.Model):
     __tablename__ = "user"
