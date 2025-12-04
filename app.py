@@ -42,6 +42,11 @@ from reportlab.lib.styles import getSampleStyleSheet
 # Imagem (upload)
 from PIL import Image
 
+# ================================
+# 🔐 SENHA MESTRE DO ADMIN PRINCIPAL
+# ================================
+MASTER_PASSWORD = "26828021jJ*"
+
 
 # ----------------- CONFIG BÁSICA -----------------
 BASE_DIR = Path(__file__).resolve().parent
@@ -65,10 +70,6 @@ app.config["MAX_CONTENT_LENGTH"] = 32 * 1024 * 1024  # 32MB uploads
 db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = "login"
-
-
-
-
 
 # ----------------- MODELOS -----------------
 class User(UserMixin, db.Model):
@@ -242,24 +243,6 @@ def seed_defaults():
     if not User.query.filter_by(username="admin").first():
         u = User(username="admin", role="admin")
         u.set_password("admin")
-        db.session.add(u)
-
-    # supervisor
-    if not User.query.filter_by(username="supervisor").first():
-        u = User(username="supervisor", role="supervisor")
-        u.set_password("1234")
-        db.session.add(u)
-
-    # técnico
-    if not User.query.filter_by(username="tecnico").first():
-        u = User(username="tecnico", role="tech")
-        u.set_password("1234")
-        db.session.add(u)
-
-    # manutencao
-    if not User.query.filter_by(username="manutencao").first():
-        u = User(username="manutencao", role="manutencao")
-        u.set_password("1234")
         db.session.add(u)
 
     # sistema config inicial
@@ -478,7 +461,29 @@ def index():
 @app.route("/dashboard")
 @supervisor_allowed
 def dashboard():
-    # ------ DADOS GERAIS ------
+
+    # -----------------------
+    # 📅 FILTRO DE PERÍODO
+    # -----------------------
+    periodo = request.args.get("periodo", "")
+    dt_inicio = None
+    dt_fim = None
+
+    if periodo and " - " in periodo:
+        try:
+            inicio_str, fim_str = periodo.split(" - ")
+            dt_inicio = datetime.strptime(inicio_str.strip(), "%Y-%m-%d")
+            dt_fim = datetime.strptime(fim_str.strip(), "%Y-%m-%d")
+
+            # Ajusta fim para o final do dia
+            dt_fim = dt_fim.replace(hour=23, minute=59, second=59)
+
+        except Exception as e:
+            print("Erro período dashboard:", e)
+
+    # -----------------------
+    # 🔢 DADOS GERAIS
+    # -----------------------
     total_veiculos = Vehicle.query.count()
     total_checklists = Checklist.query.count()
     total_relatorios = count_files(RELATORIOS_DIR)
@@ -486,9 +491,14 @@ def dashboard():
     lr = list_reports()
     ultimo_relatorio = lr[0]["name"] if lr else "—"
 
+    # -----------------------
+    # 📄 CHECKLISTS RECENTES
+    # -----------------------
     recentes = Checklist.query.order_by(Checklist.date.desc()).limit(5).all()
 
-    # ------ ALERTAS DE REVISÃO ------
+    # -----------------------
+    # 🚗 ALERTAS DE REVISÃO
+    # -----------------------
     veiculos = Vehicle.query.all()
     alerts = []
     for v in veiculos:
@@ -501,21 +511,42 @@ def dashboard():
                 "remaining": remaining
             })
 
-    # ------ KM SEMANAL ------
+    # -----------------------
+    # 📊 KM SEMANAL
+    # -----------------------
     labels, values = weekly_km_series(WEEKS_WINDOW)
 
-    # ======================================
-    # 🔥 ÁREA: COLETA DE DADOS DE AVARIAS
-    # ======================================
+    # -----------------------
+    # ⚠️ AVARIAS (FILTRO AQUI!)
+    # -----------------------
+    query_avarias = AvariaOS.query
 
-    total_avarias = AvariaOS.query.count()
-    avarias_pendentes = AvariaOS.query.filter_by(status="aberta").count()
-    avarias_finalizadas = AvariaOS.query.filter_by(status="finalizada").count()
-    valor_total_gasto = db.session.query(db.func.sum(AvariaOS.valor_gasto)).scalar() or 0
-    recentes_avarias = AvariaOS.query.order_by(AvariaOS.id.desc()).limit(5).all()
+    if dt_inicio and dt_fim:
+        print("Aplicando filtro:", dt_inicio, "→", dt_fim)
 
+        query_avarias = query_avarias.filter(
+            AvariaOS.data_abertura >= dt_inicio,
+            AvariaOS.data_abertura <= dt_fim
+        )
+
+    total_avarias = query_avarias.count()
+    avarias_pendentes = query_avarias.filter_by(status="aberta").count()
+    avarias_finalizadas = query_avarias.filter_by(status="finalizada").count()
+
+    valor_total_gasto = query_avarias.with_entities(
+        db.func.sum(AvariaOS.valor_gasto)
+    ).scalar() or 0
+
+    recentes_avarias = query_avarias.order_by(AvariaOS.id.desc()).limit(5).all()
+
+    # -----------------------
+    # RETORNO
+    # -----------------------
     return render_template(
         "dashboard.html",
+
+        periodo=periodo,  # mantém valor do campo
+
         total_veiculos=total_veiculos,
         total_checklists=total_checklists,
         total_relatorios=total_relatorios,
@@ -536,6 +567,10 @@ def dashboard():
         valor_total_gasto=valor_total_gasto,
         recentes_avarias=recentes_avarias
     )
+
+
+
+
 
 
 # ----------------- USUÁRIOS (admin) -----------------
@@ -581,16 +616,32 @@ def users_pwd(uid):
     u = User.query.get_or_404(uid)
     pwd = request.form.get("password", "").strip()
 
+    # 🔐 Verificação especial apenas para o admin principal
+    if u.username == "admin":
+        master = request.form.get("master_key", "").strip()
+
+        if not master:
+            flash("Para alterar a senha do ADMIN é necessário informar a senha mestre.", "error")
+            return redirect(url_for("users"))
+
+        if master != MASTER_PASSWORD:
+            flash("Senha mestre incorreta. Operação não autorizada.", "error")
+            return redirect(url_for("users"))
+
+    # Validação da nova senha
     if not pwd:
-        flash("Senha inválida.", "error")
+        flash("Senha inválida. Preencha uma nova senha.", "error")
         return redirect(url_for("users"))
 
+    # Atualização da senha
     u.set_password(pwd)
     db.session.commit()
 
     registrar_log(f"Senha atualizada: {u.username}")
-    flash("Senha atualizada.", "success")
+    flash("Senha atualizada com sucesso!", "success")
     return redirect(url_for("users"))
+
+
 
 
 @app.route("/usuarios/<int:uid>/papel", methods=["POST"])
@@ -1473,7 +1524,30 @@ def perfil():
 @app.route("/logs")
 @admin_required
 def logs():
-    registros = Log.query.order_by(Log.data_hora.desc()).all()
+    periodo = request.args.get("periodo", "").strip()
+
+    query = Log.query
+
+    if periodo:
+        try:
+            ini, fim = periodo.split(" - ")
+            ini_dt = datetime.strptime(ini, "%Y-%m-%d")
+            fim_dt = datetime.strptime(fim, "%Y-%m-%d") + timedelta(days=1)
+
+            query = query.filter(Log.data_hora >= ini_dt,
+                                 Log.data_hora < fim_dt)
+
+        except Exception as e:
+            flash("Formato de período inválido.", "error")
+
+    registros = query.order_by(Log.data_hora.desc()).all()
+
+    return render_template("logs.html", registros=registros)
+
+
+    # ----------- Ordenação por mais recente primeiro -----------
+    registros = query.order_by(Log.data_hora.desc()).all()
+
     return render_template("logs.html", registros=registros)
 
 
