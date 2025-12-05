@@ -71,6 +71,7 @@ db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = "login"
 
+
 # ----------------- MODELOS -----------------
 class User(UserMixin, db.Model):
     __tablename__ = "user"
@@ -368,34 +369,50 @@ def iso_week(dt: datetime):
 
 
 def weekly_km_series(weeks_back=WEEKS_WINDOW):
+    from collections import defaultdict
+
     end = datetime.utcnow()
-    rows = Checklist.query.all()
-    per_week_vehicle = {}
+    start = end - timedelta(weeks=weeks_back)
 
-    # agrupar por semana
+    # Buscar checklists no período
+    rows = (Checklist.query
+            .filter(Checklist.date >= start, Checklist.date <= end)
+            .order_by(Checklist.vehicle_id.asc(), Checklist.date.asc())
+            .all())
+
+    # Dicionário: semana → km rodado
+    weekly_km = defaultdict(int)
+
+    # Agrupar por veículo
+    last_km_per_vehicle = {}
+
     for c in rows:
+        vid = c.vehicle_id
+        km = c.km or 0
         wk = iso_week(c.date)
-        key = (wk, c.vehicle_id)
-        if key not in per_week_vehicle:
-            per_week_vehicle[key] = [c.km, c.km]
-        else:
-            lo, hi = per_week_vehicle[key]
-            per_week_vehicle[key] = [min(lo, c.km), max(hi, c.km)]
 
-    weekly = defaultdict(int)
-    for (wk, vid), (lo, hi) in per_week_vehicle.items():
-        if hi >= lo:
-            weekly[wk] += (hi - lo)
+        # Se já existe KM anterior desse veículo, calcula diferença
+        if vid in last_km_per_vehicle:
+            diff = km - last_km_per_vehicle[vid]
+            # Só soma se for positivo (para evitar reset de KM)
+            if diff > 0:
+                weekly_km[wk] += diff
 
+        # Atualiza último KM desse veículo
+        last_km_per_vehicle[vid] = km
+
+    # Gera lista de semanas de forma ordenada
     weeks = []
     for i in range(weeks_back - 1, -1, -1):
         dt = end - timedelta(weeks=i)
         monday = dt - timedelta(days=dt.weekday())
-        weeks.append(iso_week(monday + timedelta(days=3)))
+        weeks.append(iso_week(monday + timedelta(days=3)))  # meio da semana
 
     labels = weeks
-    values = [weekly.get(wk, 0) for wk in weeks]
+    values = [weekly_km.get(wk, 0) for wk in weeks]
+
     return labels, values
+
 
 
 def save_photos(files):
@@ -1525,9 +1542,14 @@ def perfil():
 @admin_required
 def logs():
     periodo = request.args.get("periodo", "").strip()
+    busca = request.args.get("busca", "").strip().lower()
+    limit = int(request.args.get("limit", 10))  # quantidade inicial
 
     query = Log.query
 
+    # -----------------------
+    # FILTRO POR PERÍODO
+    # -----------------------
     if periodo:
         try:
             ini, fim = periodo.split(" - ")
@@ -1536,13 +1558,33 @@ def logs():
 
             query = query.filter(Log.data_hora >= ini_dt,
                                  Log.data_hora < fim_dt)
-
-        except Exception as e:
+        except Exception:
             flash("Formato de período inválido.", "error")
 
-    registros = query.order_by(Log.data_hora.desc()).all()
+    # -----------------------
+    # FILTRO POR TEXTO
+    # -----------------------
+    if busca:
+        query = query.filter(
+            Log.usuario.ilike(f"%{busca}%") |
+            Log.acao.ilike(f"%{busca}%")
+        )
 
-    return render_template("logs.html", registros=registros)
+    # TOTAL REAL PARA PAGINAÇÃO
+    total_logs = query.count()
+
+    # -----------------------
+    # APLICA O LIMIT (carregar mais)
+    # -----------------------
+    registros = query.order_by(Log.data_hora.desc()).limit(limit).all()
+
+    return render_template(
+        "logs.html",
+        registros=registros,
+        limit=limit,
+        total_logs=total_logs
+    )
+
 
 
     # ----------- Ordenação por mais recente primeiro -----------
