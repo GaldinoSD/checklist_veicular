@@ -11,8 +11,7 @@
         </h1>
     </div>
 
-
-    <!-- 🎯 FILTRO COMPLETO (PERÍODO + BUSCA POR TEXTO LADO A LADO) -->
+    <!-- 🎯 FILTRO COMPLETO (PERÍODO + BUSCA) -->
     <form method="get" class="flex items-end gap-3 bg-gray-800/40 p-4 rounded-xl border border-gray-700 mb-5">
 
         <!-- PERÍODO -->
@@ -24,7 +23,7 @@
                    class="bg-gray-900 border border-gray-700 text-gray-200 px-3 py-2 rounded-md w-64">
         </div>
 
-        <!-- BUSCA POR TEXTO -->
+        <!-- BUSCA -->
         <div class="flex flex-col text-gray-300 text-xs">
             <label for="filtro">Texto</label>
             <input id="filtro" type="text" name="busca"
@@ -45,57 +44,79 @@
     </form>
 
 
-
-    <!-- LISTAGEM -->
+    <!-- LISTAGEM COM SCROLL -->
     <div class="bg-gray-900/60 backdrop-blur rounded-xl border border-gray-700 shadow-xl p-5">
 
-        <table id="tabelaLogs" class="min-w-full divide-y divide-gray-700">
-            <thead class="bg-gray-800/60">
-                <tr>
-                    <th class="px-4 py-3 text-left text-gray-300 uppercase text-xs tracking-wider">Usuário</th>
-                    <th class="px-4 py-3 text-left text-gray-300 uppercase text-xs tracking-wider">Ação</th>
-                    <th class="px-4 py-3 text-left text-gray-300 uppercase text-xs tracking-wider">Data/Hora</th>
-                </tr>
-            </thead>
+        <!-- ÁREA COM SCROLL -->
+        <div class="max-h-[500px] overflow-y-auto rounded-lg border border-gray-800">
 
-            <tbody class="divide-y divide-gray-800 text-gray-200">
-                {% for r in registros %}
-                <tr class="hover:bg-gray-800/40 transition">
-                    <td class="px-4 py-3 font-medium">{{ r.usuario }}</td>
+            <table id="tabelaLogs" class="min-w-full divide-y divide-gray-700">
+                <thead class="bg-gray-800/60 sticky top-0 z-10">
+                    <tr>
+                        <th class="px-4 py-3 text-left text-gray-300 uppercase text-xs tracking-wider">
+                            Usuário
+                        </th>
+                        <th class="px-4 py-3 text-left text-gray-300 uppercase text-xs tracking-wider">
+                            Ação
+                        </th>
+                        <th class="px-4 py-3 text-left text-gray-300 uppercase text-xs tracking-wider">
+                            Data/Hora
+                        </th>
+                    </tr>
+                </thead>
 
-                    <td class="px-4 py-3">
-                        {% set text = r.acao.lower() %}
-                        {% if "criado" in text %}
-                            <span class="text-green-400 font-semibold"><i class="fas fa-plus-circle mr-1"></i>{{ r.acao }}</span>
-                        {% elif "excluído" in text or "delet" in text %}
-                            <span class="text-red-400 font-semibold"><i class="fas fa-trash-alt mr-1"></i>{{ r.acao }}</span>
-                        {% elif "edit" in text or "alter" in text %}
-                            <span class="text-yellow-400 font-semibold"><i class="fas fa-edit mr-1"></i>{{ r.acao }}</span>
-                        {% elif "login" in text %}
-                            <span class="text-blue-400 font-semibold"><i class="fas fa-sign-in-alt mr-1"></i>{{ r.acao }}</span>
-                        {% elif "logout" in text %}
-                            <span class="text-purple-400 font-semibold"><i class="fas fa-sign-out-alt mr-1"></i>{{ r.acao }}</span>
-                        {% else %}
-                            <span class="text-gray-300">{{ r.acao }}</span>
-                        {% endif %}
-                    </td>
+                <tbody class="divide-y divide-gray-800 text-gray-200" id="tbodyLogs">
+                    {% for r in registros %}
+                    <tr class="hover:bg-gray-800/40 transition">
+                        <td class="px-4 py-3 font-medium">{{ r.usuario }}</td>
 
-                    <td class="px-4 py-3 text-gray-400">
-                        {{ r.data_hora.strftime('%d/%m/%Y %H:%M') }}
-                    </td>
-                </tr>
-                {% endfor %}
+                        <td class="px-4 py-3">
+                            {% set text = r.acao.lower() %}
+                            {% if "criado" in text %}
+                                <span class="text-green-400 font-semibold"><i class="fas fa-plus-circle mr-1"></i>{{ r.acao }}</span>
+                            {% elif "excluído" in text or "delet" in text %}
+                                <span class="text-red-400 font-semibold"><i class="fas fa-trash-alt mr-1"></i>{{ r.acao }}</span>
+                            {% elif "edit" in text or "alter" in text %}
+                                <span class="text-yellow-400 font-semibold"><i class="fas fa-edit mr-1"></i>{{ r.acao }}</span>
+                            {% elif "login" in text %}
+                                <span class="text-blue-400 font-semibold"><i class="fas fa-sign-in-alt mr-1"></i>{{ r.acao }}</span>
+                            {% elif "logout" in text %}
+                                <span class="text-purple-400 font-semibold"><i class="fas fa-sign-out-alt mr-1"></i>{{ r.acao }}</span>
+                            {% else %}
+                                <span class="text-gray-300">{{ r.acao }}</span>
+                            {% endif %}
+                        </td>
 
-                {% if registros|length == 0 %}
-                <tr>
-                    <td colspan="3" class="px-4 py-4 text-center text-gray-500">
-                        Nenhum log encontrado para este período.
-                    </td>
-                </tr>
-                {% endif %}
-            </tbody>
-        </table>
+                        <td class="px-4 py-3 text-gray-400">
+                            {{ r.data_hora.strftime('%d/%m/%Y %H:%M') }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+
+                    {% if registros|length == 0 %}
+                    <tr>
+                        <td colspan="3" class="px-4 py-4 text-center text-gray-500">
+                            Nenhum log encontrado para este período.
+                        </td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+
+        </div> <!-- scroll -->
     </div>
+
+
+    <!-- BOTÃO CARREGAR MAIS -->
+    {% if limit < total_logs %}
+    <div class="flex justify-center mt-4">
+        <a href="{{ url_for('logs', limit=limit+20, periodo=request.args.get('periodo', ''), busca=request.args.get('busca', '')) }}"
+           class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow">
+            Carregar mais ({{ limit }}/{{ total_logs }})
+        </a>
+    </div>
+    {% endif %}
+
 </div>
 
 
@@ -105,7 +126,6 @@
 <script src="https://cdn.jsdelivr.net/npm/litepicker/dist/bundle.js"></script>
 
 <script>
-// LITEPICKER – campo único com início e fim
 new Litepicker({
     element: document.getElementById('periodo'),
     singleMode: false,
@@ -117,12 +137,11 @@ new Litepicker({
 });
 </script>
 
-
-<!-- FILTRAGEM IMEDIATA POR TEXTO NA TABELA -->
+<!-- FILTRAGEM IMEDIATA POR TEXTO -->
 <script>
 document.getElementById("filtro").addEventListener("keyup", function () {
     let filtro = this.value.toLowerCase();
-    let linhas = document.querySelectorAll("#tabelaLogs tbody tr");
+    let linhas = document.querySelectorAll("#tbodyLogs tr");
 
     linhas.forEach(linha => {
         let texto = linha.innerText.toLowerCase();
