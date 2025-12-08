@@ -90,6 +90,8 @@ login_manager = LoginManager(app)
 login_manager.login_view = "login"
 
 
+
+
 # ========================
 # FILTRO DE DATA/HORA BR
 # ========================
@@ -835,16 +837,19 @@ def vehicle_edit(vid):
     year_raw = request.form.get("year")
     km_raw = request.form.get("km")
     type_raw = (request.form.get("type") or "carro").strip().lower()
+    status_raw = (request.form.get("status") or "ativo").strip().lower()
 
     v.year = int(year_raw) if year_raw and year_raw.isdigit() else None
     v.km = int(km_raw) if km_raw and km_raw.isdigit() else v.km
     v.type = type_raw
+    v.status = status_raw
 
     db.session.commit()
 
-    registrar_log(f"Veículo editado: {v.plate} (tipo={type_raw})")
+    registrar_log(f"Veículo editado: {v.plate} (status={status_raw})")
     flash("Veículo atualizado!", "success")
     return redirect(url_for("vehicles"))
+
 
 
 @app.route("/veiculos/<int:vid>/excluir", methods=["POST"])
