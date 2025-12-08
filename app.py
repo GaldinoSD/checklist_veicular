@@ -15,6 +15,19 @@ from datetime import datetime, timedelta
 from functools import wraps
 from collections import defaultdict
 
+# ===============================
+# 🔥 CONFIGURAÇÃO DE TIMEZONE
+# ===============================
+import pytz
+TZ = pytz.timezone("America/Sao_Paulo")
+
+def agora():
+    """Retorna horário real do Brasil sem tzinfo (compatível com SQLite e Postgres)."""
+    return datetime.now(TZ).replace(tzinfo=None)
+
+# ===============================
+# IMPORTS DO FLASK E EXTENSÕES
+# ===============================
 from flask import (
     Flask, render_template, request, redirect, url_for,
     flash, send_from_directory, abort
@@ -29,7 +42,9 @@ from werkzeug.utils import secure_filename
 
 from sqlalchemy import text  # para migrações leves no PostgreSQL
 
+# ===============================
 # PDF
+# ===============================
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import mm
 from reportlab.lib import colors
@@ -39,8 +54,11 @@ from reportlab.platypus import (
 )
 from reportlab.lib.styles import getSampleStyleSheet
 
-# Imagem (upload)
+# ===============================
+# IMAGENS (UPLOAD)
+# ===============================
 from PIL import Image
+
 
 # ================================
 # 🔐 SENHA MESTRE DO ADMIN PRINCIPAL
@@ -71,6 +89,22 @@ db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = "login"
 
+
+# ========================
+# FILTRO DE DATA/HORA BR
+# ========================
+from datetime import timedelta
+
+@app.template_filter("br_datetime")
+def br_datetime(value):
+    """Converte UTC -> horário de Brasília só pra exibir."""
+    if not value:
+        return ""
+    try:
+        value_br = value - timedelta(hours=3)
+        return value_br.strftime("%d/%m/%Y %H:%M")
+    except Exception:
+        return str(value)
 
 # ----------------- MODELOS -----------------
 class User(UserMixin, db.Model):
@@ -127,15 +161,20 @@ class Vehicle(db.Model):
 
 class Checklist(db.Model):
     __tablename__ = "checklist"
+
     id = db.Column(db.Integer, primary_key=True)
     vehicle_id = db.Column(db.Integer, db.ForeignKey("vehicle.id"))
     vehicle = db.relationship("Vehicle", backref="checklists")
     technician = db.Column(db.String(120))
-    date = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # 🔥 HORÁRIO REAL (corrigido)
+    date = db.Column(db.DateTime, default=lambda: agora())
+
     km = db.Column(db.Integer, default=0)
     status = db.Column(db.String(40), default="OK")
     notes = db.Column(db.Text)
     raw_json = db.Column(db.Text)
+
 
 
 class ChecklistItem(db.Model):
@@ -1398,13 +1437,17 @@ def checklist_mobile():
             flash("KM inválido.", "error")
             return redirect(url_for("checklist_mobile"))
 
-        # regras por modo
-        today = datetime.utcnow().date()
+        # =====================================================
+        # 🔥 CORRIGIDO: PEGAR DATA LOCAL REAL
+        # =====================================================
+        today = agora().date()
+
         q_today = Checklist.query.filter(
             Checklist.technician == tech,
             db.func.date(Checklist.date) == today
         )
 
+        # regras por modo
         if mode == "start_only":
             if q_today.count() >= 1:
                 flash("Você já realizou o checklist de início hoje.", "error")
@@ -1429,7 +1472,6 @@ def checklist_mobile():
         if v:
             km_atual = v.km or 0
 
-            # 🚫 KM informado menor → BLOQUEIA o checklist
             if km < km_atual:
                 flash(
                     f"A quilometragem informada ({km} km) é inferior ao KM atual do veículo ({km_atual} km).",
@@ -1465,19 +1507,25 @@ def checklist_mobile():
         files = request.files.getlist("fotos")
         photos = save_photos(files) if files else []
 
+        # =====================================================
+        # 🔥 CORRIGIDO: DATA DE ENVIO SEM UTC
+        # =====================================================
         raw = {
             "items": respostas,
             "photos": photos,
             "tecnico": tech,
             "veiculo": vehicle_id,
             "km": km,
-            "data_envio": datetime.now().strftime("%d/%m/%Y %H:%M"),
+            "data_envio": agora().strftime("%d/%m/%Y %H:%M"),
         }
 
+        # =====================================================
+        # 🔥 CORRIGIDO: NÃO USAR datetime.utcnow()
+        # =====================================================
         checklist = Checklist(
             vehicle_id=vehicle_id,
             technician=tech,
-            date=datetime.utcnow(),
+            date=agora(),
             km=km,
             status="OK",
             notes="Checklist via web",
@@ -1501,6 +1549,7 @@ def checklist_mobile():
         success = True
 
     return render_template("checklist_mobile.html", vehicles=vehicles, items=items_qs, success=success)
+
 
 
 
@@ -1556,6 +1605,7 @@ def logs():
             ini_dt = datetime.strptime(ini, "%Y-%m-%d")
             fim_dt = datetime.strptime(fim, "%Y-%m-%d") + timedelta(days=1)
 
+            # FILTRO SEM TZINFO (já usamos agora() no salvamento)
             query = query.filter(Log.data_hora >= ini_dt,
                                  Log.data_hora < fim_dt)
         except Exception:
@@ -1585,12 +1635,6 @@ def logs():
         total_logs=total_logs
     )
 
-
-
-    # ----------- Ordenação por mais recente primeiro -----------
-    registros = query.order_by(Log.data_hora.desc()).all()
-
-    return render_template("logs.html", registros=registros)
 
 
 # ----------------- EXECUÇÃO -----------------
