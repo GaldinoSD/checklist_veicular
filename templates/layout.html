@@ -89,8 +89,21 @@
                 👋 Olá, <span class="font-semibold">{{ current_user.username }}</span>
               </p>
               <p class="text-xs text-gray-400 -mt-0.5">
-                {% if ROLE_ADMIN %}Administrador{% elif ROLE_SUPERVISOR %}Supervisor{% else %}Técnico{% endif %}
-              </p>
+
+  {% if request.endpoint in ['checklist_mobile', 'manutencao_os'] %}
+      Colaborador
+  {% else %}
+      {% if ROLE_ADMIN %}
+          Administrador
+      {% elif ROLE_SUPERVISOR %}
+          Supervisor
+      {% else %}
+          Técnico
+      {% endif %}
+  {% endif %}
+
+</p>
+
             </div>
 
             <a href="{{ url_for('logout') }}"
