@@ -55,6 +55,9 @@
     {% set icon = 'fa-car text-blue-300' %}
 {% endif %}
 
+<!-- NORMALIZAR STATUS -->
+{% set status = (v.status or '').strip().upper() %}
+
 <!-- ========================
         CARD PREMIUM ULTRA
 ========================= -->
@@ -81,10 +84,7 @@
         <div class="select-none">
             <!-- Faixa superior -->
             <div class="relative bg-blue-700 text-white w-36 rounded-t-md border border-blue-900 shadow">
-
                 <div class="flex items-center justify-between px-2 py-0.5">
-
-                    <!-- Logo Mercosul (SVG) -->
                     <svg width="22" height="10" viewBox="0 0 22 14" fill="none">
                         <circle cx="3" cy="7" r="1" fill="white"/>
                         <circle cx="7" cy="5" r="1" fill="white"/>
@@ -92,10 +92,7 @@
                         <circle cx="15" cy="4.5" r="1" fill="white"/>
                         <circle cx="19" cy="7" r="1" fill="white"/>
                     </svg>
-
                     <span class="text-[10px] font-bold tracking-wide">BRASIL</span>
-
-                    <!-- Bandeira Brasil -->
                     <div class="w-5 h-3 bg-green-600 relative flex items-center justify-center border border-white">
                         <div class="w-3 h-3 bg-yellow-400 rotate-45 absolute"></div>
                         <div class="w-2 h-2 bg-blue-700 rounded-full absolute"></div>
@@ -113,12 +110,14 @@
 
         <!-- STATUS -->
         <span class="px-3 py-1 rounded-lg text-xs font-semibold border shadow-sm
-            {% if v.status=='ATIVO' %}
+            {% if status == 'ATIVO' %}
                 bg-green-800/60 text-green-200 border-green-600/40
-            {% elif v.status=='INATIVO' %}
+            {% elif status == 'INATIVO' %}
                 bg-red-800/60 text-red-200 border-red-600/40
-            {% else %}
+            {% elif status in ['MANUTENCAO','MANUTENÇÃO'] %}
                 bg-yellow-800/60 text-yellow-200 border-yellow-600/40
+            {% else %}
+                bg-gray-700/60 text-gray-300 border-gray-500/40
             {% endif %}">
             {{ v.status }}
         </span>
@@ -188,10 +187,7 @@
     {% endif %}
 </div>
 
-
-<!-- ============================
-     MODAL DE EDIÇÃO
-============================== -->
+<!-- MODAL DE EDIÇÃO -->
 <dialog id="edit{{ v.id }}"
         class="rounded-2xl bg-gray-900 border border-gray-700 p-6 shadow-2xl w-[430px]">
 
@@ -242,9 +238,9 @@
       <label class="text-sm text-gray-300">Status</label>
       <select name="status"
               class="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white">
-        <option value="ATIVO" {% if v.status=='ATIVO' %}selected{% endif %}>ATIVO</option>
-        <option value="MANUTENCAO" {% if v.status=='MANUTENCAO' %}selected{% endif %}>MANUTENÇÃO</option>
-        <option value="INATIVO" {% if v.status=='INATIVO' %}selected{% endif %}>INATIVO</option>
+        <option value="ATIVO" {% if status=='ATIVO' %}selected{% endif %}>ATIVO</option>
+        <option value="MANUTENCAO" {% if status in ['MANUTENCAO','MANUTENÇÃO'] %}selected{% endif %}>MANUTENÇÃO</option>
+        <option value="INATIVO" {% if status=='INATIVO' %}selected{% endif %}>INATIVO</option>
       </select>
     </div>
 
@@ -266,9 +262,7 @@
 {% endfor %}
 </div>
 
-<!-- ============================
-     MODAL NOVO VEÍCULO
-============================== -->
+<!-- MODAL NOVO VEÍCULO -->
 <dialog id="modalNovoVeiculo"
         class="rounded-2xl bg-gray-900 border border-gray-700 p-6 shadow-2xl w-[420px]">
 
