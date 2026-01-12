@@ -1,69 +1,129 @@
 <!doctype html>
-<html lang="pt-BR" class="h-full">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Login • Painel de Frota</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+<html lang="pt-BR" class="h-full dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Login • Painel de Frota</title>
 
-    <style>
-      /* Mantém a logo exatamente no tamanho desejado */
-      .logo-adjust {
-        width: 100%;
-        max-width: 220px;
-        max-height: 120px;
-        object-fit: contain;
-        display: block;
-      }
-    </style>
+  <script src="https://cdn.tailwindcss.com"></script>
 
-  </head>
+  <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
-  <body class="min-h-screen flex items-center justify-center p-6 
-               bg-gradient-to-br from-gray-950 via-gray-900 to-gray-800 text-gray-100">
+  <style>
+    .logo-adjust {
+      max-width: 120px;
+      max-height: 120px;
+      object-fit: contain;
+    }
+  </style>
+</head>
 
-    <form method="post" 
-      class="bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl shadow-xl 
-             p-7 w-full max-w-sm space-y-5">   <!-- card menor + mais claro -->
+<body class="h-full flex items-center justify-center 
+             bg-gradient-to-br 
+             from-gray-950 via-gray-900 to-gray-800
+             relative overflow-hidden 
+             text-gray-100">
 
-      <div class="text-center">
-        <img src="{{ url_for('static', filename='logo.png') }}" 
-             class="mx-auto logo-adjust mb-3" alt="Logo">
+  <!-- EFEITOS DE FUNDO -->
+  <div class="absolute inset-0 pointer-events-none">
+    <div class="absolute -top-32 -left-20 w-[450px] h-[450px] 
+                bg-blue-600/20 
+                rounded-full blur-[130px]"></div>
 
-        <h1 class="text-xl font-bold tracking-wide">Acesso ao Sistema</h1>
+    <div class="absolute bottom-0 right-0 w-[350px] h-[350px] 
+                bg-purple-600/20 
+                rounded-full blur-[120px]"></div>
+  </div>
+
+  <!-- CARD GLASS -->
+  <form method="post"
+        class="relative z-10 w-full max-w-md backdrop-blur-2xl
+               bg-white/5 
+               border border-white/10 
+               rounded-2xl shadow-2xl p-10">
+
+    <!-- LOGO -->
+    <div class="w-full flex justify-center mb-8">
+      <img src="{{ url_for('static', filename='logo.png') }}" 
+           alt="Logo"
+           class="logo-adjust opacity-95 drop-shadow-lg">
+    </div>
+
+    <!-- TÍTULO -->
+    <h1 class="text-2xl text-center font-bold 
+               text-white/90 
+               mb-8 tracking-wide">
+      <i class="fa-solid fa-user-shield 
+                text-blue-400 mr-2"></i>
+      Acesso ao Sistema
+    </h1>
+
+    <!-- USUÁRIO -->
+    <div class="mb-6">
+      <label class="text-sm font-medium text-blue-200">
+        Usuário
+      </label>
+
+      <div class="flex items-center mt-1 
+                  bg-white/10 
+                  border border-white/20 
+                  backdrop-blur rounded-xl px-4 py-3 shadow-lg">
+        <i class="fa-solid fa-user 
+                  text-blue-300 mr-3"></i>
+
+        <input name="username"
+               class="bg-transparent w-full 
+                      text-white
+                      placeholder-gray-400 
+                      focus:outline-none"
+               placeholder="Digite seu usuário" required>
       </div>
+    </div>
 
-      <div>
-        <label class="text-sm opacity-80">Usuário</label>
-        <input name="username" 
-          class="mt-1 w-full border border-white/30 bg-gray-900/50 text-gray-100 
-                 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-600" 
-          required>
+    <!-- SENHA -->
+    <div class="mb-10">
+      <label class="text-sm font-medium text-blue-200">
+        Senha
+      </label>
+
+      <div class="flex items-center mt-1 
+                  bg-white/10 
+                  border border-white/20 
+                  backdrop-blur rounded-xl px-4 py-3 shadow-lg">
+        <i class="fa-solid fa-lock 
+                  text-blue-300 mr-3"></i>
+
+        <input type="password" name="password"
+               class="bg-transparent w-full 
+                      text-white
+                      placeholder-gray-400
+                      focus:outline-none"
+               placeholder="Digite sua senha" required>
       </div>
+    </div>
 
-      <div>
-        <label class="text-sm opacity-80">Senha</label>
-        <input type="password" name="password" 
-          class="mt-1 w-full border border-white/30 bg-gray-900/50 text-gray-100 
-                 rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-blue-600"
-          required>
-      </div>
+    <!-- BOTÃO -->
+    <button class="w-full py-3 rounded-xl font-semibold text-lg
+                   bg-blue-600 hover:bg-blue-700 text-white 
+                   shadow-xl
+                   transition-all duration-300 transform 
+                   hover:-translate-y-[2px] active:scale-95">
+      Entrar
+    </button>
 
-      <button 
-        class="w-full bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 
-               hover:to-blue-600 text-white rounded-lg py-2 transition font-semibold shadow-lg">
-        Entrar
-      </button>
+    <!-- ERROS -->
+    {% with msgs = get_flashed_messages(with_categories=true) %}
+      {% if msgs %}
+        {% for cat, msg in msgs %}
+          <p class="text-red-400 text-center mt-4 font-semibold">
+            {{ msg }}
+          </p>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
 
-      {% with msgs = get_flashed_messages(with_categories=true) %}
-        {% if msgs %}
-          <div class="space-y-1">
-            {% for cat, msg in msgs %}
-              <div class="text-red-300 text-sm text-center">{{ msg }}</div>
-            {% endfor %}
-          </div>
-        {% endif %}
-      {% endwith %}
-    </form>
-  </body>
+  </form>
+
+</body>
 </html>
