@@ -4,22 +4,37 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{{ page_title or 'Sistema' }}</title>
+
     <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
     <link rel="shortcut icon" type="image/x-icon" href="{{ url_for('static', filename='favicon-v2.ico') }}">
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
+    <!-- Tailwind config (opcional) -->
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            boxShadow: {
+              glass: "0 18px 60px rgba(0,0,0,.45)",
+            }
+          }
+        }
+      }
+    </script>
+
     <style>
-      /* Suaviza transições */
-      * {
+      /* ✅ Não coloque transition em tudo (pega input, table, etc). */
+      a, button, .transit {
         transition: 0.15s ease-in-out;
       }
 
-      /* Efeito vidro premium */
+      /* Vidro premium */
       .glass {
         background: rgba(255, 255, 255, 0.08);
         backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
       }
     </style>
   </head>
@@ -29,32 +44,39 @@
     <!-- ============================
           CABEÇALHO MODERNO PREMIUM
     ============================== -->
-    <header class="glass border-b border-white/20 sticky top-0 z-50">
-      <div class="max-w-7xl mx-auto px-6 py-2 flex items-center justify-between">
+    <header class="glass border-b border-white/20 sticky top-0 z-50 shadow-glass">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 py-2 flex items-center justify-between gap-3">
 
-        <!-- LOGO ===================== -->
-        <div class="flex items-center gap-3">
+        <!-- LOGO -->
+        <a href="{{ url_for('dashboard') if current_user.is_authenticated else url_for('login') }}"
+           class="flex items-center gap-3">
           <img src="{{ url_for('static', filename='logo.png') }}"
                class="h-8 w-auto object-contain drop-shadow"
                alt="Logo">
-        </div>
+        </a>
 
-        <!-- MENU CENTRAL ============= -->
         {% if current_user.is_authenticated and (ROLE_ADMIN or ROLE_SUPERVISOR) %}
+
+        {% set menu_items = [
+          ('Dashboard', 'dashboard'),
+          ('Veículos', 'vehicles'),
+          ('Checklists', 'checklists'),
+          ('Entrada / Saída', 'controle_veiculos'),
+          ('Relatórios', 'reports'),
+          ('Avarias / O.S.', 'avarias_registro')
+        ] %}
+
+        <!-- MENU DESKTOP -->
         <nav class="hidden md:flex items-center gap-2 text-sm font-medium mx-auto">
-
-          {% set menu_items = [
-            ('Dashboard', 'dashboard'),
-            ('Veículos', 'vehicles'),
-            ('Checklists', 'checklists'),
-            ('Relatórios', 'reports'),
-            ('Avarias / O.S.', 'avarias_registro')
-          ] %}
-
           {% for label, route in menu_items %}
+            {% set is_active = (request.endpoint == route) %}
             <a href="{{ url_for(route) }}"
-               class="px-4 py-2 rounded-lg text-gray-300 hover:text-white
-                      hover:bg-blue-600/20 font-medium tracking-wide">
+               class="px-4 py-2 rounded-lg font-medium tracking-wide
+                      {% if is_active %}
+                        bg-blue-600/25 text-white border border-blue-500/30
+                      {% else %}
+                        text-gray-300 hover:text-white hover:bg-blue-600/20
+                      {% endif %}">
               {{ label }}
             </a>
           {% endfor %}
@@ -62,80 +84,141 @@
           {% if ROLE_ADMIN %}
             <span class="w-px h-6 bg-white/20 mx-2"></span>
 
+            {% set is_users = (request.endpoint == 'users') %}
             <a href="{{ url_for('users') }}"
-               class="px-4 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-blue-600/20">
-               Usuários
+               class="px-4 py-2 rounded-lg
+                      {% if is_users %}
+                        bg-blue-600/25 text-white border border-blue-500/30
+                      {% else %}
+                        text-gray-300 hover:text-white hover:bg-blue-600/20
+                      {% endif %}">
+              Usuários
             </a>
 
+            {% set is_cfg = (request.endpoint == 'config_checklist') %}
             <a href="{{ url_for('config_checklist') }}"
-               class="px-4 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-blue-600/20">
-               Configurações
+               class="px-4 py-2 rounded-lg
+                      {% if is_cfg %}
+                        bg-blue-600/25 text-white border border-blue-500/30
+                      {% else %}
+                        text-gray-300 hover:text-white hover:bg-blue-600/20
+                      {% endif %}">
+              Configurações
             </a>
 
+            {% set is_logs = (request.endpoint == 'logs') %}
             <a href="{{ url_for('logs') }}"
-               class="px-4 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-yellow-600/20">
-               Logs
+               class="px-4 py-2 rounded-lg
+                      {% if is_logs %}
+                        bg-yellow-600/25 text-white border border-yellow-500/30
+                      {% else %}
+                        text-gray-300 hover:text-white hover:bg-yellow-600/20
+                      {% endif %}">
+              Logs
             </a>
           {% endif %}
         </nav>
+
+        <!-- BOTÃO MOBILE (HAMBURGUER) -->
+        <button type="button"
+                id="btnMobileMenu"
+                class="md:hidden px-3 py-2 rounded-lg border border-white/15 bg-white/5 hover:bg-white/10 transit"
+                aria-expanded="false"
+                aria-controls="mobileMenu">
+          ☰
+        </button>
+
         {% endif %}
 
-        <!-- PERFIL E SAIR ============= -->
+        <!-- PERFIL E SAIR -->
         <div class="flex items-center gap-4">
-
           {% if current_user.is_authenticated %}
-            <div class="text-right leading-tight">
+            <div class="text-right leading-tight hidden sm:block">
               <p class="text-sm text-gray-100">
                 👋 Olá, <span class="font-semibold">{{ current_user.username }}</span>
               </p>
               <p class="text-xs text-gray-400 -mt-0.5">
-
-  {% if request.endpoint in ['checklist_mobile', 'manutencao_os'] %}
-      Colaborador
-  {% else %}
-      {% if ROLE_ADMIN %}
-          Administrador
-      {% elif ROLE_SUPERVISOR %}
-          Supervisor
-      {% else %}
-          Técnico
-      {% endif %}
-  {% endif %}
-
-</p>
-
+                {% if request.endpoint in ['checklist_mobile', 'manutencao_os'] %}
+                    Colaborador
+                {% else %}
+                    {% if ROLE_ADMIN %}
+                        Administrador
+                    {% elif ROLE_SUPERVISOR %}
+                        Supervisor
+                    {% else %}
+                        Técnico
+                    {% endif %}
+                {% endif %}
+              </p>
             </div>
 
             <a href="{{ url_for('logout') }}"
                class="px-4 py-1.5 rounded-lg text-sm bg-red-600/30 border border-red-600/40
-                      hover:bg-red-600/40 hover:text-red-100">
+                      hover:bg-red-600/40 hover:text-red-100 transit">
               Sair
             </a>
-
           {% else %}
-            <a href="{{ url_for('login') }}" class="text-sm hover:text-blue-400">
+            <a href="{{ url_for('login') }}" class="text-sm hover:text-blue-400 transit">
               Login
             </a>
           {% endif %}
-
         </div>
 
       </div>
+
+      <!-- MENU MOBILE (dropdown) -->
+      {% if current_user.is_authenticated and (ROLE_ADMIN or ROLE_SUPERVISOR) %}
+      <div id="mobileMenu" class="md:hidden hidden border-t border-white/10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex flex-col gap-2">
+          {% for label, route in menu_items %}
+            {% set is_active = (request.endpoint == route) %}
+            <a href="{{ url_for(route) }}"
+               class="px-4 py-2 rounded-lg text-sm font-medium
+                      {% if is_active %}
+                        bg-blue-600/25 text-white border border-blue-500/30
+                      {% else %}
+                        text-gray-300 hover:text-white hover:bg-blue-600/20
+                      {% endif %}">
+              {{ label }}
+            </a>
+          {% endfor %}
+
+          {% if ROLE_ADMIN %}
+            <div class="h-px bg-white/10 my-2"></div>
+
+            <a href="{{ url_for('users') }}"
+               class="px-4 py-2 rounded-lg text-sm font-medium text-gray-300 hover:text-white hover:bg-blue-600/20">
+              Usuários
+            </a>
+
+            <a href="{{ url_for('config_checklist') }}"
+               class="px-4 py-2 rounded-lg text-sm font-medium text-gray-300 hover:text-white hover:bg-blue-600/20">
+              Configurações
+            </a>
+
+            <a href="{{ url_for('logs') }}"
+               class="px-4 py-2 rounded-lg text-sm font-medium text-gray-300 hover:text-white hover:bg-yellow-600/20">
+              Logs
+            </a>
+          {% endif %}
+        </div>
+      </div>
+      {% endif %}
     </header>
 
     <!-- ============================
           CONTEÚDO PRINCIPAL
     ============================== -->
-    <main class="max-w-7xl mx-auto px-6 py-6">
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 py-6">
 
       {% with msgs = get_flashed_messages(with_categories=true) %}
         {% if msgs %}
           <div class="space-y-2 mb-4">
             {% for cat, msg in msgs %}
-              <div class="px-4 py-2 rounded-lg text-sm
-                  {% if cat == 'success' %} bg-green-800/40 border border-green-600/40 text-green-200
-                  {% elif cat == 'error' %} bg-red-800/40 border border-red-600/40 text-red-200
-                  {% else %} bg-white/10 border border-white/20 text-gray-100
+              <div class="px-4 py-2 rounded-lg text-sm border
+                  {% if cat == 'success' %} bg-green-800/40 border-green-600/40 text-green-200
+                  {% elif cat == 'error' %} bg-red-800/40 border-red-600/40 text-red-200
+                  {% else %} bg-white/10 border-white/20 text-gray-100
                   {% endif %}">
                 {{ msg }}
               </div>
@@ -145,8 +228,21 @@
       {% endwith %}
 
       {% block content %}{% endblock %}
-
     </main>
 
+    <script>
+      // Mobile menu toggle (seguro mesmo se não existir)
+      (function () {
+        const btn = document.getElementById("btnMobileMenu");
+        const menu = document.getElementById("mobileMenu");
+        if (!btn || !menu) return;
+
+        btn.addEventListener("click", () => {
+          const isOpen = !menu.classList.contains("hidden");
+          menu.classList.toggle("hidden");
+          btn.setAttribute("aria-expanded", String(!isOpen));
+        });
+      })();
+    </script>
   </body>
 </html>

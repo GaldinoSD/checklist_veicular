@@ -89,6 +89,7 @@ db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = "login"
 
+
 # ========================
 # FILTRO DE DATA/HORA BR
 # ========================
@@ -96,14 +97,14 @@ from datetime import timedelta
 
 @app.template_filter("br_datetime")
 def br_datetime(value):
-    """Converte UTC -> horário de Brasília só pra exibir."""
+    """Formata datetime já salvo no horário do Brasil (sem mexer em fuso)."""
     if not value:
         return ""
     try:
-        value_br = value - timedelta(hours=3)
-        return value_br.strftime("%d/%m/%Y %H:%M")
+        return value.strftime("%d/%m/%Y %H:%M")
     except Exception:
         return str(value)
+
 
 # ----------------- MODELOS -----------------
 class User(UserMixin, db.Model):
@@ -157,6 +158,27 @@ class Vehicle(db.Model):
     status = db.Column(db.String(20), default="ATIVO")
     type = db.Column(db.String(20), default="carro")  # tipo: carro / moto / caminhão etc.
 
+class VehicleMov(db.Model):
+    __tablename__ = "vehicle_mov"
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    vehicle_id = db.Column(db.Integer, db.ForeignKey("vehicle.id"), nullable=False)
+    vehicle = db.relationship("Vehicle", backref="movimentos")
+
+    # "saida" ou "entrada"
+    tipo = db.Column(db.String(10), nullable=False)
+
+    km = db.Column(db.Integer, nullable=False, default=0)
+    responsavel = db.Column(db.String(120), nullable=False)
+    obs = db.Column(db.Text)
+
+    # horário BR (sem tzinfo) usando sua função agora()
+    data_hora = db.Column(db.DateTime, default=lambda: agora())
+
+    # chegada vinculada a uma saída
+    saida_id = db.Column(db.Integer, db.ForeignKey("vehicle_mov.id"), nullable=True)
+    saida_ref = db.relationship("VehicleMov", remote_side=[id], uselist=False)
 
 class Checklist(db.Model):
     __tablename__ = "checklist"
@@ -864,6 +886,210 @@ def vehicle_delete(vid):
     registrar_log(f"Veículo excluído: {plate}")
     flash("Veículo excluído com sucesso!", "success")
     return redirect(url_for("vehicles"))
+
+@app.route("/controle-veiculos", methods=["GET", "POST"])
+@supervisor_allowed
+def controle_veiculos():
+    # ==========================
+    # POST: registrar SAÍDA ou CHEGADA
+    # ==========================
+    if request.method == "POST":
+        tipo = (request.form.get("tipo") or "").strip().lower()
+        vehicle_id = (request.form.get("vehicle_id") or "").strip()
+        saida_id = (request.form.get("saida_id") or "").strip()  # só chegada
+        obs = (request.form.get("obs") or "").strip()
+
+        # ✅ pega do select (fallback logado)
+        responsavel = (request.form.get("responsavel") or "").strip() or current_user.username
+
+        # ✅ valida se o responsável existe
+        u = User.query.filter_by(username=responsavel).first()
+        if not u:
+            flash("Responsável inválido.", "error")
+            return redirect(url_for("controle_veiculos"))
+
+        # validações básicas
+        if not vehicle_id.isdigit():
+            flash("Selecione um veículo.", "error")
+            return redirect(url_for("controle_veiculos"))
+
+        try:
+            km = int(request.form.get("km") or 0)
+        except ValueError:
+            flash("KM inválido.", "error")
+            return redirect(url_for("controle_veiculos"))
+
+        v = Vehicle.query.get(int(vehicle_id))
+        if not v:
+            flash("Veículo não encontrado.", "error")
+            return redirect(url_for("controle_veiculos"))
+
+        # ========= SAÍDA =========
+        if tipo == "saida":
+            # impede nova saída se já existe saída aberta (sem chegada)
+            ultima_saida = (
+                VehicleMov.query
+                .filter_by(vehicle_id=v.id, tipo="saida")
+                .order_by(VehicleMov.data_hora.desc())
+                .first()
+            )
+            if ultima_saida:
+                chegada_existente = VehicleMov.query.filter_by(tipo="entrada", saida_id=ultima_saida.id).first()
+                if not chegada_existente:
+                    flash("Esse veículo já tem uma SAÍDA aberta. Registre a chegada antes de criar outra saída.", "error")
+                    return redirect(url_for("controle_veiculos"))
+
+            # KM não pode ser menor que o KM do veículo
+            if km < (v.km or 0):
+                flash(f"KM informado ({km}) é menor que o KM atual do veículo ({v.km}).", "error")
+                return redirect(url_for("controle_veiculos"))
+
+            mov = VehicleMov(
+                vehicle_id=v.id,
+                tipo="saida",
+                km=km,
+                responsavel=responsavel,
+                obs=obs or None,
+                saida_id=None,
+                data_hora=agora()  # ✅ horário BR real
+            )
+            db.session.add(mov)
+
+            if km > (v.km or 0):
+                v.km = km
+
+            db.session.commit()
+            registrar_log(f"Controle Veículos: SAÍDA ({v.plate}) km={km} resp={responsavel} id={mov.id}")
+            flash("✅ Saída registrada com sucesso!", "success")
+            return redirect(url_for("controle_veiculos"))
+
+        # ======== CHEGADA ========
+        if tipo == "entrada":
+            if not saida_id.isdigit():
+                flash("Chegada inválida: saída não informada.", "error")
+                return redirect(url_for("controle_veiculos"))
+
+            saida = VehicleMov.query.get(int(saida_id))
+            if not saida or saida.tipo != "saida":
+                flash("Saída vinculada não encontrada.", "error")
+                return redirect(url_for("controle_veiculos"))
+
+            if saida.vehicle_id != v.id:
+                flash("Chegada inválida: veículo não corresponde à saída.", "error")
+                return redirect(url_for("controle_veiculos"))
+
+            # não permite chegada duplicada
+            ja_tem = VehicleMov.query.filter_by(tipo="entrada", saida_id=saida.id).first()
+            if ja_tem:
+                flash("Essa saída já possui chegada registrada.", "error")
+                return redirect(url_for("controle_veiculos"))
+
+            # km da chegada >= km da saída
+            if km < (saida.km or 0):
+                flash(f"KM da chegada ({km}) não pode ser menor que KM da saída ({saida.km}).", "error")
+                return redirect(url_for("controle_veiculos"))
+
+            mov = VehicleMov(
+                vehicle_id=v.id,
+                tipo="entrada",
+                km=km,
+                responsavel=responsavel,
+                obs=obs or None,
+                saida_id=saida.id,
+                data_hora=agora()  # ✅ horário BR real
+            )
+            db.session.add(mov)
+
+            if km > (v.km or 0):
+                v.km = km
+
+            db.session.commit()
+            registrar_log(f"Controle Veículos: CHEGADA ({v.plate}) km={km} resp={responsavel} saida_id={saida.id}")
+            flash("✅ Chegada registrada com sucesso!", "success")
+            return redirect(url_for("controle_veiculos"))
+
+        flash("Tipo inválido.", "error")
+        return redirect(url_for("controle_veiculos"))
+
+    # ==========================
+    # GET: 1 linha = SAÍDA + CHEGADA (para r.saida / r.chegada)
+    # ==========================
+    vehicles = Vehicle.query.order_by(Vehicle.plate.asc()).all()
+    usuarios = User.query.order_by(User.username.asc()).all()
+
+    # últimas saídas
+    saidas = (
+        VehicleMov.query
+        .filter(VehicleMov.tipo == "saida")
+        .order_by(VehicleMov.data_hora.desc())
+        .limit(200)
+        .all()
+    )
+
+    saida_ids = [s.id for s in saidas]
+    chegadas = []
+    if saida_ids:
+        chegadas = (
+            VehicleMov.query
+            .filter(
+                VehicleMov.tipo == "entrada",
+                VehicleMov.saida_id.in_(saida_ids)
+            )
+            .all()
+        )
+
+    chegada_por_saida = {c.saida_id: c for c in chegadas}
+
+    registros = []
+    for s in saidas:
+        c = chegada_por_saida.get(s.id)
+        registros.append({
+            "saida": s,
+            "chegada": c,
+            "pode_registrar_chegada": (c is None),
+        })
+
+    return render_template(
+        "controle_veiculos.html",
+        page_title="Controle de Entrada e Saída",
+        vehicles=vehicles,
+        usuarios=usuarios,
+        registros=registros
+    )
+
+
+
+    # ==========================
+    # GET: carregar tela com dados reais
+    # ==========================
+    vehicles = Vehicle.query.order_by(Vehicle.plate.asc()).all()
+
+    registros = (
+        VehicleMov.query
+        .order_by(VehicleMov.data_hora.desc())
+        .limit(200)
+        .all()
+    )
+
+    # marca quais SAÍDAS ainda não têm chegada
+    saida_ids = [r.id for r in registros if r.tipo == "saida"]
+    entradas = set(
+        x.saida_id for x in VehicleMov.query.filter(
+            VehicleMov.tipo == "entrada",
+            VehicleMov.saida_id.in_(saida_ids)
+        ).all()
+    )
+
+    for r in registros:
+        r.pode_registrar_chegada = (r.tipo == "saida" and r.id not in entradas)
+
+    return render_template(
+        "controle_veiculos.html",
+        page_title="Controle de Entrada e Saída",
+        vehicles=vehicles,
+        registros=registros
+    )
+
 
 
 # ----------------- AVARIAS / ORDENS DE SERVIÇO -----------------
