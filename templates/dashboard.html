@@ -3,16 +3,36 @@
 {% block content %}
 
 <!-- ============================
-      FILTRO DE PERÍODO
+      FILTRO DE PERÍODO + VEÍCULO
 ============================ -->
-<form method="get" class="flex items-end gap-3 bg-gray-800/40 p-4 rounded-xl border border-gray-700 mb-6">
+<form method="get" class="flex flex-wrap items-end gap-3 bg-gray-800/40 p-4 rounded-xl border border-gray-700 mb-6">
 
+  <!-- PERÍODO -->
   <div class="flex flex-col text-gray-300 text-xs">
       <label for="periodo">Período</label>
       <input id="periodo" type="text" name="periodo"
              value="{{ request.args.get('periodo', '') }}"
              placeholder="Selecione o período"
              class="bg-gray-900 border border-gray-700 text-gray-200 px-3 py-2 rounded-md w-64">
+  </div>
+
+  <!-- VEÍCULO -->
+  <div class="flex flex-col text-gray-300 text-xs">
+    <label for="veiculo">Veículo</label>
+    <select id="veiculo" name="veiculo"
+            class="bg-gray-900 border border-gray-700 text-gray-200 px-3 py-2 rounded-md w-56">
+      <option value="">Todos</option>
+
+      {% for v in veiculos %}
+        <option value="{{ v.id }}"
+          {% if request.args.get('veiculo') == (v.id|string) %}
+            selected
+          {% endif %}
+        >
+          {{ v.plate }}
+        </option>
+      {% endfor %}
+    </select>
   </div>
 
   <button class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm">
@@ -239,17 +259,17 @@ const ctx = document.getElementById('kmWeekly').getContext('2d');
 
 new Chart(ctx, {
   type: 'bar',
-  data: { 
-    labels, 
+  data: {
+    labels,
     datasets: [{
       label: 'KM rodados por semana',
       data: values,
       backgroundColor: '#3b82f6'
     }]
   },
-  options: { 
-    responsive: true, 
-    scales: { y: { beginAtZero: true }}
+  options: {
+    responsive: true,
+    scales: { y: { beginAtZero: true } }
   }
 });
 </script>
@@ -257,7 +277,7 @@ new Chart(ctx, {
 
 
 <!-- ============================
-      LITEPICKER
+      LITEPICKER (único)
 ============================ -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/litepicker/dist/css/litepicker.css" />
 <script src="https://cdn.jsdelivr.net/npm/litepicker/dist/bundle.js"></script>
@@ -269,21 +289,9 @@ new Litepicker({
   numberOfMonths: 2,
   numberOfColumns: 2,
   format: 'YYYY-MM-DD',
+  delimiter: ' - ',
   autoApply: true
 });
 </script>
-
-<script>
-new Litepicker({
-    element: document.getElementById('periodo'),
-    singleMode: false,
-    numberOfMonths: 2,
-    numberOfColumns: 2,
-    format: 'YYYY-MM-DD',
-    delimiter: ' - ',
-    autoApply: true
-});
-</script>
-
 
 {% endblock %}

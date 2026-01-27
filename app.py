@@ -90,6 +90,7 @@ login_manager = LoginManager(app)
 login_manager.login_view = "login"
 
 
+
 # ========================
 # FILTRO DE DATA/HORA BR
 # ========================
@@ -559,7 +560,22 @@ def dashboard():
             print("Erro período dashboard:", e)
 
     # -----------------------
+    # 🚗 FILTRO POR VEÍCULO
+    # -----------------------
+    veiculo_id = request.args.get("veiculo", "").strip()
+    veiculo_id_int = None
+    if veiculo_id:
+        try:
+            veiculo_id_int = int(veiculo_id)
+        except Exception:
+            veiculo_id_int = None
+
+    # lista de veículos pro select do template
+    veiculos = Vehicle.query.order_by(Vehicle.plate.asc()).all()
+
+    # -----------------------
     # 🔢 DADOS GERAIS
+    # (pode ser geral ou filtrado - aqui deixei geral)
     # -----------------------
     total_veiculos = Vehicle.query.count()
     total_checklists = Checklist.query.count()
@@ -569,16 +585,31 @@ def dashboard():
     ultimo_relatorio = lr[0]["name"] if lr else "—"
 
     # -----------------------
-    # 📄 CHECKLISTS RECENTES
+    # 📄 CHECKLISTS RECENTES (com filtros)
     # -----------------------
-    recentes = Checklist.query.order_by(Checklist.date.desc()).limit(5).all()
+    query_checklists = Checklist.query
+
+    if veiculo_id_int:
+        query_checklists = query_checklists.filter(Checklist.vehicle_id == veiculo_id_int)
+
+    if dt_inicio and dt_fim:
+        query_checklists = query_checklists.filter(
+            Checklist.date >= dt_inicio,
+            Checklist.date <= dt_fim
+        )
+
+    recentes = query_checklists.order_by(Checklist.date.desc()).limit(5).all()
 
     # -----------------------
-    # 🚗 ALERTAS DE REVISÃO
+    # 🚗 ALERTAS DE REVISÃO (com filtro veículo)
     # -----------------------
-    veiculos = Vehicle.query.all()
     alerts = []
-    for v in veiculos:
+
+    veiculos_para_alerta = veiculos
+    if veiculo_id_int:
+        veiculos_para_alerta = [v for v in veiculos if v.id == veiculo_id_int]
+
+    for v in veiculos_para_alerta:
         alert, next_rev, remaining = km_alert(v.km or 0)
         if alert:
             alerts.append({
@@ -591,16 +622,22 @@ def dashboard():
     # -----------------------
     # 📊 KM SEMANAL
     # -----------------------
+    # Se sua função aceitar vehicle_id, use assim:
+    # labels, values = weekly_km_series(WEEKS_WINDOW, vehicle_id=veiculo_id_int)
+    #
+    # Se NÃO aceitar, mantém do jeito atual (geral):
     labels, values = weekly_km_series(WEEKS_WINDOW)
 
     # -----------------------
-    # ⚠️ AVARIAS (FILTRO AQUI!)
+    # ⚠️ AVARIAS (com filtros)
     # -----------------------
     query_avarias = AvariaOS.query
 
+    if veiculo_id_int:
+        query_avarias = query_avarias.filter(AvariaOS.vehicle_id == veiculo_id_int)
+
     if dt_inicio and dt_fim:
         print("Aplicando filtro:", dt_inicio, "→", dt_fim)
-
         query_avarias = query_avarias.filter(
             AvariaOS.data_abertura >= dt_inicio,
             AvariaOS.data_abertura <= dt_fim
@@ -622,7 +659,9 @@ def dashboard():
     return render_template(
         "dashboard.html",
 
-        periodo=periodo,  # mantém valor do campo
+        periodo=periodo,
+        veiculos=veiculos,  # <-- necessário pro select
+        veiculo_selecionado=veiculo_id,  # opcional (se quiser usar no template)
 
         total_veiculos=total_veiculos,
         total_checklists=total_checklists,
@@ -644,11 +683,6 @@ def dashboard():
         valor_total_gasto=valor_total_gasto,
         recentes_avarias=recentes_avarias
     )
-
-
-
-
-
 
 # ----------------- USUÁRIOS (admin) -----------------
 @app.route("/usuarios")
