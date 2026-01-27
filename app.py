@@ -59,6 +59,29 @@ from reportlab.lib.styles import getSampleStyleSheet
 # ===============================
 from PIL import Image
 
+# ===============================
+# 📁 CAMINHOS DO PROJETO (BASE)
+# ===============================
+BASE_DIR = Path(__file__).resolve().parent  # pasta onde está o app.py
+
+# ===============================
+# 📷 UPLOADS (VISTORIAS / AVARIAS)
+# ===============================
+ALLOWED_EXT = {".jpg", ".jpeg", ".png", ".webp"}
+
+VISTORIAS_UPLOAD_DIR = BASE_DIR / "static" / "vistorias_fotos"
+AVARIAS_UPLOAD_DIR   = BASE_DIR / "static" / "avarias_fotos"   # se você usar também
+
+# Cria as pastas automaticamente ao iniciar o app (não dá erro se já existir)
+VISTORIAS_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+AVARIAS_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+def allowed_file(filename: str) -> bool:
+    if not filename:
+        return False
+    ext = os.path.splitext(filename.lower())[1]
+    return ext in ALLOWED_EXT
+
 
 # ================================
 # 🔐 SENHA MESTRE DO ADMIN PRINCIPAL
@@ -244,6 +267,109 @@ class Log(db.Model):
     usuario = db.Column(db.String(100), nullable=False)
     acao = db.Column(db.String(255), nullable=False)
     data_hora = db.Column(db.DateTime, default=datetime.utcnow)
+
+
+# ----------------------------------------
+# 🚗 MODELO VISTORIAS (corrigido p/ obs + foto por item)
+# ----------------------------------------
+
+class Vistoria(db.Model):
+    __tablename__ = "vistorias"
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    vehicle_id = db.Column(db.Integer, db.ForeignKey("vehicle.id"), nullable=False)
+    vehicle = db.relationship("Vehicle", backref=db.backref("vistorias", lazy=True))
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    created_by = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
+    created_by_user = db.relationship("User", foreign_keys=[created_by])
+
+    km = db.Column(db.Integer, nullable=True)
+
+    # inicio | durante | fim
+    turno = db.Column(db.String(20), default="fim", nullable=False)
+
+    local = db.Column(db.String(120), nullable=True)
+
+    # ok | avarias
+    status_geral = db.Column(db.String(20), default="ok", nullable=False)
+
+    observacoes = db.Column(db.Text, nullable=True)
+
+    # -------------------------
+    # Itens (status)
+    # ok | avaria
+    # -------------------------
+    para_choque_dianteiro = db.Column(db.String(20), default="ok", nullable=False)
+    para_choque_traseiro  = db.Column(db.String(20), default="ok", nullable=False)
+    lateral_esquerda      = db.Column(db.String(20), default="ok", nullable=False)
+    lateral_direita       = db.Column(db.String(20), default="ok", nullable=False)
+    capo                  = db.Column(db.String(20), default="ok", nullable=False)
+    teto                  = db.Column(db.String(20), default="ok", nullable=False)
+    porta_malas           = db.Column(db.String(20), default="ok", nullable=False)
+    retrovisores          = db.Column(db.String(20), default="ok", nullable=False)
+    farois_lanternas      = db.Column(db.String(20), default="ok", nullable=False)
+    vidros_parabrisa      = db.Column(db.String(20), default="ok", nullable=False)
+
+    pneus                 = db.Column(db.String(20), default="ok", nullable=False)
+    calotas               = db.Column(db.String(20), default="ok", nullable=False)
+
+    # -------------------------
+    # Observações por item
+    # -------------------------
+    obs_para_choque_dianteiro = db.Column(db.Text, nullable=True)
+    obs_para_choque_traseiro  = db.Column(db.Text, nullable=True)
+    obs_lateral_esquerda      = db.Column(db.Text, nullable=True)
+    obs_lateral_direita       = db.Column(db.Text, nullable=True)
+    obs_capo                  = db.Column(db.Text, nullable=True)
+    obs_teto                  = db.Column(db.Text, nullable=True)
+    obs_porta_malas           = db.Column(db.Text, nullable=True)
+    obs_retrovisores          = db.Column(db.Text, nullable=True)
+    obs_farois_lanternas      = db.Column(db.Text, nullable=True)
+    obs_vidros_parabrisa      = db.Column(db.Text, nullable=True)
+
+    obs_pneus                 = db.Column(db.Text, nullable=True)
+    obs_calotas               = db.Column(db.Text, nullable=True)
+
+    # -------------------------
+    # Foto por item (salva o filename)
+    # -------------------------
+    foto_para_choque_dianteiro = db.Column(db.String(255), nullable=True)
+    foto_para_choque_traseiro  = db.Column(db.String(255), nullable=True)
+    foto_lateral_esquerda      = db.Column(db.String(255), nullable=True)
+    foto_lateral_direita       = db.Column(db.String(255), nullable=True)
+    foto_capo                  = db.Column(db.String(255), nullable=True)
+    foto_teto                  = db.Column(db.String(255), nullable=True)
+    foto_porta_malas           = db.Column(db.String(255), nullable=True)
+    foto_retrovisores          = db.Column(db.String(255), nullable=True)
+    foto_farois_lanternas      = db.Column(db.String(255), nullable=True)
+    foto_vidros_parabrisa      = db.Column(db.String(255), nullable=True)
+
+    foto_pneus                 = db.Column(db.String(255), nullable=True)
+    foto_calotas               = db.Column(db.String(255), nullable=True)
+
+
+# ----------------------------------------
+# (Opcional) Galeria geral de fotos
+# -> mantenha só se ainda quiser fotos "extras" além das fotos por item
+# ----------------------------------------
+
+class VistoriaFoto(db.Model):
+    __tablename__ = "vistorias_fotos"
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    vistoria_id = db.Column(db.Integer, db.ForeignKey("vistorias.id"), nullable=False)
+    vistoria = db.relationship(
+        "Vistoria",
+        backref=db.backref("fotos", cascade="all, delete-orphan", lazy=True)
+    )
+
+    filename = db.Column(db.String(255), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
 
 
 # --------------------------------------------------------
@@ -1896,6 +2022,179 @@ def logs():
         limit=limit,
         total_logs=total_logs
     )
+
+# ===========================
+# VISTORIAS (SUPERVISOR) - ROTAS CORRIGIDAS
+# - salva OBS por item (obs_<item>)
+# - salva FOTO por item (foto_<item>)  -> grava filename no model
+# - status_geral automático (ok/avarias)
+# ===========================
+
+def allowed_file(filename: str) -> bool:
+    if not filename:
+        return False
+    ext = os.path.splitext(filename.lower())[1]
+    return ext in ALLOWED_EXT
+
+
+def parse_periodo(periodo: str):
+    """
+    Aceita:
+      - "YYYY-MM-DD - YYYY-MM-DD"
+      - "YYYY-MM-DD" (vira dia inteiro)
+    Retorna (dt_inicio, dt_fim) ou (None, None)
+    """
+    if not periodo:
+        return None, None
+
+    periodo = periodo.strip()
+
+    try:
+        if " - " in periodo:
+            inicio_str, fim_str = periodo.split(" - ")
+            dt_inicio = datetime.strptime(inicio_str.strip(), "%Y-%m-%d")
+            dt_fim = datetime.strptime(fim_str.strip(), "%Y-%m-%d").replace(hour=23, minute=59, second=59)
+            return dt_inicio, dt_fim
+
+        dt_inicio = datetime.strptime(periodo, "%Y-%m-%d")
+        dt_fim = dt_inicio.replace(hour=23, minute=59, second=59)
+        return dt_inicio, dt_fim
+
+    except Exception as e:
+        print("Erro parse_periodo:", e)
+        return None, None
+
+
+@app.route("/vistorias")
+@supervisor_allowed
+def vistorias_list():
+    periodo = request.args.get("periodo", "")
+    veiculo_id = (request.args.get("veiculo") or "").strip()
+    status = (request.args.get("status") or "").strip()  # ok | avarias | ""
+
+    dt_inicio, dt_fim = parse_periodo(periodo)
+
+    veiculos = Vehicle.query.order_by(Vehicle.plate.asc()).all()
+
+    q = Vistoria.query
+
+    if veiculo_id.isdigit():
+        q = q.filter(Vistoria.vehicle_id == int(veiculo_id))
+
+    if status in ("ok", "avarias"):
+        q = q.filter(Vistoria.status_geral == status)
+
+    if dt_inicio and dt_fim:
+        q = q.filter(Vistoria.created_at >= dt_inicio, Vistoria.created_at <= dt_fim)
+
+    registros = q.order_by(Vistoria.id.desc()).limit(80).all()
+
+    return render_template(
+        "vistorias_list.html",
+        veiculos=veiculos,
+        registros=registros,
+        periodo=periodo
+    )
+
+
+@app.route("/vistorias/nova", methods=["GET", "POST"])
+@supervisor_allowed
+def vistorias_nova():
+    veiculos = Vehicle.query.order_by(Vehicle.plate.asc()).all()
+
+    # ✅ tem que bater com os itens do template
+    ITENS = [
+        "para_choque_dianteiro",
+        "para_choque_traseiro",
+        "lateral_esquerda",
+        "lateral_direita",
+        "capo",
+        "teto",
+        "porta_malas",
+        "retrovisores",
+        "farois_lanternas",
+        "vidros_parabrisa",
+        "pneus",
+        "calotas",
+    ]
+
+    if request.method == "POST":
+        vehicle_id = (request.form.get("vehicle_id") or "").strip()
+        km = (request.form.get("km") or "").strip()
+        turno = request.form.get("turno", "fim")
+        local = (request.form.get("local") or "").strip() or None
+        observacoes = (request.form.get("observacoes") or "").strip() or None
+
+        if not vehicle_id.isdigit():
+            flash("Selecione um veículo válido.", "error")
+            return render_template("vistorias_nova.html", veiculos=veiculos)
+
+        # 1) Status dos itens
+        campos_status = {k: (request.form.get(k) or "ok") for k in ITENS}
+
+        # 2) Observações por item (obs_<item>)
+        campos_obs = {}
+        for k in ITENS:
+            obs_val = (request.form.get(f"obs_{k}") or "").strip()
+            campos_obs[f"obs_{k}"] = obs_val or None
+
+        # 3) Status geral automático (backend garante)
+        status_geral = "avarias" if any(v == "avaria" for v in campos_status.values()) else "ok"
+
+        # 4) Cria a vistoria
+        v = Vistoria(
+            vehicle_id=int(vehicle_id),
+            km=int(km) if km.isdigit() else None,
+            turno=turno,
+            local=local,
+            status_geral=status_geral,
+            observacoes=observacoes,
+            created_by=current_user.id if getattr(current_user, "is_authenticated", False) else None,
+            **campos_status,
+            **campos_obs,
+        )
+
+        db.session.add(v)
+        db.session.flush()  # garante v.id antes do commit
+
+        # 5) Salvar fotos por item (foto_<item>) -> grava filename no model
+        try:
+            VISTORIAS_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+        except Exception as e:
+            print("Erro criando pasta de vistorias_fotos:", e)
+
+        for k in ITENS:
+            file = request.files.get(f"foto_{k}")  # nome do input no HTML
+            if not file or not file.filename:
+                continue
+            if not allowed_file(file.filename):
+                continue
+
+            ext = os.path.splitext(file.filename.lower())[1]
+            filename = f"vistoria_{v.id}_{k}_{uuid.uuid4().hex}{ext}"
+            path = VISTORIAS_UPLOAD_DIR / filename
+
+            try:
+                file.save(str(path))
+                # grava no model (precisa existir coluna foto_<k> no banco)
+                setattr(v, f"foto_{k}", filename)
+            except Exception as e:
+                print("Erro salvando foto do item:", k, e)
+
+        db.session.commit()
+
+        flash("Vistoria registrada com sucesso.", "success")
+        return redirect(url_for("vistorias_detail", vistoria_id=v.id))
+
+    return render_template("vistorias_nova.html", veiculos=veiculos)
+
+
+@app.route("/vistorias/<int:vistoria_id>")
+@supervisor_allowed
+def vistorias_detail(vistoria_id):
+    v = Vistoria.query.get_or_404(vistoria_id)
+    return render_template("vistorias_detail.html", v=v)
+
 
 
 

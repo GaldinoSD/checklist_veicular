@@ -1,0 +1,211 @@
+{% extends 'layout.html' %}
+{% set page_title = "Nova Vistoria" %}
+{% block content %}
+
+<div class="bg-white/5 border border-white/10 rounded-2xl shadow p-6">
+  <h1 class="text-2xl font-bold">Nova vistoria</h1>
+  <p class="text-sm text-gray-300 mt-1">Vistoria de lataria (amassados, riscos, etc.)</p>
+
+  <form method="post" enctype="multipart/form-data" class="mt-6 space-y-6">
+    <!-- Dados principais -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div class="flex flex-col text-gray-300 text-xs">
+        <label for="vehicle_id">Veículo</label>
+        <select id="vehicle_id" name="vehicle_id" required
+                class="bg-gray-900 border border-gray-700 text-gray-200 px-3 py-2 rounded-md">
+          <option value="">Selecione</option>
+          {% for ve in veiculos %}
+            <option value="{{ ve.id }}" data-km="{{ ve.km or 0 }}">{{ ve.plate }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="flex flex-col text-gray-300 text-xs">
+        <label for="km">KM</label>
+        <input id="km" name="km" type="number" min="0"
+               placeholder="Será preenchido ao selecionar o veículo"
+               class="bg-gray-900 border border-gray-700 text-gray-200 px-3 py-2 rounded-md">
+      </div>
+
+      <div class="flex flex-col text-gray-300 text-xs">
+        <label for="turno">Turno</label>
+        <select id="turno" name="turno"
+                class="bg-gray-900 border border-gray-700 text-gray-200 px-3 py-2 rounded-md">
+          <option value="inicio">Início do expediente</option>
+          <option value="durante">Durante expediente</option>
+          <option value="fim" selected>Fim do expediente</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="flex flex-col text-gray-300 text-xs">
+        <label for="local">Local (opcional)</label>
+        <input id="local" name="local" type="text"
+               class="bg-gray-900 border border-gray-700 text-gray-200 px-3 py-2 rounded-md"
+               placeholder="Ex: Base / Pátio / Rua">
+      </div>
+
+      <!-- ✅ Status geral agora é SOMENTE automático (sem select) -->
+      <div class="flex flex-col text-gray-300 text-xs">
+        <label>Status geral (automático)</label>
+
+        <!-- Campo VISUAL (não envia) -->
+        <div id="statusBadge"
+             class="mt-0.5 inline-flex items-center gap-2 px-3 py-2 rounded-md border bg-green-900/40 border-green-700/40 text-green-200 text-sm w-fit">
+          <span class="text-base">✅</span>
+          <span id="statusText" class="font-medium">OK</span>
+        </div>
+
+        <!-- Campo REAL que vai no POST -->
+        <input type="hidden" id="status_geral" name="status_geral" value="ok">
+
+        <p class="text-[11px] text-gray-400 mt-1">
+          Atualiza automaticamente conforme os itens marcados como “Avaria”.
+        </p>
+      </div>
+    </div>
+
+    <!-- Itens de lataria -->
+    {% set itens = [
+      ("para_choque_dianteiro", "Para-choque dianteiro"),
+      ("para_choque_traseiro",  "Para-choque traseiro"),
+      ("lateral_esquerda",      "Lateral esquerda"),
+      ("lateral_direita",       "Lateral direita"),
+      ("capo",                  "Capô"),
+      ("teto",                  "Teto"),
+      ("porta_malas",           "Porta-malas"),
+      ("retrovisores",          "Retrovisores"),
+      ("farois_lanternas",      "Faróis / Lanternas"),
+      ("vidros_parabrisa",      "Vidros / Para-brisa"),
+      ("pneus",                 "Pneus"),
+      ("calotas",               "Calotas"),
+    ] %}
+
+    <div class="bg-white/5 border border-white/10 rounded-2xl shadow overflow-hidden">
+      <div class="p-5 border-b border-white/10">
+        <h3 class="text-lg font-semibold">Itens da vistoria (lataria)</h3>
+        <p class="text-xs text-gray-400 mt-1">Se marcar “Avaria”, aparece campo de observação e foto do item.</p>
+      </div>
+
+      <div class="p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+        {% for key, label in itens %}
+          <div class="p-4 rounded-xl border border-white/10 bg-black/10 h-full">
+            <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+              <div>
+                <p class="font-semibold text-white">{{ label }}</p>
+                <p class="text-xs text-gray-400">Status + (se avaria) observação + foto</p>
+              </div>
+
+              <div class="flex items-center gap-2">
+                <select name="{{ key }}" data-item-status="{{ key }}"
+                        class="bg-gray-900 border border-gray-700 text-gray-200 px-3 py-2 rounded-md text-sm">
+                  <option value="ok" selected>OK</option>
+                  <option value="avaria">Avaria</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Campos extras (somente quando avaria) -->
+            <div id="wrap_{{ key }}" class="mt-4 hidden">
+              <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <div class="flex flex-col text-gray-300 text-xs">
+                  <label for="obs_{{ key }}">Observação do item</label>
+                  <input id="obs_{{ key }}" name="obs_{{ key }}" type="text"
+                         class="bg-gray-900 border border-gray-700 text-gray-200 px-3 py-2 rounded-md"
+                         placeholder="Ex: amassado no canto, risco na pintura...">
+                </div>
+
+                <div class="flex flex-col text-gray-300 text-xs">
+                  <label for="foto_{{ key }}">Foto do item</label>
+                  <input id="foto_{{ key }}" name="foto_{{ key }}" type="file" accept=".jpg,.jpeg,.png,.webp"
+                         class="bg-gray-900 border border-gray-700 text-gray-200 px-3 py-2 rounded-md">
+                  <p class="text-[11px] text-gray-400 mt-1">1 foto por item (se precisar mais, a gente habilita depois).</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Observações gerais -->
+    <div class="flex flex-col text-gray-300 text-xs">
+      <label for="observacoes">Observações gerais (opcional)</label>
+      <textarea id="observacoes" name="observacoes" rows="3"
+                class="bg-gray-900 border border-gray-700 text-gray-200 px-3 py-2 rounded-md"
+                placeholder="Detalhes gerais da vistoria..."></textarea>
+    </div>
+
+    <div class="flex items-center justify-end gap-2">
+      <a href="{{ url_for('vistorias_list') }}"
+         class="px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded-lg text-sm">
+        Cancelar
+      </a>
+      <button class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm">
+        Salvar vistoria
+      </button>
+    </div>
+
+  </form>
+</div>
+
+<script>
+(function(){
+  // Preenche KM ao selecionar veículo
+  const sel = document.getElementById("vehicle_id");
+  const km = document.getElementById("km");
+  if(sel && km){
+    sel.addEventListener("change", () => {
+      const opt = sel.options[sel.selectedIndex];
+      const vkm = opt?.getAttribute("data-km");
+      if(vkm !== null && vkm !== undefined){
+        km.value = vkm;
+      }
+    });
+  }
+
+  const statusHidden = document.getElementById("status_geral");
+  const badge = document.getElementById("statusBadge");
+  const statusText = document.getElementById("statusText");
+  const selects = Array.from(document.querySelectorAll("[data-item-status]"));
+
+  function setBadgeOk(){
+    if(!badge || !statusText) return;
+    badge.className = "mt-0.5 inline-flex items-center gap-2 px-3 py-2 rounded-md border bg-green-900/40 border-green-700/40 text-green-200 text-sm w-fit";
+    badge.querySelector("span").textContent = "✅";
+    statusText.textContent = "OK";
+  }
+
+  function setBadgeAvarias(){
+    if(!badge || !statusText) return;
+    badge.className = "mt-0.5 inline-flex items-center gap-2 px-3 py-2 rounded-md border bg-yellow-900/40 border-yellow-700/40 text-yellow-200 text-sm w-fit";
+    badge.querySelector("span").textContent = "⚠️";
+    statusText.textContent = "Com avarias";
+  }
+
+  function updateStatusGeral(){
+    const temAvaria = selects.some(s => s.value === "avaria");
+    if(statusHidden) statusHidden.value = temAvaria ? "avarias" : "ok";
+    temAvaria ? setBadgeAvarias() : setBadgeOk();
+  }
+
+  // Mostra/oculta observação + foto por item quando status = avaria
+  selects.forEach(s => {
+    function apply(){
+      const key = s.getAttribute("data-item-status");
+      const wrap = document.getElementById("wrap_" + key);
+      if(wrap){
+        wrap.classList.toggle("hidden", s.value !== "avaria");
+      }
+      updateStatusGeral();
+    }
+    s.addEventListener("change", apply);
+    apply();
+  });
+
+  updateStatusGeral();
+})();
+</script>
+
+{% endblock %}
