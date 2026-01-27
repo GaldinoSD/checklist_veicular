@@ -62,20 +62,15 @@
       {% for key, label in itens %}
         {% set val = v|attr(key) %}
         {% set obs = v|attr('obs_' ~ key) %}
-        {% set foto = v|attr('foto_' ~ key) %}
+        {% set fotos_item_objs = fotos_por_item.get(key, []) if fotos_por_item is defined else [] %}
+        {% set fotos_item = fotos_item_objs|map(attribute='filename')|list %}
 
         <div class="bg-white/5 border border-white/10 rounded-2xl px-4 py-3">
-
-          <!-- Linha compacta -->
           <div class="flex items-start justify-between gap-3">
             <div class="min-w-0">
               <p class="text-sm font-semibold text-white truncate">{{ label }}</p>
               <p class="text-xs text-gray-500 mt-0.5">
-                {% if val == 'avaria' %}
-                  Detalhes disponíveis
-                {% else %}
-                  Sem apontamentos
-                {% endif %}
+                {% if val == 'avaria' %}Detalhes disponíveis{% else %}Sem apontamentos{% endif %}
               </p>
             </div>
 
@@ -85,11 +80,13 @@
                   ⚠️ Avaria
                 </span>
 
-                <!-- Botão ver detalhes (só se avaria) -->
+                <!-- ✅ Abre modal (agora com várias fotos) -->
                 <button type="button"
                         class="px-3 py-1.5 rounded-lg text-xs bg-white/5 border border-white/10 hover:bg-white/10 transit"
-                        data-toggle="det_{{ key }}"
-                        aria-expanded="false">
+                        data-open-modal="item"
+                        data-label="{{ label|e }}"
+                        data-obs="{{ (obs or '')|e }}"
+                        data-fotos='{{ (fotos_item or [])|tojson }}'>
                   Ver detalhes
                 </button>
               {% else %}
@@ -99,40 +96,6 @@
               {% endif %}
             </div>
           </div>
-
-          <!-- Detalhes recolhíveis -->
-          {% if val == 'avaria' %}
-            <div id="det_{{ key }}" class="mt-3 hidden">
-              <div class="rounded-xl border border-white/10 bg-black/10 p-3 space-y-3">
-
-                <!-- Observação -->
-                <div>
-                  <p class="text-xs text-white/70 font-semibold mb-1">Observação</p>
-                  {% if obs %}
-                    <p class="text-xs text-gray-200 whitespace-pre-wrap">{{ obs }}</p>
-                  {% else %}
-                    <p class="text-xs text-gray-500">Sem observação informada.</p>
-                  {% endif %}
-                </div>
-
-                <!-- Foto -->
-                <div>
-                  <p class="text-xs text-white/70 font-semibold mb-2">Foto</p>
-                  {% if foto %}
-                    <a href="{{ url_for('static', filename='vistorias_fotos/' ~ foto) }}" target="_blank"
-                       class="block overflow-hidden rounded-xl border border-white/10 bg-white/5 hover:bg-white/10">
-                      <img src="{{ url_for('static', filename='vistorias_fotos/' ~ foto) }}"
-                           class="w-full h-44 object-cover" alt="Foto {{ label }}">
-                    </a>
-                  {% else %}
-                    <p class="text-xs text-gray-500">Sem foto neste item.</p>
-                  {% endif %}
-                </div>
-
-              </div>
-            </div>
-          {% endif %}
-
         </div>
       {% endfor %}
     </div>
@@ -164,21 +127,139 @@
 
 </div>
 
+<!-- ===========================
+      ✅ MODAL (Detalhes item)
+=========================== -->
+<div id="itemModal" class="fixed inset-0 z-[60] hidden">
+  <!-- overlay -->
+  <div id="itemModalOverlay" class="absolute inset-0 bg-black/70"></div>
+
+  <!-- modal box -->
+  <div class="relative min-h-screen flex items-center justify-center p-4">
+    <div class="w-full max-w-3xl rounded-2xl border border-white/10 bg-gray-950/90 backdrop-blur-xl shadow-glass overflow-hidden">
+      <div class="flex items-start justify-between gap-3 p-4 border-b border-white/10">
+        <div class="min-w-0">
+          <p class="text-xs text-gray-400">Detalhes do item</p>
+          <h3 id="modalTitle" class="text-lg font-semibold text-white truncate">—</h3>
+        </div>
+        <button id="itemModalClose"
+                type="button"
+                class="px-3 py-2 rounded-lg text-sm bg-white/5 border border-white/10 hover:bg-white/10 transit"
+                aria-label="Fechar">
+          ✕
+        </button>
+      </div>
+
+      <div class="p-4 space-y-4">
+        <!-- Observação -->
+        <div class="rounded-xl border border-white/10 bg-white/5 p-4">
+          <p class="text-xs text-white/70 font-semibold mb-2">Observação</p>
+          <p id="modalObs" class="text-sm text-gray-200 whitespace-pre-wrap">—</p>
+        </div>
+
+        <!-- Fotos (várias) -->
+        <div class="rounded-xl border border-white/10 bg-white/5 p-4">
+          <p class="text-xs text-white/70 font-semibold mb-3">Fotos</p>
+
+          <div id="modalFotosEmpty" class="text-sm text-gray-500">
+            Nenhuma foto neste item.
+          </div>
+
+          <div id="modalFotosGrid" class="hidden grid grid-cols-2 md:grid-cols-3 gap-3"></div>
+        </div>
+
+        <div class="flex justify-end">
+          <button id="itemModalClose2" type="button"
+                  class="px-4 py-2 rounded-lg text-sm bg-gray-600 hover:bg-gray-500 text-white transit">
+            Fechar
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 (function(){
-  const btns = document.querySelectorAll("[data-toggle]");
-  btns.forEach(btn => {
+  const modal = document.getElementById("itemModal");
+  const overlay = document.getElementById("itemModalOverlay");
+  const closeBtn = document.getElementById("itemModalClose");
+  const closeBtn2 = document.getElementById("itemModalClose2");
+
+  const titleEl = document.getElementById("modalTitle");
+  const obsEl = document.getElementById("modalObs");
+
+  const emptyEl = document.getElementById("modalFotosEmpty");
+  const gridEl = document.getElementById("modalFotosGrid");
+
+  function safeParseJSON(str){
+    try { return JSON.parse(str); } catch(e){ return []; }
+  }
+
+  function openModal({label, obs, fotosJson}){
+    titleEl.textContent = label || "Item";
+    obsEl.textContent = (obs && obs.trim()) ? obs : "Sem observação informada.";
+
+    // limpa grid
+    gridEl.innerHTML = "";
+
+    const fotos = safeParseJSON(fotosJson || "[]");
+
+    if(Array.isArray(fotos) && fotos.length > 0){
+      emptyEl.classList.add("hidden");
+      gridEl.classList.remove("hidden");
+
+      fotos.forEach(filename => {
+        if(!filename) return;
+        const url = "/static/vistorias_fotos/" + String(filename).trim();
+
+        const a = document.createElement("a");
+        a.href = url;
+        a.target = "_blank";
+        a.className = "block overflow-hidden rounded-xl border border-white/10 bg-black/10 hover:bg-black/20";
+
+        const img = document.createElement("img");
+        img.src = url;
+        img.alt = "Foto do item";
+        img.className = "w-full h-36 object-cover";
+
+        a.appendChild(img);
+        gridEl.appendChild(a);
+      });
+
+    }else{
+      gridEl.classList.add("hidden");
+      emptyEl.classList.remove("hidden");
+    }
+
+    modal.classList.remove("hidden");
+    document.body.classList.add("overflow-hidden");
+  }
+
+  function closeModal(){
+    modal.classList.add("hidden");
+    document.body.classList.remove("overflow-hidden");
+  }
+
+  document.querySelectorAll("[data-open-modal='item']").forEach(btn => {
     btn.addEventListener("click", () => {
-      const id = btn.getAttribute("data-toggle");
-      const el = document.getElementById(id);
-      if(!el) return;
-
-      const isOpen = !el.classList.contains("hidden");
-      el.classList.toggle("hidden", isOpen);
-
-      btn.setAttribute("aria-expanded", String(!isOpen));
-      btn.textContent = isOpen ? "Ver detalhes" : "Ocultar";
+      openModal({
+        label: btn.getAttribute("data-label") || "",
+        obs: btn.getAttribute("data-obs") || "",
+        fotosJson: btn.getAttribute("data-fotos") || "[]"
+      });
     });
+  });
+
+  [overlay, closeBtn, closeBtn2].forEach(el => {
+    if(!el) return;
+    el.addEventListener("click", closeModal);
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if(e.key === "Escape" && !modal.classList.contains("hidden")){
+      closeModal();
+    }
   });
 })();
 </script>

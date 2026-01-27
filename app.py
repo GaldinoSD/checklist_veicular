@@ -281,7 +281,7 @@ class Vistoria(db.Model):
     vehicle_id = db.Column(db.Integer, db.ForeignKey("vehicle.id"), nullable=False)
     vehicle = db.relationship("Vehicle", backref=db.backref("vistorias", lazy=True))
 
-    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+    created_at = db.Column(db.DateTime, default=agora, nullable=False)
 
     created_by = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
     created_by_user = db.relationship("User", foreign_keys=[created_by])
@@ -368,7 +368,12 @@ class VistoriaFoto(db.Model):
     )
 
     filename = db.Column(db.String(255), nullable=False)
+
+    # ✅ NOVO: identifica de qual item é a foto (ex: "capo", "pneus", etc.)
+    item_key = db.Column(db.String(50), nullable=True, index=True)
+
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
 
 
 
@@ -2102,7 +2107,6 @@ def vistorias_list():
 def vistorias_nova():
     veiculos = Vehicle.query.order_by(Vehicle.plate.asc()).all()
 
-    # ✅ tem que bater com os itens do template
     ITENS = [
         "para_choque_dianteiro",
         "para_choque_traseiro",
@@ -2132,16 +2136,16 @@ def vistorias_nova():
         # 1) Status dos itens
         campos_status = {k: (request.form.get(k) or "ok") for k in ITENS}
 
-        # 2) Observações por item (obs_<item>)
+        # 2) Observações por item
         campos_obs = {}
         for k in ITENS:
             obs_val = (request.form.get(f"obs_{k}") or "").strip()
             campos_obs[f"obs_{k}"] = obs_val or None
 
-        # 3) Status geral automático (backend garante)
+        # 3) Status geral automático
         status_geral = "avarias" if any(v == "avaria" for v in campos_status.values()) else "ok"
 
-        # 4) Cria a vistoria
+        # 4) Cria vistoria
         v = Vistoria(
             vehicle_id=int(vehicle_id),
             km=int(km) if km.isdigit() else None,
@@ -2155,45 +2159,74 @@ def vistorias_nova():
         )
 
         db.session.add(v)
-        db.session.flush()  # garante v.id antes do commit
+        db.session.flush()  # garante v.id
 
-        # 5) Salvar fotos por item (foto_<item>) -> grava filename no model
-        try:
-            VISTORIAS_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-        except Exception as e:
-            print("Erro criando pasta de vistorias_fotos:", e)
+        # 5) Pasta de upload (garante)
+        VISTORIAS_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+        # 6) Fotos por item (MULTIPLE)
+        saved = 0
+        rejected = 0
 
         for k in ITENS:
-            file = request.files.get(f"foto_{k}")  # nome do input no HTML
-            if not file or not file.filename:
-                continue
-            if not allowed_file(file.filename):
+            # ✅ bate com o name do input: foto_<item>[]
+            files = request.files.getlist(f"foto_{k}[]")
+            if not files:
                 continue
 
-            ext = os.path.splitext(file.filename.lower())[1]
-            filename = f"vistoria_{v.id}_{k}_{uuid.uuid4().hex}{ext}"
-            path = VISTORIAS_UPLOAD_DIR / filename
+            for file in files:
+                if not file or not file.filename:
+                    continue
 
-            try:
-                file.save(str(path))
-                # grava no model (precisa existir coluna foto_<k> no banco)
-                setattr(v, f"foto_{k}", filename)
-            except Exception as e:
-                print("Erro salvando foto do item:", k, e)
+                if not allowed_file(file.filename):
+                    rejected += 1
+                    continue
+
+                ext = os.path.splitext(file.filename)[1].lower()
+                filename = f"vistoria_{v.id}_{k}_{uuid.uuid4().hex}{ext}"
+                path = VISTORIAS_UPLOAD_DIR / filename
+
+                try:
+                    file.save(str(path))
+                    db.session.add(VistoriaFoto(
+                        vistoria_id=v.id,
+                        filename=filename,
+                        item_key=k
+                    ))
+                    saved += 1
+                except Exception as e:
+                    print("Erro salvando foto:", k, e)
+                    rejected += 1
 
         db.session.commit()
 
-        flash("Vistoria registrada com sucesso.", "success")
+        if rejected:
+            flash(f"Vistoria registrada. Fotos salvas: {saved}. Rejeitadas: {rejected}", "success")
+        else:
+            flash(f"Vistoria registrada. Fotos salvas: {saved}", "success")
+
         return redirect(url_for("vistorias_detail", vistoria_id=v.id))
 
     return render_template("vistorias_nova.html", veiculos=veiculos)
+
+
 
 
 @app.route("/vistorias/<int:vistoria_id>")
 @supervisor_allowed
 def vistorias_detail(vistoria_id):
     v = Vistoria.query.get_or_404(vistoria_id)
-    return render_template("vistorias_detail.html", v=v)
+
+    fotos_por_item = defaultdict(list)
+    for f in v.fotos:
+        if f.item_key:
+            fotos_por_item[f.item_key].append(f)
+
+    return render_template(
+        "vistorias_detail.html",
+        v=v,
+        fotos_por_item=fotos_por_item
+    )
 
 
 

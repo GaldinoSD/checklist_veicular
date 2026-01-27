@@ -46,18 +46,16 @@
                placeholder="Ex: Base / Pátio / Rua">
       </div>
 
-      <!-- ✅ Status geral agora é SOMENTE automático (sem select) -->
+      <!-- Status geral automático -->
       <div class="flex flex-col text-gray-300 text-xs">
         <label>Status geral (automático)</label>
 
-        <!-- Campo VISUAL (não envia) -->
         <div id="statusBadge"
              class="mt-0.5 inline-flex items-center gap-2 px-3 py-2 rounded-md border bg-green-900/40 border-green-700/40 text-green-200 text-sm w-fit">
           <span class="text-base">✅</span>
           <span id="statusText" class="font-medium">OK</span>
         </div>
 
-        <!-- Campo REAL que vai no POST -->
         <input type="hidden" id="status_geral" name="status_geral" value="ok">
 
         <p class="text-[11px] text-gray-400 mt-1">
@@ -66,7 +64,7 @@
       </div>
     </div>
 
-    <!-- Itens de lataria -->
+    <!-- Itens -->
     {% set itens = [
       ("para_choque_dianteiro", "Para-choque dianteiro"),
       ("para_choque_traseiro",  "Para-choque traseiro"),
@@ -84,8 +82,10 @@
 
     <div class="bg-white/5 border border-white/10 rounded-2xl shadow overflow-hidden">
       <div class="p-5 border-b border-white/10">
-        <h3 class="text-lg font-semibold">Itens da vistoria (lataria)</h3>
-        <p class="text-xs text-gray-400 mt-1">Se marcar “Avaria”, aparece campo de observação e foto do item.</p>
+        <h3 class="text-lg font-semibold">Itens da vistoria</h3>
+        <p class="text-xs text-gray-400 mt-1">
+          Se marcar “Avaria”, aparece campo de observação e permite enviar <b>várias fotos</b>.
+        </p>
       </div>
 
       <div class="p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -94,7 +94,7 @@
             <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
               <div>
                 <p class="font-semibold text-white">{{ label }}</p>
-                <p class="text-xs text-gray-400">Status + (se avaria) observação + foto</p>
+                <p class="text-xs text-gray-400">Status + (se avaria) observação + fotos</p>
               </div>
 
               <div class="flex items-center gap-2">
@@ -117,10 +117,17 @@
                 </div>
 
                 <div class="flex flex-col text-gray-300 text-xs">
-                  <label for="foto_{{ key }}">Foto do item</label>
-                  <input id="foto_{{ key }}" name="foto_{{ key }}" type="file" accept=".jpg,.jpeg,.png,.webp"
+                  <label for="foto_{{ key }}">Fotos do item</label>
+
+                  <!-- ✅ MULTIPLE + name com [] -->
+                  <input id="foto_{{ key }}" name="foto_{{ key }}[]" type="file"
+                         accept=".jpg,.jpeg,.png,.webp"
+                         multiple
                          class="bg-gray-900 border border-gray-700 text-gray-200 px-3 py-2 rounded-md">
-                  <p class="text-[11px] text-gray-400 mt-1">1 foto por item (se precisar mais, a gente habilita depois).</p>
+
+                  <p class="text-[11px] text-gray-400 mt-1">
+                    Você pode selecionar várias fotos de uma vez.
+                  </p>
                 </div>
               </div>
             </div>
@@ -190,7 +197,7 @@
     temAvaria ? setBadgeAvarias() : setBadgeOk();
   }
 
-  // Mostra/oculta observação + foto por item quando status = avaria
+  // Mostra/oculta observação + fotos por item quando status = avaria
   selects.forEach(s => {
     function apply(){
       const key = s.getAttribute("data-item-status");
