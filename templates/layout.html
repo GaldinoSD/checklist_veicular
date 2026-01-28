@@ -36,6 +36,36 @@
         backdrop-filter: blur(12px);
         -webkit-backdrop-filter: blur(12px);
       }
+
+      /* ===== User chip premium (compacto - não estoura header) ===== */
+      .userchip {
+        background: rgba(255,255,255,0.06);
+        border: 1px solid rgba(255,255,255,0.12);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+      }
+
+      .userchip:hover {
+        background: rgba(255,255,255,0.085);
+        border-color: rgba(255,255,255,0.18);
+      }
+
+      .userchip-name {
+        background: linear-gradient(90deg, #ffffff, #9ecbff);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+
+      .userchip-dot {
+        box-shadow: 0 0 0 2px rgba(0,0,0,.25);
+      }
+
+      .userchip-glow-admin {
+        box-shadow: 0 0 0 1px rgba(250,204,21,.25), 0 0 14px rgba(250,204,21,.35);
+      }
+      .userchip-glow-default {
+        box-shadow: 0 0 0 1px rgba(59,130,246,.22), 0 0 12px rgba(59,130,246,.28);
+      }
     </style>
   </head>
 
@@ -49,9 +79,9 @@
 
         <!-- LOGO -->
         <a href="{{ url_for('dashboard') if current_user.is_authenticated else url_for('login') }}"
-           class="flex items-center gap-3">
+           class="flex items-center gap-3 shrink-0">
           <img src="{{ url_for('static', filename='logo.png') }}"
-               class="h-8 w-auto object-contain drop-shadow"
+               class="h-7 w-auto object-contain drop-shadow"
                alt="Logo">
         </a>
 
@@ -67,53 +97,53 @@
           ('Avarias / O.S.', 'avarias_registro')
         ] %}
 
-        <!-- MENU DESKTOP -->
-        <nav class="hidden md:flex items-center gap-2 text-sm font-medium mx-auto">
+        <!-- MENU DESKTOP (mais compacto) -->
+        <nav class="hidden md:flex items-center gap-1 text-[12px] font-medium mx-auto px-1.5">
           {% for label, route in menu_items %}
             {% set is_active = (request.endpoint == route) %}
             <a href="{{ url_for(route) }}"
-               class="px-4 py-2 rounded-lg font-medium tracking-wide
+               class="px-2.5 py-1 rounded-md font-medium tracking-wide border border-transparent text-[12px]
                       {% if is_active %}
-                        bg-blue-600/25 text-white border border-blue-500/30
+                        bg-blue-600/20 text-white border-blue-500/25
                       {% else %}
-                        text-gray-300 hover:text-white hover:bg-blue-600/20
+                        text-gray-300 hover:text-white hover:bg-white/5 hover:border-white/10
                       {% endif %}">
               {{ label }}
             </a>
           {% endfor %}
 
           {% if ROLE_ADMIN %}
-            <span class="w-px h-6 bg-white/20 mx-2"></span>
+            <span class="w-px h-5 bg-white/15 mx-1.5"></span>
 
             {% set is_users = (request.endpoint == 'users') %}
             <a href="{{ url_for('users') }}"
-               class="px-4 py-2 rounded-lg
+               class="px-2.5 py-1 rounded-md border border-transparent text-[12px]
                       {% if is_users %}
-                        bg-blue-600/25 text-white border border-blue-500/30
+                        bg-blue-600/20 text-white border-blue-500/25
                       {% else %}
-                        text-gray-300 hover:text-white hover:bg-blue-600/20
+                        text-gray-300 hover:text-white hover:bg-white/5 hover:border-white/10
                       {% endif %}">
               Usuários
             </a>
 
             {% set is_cfg = (request.endpoint == 'config_checklist') %}
             <a href="{{ url_for('config_checklist') }}"
-               class="px-4 py-2 rounded-lg
+               class="px-2.5 py-1 rounded-md border border-transparent text-[12px]
                       {% if is_cfg %}
-                        bg-blue-600/25 text-white border border-blue-500/30
+                        bg-blue-600/20 text-white border-blue-500/25
                       {% else %}
-                        text-gray-300 hover:text-white hover:bg-blue-600/20
+                        text-gray-300 hover:text-white hover:bg-white/5 hover:border-white/10
                       {% endif %}">
               Configurações
             </a>
 
             {% set is_logs = (request.endpoint == 'logs') %}
             <a href="{{ url_for('logs') }}"
-               class="px-4 py-2 rounded-lg
+               class="px-2.5 py-1 rounded-md border border-transparent text-[12px]
                       {% if is_logs %}
-                        bg-yellow-600/25 text-white border border-yellow-500/30
+                        bg-yellow-600/15 text-white border-yellow-500/25
                       {% else %}
-                        text-gray-300 hover:text-white hover:bg-yellow-600/20
+                        text-gray-300 hover:text-white hover:bg-white/5 hover:border-white/10
                       {% endif %}">
               Logs
             </a>
@@ -123,7 +153,7 @@
         <!-- BOTÃO MOBILE (HAMBURGUER) -->
         <button type="button"
                 id="btnMobileMenu"
-                class="md:hidden px-3 py-2 rounded-lg border border-white/15 bg-white/5 hover:bg-white/10 transit"
+                class="md:hidden px-3 py-2 rounded-lg border border-white/15 bg-white/5 hover:bg-white/10 transit text-sm"
                 aria-expanded="false"
                 aria-controls="mobileMenu">
           ☰
@@ -131,33 +161,73 @@
 
         {% endif %}
 
-        <!-- PERFIL E SAIR -->
-        <div class="flex items-center gap-4">
+        <!-- PERFIL + SAIR (tudo junto e compacto) -->
+        <div class="flex items-center gap-2.5 shrink-0">
           {% if current_user.is_authenticated %}
-            <div class="text-right leading-tight hidden sm:block">
-              <p class="text-sm text-gray-100">
-                👋 Olá, <span class="font-semibold">{{ current_user.username }}</span>
-              </p>
-              <p class="text-xs text-gray-400 -mt-0.5">
-                {% if request.endpoint in ['checklist_mobile', 'manutencao_os'] %}
-                    Colaborador
+
+            {% set role_label = 'Técnico' %}
+            {% if request.endpoint in ['checklist_mobile', 'manutencao_os'] %}
+              {% set role_label = 'Colaborador' %}
+            {% else %}
+              {% if ROLE_ADMIN %}
+                {% set role_label = 'Administrador' %}
+              {% elif ROLE_SUPERVISOR %}
+                {% set role_label = 'Supervisor' %}
+              {% endif %}
+            {% endif %}
+
+            <!-- CHIP PREMIUM COM SAIR DENTRO (mais compacto) -->
+            <div class="hidden sm:flex items-center gap-2.5 pl-2 pr-2 py-1 rounded-2xl userchip transit">
+
+              <!-- avatar -->
+              <div class="w-8 h-8 rounded-xl flex items-center justify-center font-extrabold text-white shadow text-sm
+                {% if ROLE_ADMIN %}
+                  bg-gradient-to-br from-yellow-400 to-yellow-300 text-black userchip-glow-admin
                 {% else %}
-                    {% if ROLE_ADMIN %}
-                        Administrador
-                    {% elif ROLE_SUPERVISOR %}
-                        Supervisor
-                    {% else %}
-                        Técnico
-                    {% endif %}
-                {% endif %}
-              </p>
+                  bg-gradient-to-br from-blue-700 to-blue-500 userchip-glow-default
+                {% endif %}">
+                {{ current_user.username[0] | upper }}
+              </div>
+
+              <!-- nome + papel (mais compacto) -->
+              <div class="leading-tight min-w-0">
+                <div class="text-[13px] font-extrabold userchip-name max-w-[130px] truncate">
+                  {{ current_user.username }}
+                </div>
+
+                <div class="flex items-center gap-1.5 mt-0.5 text-[10px] text-gray-300">
+                  <!-- status dot -->
+                  <span class="w-2 h-2 rounded-full bg-emerald-400 userchip-dot"></span>
+
+                  <span class="px-1.5 py-0.5 rounded-full border border-white/10 bg-white/5 whitespace-nowrap">
+                    {{ role_label }}
+                  </span>
+
+                  {% if ROLE_ADMIN %}
+                    <span class="text-yellow-300">👑</span>
+                  {% endif %}
+                </div>
+              </div>
+
+              <!-- divisor -->
+              <span class="w-px h-6 bg-white/10 mx-1"></span>
+
+              <!-- sair dentro do chip (mais compacto) -->
+              <a href="{{ url_for('logout') }}"
+                 class="px-2.5 py-1 rounded-lg text-[11px] font-semibold
+                        bg-red-600/20 border border-red-600/30 text-red-100
+                        hover:bg-red-600/30 hover:border-red-500/40 transit whitespace-nowrap">
+                Sair
+              </a>
             </div>
 
+            <!-- Mobile: mantém só botão sair -->
             <a href="{{ url_for('logout') }}"
-               class="px-4 py-1.5 rounded-lg text-sm bg-red-600/30 border border-red-600/40
-                      hover:bg-red-600/40 hover:text-red-100 transit">
+               class="sm:hidden px-3 py-1.5 rounded-xl text-sm bg-red-600/25 border border-red-600/35
+                      hover:bg-red-600/35 hover:text-red-100 transit">
               Sair
             </a>
+
           {% else %}
             <a href="{{ url_for('login') }}" class="text-sm hover:text-blue-400 transit">
               Login
@@ -171,14 +241,15 @@
       {% if current_user.is_authenticated and (ROLE_ADMIN or ROLE_SUPERVISOR) %}
       <div id="mobileMenu" class="md:hidden hidden border-t border-white/10">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex flex-col gap-2">
+
           {% for label, route in menu_items %}
             {% set is_active = (request.endpoint == route) %}
             <a href="{{ url_for(route) }}"
-               class="px-4 py-2 rounded-lg text-sm font-medium
+               class="px-2.5 py-1.5 rounded-lg text-[12px] font-medium border border-transparent
                       {% if is_active %}
-                        bg-blue-600/25 text-white border border-blue-500/30
+                        bg-blue-600/20 text-white border-blue-500/25
                       {% else %}
-                        text-gray-300 hover:text-white hover:bg-blue-600/20
+                        text-gray-300 hover:text-white hover:bg-white/5 hover:border-white/10
                       {% endif %}">
               {{ label }}
             </a>
@@ -188,17 +259,20 @@
             <div class="h-px bg-white/10 my-2"></div>
 
             <a href="{{ url_for('users') }}"
-               class="px-4 py-2 rounded-lg text-sm font-medium text-gray-300 hover:text-white hover:bg-blue-600/20">
+               class="px-2.5 py-1.5 rounded-lg text-[12px] font-medium border border-transparent
+                      text-gray-300 hover:text-white hover:bg-white/5 hover:border-white/10">
               Usuários
             </a>
 
             <a href="{{ url_for('config_checklist') }}"
-               class="px-4 py-2 rounded-lg text-sm font-medium text-gray-300 hover:text-white hover:bg-blue-600/20">
+               class="px-2.5 py-1.5 rounded-lg text-[12px] font-medium border border-transparent
+                      text-gray-300 hover:text-white hover:bg-white/5 hover:border-white/10">
               Configurações
             </a>
 
             <a href="{{ url_for('logs') }}"
-               class="px-4 py-2 rounded-lg text-sm font-medium text-gray-300 hover:text-white hover:bg-yellow-600/20">
+               class="px-2.5 py-1.5 rounded-lg text-[12px] font-medium border border-transparent
+                      text-gray-300 hover:text-white hover:bg-yellow-600/10 hover:border-yellow-500/20">
               Logs
             </a>
           {% endif %}
