@@ -30,6 +30,42 @@
         transition: 0.15s ease-in-out;
       }
 
+      /* =========================
+         ✅ FUNDO PREMIUM (SEM "FAIXAS" / BANDAS)
+         - Camadas + noise leve
+      ========================== */
+      body {
+        background: #020617; /* base sólida */
+        color: #f3f4f6;
+        min-height: 100vh;
+        position: relative;
+        overflow-x: hidden;
+      }
+
+      /* Camadas de glow (radial) por trás */
+      body::after {
+        content: "";
+        position: fixed;
+        inset: 0;
+        z-index: -2;
+        background:
+          radial-gradient(ellipse at top, rgba(59,130,246,.18), transparent 55%),
+          radial-gradient(ellipse at bottom, rgba(168,85,247,.14), transparent 60%),
+          radial-gradient(ellipse at left, rgba(16,185,129,.10), transparent 55%),
+          radial-gradient(ellipse at right, rgba(245,158,11,.08), transparent 55%);
+      }
+
+      /* Noise leve (remove o efeito de “repartição”) */
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        z-index: -1;
+        pointer-events: none;
+        opacity: .06;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='.35'/%3E%3C/svg%3E");
+      }
+
       /* Vidro premium */
       .glass {
         background: rgba(255, 255, 255, 0.08);
@@ -69,7 +105,8 @@
     </style>
   </head>
 
-  <body class="min-h-screen bg-gradient-to-br from-gray-950 via-gray-900 to-gray-800 text-gray-100">
+  <!-- ✅ Removi o bg-gradient daqui -->
+  <body class="min-h-screen text-gray-100">
 
     <!-- ============================
           CABEÇALHO MODERNO PREMIUM
