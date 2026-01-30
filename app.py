@@ -114,6 +114,7 @@ login_manager.login_view = "login"
 
 
 
+
 # ========================
 # FILTRO DE DATA/HORA BR
 # ========================
@@ -1947,36 +1948,41 @@ def checklist_mobile():
 
 
 # ----------------- PERFIL -----------------
-@app.route("/perfil", methods=["GET", "POST"])
+@app.get("/perfil")
 @login_required
 def perfil():
-    if request.method == "POST":
-        nova = request.form.get("nova_senha", "").strip()
-        confirma = request.form.get("confirma", "").strip()
-
-        if not nova or not confirma:
-            flash("Preencha ambos os campos de senha.", "error")
-            return redirect(url_for("perfil"))
-
-        if nova != confirma:
-            flash("As senhas não coincidem.", "error")
-            return redirect(url_for("perfil"))
-
-        current_user.set_password(nova)
-        db.session.commit()
-
-        registrar_log(f"Usuário alterou a própria senha: {current_user.username}")
-        flash("Senha atualizada com sucesso!", "success")
-
-        if current_user.is_manutencao:
-            return redirect(url_for("manutencao_os"))
-
-        if current_user.is_admin or current_user.is_supervisor:
-            return redirect(url_for("dashboard"))
-
-        return redirect(url_for("checklist_mobile"))
-
     return render_template("perfil.html", user=current_user)
+
+@app.post("/perfil/alterar-senha")
+@login_required
+def perfil_alterar_senha():
+    current_password = (request.form.get("current_password") or "").strip()
+    new_password = (request.form.get("new_password") or "").strip()
+    confirm_password = (request.form.get("confirm_password") or "").strip()
+
+    if not current_password or not new_password or not confirm_password:
+        flash("Preencha todos os campos.", "error")
+        return redirect(request.referrer or url_for("perfil"))
+
+    # ⚠️ Ajuste o nome do campo conforme seu model (ex: password_hash)
+    if not check_password_hash(current_user.password_hash, current_password):
+        flash("Senha atual incorreta.", "error")
+        return redirect(request.referrer or url_for("perfil"))
+
+    if new_password != confirm_password:
+        flash("A confirmação não confere.", "error")
+        return redirect(request.referrer or url_for("perfil"))
+
+    if len(new_password) < 6:
+        flash("A nova senha deve ter no mínimo 6 caracteres.", "error")
+        return redirect(request.referrer or url_for("perfil"))
+
+    current_user.password_hash = generate_password_hash(new_password)
+    db.session.commit()
+
+    flash("Senha alterada com sucesso!", "success")
+    return redirect(request.referrer or url_for("perfil"))
+
 
 
 # ----------------- LOGS DO SISTEMA (ADMIN) -----------------
@@ -2227,8 +2233,6 @@ def vistorias_detail(vistoria_id):
         v=v,
         fotos_por_item=fotos_por_item
     )
-
-
 
 
 # ----------------- EXECUÇÃO -----------------
