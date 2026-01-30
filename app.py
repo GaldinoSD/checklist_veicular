@@ -15,6 +15,7 @@ from datetime import datetime, timedelta
 from functools import wraps
 from collections import defaultdict
 
+
 # ===============================
 # 🔥 CONFIGURAÇÃO DE TIMEZONE
 # ===============================
@@ -41,6 +42,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 
 from sqlalchemy import text  # para migrações leves no PostgreSQL
+from sqlalchemy.orm import joinedload
 
 # ===============================
 # PDF
@@ -112,23 +114,33 @@ db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = "login"
 
-
-
-
 # ========================
 # FILTRO DE DATA/HORA BR
+# (converte UTC -> America/Sao_Paulo)
 # ========================
-from datetime import timedelta
+import pytz
+
+TZ = pytz.timezone("America/Sao_Paulo")
 
 @app.template_filter("br_datetime")
-def br_datetime(value):
-    """Formata datetime já salvo no horário do Brasil (sem mexer em fuso)."""
-    if not value:
-        return ""
+def br_datetime(dt):
+    if not dt:
+        return "-"
+
     try:
-        return value.strftime("%d/%m/%Y %H:%M")
+        # se veio "naive", considerar que está em UTC (ex: datetime.utcnow)
+        if dt.tzinfo is None:
+            dt = pytz.utc.localize(dt)
+
+        dt_br = dt.astimezone(TZ)
+        return dt_br.strftime("%d/%m/%Y %H:%M")
     except Exception:
-        return str(value)
+        # fallback pra não quebrar tela
+        try:
+            return dt.strftime("%d/%m/%Y %H:%M")
+        except Exception:
+            return str(dt)
+
 
 
 # ----------------- MODELOS -----------------
@@ -172,8 +184,13 @@ class User(UserMixin, db.Model):
         return self.role == "manutencao"
 
 
+# ===============================
+# MODELS: VEÍCULOS + MOVIMENTOS + INFORMAÇÕES
+# ===============================
+
 class Vehicle(db.Model):
     __tablename__ = "vehicle"
+
     id = db.Column(db.Integer, primary_key=True)
     plate = db.Column(db.String(20), unique=True, nullable=False)
     brand = db.Column(db.String(80))
@@ -181,7 +198,48 @@ class Vehicle(db.Model):
     year = db.Column(db.Integer)
     km = db.Column(db.Integer, default=0)
     status = db.Column(db.String(20), default="ATIVO")
-    type = db.Column(db.String(20), default="carro")  # tipo: carro / moto / caminhão etc.
+    type = db.Column(db.String(20), default="carro")  # carro / moto / caminhao / van
+
+    # ✅ NOVO: 1 ficha de informações por veículo
+    info = db.relationship(
+        "VehicleInfo",
+        backref="vehicle",
+        uselist=False,
+        cascade="all, delete-orphan"
+    )
+
+
+class VehicleInfo(db.Model):
+    __tablename__ = "vehicle_info"
+
+    id = db.Column(db.Integer, primary_key=True)
+
+    # 1:1 com veículo
+    vehicle_id = db.Column(
+        db.Integer,
+        db.ForeignKey("vehicle.id", ondelete="CASCADE"),
+        unique=True,
+        nullable=False
+    )
+
+    # Campos (você pode adicionar/remover depois)
+    oil_type = db.Column(db.String(80))          # Ex: 5W30
+    oil_brand = db.Column(db.String(80))         # Ex: Mobil, Castrol
+    oil_capacity_l = db.Column(db.Float)         # Ex: 3.5
+
+    filter_oil = db.Column(db.String(80))
+    filter_air = db.Column(db.String(80))
+    filter_fuel = db.Column(db.String(80))
+
+    coolant_type = db.Column(db.String(80))
+    brake_fluid = db.Column(db.String(80))
+    tire_pressure = db.Column(db.String(40))     # Ex: "32psi/30psi"
+
+    notes = db.Column(db.Text)
+
+    # horário BR (sem tzinfo)
+    updated_at = db.Column(db.DateTime, default=lambda: agora(), onupdate=lambda: agora())
+
 
 class VehicleMov(db.Model):
     __tablename__ = "vehicle_mov"
@@ -189,7 +247,9 @@ class VehicleMov(db.Model):
     id = db.Column(db.Integer, primary_key=True)
 
     vehicle_id = db.Column(db.Integer, db.ForeignKey("vehicle.id"), nullable=False)
-    vehicle = db.relationship("Vehicle", backref="movimentos")
+
+    # ✅ mantém sua relação, mas deixa mais limpo:
+    vehicle = db.relationship("Vehicle", backref=db.backref("movimentos", lazy=True))
 
     # "saida" ou "entrada"
     tipo = db.Column(db.String(10), nullable=False)
@@ -198,12 +258,13 @@ class VehicleMov(db.Model):
     responsavel = db.Column(db.String(120), nullable=False)
     obs = db.Column(db.Text)
 
-    # horário BR (sem tzinfo) usando sua função agora()
+    # horário BR (sem tzinfo)
     data_hora = db.Column(db.DateTime, default=lambda: agora())
 
     # chegada vinculada a uma saída
     saida_id = db.Column(db.Integer, db.ForeignKey("vehicle_mov.id"), nullable=True)
     saida_ref = db.relationship("VehicleMov", remote_side=[id], uselist=False)
+
 
 class Checklist(db.Model):
     __tablename__ = "checklist"
@@ -927,15 +988,16 @@ def users_del(uid):
 @app.route("/veiculos")
 @supervisor_allowed
 def vehicles():
-    q = request.args.get("q", "").strip().lower()
-    query = Vehicle.query
+    q = (request.args.get("q") or "").strip()
+    query = Vehicle.query.options(joinedload(Vehicle.info))  # ✅ carrega info junto (evita N+1)
 
     if q:
+        like = f"%{q}%"
         query = query.filter(
             db.or_(
-                Vehicle.plate.ilike(f"%{q}%"),
-                Vehicle.brand.ilike(f"%{q}%"),
-                Vehicle.model.ilike(f"%{q}%"),
+                Vehicle.plate.ilike(like),
+                Vehicle.brand.ilike(like),
+                Vehicle.model.ilike(like),
             )
         )
 
@@ -945,6 +1007,8 @@ def vehicles():
     for v in veiculos:
         if not v.type:
             v.type = "carro"
+        if not v.status:
+            v.status = "ATIVO"
 
     return render_template("vehicles.html", veiculos=veiculos, q=q)
 
@@ -958,10 +1022,17 @@ def vehicle_new():
     plate = (request.form.get("plate") or "").upper().strip()
     brand = (request.form.get("brand") or "").strip()
     model = (request.form.get("model") or "").strip()
-    year_raw = request.form.get("year")
-    km_raw = request.form.get("km")
+    year_raw = (request.form.get("year") or "").strip()
+    km_raw = (request.form.get("km") or "").strip()
+
     type_ = (request.form.get("type") or "carro").strip().lower()
-    status = request.form.get("status", "ATIVO")
+
+    # ✅ padroniza status em MAIÚSCULO e sem acento
+    status_raw = (request.form.get("status") or "ATIVO").strip().upper()
+    if status_raw == "MANUTENÇÃO":
+        status_raw = "MANUTENCAO"
+    if status_raw not in {"ATIVO", "INATIVO", "MANUTENCAO"}:
+        status_raw = "ATIVO"
 
     if not plate:
         flash("Placa é obrigatória.", "error")
@@ -971,16 +1042,16 @@ def vehicle_new():
         flash("Já existe um veículo com essa placa.", "error")
         return redirect(url_for("vehicles"))
 
-    year = int(year_raw) if year_raw and year_raw.isdigit() else None
-    km = int(km_raw) if km_raw and km_raw.isdigit() else 0
+    year = int(year_raw) if year_raw.isdigit() else None
+    km = int(km_raw) if km_raw.isdigit() else 0
 
     v = Vehicle(
         plate=plate,
-        brand=brand,
-        model=model,
+        brand=brand or None,
+        model=model or None,
         year=year,
         km=km,
-        status=status,
+        status=status_raw,
         type=type_,
     )
 
@@ -999,8 +1070,15 @@ def vehicle_status(vid):
         abort(403)
 
     v = Vehicle.query.get_or_404(vid)
-    old = v.status
-    v.status = request.form.get("status", v.status)
+    old = v.status or "ATIVO"
+
+    status_raw = (request.form.get("status") or old).strip().upper()
+    if status_raw == "MANUTENÇÃO":
+        status_raw = "MANUTENCAO"
+    if status_raw not in {"ATIVO", "INATIVO", "MANUTENCAO"}:
+        status_raw = old
+
+    v.status = status_raw
     db.session.commit()
 
     registrar_log(f"Status veículo {v.plate}: {old} -> {v.status}")
@@ -1016,25 +1094,33 @@ def vehicle_edit(vid):
 
     v = Vehicle.query.get_or_404(vid)
 
-    v.brand = (request.form.get("brand") or "").strip()
-    v.model = (request.form.get("model") or "").strip()
+    v.brand = (request.form.get("brand") or "").strip() or None
+    v.model = (request.form.get("model") or "").strip() or None
 
-    year_raw = request.form.get("year")
-    km_raw = request.form.get("km")
+    year_raw = (request.form.get("year") or "").strip()
+    km_raw = (request.form.get("km") or "").strip()
     type_raw = (request.form.get("type") or "carro").strip().lower()
-    status_raw = (request.form.get("status") or "ativo").strip().lower()
 
-    v.year = int(year_raw) if year_raw and year_raw.isdigit() else None
-    v.km = int(km_raw) if km_raw and km_raw.isdigit() else v.km
-    v.type = type_raw
+    status_raw = (request.form.get("status") or (v.status or "ATIVO")).strip().upper()
+    if status_raw == "MANUTENÇÃO":
+        status_raw = "MANUTENCAO"
+    if status_raw not in {"ATIVO", "INATIVO", "MANUTENCAO"}:
+        status_raw = (v.status or "ATIVO")
+
+    v.year = int(year_raw) if year_raw.isdigit() else None
+
+    # ✅ se KM vazio, mantém o atual
+    if km_raw.isdigit():
+        v.km = int(km_raw)
+
+    v.type = type_raw or "carro"
     v.status = status_raw
 
     db.session.commit()
 
-    registrar_log(f"Veículo editado: {v.plate} (status={status_raw})")
+    registrar_log(f"Veículo editado: {v.plate} (status={v.status})")
     flash("Veículo atualizado!", "success")
     return redirect(url_for("vehicles"))
-
 
 
 @app.route("/veiculos/<int:vid>/excluir", methods=["POST"])
@@ -1053,6 +1139,52 @@ def vehicle_delete(vid):
     flash("Veículo excluído com sucesso!", "success")
     return redirect(url_for("vehicles"))
 
+
+# ===============================
+# ✅ NOVO: SALVAR/ATUALIZAR INFORMAÇÕES DO VEÍCULO
+# ===============================
+@app.route("/veiculos/<int:vid>/info", methods=["POST"])
+@login_required
+def vehicle_info_save(vid):
+    if not current_user.is_admin:
+        abort(403)
+
+    v = Vehicle.query.options(joinedload(Vehicle.info)).get_or_404(vid)
+
+    # se não existe ficha ainda, cria
+    if not v.info:
+        v.info = VehicleInfo(vehicle=v)
+
+    v.info.oil_type = (request.form.get("oil_type") or "").strip() or None
+    v.info.oil_brand = (request.form.get("oil_brand") or "").strip() or None
+
+    cap = (request.form.get("oil_capacity_l") or "").strip()
+    try:
+        v.info.oil_capacity_l = float(cap) if cap else None
+    except ValueError:
+        flash("Capacidade do óleo inválida.", "error")
+        return redirect(url_for("vehicles"))
+
+    v.info.filter_oil = (request.form.get("filter_oil") or "").strip() or None
+    v.info.filter_air = (request.form.get("filter_air") or "").strip() or None
+    v.info.filter_fuel = (request.form.get("filter_fuel") or "").strip() or None
+
+    v.info.coolant_type = (request.form.get("coolant_type") or "").strip() or None
+    v.info.brake_fluid = (request.form.get("brake_fluid") or "").strip() or None
+    v.info.tire_pressure = (request.form.get("tire_pressure") or "").strip() or None
+    v.info.notes = (request.form.get("notes") or "").strip() or None
+
+    db.session.add(v)
+    db.session.commit()
+
+    registrar_log(f"Informações do veículo atualizadas: {v.plate}")
+    flash("Informações do veículo salvas!", "success")
+    return redirect(url_for("vehicles"))
+
+
+# ===============================
+# CONTROLE DE VEÍCULOS (SEU CÓDIGO)
+# ===============================
 @app.route("/controle-veiculos", methods=["GET", "POST"])
 @supervisor_allowed
 def controle_veiculos():
@@ -1178,7 +1310,7 @@ def controle_veiculos():
         return redirect(url_for("controle_veiculos"))
 
     # ==========================
-    # GET: 1 linha = SAÍDA + CHEGADA (para r.saida / r.chegada)
+    # GET: 1 linha = SAÍDA + CHEGADA
     # ==========================
     vehicles = Vehicle.query.order_by(Vehicle.plate.asc()).all()
     usuarios = User.query.order_by(User.username.asc()).all()
