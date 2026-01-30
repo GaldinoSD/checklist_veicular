@@ -119,8 +119,12 @@ login_manager.login_view = "login"
 # (converte UTC -> America/Sao_Paulo)
 # ========================
 import pytz
+from datetime import datetime
 
 TZ = pytz.timezone("America/Sao_Paulo")
+
+def agora():
+    return datetime.now(TZ).replace(tzinfo=None)
 
 @app.template_filter("br_datetime")
 def br_datetime(dt):
@@ -128,19 +132,27 @@ def br_datetime(dt):
         return "-"
 
     try:
-        # se veio "naive", considerar que está em UTC (ex: datetime.utcnow)
-        if dt.tzinfo is None:
-            dt = pytz.utc.localize(dt)
+        # Se vier timezone-aware, converte pro BR
+        if dt.tzinfo is not None:
+            return dt.astimezone(TZ).strftime("%d/%m/%Y %H:%M")
 
-        dt_br = dt.astimezone(TZ)
-        return dt_br.strftime("%d/%m/%Y %H:%M")
+        # ✅ Se vier naive: AUTO-DETECÇÃO
+        # Compara com o horário BR atual. Se estiver "adiantado" ~3h, era UTC.
+        diff_h = (dt - agora()).total_seconds() / 3600.0
+
+        # Se a diferença estiver próxima de +3h (entre +2 e +4), tratamos como UTC
+        if 2 <= diff_h <= 4:
+            dt_aware = pytz.utc.localize(dt).astimezone(TZ)
+            return dt_aware.strftime("%d/%m/%Y %H:%M")
+
+        # Caso contrário, assume que já é BR
+        return dt.strftime("%d/%m/%Y %H:%M")
+
     except Exception:
-        # fallback pra não quebrar tela
         try:
             return dt.strftime("%d/%m/%Y %H:%M")
         except Exception:
             return str(dt)
-
 
 
 # ----------------- MODELOS -----------------
@@ -1390,6 +1402,10 @@ def controle_veiculos():
 
 
 
+from datetime import datetime
+from flask import request, redirect, url_for, render_template, flash
+from flask_login import current_user
+
 # ----------------- AVARIAS / ORDENS DE SERVIÇO -----------------
 @app.route("/avarias/registro", methods=["GET", "POST"])
 @supervisor_allowed
@@ -1401,7 +1417,8 @@ def avarias_registro():
         if acao == "nova":
             nova = AvariaOS(
                 vehicle_id=request.form.get("veiculo_id"),
-                responsavel_id=request.form.get("responsavel_id"),
+                # ✅ NÃO VEM MAIS DO FORM - define automático
+                responsavel_id=current_user.id,  # ou None, se você quiser sem responsável
                 gravidade=request.form.get("gravidade"),
                 descricao=request.form.get("descricao"),
                 km=request.form.get("km"),
@@ -1409,7 +1426,7 @@ def avarias_registro():
             )
             db.session.add(nova)
             db.session.commit()
-            registrar_log(f"Avaria criada para veículo ID={nova.vehicle_id}")
+            registrar_log(f"Avaria criada para veículo ID={nova.vehicle_id} (por {current_user.username})")
             return redirect(url_for("avarias_registro"))
 
         # FINALIZAR O.S (admin/supervisor)
@@ -1424,20 +1441,22 @@ def avarias_registro():
                 os_finalizar.status = "finalizada"
                 os_finalizar.data_fechamento = datetime.utcnow()
                 db.session.commit()
-                registrar_log(f"O.S finalizada (admin/supervisor): ID={os_finalizar.id}")
+                registrar_log(f"O.S finalizada (admin/supervisor): ID={os_finalizar.id} (por {current_user.username})")
 
             return redirect(url_for("avarias_registro"))
 
     # GET — listar avarias
     ordens = AvariaOS.query.order_by(AvariaOS.id.desc()).all()
     veiculos = Vehicle.query.all()
-    colaboradores = User.query.all()
+
+    # ✅ não precisa mais disso, já que removeu o select do responsável no modal
+    # colaboradores = User.query.all()
 
     return render_template(
         "avarias_registro.html",
         ordens=ordens,
-        veiculos=veiculos,
-        colaboradores=colaboradores
+        veiculos=veiculos
+        # colaboradores=colaboradores
     )
 
 
@@ -1460,12 +1479,13 @@ def manutencao_os():
                 os_finalizar.status = "finalizada"
                 os_finalizar.data_fechamento = datetime.utcnow()
                 db.session.commit()
-                registrar_log(f"O.S finalizada (manutenção): ID={os_finalizar.id}")
+                registrar_log(f"O.S finalizada (manutenção): ID={os_finalizar.id} (por {current_user.username})")
 
             return redirect(url_for("manutencao_os"))
 
     ordens = AvariaOS.query.order_by(AvariaOS.id.desc()).all()
     return render_template("manutencao_os.html", ordens=ordens)
+
 
 
 # ----------------- IMPORTAÇÃO DE CHECKLISTS -----------------

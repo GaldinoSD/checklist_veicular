@@ -22,7 +22,7 @@
   <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
 
     {% for os in ordens %}
-    <div class="backdrop-blur-md bg-white/10 p-5 rounded-2xl 
+    <div class="backdrop-blur-md bg-white/10 p-5 rounded-2xl
                 border border-white/20 shadow-xl hover:scale-[1.03] transition">
 
       <div class="flex justify-between items-center mb-3">
@@ -32,33 +32,41 @@
         </h2>
 
         {% if os.status == 'aberta' %}
-          <span class="px-2 py-1 bg-yellow-500/20 border border-yellow-600/40 rounded-lg 
+          <span class="px-2 py-1 bg-yellow-500/20 border border-yellow-600/40 rounded-lg
                        text-yellow-200 text-[11px] font-semibold">
             ● Aberta
           </span>
         {% else %}
-          <span class="px-2 py-1 bg-green-500/20 border border-green-600/40 rounded-lg 
+          <span class="px-2 py-1 bg-green-500/20 border border-green-600/40 rounded-lg
                        text-green-200 text-[11px] font-semibold">
             ✔ Finalizada
           </span>
         {% endif %}
       </div>
 
-      <p class="text-gray-200 text-sm"><b>Veículo:</b> {{ os.vehicle.brand }} {{ os.vehicle.model }} - {{ os.vehicle.plate }}</p>
-      <p class="text-gray-200 text-sm"><b>Responsável:</b> {{ os.responsavel.username }}</p>
+      <p class="text-gray-200 text-sm">
+        <b>Veículo:</b> {{ os.vehicle.brand }} {{ os.vehicle.model }} - {{ os.vehicle.plate }}
+      </p>
+
+      {# ✅ Continua exibindo responsável SE existir (não quebra se for NULL) #}
+      {% if os.responsavel %}
+      <p class="text-gray-200 text-sm">
+        <b>Responsável:</b> {{ os.responsavel.username }}
+      </p>
+      {% endif %}
 
       <p class="text-gray-400 text-xs mt-3 border-t border-white/10 pt-2">
         {{ os.descricao }}
       </p>
 
       {% if os.status == 'aberta' %}
-      <button class="w-full mt-3 px-3 py-2 rounded-lg bg-green-600 hover:bg-green-700 
+      <button class="w-full mt-3 px-3 py-2 rounded-lg bg-green-600 hover:bg-green-700
                      text-white font-semibold text-sm shadow-md"
               onclick="openFinalizar({{ os.id }})">
         Finalizar
       </button>
       {% else %}
-      <button class="w-full mt-3 px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 
+      <button class="w-full mt-3 px-3 py-2 rounded-lg bg-blue-600 hover:bg-blue-700
                      text-white font-semibold text-sm shadow-md"
               onclick="openDetalhes({{ os.id }})">
         Ver detalhes
@@ -66,20 +74,20 @@
       {% endif %}
     </div>
 
-    <!-- JSON INVISÍVEL COM DADOS DA O.S (CORRIGIDO) -->
+    <!-- JSON INVISÍVEL COM DADOS DA O.S (AJUSTADO PARA RESPONSÁVEL OPCIONAL) -->
     <script type="application/json" id="os_data_{{ os.id }}">
       {
         "veiculo": "{{ os.vehicle.brand }} {{ os.vehicle.model }} - {{ os.vehicle.plate }}",
-        "responsavel": "{{ os.responsavel.username }}",
+        "responsavel": "{{ os.responsavel.username if os.responsavel else '' }}",
         "descricao": "{{ os.descricao }}",
         "gravidade": "{{ os.gravidade }}",
         "km": "{{ os.km }}",
         "valor_gasto": "{{ os.valor_gasto if os.valor_gasto else '' }}",
         "pecas_trocadas": "{{ os.pecas_trocadas|safe if os.pecas_trocadas else '' }}",
         "servico_realizado": "{{ os.servico_realizado|safe if os.servico_realizado else '' }}",
-        "data_abertura": "{{ os.data_abertura.strftime('%d/%m/%Y %H:%M') if os.data_abertura else '' }}",
-        "data_fechamento": "{{ os.data_fechamento.strftime('%d/%m/%Y %H:%M') if os.data_fechamento else '' }}"
-      }
+        "data_abertura": "{{ os.data_abertura|br_datetime if os.data_abertura else '' }}",
+        "data_fechamento": "{{ os.data_fechamento|br_datetime if os.data_fechamento else '' }}"
+       }
     </script>
 
     {% endfor %}
@@ -93,6 +101,7 @@
 
 <!-- =====================================
       MODAL: NOVA AVARIA (MENOR)
+      ✅ REMOVIDO CAMPO RESPONSÁVEL
 ===================================== -->
 <dialog id="modalNovaAvaria"
         class="rounded-2xl bg-gray-900 border border-gray-700 p-5 shadow-2xl w-[380px]">
@@ -113,12 +122,14 @@
 
     <div>
       <label class="text-sm text-gray-300 font-medium">KM Atual</label>
-      <input type="number" name="km" class="w-full text-white bg-gray-800 border border-gray-600 p-2.5 rounded-lg" required>
+      <input type="number" name="km"
+             class="w-full text-white bg-gray-800 border border-gray-600 p-2.5 rounded-lg" required>
     </div>
 
     <div>
       <label class="text-sm text-gray-300 font-medium">Gravidade</label>
-      <select name="gravidade" class="w-full text-white bg-gray-800 border border-gray-600 p-2.5 rounded-lg" required>
+      <select name="gravidade"
+              class="w-full text-white bg-gray-800 border border-gray-600 p-2.5 rounded-lg" required>
         <option value="baixa">Baixa</option>
         <option value="media">Média</option>
         <option value="alta">Alta</option>
@@ -131,16 +142,6 @@
       <textarea name="descricao" rows="3"
                 class="w-full text-white bg-gray-800 border border-gray-600 p-2.5 rounded-lg"
                 required></textarea>
-    </div>
-
-    <div>
-      <label class="text-sm text-gray-300 font-medium">Responsável</label>
-      <select name="responsavel_id"
-              class="w-full text-white bg-gray-800 border border-gray-600 p-2.5 rounded-lg" required>
-        {% for c in colaboradores %}
-        <option value="{{ c.id }}">{{ c.username }}</option>
-        {% endfor %}
-      </select>
     </div>
 
     <div class="flex justify-end gap-2 pt-1">
@@ -157,7 +158,6 @@
     </div>
   </form>
 </dialog>
-
 
 <!-- =====================================
       MODAL FINALIZAR (MENOR)
@@ -204,9 +204,9 @@
   </form>
 </dialog>
 
-
 <!-- =====================================
-      MODAL DETALHES O.S (NOVO)
+      MODAL DETALHES O.S
+      ✅ RESPONSÁVEL OPCIONAL
 ===================================== -->
 <dialog id="modalDetalhesOS"
         class="rounded-2xl bg-gray-900 border border-gray-700 p-6 shadow-2xl w-[420px]">
@@ -216,6 +216,8 @@
   <div class="space-y-3 text-gray-200 text-sm">
 
     <p><b>Veículo:</b> <span id="det_veiculo"></span></p>
+
+    {# ✅ Se não tiver responsável, o JS vai colocar "-" #}
     <p><b>Responsável:</b> <span id="det_resp"></span></p>
 
     <p><b>Descrição:</b><br>
@@ -253,7 +255,6 @@
 
 </dialog>
 
-
 <script>
 function openFinalizar(id) {
   document.getElementById("os_id_hidden").value = id;
@@ -265,18 +266,18 @@ function openDetalhes(id) {
 
   document.getElementById("det_id").innerText = id;
   document.getElementById("det_veiculo").innerText = dados.veiculo;
-  document.getElementById("det_resp").innerText = dados.responsavel;
+  document.getElementById("det_resp").innerText = (dados.responsavel && dados.responsavel.trim()) ? dados.responsavel : "-";
   document.getElementById("det_desc").innerText = dados.descricao;
 
-  document.getElementById("det_km").innerText = dados.km;
-  document.getElementById("det_grav").innerText = dados.gravidade;
+  document.getElementById("det_km").innerText = dados.km || "-";
+  document.getElementById("det_grav").innerText = dados.gravidade || "-";
 
   document.getElementById("det_valor").innerText = dados.valor_gasto || "0,00";
   document.getElementById("det_pecas").innerText = dados.pecas_trocadas || "-";
   document.getElementById("det_servico").innerText = dados.servico_realizado || "-";
 
-  document.getElementById("det_abertura").innerText = dados.data_abertura;
-  document.getElementById("det_fechamento").innerText = dados.data_fechamento;
+  document.getElementById("det_abertura").innerText = dados.data_abertura || "-";
+  document.getElementById("det_fechamento").innerText = dados.data_fechamento || "-";
 
   document.getElementById("modalDetalhesOS").showModal();
 }
