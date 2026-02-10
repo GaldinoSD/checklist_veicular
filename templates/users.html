@@ -8,10 +8,12 @@
 <div class="mb-8">
   <div class="flex flex-wrap items-start justify-between gap-4">
     <div>
-      <h2 class="text-3xl md:text-4xl font-extrabold tracking-tight text-white">Colaboradores</h2>
-      <p class="text-sm text-gray-300 mt-1">
+      <h2 class="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+        Colaboradores
+      </h2>
+      <p class="text-sm text-slate-600 dark:text-gray-300 mt-1">
         Gerencie usuários, perfis e permissões do sistema.
-        <span class="text-gray-400">({{ items|length }} no total)</span>
+        <span class="text-slate-400 dark:text-gray-400">({{ items|length }} no total)</span>
       </p>
     </div>
 
@@ -32,12 +34,15 @@
 <!-- =======================================================
         GRID DE USUÁRIOS (até 3 por linha)
 ======================================================= -->
-<div class="rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10 shadow-[0_18px_60px_rgba(0,0,0,.35)] p-5">
+<div class="rounded-2xl bg-white/70 dark:bg-white/5 backdrop-blur-xl
+            border border-slate-900/10 dark:border-white/10
+            shadow-[0_18px_60px_rgba(0,0,0,.20)] dark:shadow-[0_18px_60px_rgba(0,0,0,.35)]
+            p-5">
 
   <!-- topo do grid -->
   <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
-    <div class="text-sm text-gray-300">
-      Exibindo <span class="font-semibold text-white">{{ items|length }}</span> colaboradores
+    <div class="text-sm text-slate-600 dark:text-gray-300">
+      Exibindo <span class="font-semibold text-slate-900 dark:text-white">{{ items|length }}</span> colaboradores
     </div>
   </div>
 
@@ -46,7 +51,9 @@
     {% for u in items %}
 
     <!-- CARD -->
-    <div class="relative rounded-2xl border border-white/10 bg-white/5 hover:bg-white/10 transition p-5 overflow-hidden
+    <div class="relative rounded-2xl border border-slate-900/10 dark:border-white/10
+                bg-white/70 dark:bg-white/5 hover:bg-white/90 dark:hover:bg-white/10
+                transition p-5 overflow-hidden
       {% if u.username == 'admin' %}
         ring-1 ring-yellow-400/50
       {% endif %}">
@@ -80,17 +87,20 @@
 
           <div class="min-w-0">
             <div class="flex items-center gap-2">
-              <div class="text-white font-semibold truncate">{{ u.username }}</div>
+              <div class="text-slate-900 dark:text-white font-semibold truncate">{{ u.username }}</div>
 
               {% if u.username == 'admin' %}
-                <span title="Administrador Principal" class="text-yellow-300 text-base drop-shadow">👑</span>
-                <span class="text-[10px] px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-200 border border-yellow-400/60">
+                <span title="Administrador Principal" class="text-yellow-400 dark:text-yellow-300 text-base drop-shadow">👑</span>
+                <span class="text-[10px] px-2 py-0.5 rounded-full
+                             bg-yellow-500/15 dark:bg-yellow-500/20
+                             text-yellow-800 dark:text-yellow-200
+                             border border-yellow-500/25 dark:border-yellow-400/60">
                   Principal
                 </span>
               {% endif %}
             </div>
 
-            <div class="text-xs text-gray-400 mt-0.5">ID: {{ u.id }}</div>
+            <div class="text-xs text-slate-500 dark:text-gray-400 mt-0.5">ID: {{ u.id }}</div>
           </div>
         </div>
 
@@ -98,15 +108,15 @@
         <div class="shrink-0">
           <span class="text-[11px] px-2.5 py-1 rounded-full border w-fit font-semibold inline-flex items-center gap-2
             {% if u.username == 'admin' %}
-              bg-yellow-500/20 text-yellow-200 border-yellow-400/60
+              bg-yellow-500/15 dark:bg-yellow-500/20 text-yellow-800 dark:text-yellow-200 border-yellow-500/25 dark:border-yellow-400/60
             {% elif u.role == 'admin' %}
-              bg-blue-900/40 text-blue-200 border-blue-700/40
+              bg-blue-500/10 dark:bg-blue-900/40 text-blue-800 dark:text-blue-200 border-blue-500/20 dark:border-blue-700/40
             {% elif u.role == 'supervisor' %}
-              bg-yellow-900/40 text-yellow-200 border-yellow-700/40
+              bg-yellow-500/10 dark:bg-yellow-900/40 text-yellow-800 dark:text-yellow-200 border-yellow-500/20 dark:border-yellow-700/40
             {% elif u.role == 'manutencao' %}
-              bg-purple-900/40 text-purple-200 border-purple-700/40
+              bg-purple-500/10 dark:bg-purple-900/40 text-purple-800 dark:text-purple-200 border-purple-500/20 dark:border-purple-700/40
             {% else %}
-              bg-gray-800/60 text-gray-200 border-gray-600/40
+              bg-slate-900/5 dark:bg-gray-800/60 text-slate-700 dark:text-gray-200 border-slate-900/10 dark:border-gray-600/40
             {% endif %}">
             {% if u.username == "admin" %}
               Admin — Principal
@@ -130,7 +140,7 @@
             {% else %}
               bg-blue-600 hover:bg-blue-500 text-white
             {% endif %}
-            focus:outline-none focus-visible:ring-2 focus-visible:ring-white/20">
+            focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/10 dark:focus-visible:ring-white/20">
           Editar
         </button>
 
@@ -154,44 +164,49 @@
             MODAL EDITAR
     ======================================================= -->
     <dialog id="modalEdit{{ u.id }}"
-      class="rounded-2xl bg-gray-900 border border-gray-700 p-0 shadow-2xl w-[520px] max-w-[92vw] backdrop:bg-black/70">
+      class="rounded-2xl bg-white dark:bg-gray-900 border border-slate-900/10 dark:border-gray-700 p-0 shadow-2xl
+             w-[520px] max-w-[92vw] backdrop:bg-black/70">
 
-      <div class="p-6 border-b border-white/10">
-        <h2 class="text-xl font-bold text-white">Editar colaborador</h2>
-        <p class="text-sm text-gray-400 mt-1">Atualize a senha e/ou perfil do usuário.</p>
+      <div class="p-6 border-b border-slate-900/10 dark:border-white/10">
+        <h2 class="text-xl font-bold text-slate-900 dark:text-white">Editar colaborador</h2>
+        <p class="text-sm text-slate-600 dark:text-gray-400 mt-1">Atualize a senha e/ou perfil do usuário.</p>
       </div>
 
       <div class="p-6">
         <form method="post" action="{{ url_for('users_pwd', uid=u.id) }}" class="space-y-4">
 
           <div>
-            <label class="text-xs text-gray-400 font-medium">Usuário</label>
+            <label class="text-xs text-slate-500 dark:text-gray-400 font-medium">Usuário</label>
             <input value="{{ u.username }}" disabled
-              class="mt-1 w-full bg-gray-800/80 border border-gray-700 rounded-xl px-4 py-2.5 text-gray-400 text-sm shadow-inner">
+              class="mt-1 w-full bg-slate-100 dark:bg-gray-800/80 border border-slate-900/10 dark:border-gray-700
+                     rounded-xl px-4 py-2.5 text-slate-400 dark:text-gray-400 text-sm shadow-inner">
           </div>
 
           <div>
-            <label class="text-xs text-gray-400 font-medium">Nova senha</label>
+            <label class="text-xs text-slate-500 dark:text-gray-400 font-medium">Nova senha</label>
             <input name="password" type="password" placeholder="Digite a nova senha"
-              class="mt-1 w-full bg-gray-800/80 border border-gray-700 rounded-xl px-4 py-2.5 text-white text-sm shadow-inner
-                     focus:outline-none focus:ring-2 focus:ring-blue-500/40">
+              class="mt-1 w-full bg-white dark:bg-gray-800/80 border border-slate-900/10 dark:border-gray-700
+                     rounded-xl px-4 py-2.5 text-slate-900 dark:text-white text-sm shadow-inner
+                     focus:outline-none focus:ring-2 focus:ring-blue-500/30">
           </div>
 
           {% if u.username == "admin" %}
           <div>
-            <label class="text-xs text-red-400 font-medium">Senha mestre</label>
+            <label class="text-xs text-red-600 dark:text-red-400 font-medium">Senha mestre</label>
             <input name="master_key" type="password" placeholder="Obrigatória para editar admin"
-              class="mt-1 w-full bg-red-900/30 border border-red-700 rounded-xl px-4 py-2.5 text-white text-sm shadow-inner
-                     focus:outline-none focus:ring-2 focus:ring-red-500/40">
+              class="mt-1 w-full bg-red-50 dark:bg-red-900/30 border border-red-500/25 dark:border-red-700
+                     rounded-xl px-4 py-2.5 text-slate-900 dark:text-white text-sm shadow-inner
+                     focus:outline-none focus:ring-2 focus:ring-red-500/30">
           </div>
           {% endif %}
 
           {% if u.username != "admin" %}
           <div>
-            <label class="text-xs text-gray-400 font-medium">Perfil</label>
+            <label class="text-xs text-slate-500 dark:text-gray-400 font-medium">Perfil</label>
             <select name="role" form="formRole{{ u.id }}"
-              class="mt-1 w-full bg-gray-800/80 border border-gray-700 rounded-xl px-4 py-2.5 text-white text-sm shadow-inner
-                     focus:outline-none focus:ring-2 focus:ring-indigo-500/40">
+              class="mt-1 w-full bg-white dark:bg-gray-800/80 border border-slate-900/10 dark:border-gray-700
+                     rounded-xl px-4 py-2.5 text-slate-900 dark:text-white text-sm shadow-inner
+                     focus:outline-none focus:ring-2 focus:ring-indigo-500/30">
               <option value="tech" {% if u.role == 'tech' %}selected{% endif %}>Técnico</option>
               <option value="supervisor" {% if u.role == 'supervisor' %}selected{% endif %}>Supervisor</option>
               <option value="admin" {% if u.role == 'admin' %}selected{% endif %}>Administrador</option>
@@ -203,8 +218,10 @@
           <div class="flex flex-wrap justify-end gap-3 pt-4">
             <button type="button"
               onclick="document.getElementById('modalEdit{{ u.id }}').close()"
-              class="px-4 py-2 rounded-xl bg-gray-700 hover:bg-gray-600 text-white text-sm
-                     focus:outline-none focus-visible:ring-2 focus-visible:ring-white/20">
+              class="px-4 py-2 rounded-xl
+                     bg-slate-900/5 hover:bg-slate-900/10 border border-slate-900/10 text-slate-900
+                     dark:bg-gray-700 dark:hover:bg-gray-600 dark:border-white/10 dark:text-white text-sm
+                     focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/10 dark:focus-visible:ring-white/20">
               Cancelar
             </button>
 
@@ -216,7 +233,7 @@
                   bg-blue-600 hover:bg-blue-700 text-white
                 {% endif %}
                 text-sm font-semibold shadow
-                focus:outline-none focus-visible:ring-2 focus-visible:ring-white/20">
+                focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/10 dark:focus-visible:ring-white/20">
               Salvar senha
             </button>
 
@@ -241,40 +258,43 @@
 </div>
 
 
-
 <!-- =======================================================
         MODAL NOVO USUÁRIO
 ======================================================= -->
 <dialog id="modalNovoUsuario"
-  class="rounded-2xl bg-gray-900 border border-gray-700 p-0 shadow-2xl w-[520px] max-w-[92vw] backdrop:bg-black/70">
+  class="rounded-2xl bg-white dark:bg-gray-900 border border-slate-900/10 dark:border-gray-700 p-0 shadow-2xl
+         w-[520px] max-w-[92vw] backdrop:bg-black/70">
 
-  <div class="p-6 border-b border-white/10">
-    <h2 class="text-xl font-bold text-white">Cadastrar colaborador</h2>
-    <p class="text-sm text-gray-400 mt-1">Crie um novo usuário com perfil de acesso.</p>
+  <div class="p-6 border-b border-slate-900/10 dark:border-white/10">
+    <h2 class="text-xl font-bold text-slate-900 dark:text-white">Cadastrar colaborador</h2>
+    <p class="text-sm text-slate-600 dark:text-gray-400 mt-1">Crie um novo usuário com perfil de acesso.</p>
   </div>
 
   <div class="p-6">
     <form method="post" action="{{ url_for('users_new') }}" class="space-y-4">
 
       <div>
-        <label class="text-xs text-gray-400 font-medium">Usuário</label>
+        <label class="text-xs text-slate-500 dark:text-gray-400 font-medium">Usuário</label>
         <input name="username" required
-          class="mt-1 w-full bg-gray-800/80 border border-gray-700 rounded-xl px-4 py-2.5 text-white text-sm shadow-inner
+          class="mt-1 w-full bg-white dark:bg-gray-800/80 border border-slate-900/10 dark:border-gray-700
+                 rounded-xl px-4 py-2.5 text-slate-900 dark:text-white text-sm shadow-inner
                  focus:outline-none focus:ring-2 focus:ring-green-500/30">
       </div>
 
       <div>
-        <label class="text-xs text-gray-400 font-medium">Senha</label>
+        <label class="text-xs text-slate-500 dark:text-gray-400 font-medium">Senha</label>
         <input name="password" type="password" required
-          class="mt-1 w-full bg-gray-800/80 border border-gray-700 rounded-xl px-4 py-2.5 text-white text-sm shadow-inner
+          class="mt-1 w-full bg-white dark:bg-gray-800/80 border border-slate-900/10 dark:border-gray-700
+                 rounded-xl px-4 py-2.5 text-slate-900 dark:text-white text-sm shadow-inner
                  focus:outline-none focus:ring-2 focus:ring-green-500/30">
-        <p class="text-[11px] text-gray-500 mt-1">Dica: use pelo menos 8 caracteres.</p>
+        <p class="text-[11px] text-slate-500 dark:text-gray-500 mt-1">Dica: use pelo menos 8 caracteres.</p>
       </div>
 
       <div>
-        <label class="text-xs text-gray-400 font-medium">Perfil</label>
+        <label class="text-xs text-slate-500 dark:text-gray-400 font-medium">Perfil</label>
         <select name="role"
-          class="mt-1 w-full bg-gray-800/80 border border-gray-700 rounded-xl px-4 py-2.5 text-white text-sm shadow-inner
+          class="mt-1 w-full bg-white dark:bg-gray-800/80 border border-slate-900/10 dark:border-gray-700
+                 rounded-xl px-4 py-2.5 text-slate-900 dark:text-white text-sm shadow-inner
                  focus:outline-none focus:ring-2 focus:ring-green-500/30">
           <option value="tech">Técnico</option>
           <option value="supervisor">Supervisor</option>
@@ -286,8 +306,10 @@
       <div class="flex flex-wrap justify-end gap-3 pt-4">
         <button type="button"
           onclick="document.getElementById('modalNovoUsuario').close()"
-          class="px-4 py-2 rounded-xl bg-gray-700 hover:bg-gray-600 text-white text-sm
-                 focus:outline-none focus-visible:ring-2 focus-visible:ring-white/20">
+          class="px-4 py-2 rounded-xl
+                 bg-slate-900/5 hover:bg-slate-900/10 border border-slate-900/10 text-slate-900
+                 dark:bg-gray-700 dark:hover:bg-gray-600 dark:border-white/10 dark:text-white text-sm
+                 focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/10 dark:focus-visible:ring-white/20">
           Cancelar
         </button>
 

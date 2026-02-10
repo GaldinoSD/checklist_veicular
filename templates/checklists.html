@@ -2,23 +2,28 @@
 {% set page_title = "Checklists" %}
 {% block content %}
 
-<div class="bg-white/5 border border-white/10 rounded-2xl shadow p-5">
+<div class="bg-white/70 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl shadow p-5">
 
   <div class="flex items-center justify-between mb-4">
-    <h2 class="text-lg font-semibold">Checklists</h2>
+    <h2 class="text-lg font-semibold text-slate-900 dark:text-white">Checklists</h2>
 
     <form method="get" class="flex gap-2">
-      <input name="q" value="{{ q }}" 
-             placeholder="Buscar placa/técnico/status..." 
-             class="border border-white/20 bg-gray-900/50 rounded-lg px-3 py-2">
-      <button class="bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg px-4">
+      <input name="q" value="{{ q }}"
+             placeholder="Buscar placa/técnico/status..."
+             class="border border-slate-900/10 dark:border-white/20
+                    bg-white dark:bg-gray-900/50
+                    text-slate-900 dark:text-gray-200
+                    placeholder:text-slate-400 dark:placeholder:text-gray-500
+                    rounded-lg px-3 py-2
+                    focus:outline-none focus:ring-2 focus:ring-blue-600/40">
+      <button class="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-500 hover:to-blue-700 text-white rounded-lg px-4">
         Buscar
       </button>
     </form>
   </div>
 
   <form method="post" action="{{ url_for('checklists_import') }}" class="mb-4">
-    <button class="bg-green-700 text-white rounded-lg px-4 py-2">
+    <button class="bg-green-700 hover:bg-green-600 text-white rounded-lg px-4 py-2">
       Importar JSONs da pasta inbox/
     </button>
   </form>
@@ -26,9 +31,9 @@
   <!-- ======================= TABELA ======================= -->
   <div class="overflow-x-auto rounded-lg">
     <table class="min-w-full text-sm">
-      
+
       <thead>
-        <tr class="text-gray-300 border-b border-white/10 text-left">
+        <tr class="text-slate-600 dark:text-gray-300 border-b border-slate-900/10 dark:border-white/10 text-left">
           <th class="px-4 py-2 w-40">Data</th>
           <th class="px-4 py-2 w-32">Placa</th>
           <th class="px-4 py-2 w-40">Técnico</th>
@@ -38,7 +43,7 @@
         </tr>
       </thead>
 
-      <tbody class="text-gray-200">
+      <tbody class="text-slate-900 dark:text-gray-200">
 
         {# namespace para controlar o grupo mês/ano #}
         {% set ns = namespace(last_group=None) %}
@@ -79,16 +84,16 @@
 
           {# só mostra o cabeçalho quando mudar mês/ano #}
           {% if grupo != ns.last_group %}
-            <tr class="bg-white/5">
-              <td colspan="6" class="px-4 py-2 text-blue-300 font-semibold uppercase tracking-wide">
+            <tr class="bg-slate-900/5 dark:bg-white/5">
+              <td colspan="6" class="px-4 py-2 text-blue-700 dark:text-blue-300 font-semibold uppercase tracking-wide">
                 📅 {{ grupo }}
               </td>
             </tr>
             {% set ns.last_group = grupo %}
           {% endif %}
 
-          <tr class="border-b border-white/10 hover:bg-white/5 transition">
-            
+          <tr class="border-b border-slate-900/10 dark:border-white/10 hover:bg-slate-900/5 dark:hover:bg-white/5 transition">
+
             <!-- Data -->
             <td class="px-4 py-2 whitespace-nowrap">
               {{ c.date.strftime('%d/%m/%Y %H:%M') }}
@@ -111,15 +116,17 @@
 
             <!-- Status -->
             <td class="px-4 py-2">
-              <span class="px-2 py-1 rounded-lg text-xs 
-                          bg-green-900/40 text-green-200 border border-green-700/40">
+              <span class="px-2 py-1 rounded-lg text-xs
+                          bg-green-200/70 dark:bg-green-900/40
+                          text-green-900 dark:text-green-200
+                          border border-green-500/25 dark:border-green-700/40">
                 {{ c.status }}
               </span>
             </td>
 
             <!-- Detalhes -->
             <td class="px-4 py-2 text-center">
-              <a class="text-blue-400 underline" 
+              <a class="text-blue-700 dark:text-blue-400 underline"
                  href="{{ url_for('checklist_detail', cid=c.id) }}">
                  Ver
               </a>
@@ -129,7 +136,7 @@
 
         {% else %}
           <tr>
-            <td class="py-3 text-gray-400 text-center" colspan="6">
+            <td class="py-3 text-slate-500 dark:text-gray-400 text-center" colspan="6">
               Sem registros.
             </td>
           </tr>

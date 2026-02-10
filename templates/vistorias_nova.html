@@ -2,17 +2,22 @@
 {% set page_title = "Nova Vistoria" %}
 {% block content %}
 
-<div class="bg-white/5 border border-white/10 rounded-2xl shadow p-6">
-  <h1 class="text-2xl font-bold">Nova vistoria</h1>
-  <p class="text-sm text-gray-300 mt-1">Vistoria de lataria (amassados, riscos, etc.)</p>
+<div class="bg-white/70 border border-slate-900/10 rounded-2xl shadow p-6 backdrop-blur
+            dark:bg-white/5 dark:border-white/10">
+
+  <h1 class="text-2xl font-bold text-slate-900 dark:text-white">Nova vistoria</h1>
+  <p class="text-sm text-slate-600 mt-1 dark:text-gray-300">Vistoria de lataria (amassados, riscos, etc.)</p>
 
   <form method="post" enctype="multipart/form-data" class="mt-6 space-y-6">
+
     <!-- Dados principais -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <div class="flex flex-col text-gray-300 text-xs">
+      <div class="flex flex-col text-slate-600 text-xs dark:text-gray-300">
         <label for="vehicle_id">Veículo</label>
         <select id="vehicle_id" name="vehicle_id" required
-                class="bg-gray-900 border border-gray-700 text-gray-200 px-3 py-2 rounded-md">
+                class="bg-white border border-slate-900/10 text-slate-900 px-3 py-2 rounded-md
+                       focus:outline-none focus:ring-2 focus:ring-blue-500/40
+                       dark:bg-gray-900 dark:border-gray-700 dark:text-gray-200">
           <option value="">Selecione</option>
           {% for ve in veiculos %}
             <option value="{{ ve.id }}" data-km="{{ ve.km or 0 }}">{{ ve.plate }}</option>
@@ -20,17 +25,21 @@
         </select>
       </div>
 
-      <div class="flex flex-col text-gray-300 text-xs">
+      <div class="flex flex-col text-slate-600 text-xs dark:text-gray-300">
         <label for="km">KM</label>
         <input id="km" name="km" type="number" min="0"
                placeholder="Será preenchido ao selecionar o veículo"
-               class="bg-gray-900 border border-gray-700 text-gray-200 px-3 py-2 rounded-md">
+               class="bg-white border border-slate-900/10 text-slate-900 px-3 py-2 rounded-md
+                      focus:outline-none focus:ring-2 focus:ring-blue-500/40
+                      dark:bg-gray-900 dark:border-gray-700 dark:text-gray-200">
       </div>
 
-      <div class="flex flex-col text-gray-300 text-xs">
+      <div class="flex flex-col text-slate-600 text-xs dark:text-gray-300">
         <label for="turno">Turno</label>
         <select id="turno" name="turno"
-                class="bg-gray-900 border border-gray-700 text-gray-200 px-3 py-2 rounded-md">
+                class="bg-white border border-slate-900/10 text-slate-900 px-3 py-2 rounded-md
+                       focus:outline-none focus:ring-2 focus:ring-blue-500/40
+                       dark:bg-gray-900 dark:border-gray-700 dark:text-gray-200">
           <option value="inicio">Início do expediente</option>
           <option value="durante">Durante expediente</option>
           <option value="fim" selected>Fim do expediente</option>
@@ -39,26 +48,30 @@
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div class="flex flex-col text-gray-300 text-xs">
+      <div class="flex flex-col text-slate-600 text-xs dark:text-gray-300">
         <label for="local">Local (opcional)</label>
         <input id="local" name="local" type="text"
-               class="bg-gray-900 border border-gray-700 text-gray-200 px-3 py-2 rounded-md"
+               class="bg-white border border-slate-900/10 text-slate-900 px-3 py-2 rounded-md
+                      focus:outline-none focus:ring-2 focus:ring-blue-500/40
+                      dark:bg-gray-900 dark:border-gray-700 dark:text-gray-200"
                placeholder="Ex: Base / Pátio / Rua">
       </div>
 
       <!-- Status geral automático -->
-      <div class="flex flex-col text-gray-300 text-xs">
+      <div class="flex flex-col text-slate-600 text-xs dark:text-gray-300">
         <label>Status geral (automático)</label>
 
         <div id="statusBadge"
-             class="mt-0.5 inline-flex items-center gap-2 px-3 py-2 rounded-md border bg-green-900/40 border-green-700/40 text-green-200 text-sm w-fit">
+             class="mt-0.5 inline-flex items-center gap-2 px-3 py-2 rounded-md border
+                    bg-emerald-600/10 border-emerald-600/20 text-emerald-700 text-sm w-fit
+                    dark:bg-green-900/40 dark:border-green-700/40 dark:text-green-200">
           <span class="text-base">✅</span>
           <span id="statusText" class="font-medium">OK</span>
         </div>
 
         <input type="hidden" id="status_geral" name="status_geral" value="ok">
 
-        <p class="text-[11px] text-gray-400 mt-1">
+        <p class="text-[11px] text-slate-500 mt-1 dark:text-gray-400">
           Atualiza automaticamente conforme os itens marcados como “Avaria”.
         </p>
       </div>
@@ -80,26 +93,31 @@
       ("calotas",               "Calotas"),
     ] %}
 
-    <div class="bg-white/5 border border-white/10 rounded-2xl shadow overflow-hidden">
-      <div class="p-5 border-b border-white/10">
-        <h3 class="text-lg font-semibold">Itens da vistoria</h3>
-        <p class="text-xs text-gray-400 mt-1">
+    <div class="bg-white/70 border border-slate-900/10 rounded-2xl shadow overflow-hidden backdrop-blur
+                dark:bg-white/5 dark:border-white/10">
+      <div class="p-5 border-b border-slate-900/10 dark:border-white/10">
+        <h3 class="text-lg font-semibold text-slate-900 dark:text-white">Itens da vistoria</h3>
+        <p class="text-xs text-slate-500 mt-1 dark:text-gray-400">
           Se marcar “Avaria”, aparece campo de observação e permite enviar <b>várias fotos</b>.
         </p>
       </div>
 
       <div class="p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
         {% for key, label in itens %}
-          <div class="p-4 rounded-xl border border-white/10 bg-black/10 h-full">
+          <div class="p-4 rounded-xl border border-slate-900/10 bg-slate-50/70 h-full
+                      dark:border-white/10 dark:bg-black/10">
+
             <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
               <div>
-                <p class="font-semibold text-white">{{ label }}</p>
-                <p class="text-xs text-gray-400">Status + (se avaria) observação + fotos</p>
+                <p class="font-semibold text-slate-900 dark:text-white">{{ label }}</p>
+                <p class="text-xs text-slate-500 dark:text-gray-400">Status + (se avaria) observação + fotos</p>
               </div>
 
               <div class="flex items-center gap-2">
                 <select name="{{ key }}" data-item-status="{{ key }}"
-                        class="bg-gray-900 border border-gray-700 text-gray-200 px-3 py-2 rounded-md text-sm">
+                        class="bg-white border border-slate-900/10 text-slate-900 px-3 py-2 rounded-md text-sm
+                               focus:outline-none focus:ring-2 focus:ring-blue-500/40
+                               dark:bg-gray-900 dark:border-gray-700 dark:text-gray-200">
                   <option value="ok" selected>OK</option>
                   <option value="avaria">Avaria</option>
                 </select>
@@ -109,44 +127,56 @@
             <!-- Campos extras (somente quando avaria) -->
             <div id="wrap_{{ key }}" class="mt-4 hidden">
               <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <div class="flex flex-col text-gray-300 text-xs">
+
+                <div class="flex flex-col text-slate-600 text-xs dark:text-gray-300">
                   <label for="obs_{{ key }}">Observação do item</label>
                   <input id="obs_{{ key }}" name="obs_{{ key }}" type="text"
-                         class="bg-gray-900 border border-gray-700 text-gray-200 px-3 py-2 rounded-md"
+                         class="bg-white border border-slate-900/10 text-slate-900 px-3 py-2 rounded-md
+                                focus:outline-none focus:ring-2 focus:ring-blue-500/40
+                                dark:bg-gray-900 dark:border-gray-700 dark:text-gray-200"
                          placeholder="Ex: amassado no canto, risco na pintura...">
                 </div>
 
-                <div class="flex flex-col text-gray-300 text-xs">
+                <div class="flex flex-col text-slate-600 text-xs dark:text-gray-300">
                   <label for="foto_{{ key }}">Fotos do item</label>
 
                   <!-- ✅ MULTIPLE + name com [] -->
                   <input id="foto_{{ key }}" name="foto_{{ key }}[]" type="file"
                          accept=".jpg,.jpeg,.png,.webp"
                          multiple
-                         class="bg-gray-900 border border-gray-700 text-gray-200 px-3 py-2 rounded-md">
+                         class="bg-white border border-slate-900/10 text-slate-900 px-3 py-2 rounded-md
+                                file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0
+                                file:bg-slate-900/10 file:text-slate-700
+                                dark:bg-gray-900 dark:border-gray-700 dark:text-gray-200
+                                dark:file:bg-white/10 dark:file:text-gray-200">
 
-                  <p class="text-[11px] text-gray-400 mt-1">
+                  <p class="text-[11px] text-slate-500 mt-1 dark:text-gray-400">
                     Você pode selecionar várias fotos de uma vez.
                   </p>
                 </div>
+
               </div>
             </div>
+
           </div>
         {% endfor %}
       </div>
     </div>
 
     <!-- Observações gerais -->
-    <div class="flex flex-col text-gray-300 text-xs">
+    <div class="flex flex-col text-slate-600 text-xs dark:text-gray-300">
       <label for="observacoes">Observações gerais (opcional)</label>
       <textarea id="observacoes" name="observacoes" rows="3"
-                class="bg-gray-900 border border-gray-700 text-gray-200 px-3 py-2 rounded-md"
+                class="bg-white border border-slate-900/10 text-slate-900 px-3 py-2 rounded-md
+                       focus:outline-none focus:ring-2 focus:ring-blue-500/40
+                       dark:bg-gray-900 dark:border-gray-700 dark:text-gray-200"
                 placeholder="Detalhes gerais da vistoria..."></textarea>
     </div>
 
     <div class="flex items-center justify-end gap-2">
       <a href="{{ url_for('vistorias_list') }}"
-         class="px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded-lg text-sm">
+         class="px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-lg text-sm
+                dark:bg-gray-600 dark:hover:bg-gray-500">
         Cancelar
       </a>
       <button class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm">
@@ -179,14 +209,20 @@
 
   function setBadgeOk(){
     if(!badge || !statusText) return;
-    badge.className = "mt-0.5 inline-flex items-center gap-2 px-3 py-2 rounded-md border bg-green-900/40 border-green-700/40 text-green-200 text-sm w-fit";
+    badge.className =
+      "mt-0.5 inline-flex items-center gap-2 px-3 py-2 rounded-md border text-sm w-fit " +
+      "bg-emerald-600/10 border-emerald-600/20 text-emerald-700 " +
+      "dark:bg-green-900/40 dark:border-green-700/40 dark:text-green-200";
     badge.querySelector("span").textContent = "✅";
     statusText.textContent = "OK";
   }
 
   function setBadgeAvarias(){
     if(!badge || !statusText) return;
-    badge.className = "mt-0.5 inline-flex items-center gap-2 px-3 py-2 rounded-md border bg-yellow-900/40 border-yellow-700/40 text-yellow-200 text-sm w-fit";
+    badge.className =
+      "mt-0.5 inline-flex items-center gap-2 px-3 py-2 rounded-md border text-sm w-fit " +
+      "bg-amber-500/10 border-amber-500/20 text-amber-700 " +
+      "dark:bg-yellow-900/40 dark:border-yellow-700/40 dark:text-yellow-200";
     badge.querySelector("span").textContent = "⚠️";
     statusText.textContent = "Com avarias";
   }

@@ -2,9 +2,9 @@
 {% set page_title = "Relatórios" %}
 {% block content %}
 
-<div class="bg-white/5 border border-white/10 rounded-2xl shadow p-5">
+<div class="bg-white/70 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl shadow p-5">
 
-  <h2 class="text-lg font-semibold mb-4">Relatórios (PDF)</h2>
+  <h2 class="text-lg font-semibold mb-4 text-slate-900 dark:text-white">Relatórios (PDF)</h2>
 
   {% set ns = namespace(last_group=None) %}
 
@@ -12,7 +12,7 @@
     <table class="min-w-full text-sm">
 
       <thead>
-        <tr class="text-gray-300 border-b border-white/10 text-left">
+        <tr class="text-slate-600 dark:text-gray-300 border-b border-slate-900/10 dark:border-white/10 text-left">
           <th class="px-4 py-2 w-[45%]">Nome</th>
           <th class="px-4 py-2 w-[15%] text-right">Tamanho</th>
           <th class="px-4 py-2 w-[20%]">Modificado</th>
@@ -20,7 +20,7 @@
         </tr>
       </thead>
 
-      <tbody class="text-gray-200">
+      <tbody class="text-slate-900 dark:text-gray-200">
 
         {% for f in items %}
 
@@ -38,15 +38,15 @@
 
         {# SOMENTE MOSTRA O BLOCO SE O MÊS MUDAR #}
         {% if grupo != ns.last_group %}
-          <tr class="bg-white/5">
-            <td colspan="4" class="px-4 py-2 text-blue-300 font-semibold uppercase tracking-wide">
+          <tr class="bg-slate-900/5 dark:bg-white/5">
+            <td colspan="4" class="px-4 py-2 text-blue-700 dark:text-blue-300 font-semibold uppercase tracking-wide">
               📁 {{ grupo }}
             </td>
           </tr>
           {% set ns.last_group = grupo %}
         {% endif %}
 
-        <tr class="border-b border-white/10 hover:bg-white/5 transition">
+        <tr class="border-b border-slate-900/10 dark:border-white/10 hover:bg-slate-900/5 dark:hover:bg-white/5 transition">
 
           <td class="px-4 py-2 break-all">
             {{ f.name }}
@@ -82,7 +82,7 @@
 
         {% else %}
         <tr>
-          <td class="py-3 text-gray-400 text-center" colspan="4">
+          <td class="py-3 text-slate-500 dark:text-gray-400 text-center" colspan="4">
             Nenhum arquivo encontrado.
           </td>
         </tr>

@@ -11,9 +11,10 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
-    <!-- Tailwind config (opcional) -->
+    <!-- ✅ Tailwind config + dark mode -->
     <script>
       tailwind.config = {
+        darkMode: "class",
         theme: {
           extend: {
             boxShadow: {
@@ -24,6 +25,22 @@
       }
     </script>
 
+    <!-- ✅ Tema: aplica ANTES de renderizar (evita flash claro/escuro) -->
+    <script>
+      (function () {
+        try {
+          const saved = localStorage.getItem("theme"); // "dark" | "light" | null
+          const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+          const shouldDark = saved ? (saved === "dark") : prefersDark;
+
+          if (shouldDark) document.documentElement.classList.add("dark");
+          else document.documentElement.classList.remove("dark");
+        } catch (e) {
+          // se falhar, mantém padrão
+        }
+      })();
+    </script>
+
     <style>
       /* ✅ Não coloque transition em tudo (pega input, table, etc). */
       a, button, .transit {
@@ -31,23 +48,52 @@
       }
 
       /* =========================
-         ✅ FUNDO PREMIUM (SEM "FAIXAS" / BANDAS)
+         ✅ FUNDO PREMIUM - LIGHT/DARK
          - Camadas + noise leve
       ========================== */
+
+      /* base */
       body {
-        background: #020617; /* base sólida */
-        color: #f3f4f6;
         min-height: 100vh;
         position: relative;
         overflow-x: hidden;
       }
 
-      /* Camadas de glow (radial) por trás */
+      /* LIGHT (padrão) */
+      body {
+        background: #f8fafc;
+        color: #0f172a;
+      }
+
       body::after {
         content: "";
         position: fixed;
         inset: 0;
         z-index: -2;
+        background:
+          radial-gradient(ellipse at top, rgba(59,130,246,.10), transparent 55%),
+          radial-gradient(ellipse at bottom, rgba(168,85,247,.08), transparent 60%),
+          radial-gradient(ellipse at left, rgba(16,185,129,.06), transparent 55%),
+          radial-gradient(ellipse at right, rgba(245,158,11,.05), transparent 55%);
+      }
+
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        z-index: -1;
+        pointer-events: none;
+        opacity: .05;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='.35'/%3E%3C/svg%3E");
+      }
+
+      /* DARK (quando <html class="dark">) */
+      .dark body {
+        background: #020617;
+        color: #f3f4f6;
+      }
+
+      .dark body::after {
         background:
           radial-gradient(ellipse at top, rgba(59,130,246,.18), transparent 55%),
           radial-gradient(ellipse at bottom, rgba(168,85,247,.14), transparent 60%),
@@ -55,44 +101,56 @@
           radial-gradient(ellipse at right, rgba(245,158,11,.08), transparent 55%);
       }
 
-      /* Noise leve (remove o efeito de “repartição”) */
-      body::before {
-        content: "";
-        position: fixed;
-        inset: 0;
-        z-index: -1;
-        pointer-events: none;
+      .dark body::before {
         opacity: .06;
-        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='.35'/%3E%3C/svg%3E");
       }
 
       /* Vidro premium */
       .glass {
-        background: rgba(255, 255, 255, 0.08);
+        background: rgba(255, 255, 255, 0.72);
         backdrop-filter: blur(12px);
         -webkit-backdrop-filter: blur(12px);
       }
+      .dark .glass {
+        background: rgba(255, 255, 255, 0.08);
+      }
 
-      /* ===== User chip premium (compacto - não estoura header) ===== */
+      /* ===== User chip premium ===== */
       .userchip {
-        background: rgba(255,255,255,0.06);
-        border: 1px solid rgba(255,255,255,0.12);
+        background: rgba(15, 23, 42, 0.05);
+        border: 1px solid rgba(15, 23, 42, 0.10);
         backdrop-filter: blur(12px);
         -webkit-backdrop-filter: blur(12px);
+      }
+      .dark .userchip {
+        background: rgba(255,255,255,0.06);
+        border: 1px solid rgba(255,255,255,0.12);
       }
 
       .userchip:hover {
+        background: rgba(15, 23, 42, 0.07);
+        border-color: rgba(15, 23, 42, 0.14);
+      }
+      .dark .userchip:hover {
         background: rgba(255,255,255,0.085);
         border-color: rgba(255,255,255,0.18);
       }
 
       .userchip-name {
+        background: linear-gradient(90deg, #0f172a, #2563eb);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+      }
+      .dark .userchip-name {
         background: linear-gradient(90deg, #ffffff, #9ecbff);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
       }
 
       .userchip-dot {
+        box-shadow: 0 0 0 2px rgba(255,255,255,.55);
+      }
+      .dark .userchip-dot {
         box-shadow: 0 0 0 2px rgba(0,0,0,.25);
       }
 
@@ -102,16 +160,31 @@
       .userchip-glow-default {
         box-shadow: 0 0 0 1px rgba(59,130,246,.22), 0 0 12px rgba(59,130,246,.28);
       }
+
+      /* ✅ Botão tema */
+      .themebtn {
+        border: 1px solid rgba(15,23,42,.12);
+        background: rgba(255,255,255,.55);
+      }
+      .themebtn:hover {
+        background: rgba(255,255,255,.75);
+      }
+      .dark .themebtn {
+        border: 1px solid rgba(255,255,255,.15);
+        background: rgba(255,255,255,.06);
+      }
+      .dark .themebtn:hover {
+        background: rgba(255,255,255,.10);
+      }
     </style>
   </head>
 
-  <!-- ✅ Removi o bg-gradient daqui -->
-  <body class="min-h-screen text-gray-100">
+  <body class="min-h-screen">
 
     <!-- ============================
           CABEÇALHO MODERNO PREMIUM
     ============================== -->
-    <header class="glass border-b border-white/20 sticky top-0 z-50 shadow-glass">
+    <header class="glass border-b border-slate-900/10 dark:border-white/20 sticky top-0 z-50 shadow-glass">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 py-2 flex items-center justify-between gap-3">
 
         <!-- LOGO (NÃO CLICÁVEL) + TOOLTIP (versão e dev) -->
@@ -129,17 +202,17 @@
                    transition-all duration-200 ease-out
                    z-50">
 
-            <div class="glass border border-white/20 rounded-xl px-3 py-2 shadow-glass">
-              <div class="text-[11px] font-semibold text-white tracking-wide">
+            <div class="glass border border-slate-900/10 dark:border-white/20 rounded-xl px-3 py-2 shadow-glass">
+              <div class="text-[11px] font-semibold text-slate-900 dark:text-white tracking-wide">
                 Sistema de Controle Veicular
               </div>
 
-              <div class="mt-1 text-[10px] text-gray-300">
-                Versão <span class="font-semibold text-blue-300">v1.1.0</span>
+              <div class="mt-1 text-[10px] text-slate-600 dark:text-gray-300">
+                Versão <span class="font-semibold text-blue-600 dark:text-blue-300">v1.1.0</span>
               </div>
 
-              <div class="text-[10px] text-gray-400">
-                Desenvolvido por <span class="text-gray-200 font-medium">Jonatas de A. Galdino</span>
+              <div class="text-[10px] text-slate-500 dark:text-gray-400">
+                Desenvolvido por <span class="text-slate-800 dark:text-gray-200 font-medium">Jonatas de A. Galdino</span>
               </div>
             </div>
           </div>
@@ -164,24 +237,24 @@
             <a href="{{ url_for(route) }}"
                class="px-2.5 py-1 rounded-md font-medium tracking-wide border border-transparent text-[12px]
                       {% if is_active %}
-                        bg-blue-600/20 text-white border-blue-500/25
+                        bg-blue-600/20 text-slate-900 dark:text-white border-blue-500/25
                       {% else %}
-                        text-gray-300 hover:text-white hover:bg-white/5 hover:border-white/10
+                        text-slate-600 dark:text-gray-300 hover:text-slate-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 hover:border-slate-900/10 dark:hover:border-white/10
                       {% endif %}">
               {{ label }}
             </a>
           {% endfor %}
 
           {% if ROLE_ADMIN %}
-            <span class="w-px h-5 bg-white/15 mx-1.5"></span>
+            <span class="w-px h-5 bg-slate-900/10 dark:bg-white/15 mx-1.5"></span>
 
             {% set is_users = (request.endpoint == 'users') %}
             <a href="{{ url_for('users') }}"
                class="px-2.5 py-1 rounded-md border border-transparent text-[12px]
                       {% if is_users %}
-                        bg-blue-600/20 text-white border-blue-500/25
+                        bg-blue-600/20 text-slate-900 dark:text-white border-blue-500/25
                       {% else %}
-                        text-gray-300 hover:text-white hover:bg-white/5 hover:border-white/10
+                        text-slate-600 dark:text-gray-300 hover:text-slate-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 hover:border-slate-900/10 dark:hover:border-white/10
                       {% endif %}">
               Usuários
             </a>
@@ -190,9 +263,9 @@
             <a href="{{ url_for('config_checklist') }}"
                class="px-2.5 py-1 rounded-md border border-transparent text-[12px]
                       {% if is_cfg %}
-                        bg-blue-600/20 text-white border-blue-500/25
+                        bg-blue-600/20 text-slate-900 dark:text-white border-blue-500/25
                       {% else %}
-                        text-gray-300 hover:text-white hover:bg-white/5 hover:border-white/10
+                        text-slate-600 dark:text-gray-300 hover:text-slate-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 hover:border-slate-900/10 dark:hover:border-white/10
                       {% endif %}">
               Configurações
             </a>
@@ -201,9 +274,9 @@
             <a href="{{ url_for('logs') }}"
                class="px-2.5 py-1 rounded-md border border-transparent text-[12px]
                       {% if is_logs %}
-                        bg-yellow-600/15 text-white border-yellow-500/25
+                        bg-yellow-600/15 text-slate-900 dark:text-white border-yellow-500/25
                       {% else %}
-                        text-gray-300 hover:text-white hover:bg-white/5 hover:border-white/10
+                        text-slate-600 dark:text-gray-300 hover:text-slate-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-yellow-600/10 hover:border-slate-900/10 dark:hover:border-yellow-500/20
                       {% endif %}">
               Logs
             </a>
@@ -213,7 +286,7 @@
         <!-- BOTÃO MOBILE (HAMBURGUER) -->
         <button type="button"
                 id="btnMobileMenu"
-                class="md:hidden px-3 py-2 rounded-lg border border-white/15 bg-white/5 hover:bg-white/10 transit text-sm"
+                class="md:hidden px-3 py-2 rounded-lg border border-slate-900/10 dark:border-white/15 bg-white/60 dark:bg-white/5 hover:bg-white/80 dark:hover:bg-white/10 transit text-sm text-slate-800 dark:text-gray-100"
                 aria-expanded="false"
                 aria-controls="mobileMenu">
           ☰
@@ -221,9 +294,17 @@
 
         {% endif %}
 
-        <!-- PERFIL + SAIR (tudo junto e compacto) -->
+        <!-- PERFIL + TEMA + SAIR -->
         <div class="flex items-center gap-2.5 shrink-0">
           {% if current_user.is_authenticated %}
+
+            <!-- ✅ Botão tema (sempre visível) -->
+            <button type="button"
+                    id="btnTheme"
+                    class="themebtn px-3 py-2 rounded-xl text-sm transit text-slate-800 dark:text-gray-100"
+                    title="Alternar tema">
+              <span id="themeIcon">🌙</span>
+            </button>
 
             {% set role_label = 'Técnico' %}
             {% if request.endpoint in ['checklist_mobile', 'manutencao_os'] %}
@@ -236,60 +317,65 @@
               {% endif %}
             {% endif %}
 
-            <!-- CHIP PREMIUM COM SAIR DENTRO (mais compacto) -->
+            <!-- CHIP PREMIUM COM SAIR DENTRO -->
             <div class="hidden sm:flex items-center gap-2.5 pl-2 pr-2 py-1 rounded-2xl userchip transit">
 
               <!-- avatar -->
-              <div class="w-8 h-8 rounded-xl flex items-center justify-center font-extrabold text-white shadow text-sm
+              <div class="w-8 h-8 rounded-xl flex items-center justify-center font-extrabold shadow text-sm
                 {% if ROLE_ADMIN %}
                   bg-gradient-to-br from-yellow-400 to-yellow-300 text-black userchip-glow-admin
                 {% else %}
-                  bg-gradient-to-br from-blue-700 to-blue-500 userchip-glow-default
+                  bg-gradient-to-br from-blue-700 to-blue-500 text-white userchip-glow-default
                 {% endif %}">
                 {{ current_user.username[0] | upper }}
               </div>
 
-              <!-- nome + papel (mais compacto) -->
+              <!-- nome + papel -->
               <div class="leading-tight min-w-0">
                 <div class="text-[13px] font-extrabold userchip-name max-w-[130px] truncate">
                   {{ current_user.username }}
                 </div>
 
-                <div class="flex items-center gap-1.5 mt-0.5 text-[10px] text-gray-300">
-                  <!-- status dot -->
+                <div class="flex items-center gap-1.5 mt-0.5 text-[10px] text-slate-600 dark:text-gray-300">
                   <span class="w-2 h-2 rounded-full bg-emerald-400 userchip-dot"></span>
 
-                  <span class="px-1.5 py-0.5 rounded-full border border-white/10 bg-white/5 whitespace-nowrap">
+                  <span class="px-1.5 py-0.5 rounded-full border border-slate-900/10 dark:border-white/10 bg-white/50 dark:bg-white/5 whitespace-nowrap">
                     {{ role_label }}
                   </span>
 
                   {% if ROLE_ADMIN %}
-                    <span class="text-yellow-300">👑</span>
+                    <span class="text-yellow-500 dark:text-yellow-300">👑</span>
                   {% endif %}
                 </div>
               </div>
 
-              <!-- divisor -->
-              <span class="w-px h-6 bg-white/10 mx-1"></span>
+              <span class="w-px h-6 bg-slate-900/10 dark:bg-white/10 mx-1"></span>
 
-              <!-- sair dentro do chip (mais compacto) -->
               <a href="{{ url_for('logout') }}"
                  class="px-2.5 py-1 rounded-lg text-[11px] font-semibold
-                        bg-red-600/20 border border-red-600/30 text-red-100
-                        hover:bg-red-600/30 hover:border-red-500/40 transit whitespace-nowrap">
+                        bg-red-600/15 dark:bg-red-600/20 border border-red-600/25 dark:border-red-600/30 text-red-700 dark:text-red-100
+                        hover:bg-red-600/20 dark:hover:bg-red-600/30 hover:border-red-500/30 dark:hover:border-red-500/40 transit whitespace-nowrap">
                 Sair
               </a>
             </div>
 
             <!-- Mobile: mantém só botão sair -->
             <a href="{{ url_for('logout') }}"
-               class="sm:hidden px-3 py-1.5 rounded-xl text-sm bg-red-600/25 border border-red-600/35
-                      hover:bg-red-600/35 hover:text-red-100 transit">
+               class="sm:hidden px-3 py-1.5 rounded-xl text-sm bg-red-600/15 dark:bg-red-600/25 border border-red-600/25 dark:border-red-600/35
+                      hover:bg-red-600/20 dark:hover:bg-red-600/35 hover:text-red-700 dark:hover:text-red-100 transit text-red-700 dark:text-red-100">
               Sair
             </a>
 
           {% else %}
-            <a href="{{ url_for('login') }}" class="text-sm hover:text-blue-400 transit">
+            <!-- na tela de login, você também pode mostrar o botão tema -->
+            <button type="button"
+                    id="btnTheme"
+                    class="themebtn px-3 py-2 rounded-xl text-sm transit text-slate-800 dark:text-gray-100"
+                    title="Alternar tema">
+              <span id="themeIcon">🌙</span>
+            </button>
+
+            <a href="{{ url_for('login') }}" class="text-sm text-slate-700 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400 transit">
               Login
             </a>
           {% endif %}
@@ -299,7 +385,7 @@
 
       <!-- MENU MOBILE (dropdown) -->
       {% if current_user.is_authenticated and (ROLE_ADMIN or ROLE_SUPERVISOR) %}
-      <div id="mobileMenu" class="md:hidden hidden border-t border-white/10">
+      <div id="mobileMenu" class="md:hidden hidden border-t border-slate-900/10 dark:border-white/10">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex flex-col gap-2">
 
           {% for label, route in menu_items %}
@@ -307,32 +393,32 @@
             <a href="{{ url_for(route) }}"
                class="px-2.5 py-1.5 rounded-lg text-[12px] font-medium border border-transparent
                       {% if is_active %}
-                        bg-blue-600/20 text-white border-blue-500/25
+                        bg-blue-600/20 text-slate-900 dark:text-white border-blue-500/25
                       {% else %}
-                        text-gray-300 hover:text-white hover:bg-white/5 hover:border-white/10
+                        text-slate-600 dark:text-gray-300 hover:text-slate-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 hover:border-slate-900/10 dark:hover:border-white/10
                       {% endif %}">
               {{ label }}
             </a>
           {% endfor %}
 
           {% if ROLE_ADMIN %}
-            <div class="h-px bg-white/10 my-2"></div>
+            <div class="h-px bg-slate-900/10 dark:bg-white/10 my-2"></div>
 
             <a href="{{ url_for('users') }}"
                class="px-2.5 py-1.5 rounded-lg text-[12px] font-medium border border-transparent
-                      text-gray-300 hover:text-white hover:bg-white/5 hover:border-white/10">
+                      text-slate-600 dark:text-gray-300 hover:text-slate-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 hover:border-slate-900/10 dark:hover:border-white/10">
               Usuários
             </a>
 
             <a href="{{ url_for('config_checklist') }}"
                class="px-2.5 py-1.5 rounded-lg text-[12px] font-medium border border-transparent
-                      text-gray-300 hover:text-white hover:bg-white/5 hover:border-white/10">
+                      text-slate-600 dark:text-gray-300 hover:text-slate-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5 hover:border-slate-900/10 dark:hover:border-white/10">
               Configurações
             </a>
 
             <a href="{{ url_for('logs') }}"
                class="px-2.5 py-1.5 rounded-lg text-[12px] font-medium border border-transparent
-                      text-gray-300 hover:text-white hover:bg-yellow-600/10 hover:border-yellow-500/20">
+                      text-slate-600 dark:text-gray-300 hover:text-slate-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-yellow-600/10 hover:border-slate-900/10 dark:hover:border-yellow-500/20">
               Logs
             </a>
           {% endif %}
@@ -351,9 +437,9 @@
           <div class="space-y-2 mb-4">
             {% for cat, msg in msgs %}
               <div class="px-4 py-2 rounded-lg text-sm border
-                  {% if cat == 'success' %} bg-green-800/40 border-green-600/40 text-green-200
-                  {% elif cat == 'error' %} bg-red-800/40 border-red-600/40 text-red-200
-                  {% else %} bg-white/10 border-white/20 text-gray-100
+                  {% if cat == 'success' %} bg-green-500/15 dark:bg-green-800/40 border-green-600/20 dark:border-green-600/40 text-green-800 dark:text-green-200
+                  {% elif cat == 'error' %} bg-red-500/15 dark:bg-red-800/40 border-red-600/20 dark:border-red-600/40 text-red-800 dark:text-red-200
+                  {% else %} bg-white/60 dark:bg-white/10 border-slate-900/10 dark:border-white/20 text-slate-800 dark:text-gray-100
                   {% endif %}">
                 {{ msg }}
               </div>
@@ -376,6 +462,42 @@
           const isOpen = !menu.classList.contains("hidden");
           menu.classList.toggle("hidden");
           btn.setAttribute("aria-expanded", String(!isOpen));
+        });
+      })();
+    </script>
+
+    <script>
+      // ✅ Alternar tema + ícone + persistência
+      (function () {
+        const btn = document.getElementById("btnTheme");
+        const icon = document.getElementById("themeIcon");
+
+        function isDark() {
+          return document.documentElement.classList.contains("dark");
+        }
+
+        function syncIcon() {
+          if (!icon) return;
+          icon.textContent = isDark() ? "☀️" : "🌙";
+        }
+
+        function setTheme(next) {
+          if (next === "dark") {
+            document.documentElement.classList.add("dark");
+            localStorage.setItem("theme", "dark");
+          } else {
+            document.documentElement.classList.remove("dark");
+            localStorage.setItem("theme", "light");
+          }
+          syncIcon();
+        }
+
+        // ícone inicial
+        syncIcon();
+
+        if (!btn) return;
+        btn.addEventListener("click", () => {
+          setTheme(isDark() ? "light" : "dark");
         });
       })();
     </script>

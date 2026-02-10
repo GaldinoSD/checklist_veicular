@@ -1,135 +1,146 @@
 {% extends "layout.html" %}
-
 {% block content %}
 <div class="max-w-6xl mx-auto">
 
-    <!-- TÍTULO -->
-    <div class="flex items-center justify-between mb-6">
-        <h1 class="text-3xl font-semibold text-gray-100 flex items-center gap-3">
-            <i class="fas fa-clipboard-list text-blue-400 text-2xl"></i>
-            Logs do Sistema
-        </h1>
+  <!-- TÍTULO -->
+  <div class="flex items-center justify-between mb-6">
+    <h1 class="text-3xl font-semibold text-slate-900 dark:text-gray-100 flex items-center gap-3">
+      <i class="fas fa-clipboard-list text-blue-500 dark:text-blue-400 text-2xl"></i>
+      Logs do Sistema
+    </h1>
+  </div>
+
+  <!-- 🎯 FILTRO COMPLETO (PERÍODO + BUSCA) -->
+  <form method="get"
+        class="flex flex-wrap items-end gap-3
+               bg-white/70 border border-slate-900/10
+               dark:bg-gray-800/40 dark:border-gray-700
+               p-4 rounded-xl mb-5 backdrop-blur">
+
+    <!-- PERÍODO -->
+    <div class="flex flex-col text-slate-600 dark:text-gray-300 text-xs">
+      <label for="periodo">Período</label>
+      <input id="periodo" type="text" name="periodo"
+             value="{{ request.args.get('periodo', '') }}"
+             placeholder="Selecione o período"
+             class="bg-white border border-slate-900/10 text-slate-900 px-3 py-2 rounded-md w-64
+                    focus:outline-none focus:ring-2 focus:ring-blue-500/40
+                    dark:bg-gray-900 dark:border-gray-700 dark:text-gray-200">
     </div>
 
-    <!-- 🎯 FILTRO COMPLETO (PERÍODO + BUSCA) -->
-    <form method="get" class="flex items-end gap-3 bg-gray-800/40 p-4 rounded-xl border border-gray-700 mb-5">
-
-        <!-- PERÍODO -->
-        <div class="flex flex-col text-gray-300 text-xs">
-            <label for="periodo">Período</label>
-            <input id="periodo" type="text" name="periodo"
-                   value="{{ request.args.get('periodo', '') }}"
-                   placeholder="Selecione o período"
-                   class="bg-gray-900 border border-gray-700 text-gray-200 px-3 py-2 rounded-md w-64">
-        </div>
-
-        <!-- BUSCA -->
-        <div class="flex flex-col text-gray-300 text-xs">
-            <label for="filtro">Texto</label>
-            <input id="filtro" type="text" name="busca"
-                   value="{{ request.args.get('busca', '') }}"
-                   placeholder="Filtrar por texto..."
-                   class="bg-gray-900 border border-gray-700 text-gray-200 px-3 py-2 rounded-md w-64">
-        </div>
-
-        <!-- BOTÕES -->
-        <button class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm">
-            Filtrar
-        </button>
-
-        <a href="{{ url_for('logs') }}"
-           class="px-4 py-2 bg-gray-600 hover:bg-gray-500 text-white rounded-lg text-sm">
-            Limpar
-        </a>
-    </form>
-
-
-    <!-- LISTAGEM COM SCROLL -->
-    <div class="bg-gray-900/60 backdrop-blur rounded-xl border border-gray-700 shadow-xl p-5">
-
-        <!-- ÁREA COM SCROLL -->
-        <div class="max-h-[500px] overflow-y-auto rounded-lg border border-gray-800">
-
-            <table id="tabelaLogs" class="min-w-full divide-y divide-gray-700">
-                <thead class="bg-gray-800/60 sticky top-0 z-10">
-                    <tr>
-                        <th class="px-4 py-3 text-left text-gray-300 uppercase text-xs tracking-wider">
-                            Usuário
-                        </th>
-                        <th class="px-4 py-3 text-left text-gray-300 uppercase text-xs tracking-wider">
-                            Ação
-                        </th>
-                        <th class="px-4 py-3 text-left text-gray-300 uppercase text-xs tracking-wider">
-                            Data/Hora
-                        </th>
-                    </tr>
-                </thead>
-
-                <tbody class="divide-y divide-gray-800 text-gray-200" id="tbodyLogs">
-                    {% for r in registros %}
-                    <tr class="hover:bg-gray-800/40 transition">
-                        <td class="px-4 py-3 font-medium">{{ r.usuario }}</td>
-
-                        <td class="px-4 py-3">
-                            {% set text = r.acao.lower() %}
-                            {% if "criado" in text %}
-                                <span class="text-green-400 font-semibold">
-                                    <i class="fas fa-plus-circle mr-1"></i>{{ r.acao }}
-                                </span>
-                            {% elif "excluído" in text or "delet" in text %}
-                                <span class="text-red-400 font-semibold">
-                                    <i class="fas fa-trash-alt mr-1"></i>{{ r.acao }}
-                                </span>
-                            {% elif "edit" in text or "alter" in text %}
-                                <span class="text-yellow-400 font-semibold">
-                                    <i class="fas fa-edit mr-1"></i>{{ r.acao }}
-                                </span>
-                            {% elif "login" in text %}
-                                <span class="text-blue-400 font-semibold">
-                                    <i class="fas fa-sign-in-alt mr-1"></i>{{ r.acao }}
-                                </span>
-                            {% elif "logout" in text %}
-                                <span class="text-purple-400 font-semibold">
-                                    <i class="fas fa-sign-out-alt mr-1"></i>{{ r.acao }}
-                                </span>
-                            {% else %}
-                                <span class="text-gray-300">{{ r.acao }}</span>
-                            {% endif %}
-                        </td>
-
-                        <td class="px-4 py-3 text-gray-400">
-                            {{ r.data_hora|br_datetime }}
-                        </td>
-                    </tr>
-                    {% endfor %}
-
-                    {% if registros|length == 0 %}
-                    <tr>
-                        <td colspan="3" class="px-4 py-4 text-center text-gray-500">
-                            Nenhum log encontrado para este período.
-                        </td>
-                    </tr>
-                    {% endif %}
-                </tbody>
-            </table>
-
-        </div> <!-- scroll -->
+    <!-- BUSCA -->
+    <div class="flex flex-col text-slate-600 dark:text-gray-300 text-xs">
+      <label for="filtro">Texto</label>
+      <input id="filtro" type="text" name="busca"
+             value="{{ request.args.get('busca', '') }}"
+             placeholder="Filtrar por texto..."
+             class="bg-white border border-slate-900/10 text-slate-900 px-3 py-2 rounded-md w-64
+                    focus:outline-none focus:ring-2 focus:ring-blue-500/40
+                    dark:bg-gray-900 dark:border-gray-700 dark:text-gray-200">
     </div>
 
+    <!-- BOTÕES -->
+    <button class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm">
+      Filtrar
+    </button>
 
-    <!-- BOTÃO CARREGAR MAIS -->
-    {% if limit < total_logs %}
-    <div class="flex justify-center mt-4">
-        <a href="{{ url_for('logs', limit=limit+20, periodo=request.args.get('periodo', ''), busca=request.args.get('busca', '')) }}"
-           class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow">
-            Carregar mais ({{ limit }}/{{ total_logs }})
-        </a>
+    <a href="{{ url_for('logs') }}"
+       class="px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-lg text-sm
+              dark:bg-gray-600 dark:hover:bg-gray-500">
+      Limpar
+    </a>
+  </form>
+
+  <!-- LISTAGEM COM SCROLL -->
+  <div class="bg-white/70 border border-slate-900/10 shadow-xl p-5 rounded-xl backdrop-blur
+              dark:bg-gray-900/60 dark:border-gray-700">
+
+    <!-- ÁREA COM SCROLL -->
+    <div class="max-h-[500px] overflow-y-auto rounded-lg
+                border border-slate-900/10
+                dark:border-gray-800">
+
+      <table id="tabelaLogs" class="min-w-full divide-y divide-slate-200 dark:divide-gray-700">
+        <thead class="bg-slate-100/70 sticky top-0 z-10
+                      dark:bg-gray-800/60">
+          <tr>
+            <th class="px-4 py-3 text-left text-slate-600 dark:text-gray-300 uppercase text-xs tracking-wider">
+              Usuário
+            </th>
+            <th class="px-4 py-3 text-left text-slate-600 dark:text-gray-300 uppercase text-xs tracking-wider">
+              Ação
+            </th>
+            <th class="px-4 py-3 text-left text-slate-600 dark:text-gray-300 uppercase text-xs tracking-wider">
+              Data/Hora
+            </th>
+          </tr>
+        </thead>
+
+        <tbody class="divide-y divide-slate-200 dark:divide-gray-800
+                      text-slate-900 dark:text-gray-200"
+               id="tbodyLogs">
+
+          {% for r in registros %}
+          <tr class="hover:bg-slate-50/70 dark:hover:bg-gray-800/40 transition">
+            <td class="px-4 py-3 font-medium">{{ r.usuario }}</td>
+
+            <td class="px-4 py-3">
+              {% set text = r.acao.lower() %}
+              {% if "criado" in text %}
+                <span class="text-emerald-600 dark:text-green-400 font-semibold">
+                  <i class="fas fa-plus-circle mr-1"></i>{{ r.acao }}
+                </span>
+              {% elif "excluído" in text or "delet" in text %}
+                <span class="text-red-600 dark:text-red-400 font-semibold">
+                  <i class="fas fa-trash-alt mr-1"></i>{{ r.acao }}
+                </span>
+              {% elif "edit" in text or "alter" in text %}
+                <span class="text-amber-600 dark:text-yellow-400 font-semibold">
+                  <i class="fas fa-edit mr-1"></i>{{ r.acao }}
+                </span>
+              {% elif "login" in text %}
+                <span class="text-blue-600 dark:text-blue-400 font-semibold">
+                  <i class="fas fa-sign-in-alt mr-1"></i>{{ r.acao }}
+                </span>
+              {% elif "logout" in text %}
+                <span class="text-purple-600 dark:text-purple-400 font-semibold">
+                  <i class="fas fa-sign-out-alt mr-1"></i>{{ r.acao }}
+                </span>
+              {% else %}
+                <span class="text-slate-700 dark:text-gray-300">{{ r.acao }}</span>
+              {% endif %}
+            </td>
+
+            <td class="px-4 py-3 text-slate-500 dark:text-gray-400">
+              {{ r.data_hora|br_datetime }}
+            </td>
+          </tr>
+          {% endfor %}
+
+          {% if registros|length == 0 %}
+          <tr>
+            <td colspan="3" class="px-4 py-4 text-center text-slate-500 dark:text-gray-500">
+              Nenhum log encontrado para este período.
+            </td>
+          </tr>
+          {% endif %}
+        </tbody>
+      </table>
+
     </div>
-    {% endif %}
+  </div>
+
+  <!-- BOTÃO CARREGAR MAIS -->
+  {% if limit < total_logs %}
+  <div class="flex justify-center mt-4">
+    <a href="{{ url_for('logs', limit=limit+20, periodo=request.args.get('periodo', ''), busca=request.args.get('busca', '')) }}"
+       class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow">
+      Carregar mais ({{ limit }}/{{ total_logs }})
+    </a>
+  </div>
+  {% endif %}
 
 </div>
-
-
 
 <!-- LITEPICKER -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/litepicker/dist/css/litepicker.css" />
@@ -137,27 +148,31 @@
 
 <script>
 new Litepicker({
-    element: document.getElementById('periodo'),
-    singleMode: false,
-    numberOfMonths: 2,
-    numberOfColumns: 2,
-    format: 'YYYY-MM-DD',
-    autoApply: true,
-    showTooltip: true
+  element: document.getElementById('periodo'),
+  singleMode: false,
+  numberOfMonths: 2,
+  numberOfColumns: 2,
+  format: 'YYYY-MM-DD',
+  autoApply: true,
+  showTooltip: true
 });
 </script>
 
-<!-- FILTRAGEM IMEDIATA POR TEXTO -->
+<!-- FILTRAGEM IMEDIATA POR TEXTO (com null-check) -->
 <script>
-document.getElementById("filtro").addEventListener("keyup", function () {
-    let filtro = this.value.toLowerCase();
-    let linhas = document.querySelectorAll("#tbodyLogs tr");
+(function () {
+  const filtroEl = document.getElementById("filtro");
+  const linhas = () => document.querySelectorAll("#tbodyLogs tr");
+  if (!filtroEl) return;
 
-    linhas.forEach(linha => {
-        let texto = linha.innerText.toLowerCase();
-        linha.style.display = texto.includes(filtro) ? "" : "none";
+  filtroEl.addEventListener("keyup", function () {
+    const filtro = (this.value || "").toLowerCase();
+    linhas().forEach(linha => {
+      const texto = (linha.innerText || "").toLowerCase();
+      linha.style.display = texto.includes(filtro) ? "" : "none";
     });
-});
+  });
+})();
 </script>
 
 {% endblock %}

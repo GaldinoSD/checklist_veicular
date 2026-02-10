@@ -1,43 +1,58 @@
 {% extends 'layout.html' %}
 {% set page_title = "Configurações do Checklist" %}
 {% block content %}
+
 <div class="max-w-4xl mx-auto space-y-6">
 
   <!-- ======================= 🔹 MODO DO CHECKLIST ======================= -->
-  <div class="bg-gradient-to-br from-gray-900/70 to-gray-800/60 border border-white/10 rounded-2xl shadow-lg p-6 backdrop-blur">
-    <h2 class="text-xl font-bold mb-4 text-white">Modo do Checklist</h2>
+  <div class="rounded-2xl shadow-lg p-6 border backdrop-blur
+              bg-white/70 border-slate-900/10
+              dark:bg-white/5 dark:border-white/10">
+    <h2 class="text-xl font-bold mb-4 text-slate-900 dark:text-white">Modo do Checklist</h2>
 
     <form method="post" action="{{ url_for('config_checklist_mode') }}" class="space-y-3">
-
-      <label class="text-gray-300 text-sm">Selecione o modo de funcionamento:</label>
+      <label class="text-sm text-slate-700 dark:text-gray-300">Selecione o modo de funcionamento:</label>
 
       <select name="mode"
-        class="border border-white/20 bg-gray-900/40 text-white rounded-lg px-3 py-2 w-full cursor-pointer">
+        class="w-full rounded-lg px-3 py-2 border cursor-pointer
+               bg-white text-slate-900 border-slate-900/10
+               dark:bg-gray-900/60 dark:text-white dark:border-white/10
+               focus:outline-none focus:ring-2 focus:ring-blue-600/30">
         <option value="disabled" {% if config.mode=='disabled' %}selected{% endif %}>❌ Desativado</option>
         <option value="start_only" {% if config.mode=='start_only' %}selected{% endif %}>🟦 Somente Início</option>
         <option value="start_end" {% if config.mode=='start_end' %}selected{% endif %}>🟩 Início e Chegada</option>
       </select>
 
       <button
-        class="bg-green-700 hover:bg-green-600 text-white rounded-lg px-5 py-2 transition shadow-lg hover:shadow-green-700/40">
+        class="rounded-lg px-5 py-2 font-semibold text-white shadow-lg transition
+               bg-green-700 hover:bg-green-600 hover:shadow-green-700/30">
         💾 Salvar Modo
       </button>
     </form>
   </div>
 
   <!-- ======================= 🔹 ADICIONAR NOVA PERGUNTA ======================= -->
-  <div class="bg-gradient-to-br from-gray-900/70 to-gray-800/60 border border-white/10 rounded-2xl shadow-lg p-6 backdrop-blur">
-    <h2 class="text-xl font-bold mb-4 text-white">Adicionar Pergunta</h2>
+  <div class="rounded-2xl shadow-lg p-6 border backdrop-blur
+              bg-white/70 border-slate-900/10
+              dark:bg-white/5 dark:border-white/10">
+    <h2 class="text-xl font-bold mb-4 text-slate-900 dark:text-white">Adicionar Pergunta</h2>
 
     <form method="post" action="{{ url_for('config_checklist_new') }}" class="space-y-4" id="new-item-form">
-      <div class="grid md:grid-cols-2 gap-3">
 
+      <div class="grid md:grid-cols-2 gap-3">
         <input name="text" placeholder="Texto da pergunta"
-          class="border border-white/20 bg-gray-900/40 text-white rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
+          class="rounded-lg px-3 py-2 border
+                 bg-white text-slate-900 border-slate-900/10
+                 dark:bg-gray-900/60 dark:text-white dark:border-white/10
+                 focus:outline-none focus:ring-2 focus:ring-blue-600/30">
 
         <select name="type"
-          class="border border-white/20 bg-gray-900/40 text-white rounded-lg px-3 py-2 type-select cursor-pointer"
+          class="rounded-lg px-3 py-2 border cursor-pointer type-select
+                 bg-white text-slate-900 border-slate-900/10
+                 dark:bg-gray-900/60 dark:text-white dark:border-white/10
+                 focus:outline-none focus:ring-2 focus:ring-blue-600/30"
           onchange="toggleOptions(this)">
+
           <option value="texto_curto">Texto curto</option>
           <option value="paragrafo">Parágrafo</option>
           <option value="numero">Número</option>
@@ -47,58 +62,68 @@
           <option value="radio">Seleção única</option>
           <option value="checkboxes">Seleção múltipla</option>
         </select>
-
       </div>
 
       <!-- Opções dinâmicas -->
-      <div class="hidden options-box">
-        <label class="text-sm text-gray-400 mb-2 block">Opções</label>
+      <div class="hidden options-box rounded-xl border p-4
+                  bg-slate-900/3 border-slate-900/10
+                  dark:bg-black/10 dark:border-white/10">
+        <label class="text-sm mb-2 block text-slate-600 dark:text-gray-400">Opções</label>
+
         <div class="space-y-2" id="option-list"></div>
 
         <button type="button" onclick="addOptionField(this)"
-          class="mt-2 bg-blue-700 hover:bg-blue-600 text-white rounded px-3 py-1 text-sm">
+          class="mt-2 rounded px-3 py-1 text-sm font-semibold text-white
+                 bg-blue-700 hover:bg-blue-600">
           ➕ Adicionar opção
         </button>
+
         <input type="hidden" name="options" id="options-hidden">
       </div>
 
       <!-- Configurações extras -->
       <div class="flex flex-wrap gap-4 items-center">
 
-        <label class="inline-flex items-center gap-2 text-sm text-gray-300">
+        <label class="inline-flex items-center gap-2 text-sm text-slate-700 dark:text-gray-300">
           <input type="checkbox" name="required" class="accent-blue-600"> Obrigatória
         </label>
 
-        <label class="inline-flex items-center gap-2 text-sm text-gray-300">
+        <label class="inline-flex items-center gap-2 text-sm text-slate-700 dark:text-gray-300">
           <input type="checkbox" name="require_justif_no" class="accent-yellow-500">
           Exigir justificativa se 'Não'
         </label>
 
-        <button onclick="prepareOptions(this)"
-          class="ml-auto bg-green-700 hover:bg-green-600 text-white rounded-lg px-5 py-2 shadow-lg hover:shadow-green-700/40">
+        <button type="button" onclick="prepareOptions(this)"
+          class="ml-auto rounded-lg px-5 py-2 font-semibold text-white shadow-lg transition
+                 bg-green-700 hover:bg-green-600 hover:shadow-green-700/30">
           ➕ Adicionar
         </button>
       </div>
-
     </form>
   </div>
 
   <!-- ======================= 🔹 LISTAGEM DE PERGUNTAS EXISTENTES ======================= -->
   {% for it in items %}
-  <div
-    class="bg-gradient-to-br from-gray-900/60 to-gray-800/60 border border-white/10 rounded-2xl shadow-lg p-6 space-y-3 backdrop-blur">
+  <div class="rounded-2xl shadow-lg p-6 border backdrop-blur
+              bg-white/70 border-slate-900/10
+              dark:bg-white/5 dark:border-white/10">
 
     <div class="flex items-start justify-between gap-3">
-
       <div class="flex-1">
         <form method="post" action="{{ url_for('config_checklist_edit', iid=it.id) }}" class="space-y-3">
 
           <div class="grid md:grid-cols-2 gap-3">
-
             <input name="text" value="{{ it.text }}"
-              class="border border-white/20 bg-gray-900/40 text-white rounded px-3 py-2 focus:ring-2 focus:ring-blue-500 outline-none">
+              class="rounded-lg px-3 py-2 border
+                     bg-white text-slate-900 border-slate-900/10
+                     dark:bg-gray-900/60 dark:text-white dark:border-white/10
+                     focus:outline-none focus:ring-2 focus:ring-blue-600/30">
 
-            <select name="type" class="border border-white/20 bg-gray-900/40 text-white rounded px-3 py-2 type-select"
+            <select name="type"
+              class="rounded-lg px-3 py-2 border cursor-pointer type-select
+                     bg-white text-slate-900 border-slate-900/10
+                     dark:bg-gray-900/60 dark:text-white dark:border-white/10
+                     focus:outline-none focus:ring-2 focus:ring-blue-600/30"
               onchange="toggleOptions(this)">
               <option value="texto_curto" {% if it.type=='texto_curto' %}selected{% endif %}>Texto curto</option>
               <option value="paragrafo" {% if it.type=='paragrafo' %}selected{% endif %}>Parágrafo</option>
@@ -109,62 +134,66 @@
               <option value="radio" {% if it.type=='radio' %}selected{% endif %}>Seleção única</option>
               <option value="checkboxes" {% if it.type=='checkboxes' %}selected{% endif %}>Seleção múltipla</option>
             </select>
-
           </div>
 
           <!-- Opções -->
-          <div class="{% if it.type in ['dropdown', 'radio', 'checkboxes'] %}{% else %}hidden{% endif %} options-box">
+          <div class="{% if it.type in ['dropdown','radio','checkboxes'] %}{% else %}hidden{% endif %} options-box
+                      rounded-xl border p-4
+                      bg-slate-900/3 border-slate-900/10
+                      dark:bg-black/10 dark:border-white/10">
 
-            <label class="text-sm text-gray-400">Opções</label>
+            <label class="text-sm text-slate-600 dark:text-gray-400">Opções</label>
 
-            <div class="space-y-2 option-list-edit">
+            <div class="space-y-2 option-list-edit mt-2">
               {% for opt in (it.options.split(',') if it.options else []) %}
               <div class="flex gap-2 items-center">
                 <input type="text" name="option_inputs" value="{{ opt }}"
-                  class="border border-white/20 bg-gray-900/40 text-white rounded px-3 py-1 flex-1">
+                  class="rounded px-3 py-1 flex-1 border
+                         bg-white text-slate-900 border-slate-900/10
+                         dark:bg-gray-900/60 dark:text-white dark:border-white/10">
                 <button type="button" onclick="this.parentNode.remove()"
-                  class="bg-red-700 hover:bg-red-600 text-white rounded px-2">🗑</button>
+                  class="rounded px-2 py-1 text-white bg-red-700 hover:bg-red-600">🗑</button>
               </div>
               {% endfor %}
             </div>
 
             <button type="button" onclick="addOptionFieldEdit(this)"
-              class="mt-2 bg-blue-700 hover:bg-blue-600 text-white rounded px-3 py-1 text-sm">
+              class="mt-3 rounded px-3 py-1 text-sm font-semibold text-white
+                     bg-blue-700 hover:bg-blue-600">
               ➕ Adicionar opção
             </button>
 
             <input type="hidden" name="options" class="options-hidden-edit">
-
           </div>
 
-          <!-- Justificativa -->
+          <!-- Justificativa (visual) -->
           <div>
-            <label class="block text-sm text-gray-400 mb-1">Campo de justificativa (apenas visual)</label>
+            <label class="block text-sm mb-1 text-slate-600 dark:text-gray-400">Campo de justificativa (apenas visual)</label>
             <input type="text" disabled placeholder="Este campo será exibido no checklist"
-              class="w-full bg-gray-900/40 border border-gray-700 text-gray-400 italic rounded px-3 py-2 text-sm">
+              class="w-full rounded px-3 py-2 text-sm italic border
+                     bg-slate-900/5 text-slate-500 border-slate-900/10
+                     dark:bg-white/5 dark:text-gray-400 dark:border-white/10">
           </div>
 
           <!-- Ações -->
           <div class="flex flex-wrap items-center gap-4">
-
-            <label class="inline-flex items-center gap-2 text-sm text-gray-300">
+            <label class="inline-flex items-center gap-2 text-sm text-slate-700 dark:text-gray-300">
               <input type="checkbox" name="required" {% if it.required %}checked{% endif %} class="accent-blue-600">
               Obrigatória
             </label>
 
-            <label class="inline-flex items-center gap-2 text-sm text-gray-300">
+            <label class="inline-flex items-center gap-2 text-sm text-slate-700 dark:text-gray-300">
               <input type="checkbox" name="require_justif_no" {% if it.require_justif_no %}checked{% endif %}
                 class="accent-yellow-500">
               Exigir justificativa se 'Não'
             </label>
 
-            <button onclick="prepareOptions(this)"
-              class="ml-auto bg-indigo-600 hover:bg-indigo-500 text-white rounded px-4 py-1.5 shadow-lg hover:shadow-indigo-700/40">
+            <button type="button" onclick="prepareOptions(this)"
+              class="ml-auto rounded px-4 py-2 text-sm font-semibold text-white shadow transition
+                     bg-indigo-600 hover:bg-indigo-500 hover:shadow-indigo-700/30">
               💾 Salvar
             </button>
-
           </div>
-
         </form>
       </div>
 
@@ -173,28 +202,35 @@
         <form method="post" action="{{ url_for('config_checklist_move', iid=it.id) }}">
           <input type="hidden" name="dir" value="up">
           <button title="Mover para cima"
-            class="bg-white/10 border border-white/20 text-white rounded px-2 py-1 hover:bg-white/20">▲</button>
+            class="rounded px-2 py-1 border
+                   bg-white/60 border-slate-900/10 text-slate-800 hover:bg-white
+                   dark:bg-white/5 dark:border-white/10 dark:text-white dark:hover:bg-white/10">▲</button>
         </form>
 
         <form method="post" action="{{ url_for('config_checklist_move', iid=it.id) }}">
           <input type="hidden" name="dir" value="down">
           <button title="Mover para baixo"
-            class="bg-white/10 border border-white/20 text-white rounded px-2 py-1 hover:bg-white/20">▼</button>
+            class="rounded px-2 py-1 border
+                   bg-white/60 border-slate-900/10 text-slate-800 hover:bg-white
+                   dark:bg-white/5 dark:border-white/10 dark:text-white dark:hover:bg-white/10">▼</button>
         </form>
 
         <form method="post" action="{{ url_for('config_checklist_del', iid=it.id) }}"
-          onsubmit="return confirm('Excluir item?');">
+              onsubmit="return confirm('Excluir item?');">
           <button
-            class="bg-red-700 hover:bg-red-600 text-white rounded px-3 py-1 shadow-lg hover:shadow-red-700/40">🗑
-            Excluir</button>
+            class="rounded px-3 py-2 text-white shadow transition
+                   bg-red-700 hover:bg-red-600 hover:shadow-red-700/30">
+            🗑 Excluir
+          </button>
         </form>
       </div>
-
     </div>
   </div>
 
   {% else %}
-  <div class="text-center text-gray-400 text-sm mt-10">Nenhuma pergunta cadastrada ainda.</div>
+    <div class="text-center text-sm mt-10 text-slate-500 dark:text-gray-400">
+      Nenhuma pergunta cadastrada ainda.
+    </div>
   {% endfor %}
 
 </div>
@@ -219,8 +255,12 @@ function addOptionField(btn) {
   const div = document.createElement('div');
   div.className = 'flex gap-2 items-center';
   div.innerHTML = `
-    <input type="text" class="border border-white/20 bg-gray-900/40 text-white rounded px-3 py-1 flex-1 option-input" placeholder="Digite uma opção...">
-    <button type="button" onclick="this.parentNode.remove()" class="bg-red-700 hover:bg-red-600 text-white rounded px-2">🗑</button>
+    <input type="text" class="option-input flex-1 rounded px-3 py-1 border
+      bg-white text-slate-900 border-slate-900/10
+      dark:bg-gray-900/60 dark:text-white dark:border-white/10"
+      placeholder="Digite uma opção...">
+    <button type="button" onclick="this.parentNode.remove()"
+      class="rounded px-2 py-1 text-white bg-red-700 hover:bg-red-600">🗑</button>
   `;
   list.appendChild(div);
 }
@@ -230,8 +270,12 @@ function addOptionFieldEdit(btn) {
   const div = document.createElement('div');
   div.className = 'flex gap-2 items-center';
   div.innerHTML = `
-    <input type="text" name="option_inputs" class="border border-white/20 bg-gray-900/40 text-white rounded px-3 py-1 flex-1" placeholder="Digite uma opção...">
-    <button type="button" onclick="this.parentNode.remove()" class="bg-red-700 hover:bg-red-600 text-white rounded px-2">🗑</button>
+    <input type="text" name="option_inputs" class="flex-1 rounded px-3 py-1 border
+      bg-white text-slate-900 border-slate-900/10
+      dark:bg-gray-900/60 dark:text-white dark:border-white/10"
+      placeholder="Digite uma opção...">
+    <button type="button" onclick="this.parentNode.remove()"
+      class="rounded px-2 py-1 text-white bg-red-700 hover:bg-red-600">🗑</button>
   `;
   list.appendChild(div);
 }

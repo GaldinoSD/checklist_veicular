@@ -1,15 +1,16 @@
 {% extends "layout.html" %}
 {% block content %}
 
-<div class="glass border border-white/20 rounded-2xl p-6 space-y-5">
+<div class="glass border border-slate-900/10 dark:border-white/20 rounded-2xl p-6 space-y-5
+            bg-white/70 dark:bg-white/5">
 
   <!-- CABEÇALHO DA PÁGINA -->
   <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
     <div>
-      <h1 class="text-2xl font-semibold text-white">
+      <h1 class="text-2xl font-semibold text-slate-900 dark:text-white">
         🚗 Controle de Entrada e Saída
       </h1>
-      <p class="text-sm text-gray-300 mt-1">
+      <p class="text-sm text-slate-600 dark:text-gray-300 mt-1">
         O primeiro registro do veículo é sempre <b>Saída</b>. Depois, registre a <b>Chegada</b> no botão.
       </p>
     </div>
@@ -24,19 +25,19 @@
   </div>
 
   <!-- TABELA / HISTÓRICO -->
-  <div class="border-t border-white/20 pt-5">
+  <div class="border-t border-slate-900/10 dark:border-white/20 pt-5">
     <div class="flex items-center justify-between mb-3">
-      <h2 class="text-lg font-semibold text-white">
+      <h2 class="text-lg font-semibold text-slate-900 dark:text-white">
         📋 Registros
       </h2>
-      <p class="text-xs text-gray-400">
+      <p class="text-xs text-slate-500 dark:text-gray-400">
         Total: {{ registros|length if registros else 0 }}
       </p>
     </div>
 
     <div class="overflow-x-auto">
-      <table class="min-w-full text-sm border border-white/20 rounded-lg overflow-hidden">
-        <thead class="bg-white/10 text-gray-300">
+      <table class="min-w-full text-sm border border-slate-900/10 dark:border-white/20 rounded-lg overflow-hidden">
+        <thead class="bg-slate-900/5 dark:bg-white/10 text-slate-600 dark:text-gray-300">
           <tr>
             <th class="px-3 py-2 text-left">Saída</th>
             <th class="px-3 py-2 text-left">Chegada</th>
@@ -49,11 +50,11 @@
           </tr>
         </thead>
 
-        <tbody class="divide-y divide-white/10">
+        <tbody class="divide-y divide-slate-900/10 dark:divide-white/10 text-slate-900 dark:text-gray-200">
           {% for r in registros %}
           {% set s = r.saida %}
           {% set c = r.chegada %}
-          <tr class="hover:bg-white/5">
+          <tr class="hover:bg-slate-900/5 dark:hover:bg-white/5">
             <td class="px-3 py-2 whitespace-nowrap">
               {{ s.data_hora | br_datetime }}
             </td>
@@ -62,16 +63,16 @@
               {% if c %}
                 {{ c.data_hora | br_datetime }}
               {% else %}
-                <span class="text-gray-500">—</span>
+                <span class="text-slate-400 dark:text-gray-500">—</span>
               {% endif %}
             </td>
 
             <td class="px-3 py-2 whitespace-nowrap">
               {% if s.vehicle %}
-                <span class="font-semibold text-gray-100">{{ s.vehicle.plate }}</span>
-                <span class="text-gray-400">— {{ s.vehicle.brand }} {{ s.vehicle.model }}</span>
+                <span class="font-semibold text-slate-900 dark:text-gray-100">{{ s.vehicle.plate }}</span>
+                <span class="text-slate-500 dark:text-gray-400">— {{ s.vehicle.brand }} {{ s.vehicle.model }}</span>
               {% else %}
-                <span class="text-gray-300">—</span>
+                <span class="text-slate-500 dark:text-gray-300">—</span>
               {% endif %}
             </td>
 
@@ -83,7 +84,7 @@
               {% if c %}
                 {{ c.km }}
               {% else %}
-                <span class="text-gray-500">—</span>
+                <span class="text-slate-400 dark:text-gray-500">—</span>
               {% endif %}
             </td>
 
@@ -92,10 +93,10 @@
             </td>
 
             <td class="px-3 py-2">
-              <span class="text-gray-300">
+              <span class="text-slate-700 dark:text-gray-300">
                 {{ s.obs if s.obs else "—" }}
                 {% if c and c.obs %}
-                  <span class="text-gray-500"> | Chegada: </span>{{ c.obs }}
+                  <span class="text-slate-400 dark:text-gray-500"> | Chegada: </span>{{ c.obs }}
                 {% endif %}
               </span>
             </td>
@@ -105,18 +106,21 @@
               {% if r.pode_registrar_chegada %}
                 <button type="button"
                         onclick="abrirModalChegada('{{ s.vehicle_id }}','{{ s.id }}','{{ s.km }}','{{ s.responsavel }}')"
-                        class="px-3 py-1.5 rounded-lg bg-green-600/25 border border-green-600/30
-                               hover:bg-green-600/35 text-green-200 font-semibold">
+                        class="px-3 py-1.5 rounded-lg
+                               bg-green-600/20 dark:bg-green-600/25
+                               border border-green-600/25 dark:border-green-600/30
+                               hover:bg-green-600/30 dark:hover:bg-green-600/35
+                               text-green-800 dark:text-green-200 font-semibold">
                   Registrar chegada
                 </button>
               {% else %}
-                <span class="text-gray-500">Finalizado</span>
+                <span class="text-slate-400 dark:text-gray-500">Finalizado</span>
               {% endif %}
             </td>
           </tr>
           {% else %}
           <tr>
-            <td colspan="8" class="px-3 py-6 text-center text-gray-400">
+            <td colspan="8" class="px-3 py-6 text-center text-slate-500 dark:text-gray-400">
               Nenhum registro encontrado.
             </td>
           </tr>
@@ -134,18 +138,22 @@
 <div id="modalSaida" class="fixed inset-0 hidden z-[9999] items-center justify-center">
   <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="fecharModalSaida()"></div>
 
-  <div class="relative w-full max-w-2xl mx-4 rounded-2xl border border-white/20
-              bg-gray-950/70 glass shadow-2xl overflow-hidden">
+  <div class="relative w-full max-w-2xl mx-4 rounded-2xl
+              border border-slate-900/10 dark:border-white/20
+              bg-white/90 dark:bg-gray-950/70
+              dark:glass shadow-2xl overflow-hidden">
 
-    <div class="flex items-center justify-between px-6 py-4 border-b border-white/10">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-900/10 dark:border-white/10">
       <div>
-        <h3 class="text-lg font-semibold text-white">+ Nova Saída</h3>
-        <p class="text-xs text-gray-400">Registro de saída do veículo</p>
+        <h3 class="text-lg font-semibold text-slate-900 dark:text-white">+ Nova Saída</h3>
+        <p class="text-xs text-slate-500 dark:text-gray-400">Registro de saída do veículo</p>
       </div>
 
       <button type="button" onclick="fecharModalSaida()"
-              class="w-10 h-10 grid place-items-center rounded-lg bg-white/5 hover:bg-white/10 border border-white/10">
-        <span class="text-gray-200 text-xl">×</span>
+              class="w-10 h-10 grid place-items-center rounded-lg
+                     bg-slate-900/5 hover:bg-slate-900/10 border border-slate-900/10
+                     dark:bg-white/5 dark:hover:bg-white/10 dark:border-white/10">
+        <span class="text-slate-700 dark:text-gray-200 text-xl">×</span>
       </button>
     </div>
 
@@ -156,9 +164,14 @@
 
       <!-- VEÍCULO -->
       <div>
-        <label class="block text-sm text-gray-300 mb-1">Veículo</label>
+        <label class="block text-sm text-slate-700 dark:text-gray-300 mb-1">Veículo</label>
         <select name="vehicle_id" id="saida_vehicle_id" required
-                class="w-full rounded-lg bg-gray-900 border border-white/20 px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-600">
+                class="w-full rounded-lg
+                       bg-white dark:bg-gray-900
+                       border border-slate-900/10 dark:border-white/20
+                       px-3 py-2
+                       text-slate-900 dark:text-white
+                       focus:outline-none focus:ring-2 focus:ring-blue-600/40">
           <option value="">Selecione o veículo</option>
           {% for v in vehicles %}
             <option value="{{ v.id }}">{{ v.plate }} — {{ v.brand }} {{ v.model }}</option>
@@ -168,24 +181,40 @@
 
       <!-- TIPO VISUAL -->
       <div>
-        <label class="block text-sm text-gray-300 mb-1">Tipo</label>
+        <label class="block text-sm text-slate-700 dark:text-gray-300 mb-1">Tipo</label>
         <input type="text" value="Saída" readonly
-               class="w-full rounded-lg bg-gray-800 border border-white/10 px-3 py-2 text-gray-300 cursor-not-allowed">
+               class="w-full rounded-lg
+                      bg-slate-100 dark:bg-gray-800
+                      border border-slate-900/10 dark:border-white/10
+                      px-3 py-2
+                      text-slate-600 dark:text-gray-300
+                      cursor-not-allowed">
       </div>
 
       <!-- KM -->
       <div>
-        <label class="block text-sm text-gray-300 mb-1">Quilometragem</label>
+        <label class="block text-sm text-slate-700 dark:text-gray-300 mb-1">Quilometragem</label>
         <input type="number" name="km" id="saida_km" min="0" required
                placeholder="Ex: 45230"
-               class="w-full rounded-lg bg-gray-900 border border-white/20 px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-600">
+               class="w-full rounded-lg
+                      bg-white dark:bg-gray-900
+                      border border-slate-900/10 dark:border-white/20
+                      px-3 py-2
+                      text-slate-900 dark:text-white
+                      placeholder:text-slate-400 dark:placeholder:text-gray-500
+                      focus:outline-none focus:ring-2 focus:ring-blue-600/40">
       </div>
 
-      <!-- RESPONSÁVEL (AGORA SELECT) - MOSTRA SÓ O LOGIN -->
+      <!-- RESPONSÁVEL -->
       <div>
-        <label class="block text-sm text-gray-300 mb-1">Responsável</label>
+        <label class="block text-sm text-slate-700 dark:text-gray-300 mb-1">Responsável</label>
         <select name="responsavel" id="saida_responsavel" required
-                class="w-full rounded-lg bg-gray-900 border border-white/20 px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-600">
+                class="w-full rounded-lg
+                       bg-white dark:bg-gray-900
+                       border border-slate-900/10 dark:border-white/20
+                       px-3 py-2
+                       text-slate-900 dark:text-white
+                       focus:outline-none focus:ring-2 focus:ring-blue-600/40">
           {% for u in usuarios %}
             <option value="{{ u.username }}" {% if u.username == current_user.username %}selected{% endif %}>
               {{ u.username }}
@@ -196,15 +225,23 @@
 
       <!-- OBS -->
       <div class="md:col-span-2">
-        <label class="block text-sm text-gray-300 mb-1">Observações</label>
+        <label class="block text-sm text-slate-700 dark:text-gray-300 mb-1">Observações</label>
         <textarea name="obs" id="saida_obs" rows="3"
                   placeholder="Destino, serviço, ocorrência, etc."
-                  class="w-full rounded-lg bg-gray-900 border border-white/20 px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-blue-600"></textarea>
+                  class="w-full rounded-lg
+                         bg-white dark:bg-gray-900
+                         border border-slate-900/10 dark:border-white/20
+                         px-3 py-2
+                         text-slate-900 dark:text-white
+                         placeholder:text-slate-400 dark:placeholder:text-gray-500
+                         focus:outline-none focus:ring-2 focus:ring-blue-600/40"></textarea>
       </div>
 
       <div class="md:col-span-2 flex justify-end gap-2 pt-2">
         <button type="button" onclick="fecharModalSaida()"
-                class="px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-gray-200">
+                class="px-4 py-2 rounded-lg
+                       bg-slate-900/5 hover:bg-slate-900/10 border border-slate-900/10 text-slate-800
+                       dark:bg-white/5 dark:hover:bg-white/10 dark:border-white/10 dark:text-gray-200">
           Cancelar
         </button>
 
@@ -223,18 +260,22 @@
 <div id="modalChegada" class="fixed inset-0 hidden z-[9999] items-center justify-center">
   <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="fecharModalChegada()"></div>
 
-  <div class="relative w-full max-w-2xl mx-4 rounded-2xl border border-white/20
-              bg-gray-950/70 glass shadow-2xl overflow-hidden">
+  <div class="relative w-full max-w-2xl mx-4 rounded-2xl
+              border border-slate-900/10 dark:border-white/20
+              bg-white/90 dark:bg-gray-950/70
+              dark:glass shadow-2xl overflow-hidden">
 
-    <div class="flex items-center justify-between px-6 py-4 border-b border-white/10">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-900/10 dark:border-white/10">
       <div>
-        <h3 class="text-lg font-semibold text-white">Registrar Chegada</h3>
-        <p class="text-xs text-gray-400">Finalize a saída registrando a entrada do veículo</p>
+        <h3 class="text-lg font-semibold text-slate-900 dark:text-white">Registrar Chegada</h3>
+        <p class="text-xs text-slate-500 dark:text-gray-400">Finalize a saída registrando a entrada do veículo</p>
       </div>
 
       <button type="button" onclick="fecharModalChegada()"
-              class="w-10 h-10 grid place-items-center rounded-lg bg-white/5 hover:bg-white/10 border border-white/10">
-        <span class="text-gray-200 text-xl">×</span>
+              class="w-10 h-10 grid place-items-center rounded-lg
+                     bg-slate-900/5 hover:bg-slate-900/10 border border-slate-900/10
+                     dark:bg-white/5 dark:hover:bg-white/10 dark:border-white/10">
+        <span class="text-slate-700 dark:text-gray-200 text-xl">×</span>
       </button>
     </div>
 
@@ -247,33 +288,54 @@
 
       <!-- VEÍCULO VISUAL -->
       <div>
-        <label class="block text-sm text-gray-300 mb-1">Veículo</label>
+        <label class="block text-sm text-slate-700 dark:text-gray-300 mb-1">Veículo</label>
         <input type="text" id="chegada_veiculo_label" readonly
-               class="w-full rounded-lg bg-gray-800 border border-white/10 px-3 py-2 text-gray-300 cursor-not-allowed">
-        <p class="text-xs text-gray-500 mt-1">Vinculado à saída selecionada.</p>
+               class="w-full rounded-lg
+                      bg-slate-100 dark:bg-gray-800
+                      border border-slate-900/10 dark:border-white/10
+                      px-3 py-2
+                      text-slate-600 dark:text-gray-300
+                      cursor-not-allowed">
+        <p class="text-xs text-slate-500 dark:text-gray-500 mt-1">Vinculado à saída selecionada.</p>
       </div>
 
       <!-- TIPO VISUAL -->
       <div>
-        <label class="block text-sm text-gray-300 mb-1">Tipo</label>
+        <label class="block text-sm text-slate-700 dark:text-gray-300 mb-1">Tipo</label>
         <input type="text" value="Chegada (Entrada)" readonly
-               class="w-full rounded-lg bg-gray-800 border border-white/10 px-3 py-2 text-gray-300 cursor-not-allowed">
+               class="w-full rounded-lg
+                      bg-slate-100 dark:bg-gray-800
+                      border border-slate-900/10 dark:border-white/10
+                      px-3 py-2
+                      text-slate-600 dark:text-gray-300
+                      cursor-not-allowed">
       </div>
 
       <!-- KM -->
       <div>
-        <label class="block text-sm text-gray-300 mb-1">Quilometragem na chegada</label>
+        <label class="block text-sm text-slate-700 dark:text-gray-300 mb-1">Quilometragem na chegada</label>
         <input type="number" name="km" id="chegada_km" min="0" required
                placeholder="Ex: 45890"
-               class="w-full rounded-lg bg-gray-900 border border-white/20 px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-green-600">
-        <p class="text-xs text-gray-500 mt-1" id="chegada_km_hint"></p>
+               class="w-full rounded-lg
+                      bg-white dark:bg-gray-900
+                      border border-slate-900/10 dark:border-white/20
+                      px-3 py-2
+                      text-slate-900 dark:text-white
+                      placeholder:text-slate-400 dark:placeholder:text-gray-500
+                      focus:outline-none focus:ring-2 focus:ring-green-600/40">
+        <p class="text-xs text-slate-500 dark:text-gray-500 mt-1" id="chegada_km_hint"></p>
       </div>
 
-      <!-- RESPONSÁVEL (SELECT) - MOSTRA SÓ O LOGIN -->
+      <!-- RESPONSÁVEL -->
       <div>
-        <label class="block text-sm text-gray-300 mb-1">Responsável</label>
+        <label class="block text-sm text-slate-700 dark:text-gray-300 mb-1">Responsável</label>
         <select name="responsavel" id="chegada_responsavel" required
-                class="w-full rounded-lg bg-gray-900 border border-white/20 px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-green-600">
+                class="w-full rounded-lg
+                       bg-white dark:bg-gray-900
+                       border border-slate-900/10 dark:border-white/20
+                       px-3 py-2
+                       text-slate-900 dark:text-white
+                       focus:outline-none focus:ring-2 focus:ring-green-600/40">
           {% for u in usuarios %}
             <option value="{{ u.username }}" {% if u.username == current_user.username %}selected{% endif %}>
               {{ u.username }}
@@ -284,15 +346,23 @@
 
       <!-- OBS -->
       <div class="md:col-span-2">
-        <label class="block text-sm text-gray-300 mb-1">Observações</label>
+        <label class="block text-sm text-slate-700 dark:text-gray-300 mb-1">Observações</label>
         <textarea name="obs" id="chegada_obs" rows="3"
                   placeholder="Ocorrência na volta, abastecimento, avaria, etc."
-                  class="w-full rounded-lg bg-gray-900 border border-white/20 px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-green-600"></textarea>
+                  class="w-full rounded-lg
+                         bg-white dark:bg-gray-900
+                         border border-slate-900/10 dark:border-white/20
+                         px-3 py-2
+                         text-slate-900 dark:text-white
+                         placeholder:text-slate-400 dark:placeholder:text-gray-500
+                         focus:outline-none focus:ring-2 focus:ring-green-600/40"></textarea>
       </div>
 
       <div class="md:col-span-2 flex justify-end gap-2 pt-2">
         <button type="button" onclick="fecharModalChegada()"
-                class="px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-gray-200">
+                class="px-4 py-2 rounded-lg
+                       bg-slate-900/5 hover:bg-slate-900/10 border border-slate-900/10 text-slate-800
+                       dark:bg-white/5 dark:hover:bg-white/10 dark:border-white/10 dark:text-gray-200">
           Cancelar
         </button>
 
