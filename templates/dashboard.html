@@ -2,366 +2,551 @@
 {% set page_title = "Dashboard" %}
 {% block content %}
 
+<!-- ✅ HEADER PREMIUM DASHBOARD COMPACT -->
+<div class="mb-8 animate-premium">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 glass-premium p-6 rounded-[2rem] shadow-xl overflow-hidden relative">
+        <!-- Decorativos -->
+        <div class="absolute -top-24 -right-24 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl"></div>
+        <div class="absolute -bottom-24 -left-24 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl"></div>
+
+        <div class="flex items-center gap-5 relative z-10">
+            <div class="w-12 h-12 rounded-[1.25rem] bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-2xl shadow-blue-500/20">
+                <i class="fa-solid {% if view == 'veiculos' %}fa-truck-fast{% else %}fa-microchip{% endif %} text-xl"></i>
+            </div>
+            <div>
+                <nav class="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-0.5">
+                    <span>Módulos</span>
+                    <i class="fa-solid fa-chevron-right text-[8px] opacity-30"></i>
+                    <span class="text-blue-500">{% if view == 'veiculos' %}Veículos{% else %}Gestão Técnica{% endif %}</span>
+                </nav>
+                <h2 class="text-2xl font-black text-slate-800 dark:text-white tracking-tight">
+                    {% if view == 'veiculos' %}Dashboard de Frota{% else %}Operação Técnica{% endif %}
+                </h2>
+            </div>
+        </div>
+
+        <!-- ✅ SEGMENTED CONTROL -->
+        <div class="flex bg-slate-900/5 dark:bg-white/5 p-1.5 rounded-[1.5rem] border border-slate-900/5 dark:border-white/5 relative z-10 w-fit">
+            <a href="{{ url_for('dashboard', view='veiculos') }}" 
+               class="px-6 py-2.5 rounded-2xl text-[12px] font-bold transition-all flex items-center gap-2
+                      {% if view == 'veiculos' %}
+                        bg-white dark:bg-slate-800 text-blue-600 shadow-xl shadow-blue-500/10
+                      {% else %}
+                        text-slate-500 dark:text-gray-400 hover:text-slate-800 dark:hover:text-white
+                      {% endif %}">
+                <i class="fa-solid fa-car-side"></i> Frota
+            </a>
+            {% if current_user.username == 'admin' %}
+            <a href="{{ url_for('dashboard', view='gestao') }}" 
+               class="px-6 py-2.5 rounded-2xl text-[12px] font-bold transition-all flex items-center gap-2
+                      {% if view == 'gestao' %}
+                        bg-white dark:bg-slate-800 text-purple-600 shadow-xl shadow-purple-500/10
+                      {% else %}
+                        text-slate-500 dark:text-gray-400 hover:text-slate-800 dark:hover:text-white
+                      {% endif %}">
+                <i class="fa-solid fa-screwdriver-wrench"></i> Gestão Técnica
+            </a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% if view == 'veiculos' %}
 <!-- ============================
-      FILTRO DE PERÍODO + VEÍCULO
+      DASHBOARD DE FROTA (COCKPIT)
 ============================ -->
-<form method="get"
-      class="flex flex-wrap items-end gap-3
-             bg-white/70 dark:bg-gray-800/40
-             p-4 rounded-xl
-             border border-slate-900/10 dark:border-gray-700
-             mb-6">
-
-  <!-- PERÍODO -->
-  <div class="flex flex-col text-slate-700 dark:text-gray-300 text-xs">
-    <label for="periodo">Período</label>
-    <input id="periodo" type="text" name="periodo"
-           value="{{ request.args.get('periodo', '') }}"
-           placeholder="Selecione o período"
-           class="bg-white dark:bg-gray-900
-                  border border-slate-900/10 dark:border-gray-700
-                  text-slate-900 dark:text-gray-200
-                  placeholder:text-slate-400 dark:placeholder:text-gray-500
-                  px-3 py-2 rounded-md w-64
-                  focus:outline-none focus:ring-2 focus:ring-blue-500/40">
+<form method="get" class="flex flex-wrap items-end gap-3 glass-premium p-4 rounded-2xl mb-8 relative z-10">
+  <div class="flex flex-col text-slate-700 dark:text-gray-300 text-[10px] font-black uppercase tracking-wider">
+    <label for="periodo" class="mb-1">Período</label>
+    <input id="periodo" type="text" name="periodo" value="{{ request.args.get('periodo', '') }}"
+           class="bg-white dark:bg-slate-900 border-none ring-1 ring-slate-900/10 dark:ring-white/10 text-slate-900 dark:text-gray-200 px-3 py-2 rounded-xl w-64 focus:ring-2 focus:ring-blue-500/40 outline-none">
   </div>
-
-  <!-- VEÍCULO -->
-  <div class="flex flex-col text-slate-700 dark:text-gray-300 text-xs">
-    <label for="veiculo">Veículo</label>
-    <select id="veiculo" name="veiculo"
-            class="bg-white dark:bg-gray-900
-                   border border-slate-900/10 dark:border-gray-700
-                   text-slate-900 dark:text-gray-200
-                   px-3 py-2 rounded-md w-56
-                   focus:outline-none focus:ring-2 focus:ring-blue-500/40">
-      <option value="">Todos</option>
-
-      {% for v in veiculos %}
-        <option value="{{ v.id }}"
-          {% if request.args.get('veiculo') == (v.id|string) %}
-            selected
-          {% endif %}
-        >
-          {{ v.plate }}
-        </option>
-      {% endfor %}
-    </select>
-  </div>
-
-  <button class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm">
+  <button class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black uppercase transition-all shadow-lg shadow-blue-500/20">
     Filtrar
   </button>
-
-  <a href="{{ url_for('dashboard') }}"
-     class="px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-lg text-sm">
+  <a href="{{ url_for('dashboard') }}" class="px-6 py-2 bg-slate-200 dark:bg-white/5 text-slate-600 dark:text-gray-300 rounded-xl text-xs font-black uppercase hover:bg-slate-300 transition-all">
     Limpar
   </a>
 </form>
 
+<div id="frota-dashboard-premium" class="animate-premium">
+    <!-- Top KPIs -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div class="card-premium p-6">
+            <div class="flex items-center justify-between mb-4">
+                <div class="w-12 h-12 rounded-2xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600 shadow-lg shadow-emerald-500/10">
+                    <i class="fa-solid fa-shield-heart text-xl"></i>
+                </div>
+                <span class="text-[9px] font-black text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded-lg uppercase tracking-tighter">Status 7d</span>
+            </div>
+            <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">Saúde da Frota</p>
+            <h3 id="stat-frota-health" class="text-3xl font-black text-slate-800 dark:text-white mt-1">0%</h3>
+            <div class="mt-4 h-1.5 w-full bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden">
+                <div id="bar-frota-health" class="h-full bg-emerald-500 transition-all duration-1000" style="width: 0%"></div>
+            </div>
+        </div>
 
-<!-- ============================
-      CARDS SUPERIORES
-============================ -->
-<div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-  <div class="bg-white/70 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl shadow p-5">
-    <p class="text-sm text-slate-600 dark:text-gray-300">Veículos</p>
-    <p class="text-3xl font-bold mt-1 text-slate-900 dark:text-white">{{ total_veiculos }}</p>
-  </div>
+        <div class="card-premium p-6">
+            <div class="flex items-center justify-between mb-4">
+                <div class="w-12 h-12 rounded-2xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-amber-600 shadow-lg shadow-amber-500/10">
+                    <i class="fa-solid fa-hand-holding-dollar text-xl"></i>
+                </div>
+            </div>
+            <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">Manutenção (Mês)</p>
+            <h3 id="stat-frota-cost" class="text-3xl font-black text-slate-800 dark:text-white mt-1">R$ 0</h3>
+            <p class="text-[9px] text-slate-400 mt-2">Ordens Finalizadas</p>
+        </div>
 
-  <div class="bg-white/70 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl shadow p-5">
-    <p class="text-sm text-slate-600 dark:text-gray-300">Checklists</p>
-    <p class="text-3xl font-bold mt-1 text-slate-900 dark:text-white">{{ total_checklists }}</p>
-  </div>
+        <div class="card-premium p-6">
+            <div class="flex items-center justify-between mb-4">
+                <div class="w-12 h-12 rounded-2xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 shadow-lg shadow-blue-500/10">
+                    <i class="fa-solid fa-clipboard-list text-xl"></i>
+                </div>
+            </div>
+            <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">Checklists Hoje</p>
+            <h3 id="stat-frota-checklists" class="text-3xl font-black text-slate-800 dark:text-white mt-1">0</h3>
+            <p class="text-[9px] text-slate-400 mt-2">Novos Registros</p>
+        </div>
 
-  <div class="bg-white/70 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl shadow p-5">
-    <p class="text-sm text-slate-600 dark:text-gray-300">Relatórios</p>
-    <p class="text-3xl font-bold mt-1 text-slate-900 dark:text-white">{{ total_relatorios }}</p>
-  </div>
+        <div class="card-premium p-6">
+            <div class="flex items-center justify-between mb-4">
+                <div class="w-12 h-12 rounded-2xl bg-rose-100 dark:bg-rose-900/30 flex items-center justify-center text-rose-600 shadow-lg shadow-rose-500/10">
+                    <i class="fa-solid fa-wrench text-xl"></i>
+                </div>
+            </div>
+            <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">O.S em Aberto</p>
+            <h3 id="stat-frota-os" class="text-3xl font-black text-slate-800 dark:text-white mt-1">0</h3>
+            <p class="text-[9px] text-rose-400 mt-2">Aguardando Oficina</p>
+        </div>
+    </div>
 
-  <!-- ✅ ÚLTIMO RELATÓRIO -->
-  <div class="bg-white/70 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl shadow p-5">
-    <p class="text-sm text-slate-600 dark:text-gray-300">Último relatório</p>
-    <p class="text-lg font-semibold mt-1 break-all text-slate-900 dark:text-white">
-      {% if ultimo_relatorio %}
-        {{ ultimo_relatorio|br_datetime }}
-      {% else %}
-        -
-      {% endif %}
-    </p>
-  </div>
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+        <div class="lg:col-span-2 card-premium p-8">
+            <div class="flex items-center justify-between mb-8">
+                <div>
+                    <h4 class="text-lg font-black text-slate-800 dark:text-white">Rodagem da Frota</h4>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">KM Percorrido (Últimos 7 dias)</p>
+                </div>
+            </div>
+            <div class="h-72">
+                <canvas id="chartKM"></canvas>
+            </div>
+        </div>
+
+        <div class="lg:col-span-1 card-premium p-8">
+            <h4 class="text-lg font-black text-slate-800 dark:text-white mb-1">Próximas Revisões</h4>
+            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-8">Manutenção Preventiva</p>
+            <div id="dashboard-rev-alerts" class="space-y-4">
+                <p class="text-center text-slate-400 text-xs py-10 italic">Analisando odômetros...</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-8">
+        <div class="card-premium p-8">
+            <h3 class="text-sm font-black text-slate-800 dark:text-white mb-6 uppercase tracking-widest flex items-center gap-2">
+                <i class="fa-solid fa-magnifying-glass-chart text-indigo-500"></i> Status Inspeção (30d)
+            </h3>
+            <div class="h-48">
+                <canvas id="chartFrotaStatus"></canvas>
+            </div>
+        </div>
+
+        <div class="card-premium p-8">
+            <h3 class="text-sm font-black text-slate-800 dark:text-white mb-6 uppercase tracking-widest flex items-center gap-2">
+                <i class="fa-solid fa-triangle-exclamation text-rose-500"></i> O.S Recentes
+            </h3>
+            <div id="dashboard-os-recent" class="space-y-3"></div>
+        </div>
+
+        <div class="card-premium p-8">
+            <h3 class="text-sm font-black text-slate-800 dark:text-white mb-6 uppercase tracking-widest flex items-center gap-2">
+                <i class="fa-solid fa-history text-blue-500"></i> Últimos Registros
+            </h3>
+            <div id="dashboard-checklists-recent" class="space-y-3">
+                {% for c in recentes %}
+                <div class="p-3 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-900/5 flex justify-between items-center group hover:bg-white transition-all">
+                    <div class="min-w-0">
+                        <h4 class="text-xs font-black text-slate-800 dark:text-white truncate">{{ c.vehicle.plate }}</h4>
+                        <p class="text-[9px] text-slate-400 uppercase">{{ c.technician }} • {{ c.date.strftime('%d/%m %H:%M') }}</p>
+                    </div>
+                    <span class="px-2 py-0.5 rounded-lg text-[8px] font-black uppercase {{ 'bg-emerald-100 text-emerald-600' if c.status == 'OK' else 'bg-rose-100 text-rose-600' }}">
+                        {{ c.status }}
+                    </span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabelas de Histórico (Manter o que já tinha, mas com estilo premium) -->
+    <div class="card-premium p-8 mb-8">
+        <h3 class="text-sm font-black text-slate-800 dark:text-white mb-6 uppercase tracking-widest flex items-center gap-2">
+            <i class="fa-solid fa-users text-blue-500"></i> Checklist por Técnico
+        </h3>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left">
+                <thead>
+                    <tr class="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-900/5 dark:border-white/5">
+                        <th class="py-4 px-2">Técnico</th>
+                        <th class="py-4 px-2 text-center">Semana</th>
+                        <th class="py-4 px-2 text-center">Mês</th>
+                        <th class="py-4 px-2 text-center">Ano</th>
+                        <th class="py-4 px-2 text-center">Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for us in user_stats_list %}
+                    <tr class="border-b border-slate-900/5 dark:border-white/5 hover:bg-slate-50 dark:hover:bg-white/5 transition-all">
+                        <td class="py-4 px-2">
+                            <div class="flex items-center gap-3">
+                                <div class="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 font-bold text-xs">
+                                    {{ us.username[0]|upper }}
+                                </div>
+                                <span class="text-xs font-bold text-slate-700 dark:text-gray-200">{{ us.username }}</span>
+                            </div>
+                        </td>
+                        <td class="py-4 px-2 text-center text-xs font-bold text-slate-600 dark:text-gray-400">{{ us.semanal }}</td>
+                        <td class="py-4 px-2 text-center text-xs font-bold text-slate-600 dark:text-gray-400">{{ us.mensal }}</td>
+                        <td class="py-4 px-2 text-center text-xs font-bold text-slate-600 dark:text-gray-400">{{ us.anual }}</td>
+                        <td class="py-4 px-2 text-center text-sm font-black text-blue-600">{{ us.total }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
 
-
+{% else %}
 <!-- ============================
-      GRÁFICO + ALERTAS
+      DASHBOARD GESTÃO TÉCNICA (PREMIUM COCKPIT)
 ============================ -->
-<div class="mt-8 grid grid-cols-1 lg:grid-cols-3 gap-4">
+<div id="gestao-dashboard-premium" class="animate-premium">
+    <!-- Top KPIs -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div class="card-premium p-6 group">
+            <div class="flex items-center justify-between mb-4">
+                <div class="w-12 h-12 rounded-2xl bg-teal-100 dark:bg-teal-900/30 flex items-center justify-center text-teal-600 shadow-lg shadow-teal-500/10">
+                    <i class="fa-solid fa-graduation-cap text-xl"></i>
+                </div>
+                <span class="text-[9px] font-black text-teal-500 bg-teal-500/10 px-2 py-1 rounded-lg uppercase tracking-tighter">LMS Ativo</span>
+            </div>
+            <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">Conclusão Treinamentos</p>
+            <h3 id="stat-lms-completion" class="text-3xl font-black text-slate-800 dark:text-white mt-1">0%</h3>
+            <div class="mt-4 h-1.5 w-full bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden">
+                <div id="bar-lms" class="h-full bg-teal-500 transition-all duration-1000" style="width: 0%"></div>
+            </div>
+        </div>
 
-  <div class="bg-white/70 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl shadow p-5 lg:col-span-2">
-    <h3 class="text-lg font-semibold mb-3 text-slate-900 dark:text-white">Quilometragem semanal</h3>
-    <canvas id="kmWeekly"></canvas>
-  </div>
+        <div class="card-premium p-6">
+            <div class="flex items-center justify-between mb-4">
+                <div class="w-12 h-12 rounded-2xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 shadow-lg shadow-blue-500/10">
+                    <i class="fa-solid fa-clipboard-check text-xl"></i>
+                </div>
+            </div>
+            <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">Auditorias (Mês)</p>
+            <h3 id="stat-audits" class="text-3xl font-black text-slate-800 dark:text-white mt-1">0</h3>
+            <p class="text-[9px] text-slate-400 mt-2">Rota Exata + Supervisão</p>
+        </div>
 
-  <div class="bg-white/70 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl shadow p-5">
-    <h3 class="text-lg font-semibold mb-3 text-slate-900 dark:text-white">Alertas de revisão</h3>
-    <p class="text-xs text-slate-500 dark:text-gray-400 mb-2">
-      Intervalo: {{ rev_interval }} km · Aviso a {{ rev_margin }} km
-    </p>
+        <div class="card-premium p-6">
+            <div class="flex items-center justify-between mb-4">
+                <div class="w-12 h-12 rounded-2xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600 shadow-lg shadow-emerald-500/10">
+                    <i class="fa-solid fa-truck-medical text-xl"></i>
+                </div>
+            </div>
+            <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">Saúde da Frota (7d)</p>
+            <h3 id="stat-fleet-health" class="text-3xl font-black text-slate-800 dark:text-white mt-1">0%</h3>
+            <div class="mt-4 h-1.5 w-full bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden">
+                <div id="bar-fleet" class="h-full bg-emerald-500 transition-all duration-1000" style="width: 0%"></div>
+            </div>
+        </div>
 
-    <ul class="space-y-2 max-h-72 overflow-auto pr-2">
-      {% for a in alerts %}
-        <li class="p-3 rounded-xl
-                   bg-yellow-200/60 dark:bg-yellow-900/30
-                   text-yellow-900 dark:text-yellow-200
-                   border border-yellow-500/25 dark:border-yellow-700/40">
-          <div class="flex justify-between">
-            <span class="font-semibold">{{ a.plate }}</span>
-            <span class="text-xs">km: {{ a.km }}</span>
-          </div>
-          <p class="text-xs mt-1">
-            Próx. revisão: {{ a.next_rev }} · Faltam {{ a.remaining }} km
-          </p>
-        </li>
-      {% else %}
-        <li class="text-sm text-slate-500 dark:text-gray-400">Nenhum alerta.</li>
-      {% endfor %}
-    </ul>
-  </div>
+        <div class="card-premium p-6">
+            <div class="flex items-center justify-between mb-4">
+                <div class="w-12 h-12 rounded-2xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-600 shadow-lg shadow-red-500/10">
+                    <i class="fa-solid fa-triangle-exclamation text-xl"></i>
+                </div>
+            </div>
+            <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">Pendências Críticas</p>
+            <h3 id="stat-critical" class="text-3xl font-black text-slate-800 dark:text-white mt-1">0</h3>
+            <p class="text-[9px] text-red-400 mt-2">RFOs + Tarefas Atrasadas</p>
+        </div>
+    </div>
 
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+        <div class="lg:col-span-2 card-premium p-8">
+            <div class="flex items-center justify-between mb-8">
+                <div>
+                    <h4 class="text-lg font-black text-slate-800 dark:text-white">Produtividade Operacional</h4>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Volume de Atividades (Últimos 7 dias)</p>
+                </div>
+            </div>
+            <div class="h-72">
+                <canvas id="chartAtividades"></canvas>
+            </div>
+        </div>
+
+        <div class="lg:col-span-1 card-premium p-8">
+            <h4 class="text-lg font-black text-slate-800 dark:text-white mb-1">Ranking de Performance</h4>
+            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-8">Baseado em Treinamentos LMS</p>
+            <div id="dashboard-ranking" class="space-y-4">
+                <p class="text-center text-slate-400 text-xs py-10 italic">Calculando scores...</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div class="card-premium p-8">
+            <h3 class="text-sm font-black text-slate-800 dark:text-white mb-6 uppercase tracking-widest flex items-center gap-2">
+                <i class="fa-solid fa-bolt text-amber-500"></i> Alertas Combustível
+            </h3>
+            <div id="dashboard-generator-alerts" class="space-y-4"></div>
+        </div>
+
+        <div class="card-premium p-8">
+            <h3 class="text-sm font-black text-slate-800 dark:text-white mb-6 uppercase tracking-widest flex items-center gap-2">
+                <i class="fa-solid fa-list-check text-blue-500"></i> Planos de Ação
+            </h3>
+            <div id="dashboard-tasks-critical" class="space-y-3"></div>
+        </div>
+
+        <div class="card-premium p-8">
+            <h3 class="text-sm font-black text-slate-800 dark:text-white mb-6 uppercase tracking-widest flex items-center gap-2">
+                <i class="fa-solid fa-chart-pie text-red-500"></i> Distribuição RFO
+            </h3>
+            <div class="h-48">
+                <canvas id="chartRFO"></canvas>
+            </div>
+        </div>
+    </div>
 </div>
+{% endif %}
 
-
-<!-- ============================
-      CHECKLISTS RECENTES
-============================ -->
-<div class="mt-8 bg-white/70 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl shadow">
-  <div class="p-5 border-b border-slate-900/10 dark:border-white/10">
-    <h3 class="text-lg font-semibold text-slate-900 dark:text-white">Checklists recentes</h3>
-  </div>
-
-  <div class="p-5 overflow-x-auto">
-    <table class="min-w-full text-left text-sm">
-      <thead>
-        <tr class="text-slate-600 dark:text-gray-300">
-          <th class="py-2 pr-4">Data</th>
-          <th class="py-2 pr-4">Placa</th>
-          <th class="py-2 pr-4">Técnico</th>
-          <th class="py-2 pr-4">KM</th>
-          <th class="py-2 pr-4">Status</th>
-          <th class="py-2 pr-4">Detalhes</th>
-        </tr>
-      </thead>
-
-      <tbody>
-        {% for c in recentes %}
-        <tr class="border-t border-slate-900/10 dark:border-white/10">
-          <td class="py-2 pr-4 text-slate-900 dark:text-gray-100">{{ c.date|br_datetime }}</td>
-          <td class="py-2 pr-4 text-slate-900 dark:text-gray-100">{{ c.vehicle.plate if c.vehicle else '-' }}</td>
-          <td class="py-2 pr-4 text-slate-900 dark:text-gray-100">{{ c.technician or '-' }}</td>
-          <td class="py-2 pr-4 text-slate-900 dark:text-gray-100">{{ c.km }}</td>
-          <td class="py-2 pr-4">
-            <span class="px-2 py-1 rounded-lg text-xs
-                         bg-green-200/60 dark:bg-green-900/40
-                         text-green-900 dark:text-green-200
-                         border border-green-500/25 dark:border-green-700/40">
-              {{ c.status }}
-            </span>
-          </td>
-          <td class="py-2 pr-4">
-            <a class="text-blue-700 dark:text-blue-400 underline" href="{{ url_for('checklist_detail', cid=c.id) }}">
-              Ver
-            </a>
-          </td>
-        </tr>
-        {% else %}
-        <tr>
-          <td class="py-3 text-slate-500 dark:text-gray-400" colspan="6">Sem registros.</td>
-        </tr>
-        {% endfor %}
-      </tbody>
-
-    </table>
-  </div>
-</div>
-
-
-<!-- ============================
-      DASHBOARD DE AVARIAS
-============================ -->
-<div class="mt-10">
-  <h2 class="text-2xl font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-3">
-    <i class="fa-solid fa-car-burst text-red-500"></i>
-    Dashboard de Avarias
-  </h2>
-
-  <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-    <div class="bg-white/70 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl shadow p-5">
-      <p class="text-sm text-slate-600 dark:text-gray-300">Total de Avarias</p>
-      <p class="text-3xl font-bold mt-1 text-slate-900 dark:text-white">{{ total_avarias }}</p>
-    </div>
-
-    <div class="bg-white/70 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl shadow p-5">
-      <p class="text-sm text-slate-600 dark:text-gray-300">Pendentes</p>
-      <p class="text-3xl font-bold mt-1 text-yellow-600 dark:text-yellow-400">{{ avarias_pendentes }}</p>
-    </div>
-
-    <div class="bg-white/70 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl shadow p-5">
-      <p class="text-sm text-slate-600 dark:text-gray-300">Finalizadas</p>
-      <p class="text-3xl font-bold mt-1 text-green-600 dark:text-green-400">{{ avarias_finalizadas }}</p>
-    </div>
-
-    <div class="bg-white/70 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl shadow p-5">
-      <p class="text-sm text-slate-600 dark:text-gray-300">Total gasto</p>
-      <p class="text-3xl font-bold mt-1 text-red-600 dark:text-red-400">R$ {{ valor_total_gasto }}</p>
-    </div>
-  </div>
-
-  <!-- LISTA -->
-  <div class="mt-6 bg-white/70 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl shadow">
-    <div class="p-5 border-b border-slate-900/10 dark:border-white/10">
-      <h3 class="text-lg font-semibold text-slate-900 dark:text-white">Últimas avarias registradas</h3>
-    </div>
-
-    <div class="p-5 overflow-x-auto">
-      <table class="min-w-full text-left text-sm">
-        <thead>
-          <tr class="text-slate-600 dark:text-gray-300">
-            <th class="py-2 pr-4">ID</th>
-            <th class="py-2 pr-4">Placa</th>
-            <th class="py-2 pr-4">KM</th>
-            <th class="py-2 pr-4">Gravidade</th>
-            <th class="py-2 pr-4">Status</th>
-            <th class="py-2 pr-4">Detalhes</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          {% for a in recentes_avarias %}
-          <tr class="border-t border-slate-900/10 dark:border-white/10">
-            <td class="py-2 pr-4 text-slate-900 dark:text-gray-100">#{{ a.id }}</td>
-            <td class="py-2 pr-4 text-slate-900 dark:text-gray-100">{{ a.vehicle.plate }}</td>
-            <td class="py-2 pr-4 text-slate-900 dark:text-gray-100">{{ a.km }}</td>
-            <td class="py-2 pr-4 text-slate-900 dark:text-gray-100 capitalize">{{ a.gravidade }}</td>
-            <td class="py-2 pr-4">
-              {% if a.status == 'aberta' %}
-                <span class="px-2 py-1 rounded-lg text-xs
-                             bg-yellow-200/60 dark:bg-yellow-900/40
-                             text-yellow-900 dark:text-yellow-200
-                             border border-yellow-500/25 dark:border-yellow-700/40">
-                  Aberta
-                </span>
-              {% else %}
-                <span class="px-2 py-1 rounded-lg text-xs
-                             bg-green-200/60 dark:bg-green-900/40
-                             text-green-900 dark:text-green-200
-                             border border-green-500/25 dark:border-green-700/40">
-                  Finalizada
-                </span>
-              {% endif %}
-            </td>
-            <td class="py-2 pr-4">
-              <a class="text-blue-700 dark:text-blue-400 underline" href="{{ url_for('avarias_registro') }}">
-                Ver
-              </a>
-            </td>
-          </tr>
-          {% else %}
-          <tr>
-            <td class="py-3 text-slate-500 dark:text-gray-400" colspan="6">Sem registros.</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-
-      </table>
-    </div>
-  </div>
-</div>
-
-
-<!-- ============================
-      GRÁFICO JS (acompanha o tema)
-============================ -->
-<script>
-  const labels = {{ wk_labels | tojson }};
-  const values = {{ wk_values | tojson }};
-  const ctx = document.getElementById('kmWeekly').getContext('2d');
-
-  function isDark() {
-    return document.documentElement.classList.contains('dark');
-  }
-
-  function axisColor() {
-    return isDark() ? '#cbd5e1' : '#334155';  // slate-300 / slate-700
-  }
-
-  function gridColor() {
-    return isDark() ? 'rgba(148,163,184,.22)' : 'rgba(15,23,42,.10)'; // slate-400 / slate-900
-  }
-
-  function makeChart() {
-    return new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels,
-        datasets: [{
-          label: 'KM rodados por semana',
-          data: values,
-          backgroundColor: '#3b82f6'
-        }]
-      },
-      options: {
-        responsive: true,
-        plugins: {
-          legend: {
-            labels: { color: axisColor() }
-          }
-        },
-        scales: {
-          x: {
-            ticks: { color: axisColor() },
-            grid: { color: gridColor() }
-          },
-          y: {
-            beginAtZero: true,
-            ticks: { color: axisColor() },
-            grid: { color: gridColor() }
-          }
-        }
-      }
-    });
-  }
-
-  let kmChart = makeChart();
-
-  // ✅ atualiza cores quando o tema muda (botão no layout troca a classe "dark")
-  const obs = new MutationObserver(() => {
-    try {
-      kmChart.destroy();
-    } catch(e) {}
-    kmChart = makeChart();
-  });
-
-  obs.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
-</script>
-
-
-<!-- ============================
-      LITEPICKER (único)
-============================ -->
+<!-- ✅ SCRIPTS -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/litepicker/dist/css/litepicker.css" />
 <script src="https://cdn.jsdelivr.net/npm/litepicker/dist/bundle.js"></script>
 
 <script>
-  new Litepicker({
-    element: document.getElementById('periodo'),
-    singleMode: false,
-    numberOfMonths: 2,
-    numberOfColumns: 2,
-    format: 'YYYY-MM-DD',
-    delimiter: ' - ',
-    autoApply: true
-  });
+    // --- UTILS ---
+    function isDark() { return document.documentElement.classList.contains('dark'); }
+    
+    // --- DASHBOARD FROTA ---
+    let chartKM = null;
+    let chartFrotaStatus = null;
+
+    async function loadFrotaDashboard() {
+        try {
+            const res = await fetch('/api/frota/dashboard_stats');
+            const data = await res.json();
+
+            document.getElementById('stat-frota-health').textContent = data.fleet_health + '%';
+            document.getElementById('bar-frota-health').style.width = data.fleet_health + '%';
+            document.getElementById('stat-frota-cost').textContent = 'R$ ' + data.total_cost_month.toLocaleString('pt-BR');
+            document.getElementById('stat-frota-checklists').textContent = data.checklists_today;
+            document.getElementById('stat-frota-os').textContent = data.open_os;
+
+            const ctxKM = document.getElementById('chartKM').getContext('2d');
+            if(chartKM) chartKM.destroy();
+            chartKM = new Chart(ctxKM, {
+                type: 'line',
+                data: {
+                    labels: data.km_history.labels,
+                    datasets: [{
+                        label: 'KM Rodados',
+                        data: data.km_history.values,
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        fill: true,
+                        tension: 0.4,
+                        borderWidth: 3,
+                        pointRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: isDark() ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' } },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+
+            const ctxStatus = document.getElementById('chartFrotaStatus').getContext('2d');
+            if(chartFrotaStatus) chartFrotaStatus.destroy();
+            chartFrotaStatus = new Chart(ctxStatus, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(data.status_dist),
+                    datasets: [{
+                        data: Object.values(data.status_dist),
+                        backgroundColor: ['#10b981', '#f43f5e', '#f59e0b', '#6366f1'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 6, font: { size: 9 } } }
+                    },
+                    cutout: '70%'
+                }
+            });
+
+            const revDiv = document.getElementById('dashboard-rev-alerts');
+            revDiv.innerHTML = data.rev_alerts.length ? data.rev_alerts.map(v => `
+                <div class="p-3 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-900/5">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-xs font-black text-slate-800 dark:text-white">${v.plate}</span>
+                        <span class="text-[10px] font-bold text-rose-500">${v.remaining} km restando</span>
+                    </div>
+                    <div class="w-full h-1.5 bg-slate-200 dark:bg-white/5 rounded-full overflow-hidden">
+                        <div class="h-full bg-rose-500 transition-all duration-1000" style="width: ${v.perc}%"></div>
+                    </div>
+                </div>
+            `).join('') : '<p class="text-xs text-slate-400 text-center py-10">Frota revisada!</p>';
+
+            const osDiv = document.getElementById('dashboard-os-recent');
+            osDiv.innerHTML = data.latest_os.length ? data.latest_os.map(o => `
+                <div class="p-3 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-900/5 flex justify-between items-center">
+                    <div>
+                        <h4 class="text-xs font-black text-slate-800 dark:text-white">${o.plate}</h4>
+                        <p class="text-[9px] text-slate-400 truncate w-40">${o.desc}</p>
+                    </div>
+                    <span class="px-2 py-0.5 rounded-lg text-[8px] font-black bg-rose-100 text-rose-600 uppercase">
+                        ${o.gravity}
+                    </span>
+                </div>
+            `).join('') : '<p class="text-xs text-slate-400 text-center py-10">Nenhuma O.S aberta.</p>';
+
+        } catch (e) { console.error("Erro dashboard frota:", e); }
+    }
+
+    // --- DASHBOARD GESTÃO ---
+    let rfoChart = null, activitiesChart = null;
+
+    async function loadGestaoDashboard() {
+        try {
+            const res = await fetch('/api/gestao/dashboard_stats');
+            const data = await res.json();
+
+            document.getElementById('stat-lms-completion').textContent = (data.lms_completion || 0) + '%';
+            document.getElementById('bar-lms').style.width = (data.lms_completion || 0) + '%';
+            document.getElementById('stat-audits').textContent = data.total_audits_month || 0;
+            document.getElementById('stat-fleet-health').textContent = (data.fleet_health || 0) + '%';
+            document.getElementById('bar-fleet').style.width = (data.fleet_health || 0) + '%';
+            document.getElementById('stat-critical').textContent = (data.rfo_active || 0) + (data.tasks_pending || 0);
+
+            const ctxRFO = document.getElementById('chartRFO').getContext('2d');
+            if(rfoChart) rfoChart.destroy();
+            rfoChart = new Chart(ctxRFO, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(data.rfo_by_type || {}),
+                    datasets: [{
+                        data: Object.values(data.rfo_by_type || {}),
+                        backgroundColor: ['#ef4444', '#f59e0b', '#3b82f6', '#10b981', '#8b5cf6', '#6366f1'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 6, font: { size: 9 } } } },
+                    cutout: '70%'
+                }
+            });
+
+            const ctxAct = document.getElementById('chartAtividades').getContext('2d');
+            if(activitiesChart) activitiesChart.destroy();
+            activitiesChart = new Chart(ctxAct, {
+                type: 'line',
+                data: {
+                    labels: data.atividades_history.labels,
+                    datasets: [{
+                        label: 'Atividades',
+                        data: data.atividades_history.values,
+                        borderColor: '#6366f1',
+                        backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                        fill: true, tension: 0.4, borderWidth: 3, pointRadius: 3
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true, grid: { color: isDark() ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' } },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+
+            const rankingDiv = document.getElementById('dashboard-ranking');
+            rankingDiv.innerHTML = data.ranking.length ? data.ranking.map((r, idx) => `
+                <div class="flex items-center gap-3 p-3 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-900/5 transition-all">
+                    <div class="w-7 h-7 rounded-lg ${idx === 0 ? 'bg-amber-400 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-500'} flex items-center justify-center font-black text-[10px]">
+                        ${idx + 1}º
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="text-[11px] font-bold text-slate-800 dark:text-white truncate">${r.name}</div>
+                        <div class="w-full bg-slate-200 dark:bg-white/5 h-1 rounded-full mt-1.5">
+                            <div class="h-full bg-teal-500 rounded-full" style="width: ${Math.min(r.points, 100)}%"></div>
+                        </div>
+                    </div>
+                    <div class="text-[10px] font-black text-teal-600">${r.points} pts</div>
+                </div>
+            `).join('') : '<p class="text-xs text-slate-400 text-center py-10">Sem dados.</p>';
+
+            const genContainer = document.getElementById('dashboard-generator-alerts');
+            genContainer.innerHTML = data.generator_alerts.length ? data.generator_alerts.map(g => `
+                <div class="p-4 rounded-2xl bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-900/30">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="text-xs font-bold text-amber-700 dark:text-amber-400">${g.name}</span>
+                        <span class="text-[10px] font-black text-amber-600">${g.perc}%</span>
+                    </div>
+                    <div class="w-full h-1.5 bg-amber-200 dark:bg-amber-900/40 rounded-full overflow-hidden">
+                        <div class="h-full bg-amber-500" style="width: ${g.perc}%"></div>
+                    </div>
+                </div>
+            `).join('') : '<p class="text-center text-slate-400 text-xs py-10">Tudo normal.</p>';
+
+            const taskContainer = document.getElementById('dashboard-tasks-critical');
+            taskContainer.innerHTML = data.critical_tasks.length ? data.critical_tasks.map(t => `
+                <div class="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-900/5 flex justify-between items-center">
+                    <div>
+                        <h4 class="text-xs font-bold text-slate-800 dark:text-white">${t.title}</h4>
+                        <p class="text-[10px] text-slate-400 capitalize">${t.responsible} • ${t.priority}</p>
+                    </div>
+                    <span class="px-2 py-0.5 rounded-full text-[8px] font-black bg-red-100 text-red-600 uppercase">Crítica</span>
+                </div>
+            `).join('') : '<p class="text-center text-slate-400 text-xs py-10">Sem tarefas críticas.</p>';
+
+        } catch (e) { console.error("Erro dashboard gestao:", e); }
+    }
+
+    // --- INIT ---
+    document.addEventListener('DOMContentLoaded', () => {
+        if (document.getElementById('periodo')) {
+            new Litepicker({
+                element: document.getElementById('periodo'),
+                singleMode: false,
+                numberOfMonths: 2,
+                numberOfColumns: 2,
+                format: 'YYYY-MM-DD',
+                delimiter: ' - ',
+                autoApply: true
+            });
+        }
+
+        {% if view == 'veiculos' %}
+            loadFrotaDashboard();
+        {% else %}
+            loadGestaoDashboard();
+        {% endif %}
+    });
 </script>
 
 {% endblock %}

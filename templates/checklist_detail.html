@@ -1,88 +1,175 @@
 {% extends 'layout.html' %}
-{% set page_title = "Detalhe do Checklist" %}
+{% set page_title = "Detalhes do Checklist" %}
 {% block content %}
 
-<div class="bg-white/70 border border-slate-900/10 rounded-2xl shadow p-6 backdrop-blur
-            dark:bg-white/5 dark:border-white/10">
+<!-- ✅ HEADER PREMIUM DETAIL -->
+<div class="mb-8 animate-premium">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 glass-premium p-6 rounded-[2rem] shadow-xl overflow-hidden relative">
+        <!-- Decorativos -->
+        <div class="absolute -top-24 -right-24 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl"></div>
+        <div class="absolute -bottom-24 -left-24 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl"></div>
 
-  <div class="flex items-center justify-between mb-4">
-    <h2 class="text-lg font-semibold text-slate-900 dark:text-gray-100">
-      Checklist #{{ c.id }} • {{ c.date.strftime('%d/%m/%Y %H:%M') }}
-    </h2>
+        <div class="flex items-center gap-5 relative z-10">
+            <div class="w-14 h-14 rounded-[1.25rem] bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-2xl shadow-blue-500/20">
+                <i class="fa-solid fa-clipboard-list text-2xl"></i>
+            </div>
+            <div>
+                <nav class="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">
+                    <a href="{{ url_for('checklists') }}" class="hover:text-blue-500 transition-colors">Checklists</a>
+                    <i class="fa-solid fa-chevron-right text-[8px] opacity-30"></i>
+                    <span class="text-blue-500">Detalhes</span>
+                </nav>
+                <h2 class="text-2xl font-black text-slate-800 dark:text-white tracking-tight flex items-center gap-3">
+                    Checklist #{{ c.id }}
+                    {% if c.status == 'OK' %}
+                        <span class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-emerald-100/80 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30">
+                            {{ c.status }}
+                        </span>
+                    {% else %}
+                        <span class="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-rose-100/80 dark:bg-rose-500/20 text-rose-700 dark:text-rose-400 border border-rose-500/30 animate-pulse">
+                            {{ c.status }}
+                        </span>
+                    {% endif %}
+                </h2>
+            </div>
+        </div>
 
-    <a class="text-blue-600 hover:text-blue-700 underline
-              dark:text-blue-400 dark:hover:text-blue-300"
-       href="{{ url_for('checklists') }}">
-      Voltar
-    </a>
-  </div>
+        <div class="flex items-center gap-3 relative z-10">
+            <a href="{{ url_for('checklists') }}" class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-white rounded-xl font-black text-[10px] uppercase tracking-widest transition-all active:scale-95 flex items-center gap-2">
+                <i class="fa-solid fa-arrow-left text-xs"></i> Voltar
+            </a>
+        </div>
+    </div>
+</div>
 
-  <div class="grid md:grid-cols-3 gap-4">
+<div class="grid lg:grid-cols-3 gap-6 animate-fade-in-up">
+    <!-- COLUNA DA ESQUERDA: RESUMO -->
+    <div class="lg:col-span-1 space-y-6">
+        <div class="card-premium p-6 relative overflow-hidden">
+            <div class="absolute top-0 right-0 p-4 opacity-10">
+                <i class="fa-solid fa-truck-front text-6xl"></i>
+            </div>
+            <h3 class="text-sm font-black text-slate-800 dark:text-white uppercase tracking-widest mb-6 flex items-center gap-2">
+                <i class="fa-solid fa-circle-info text-blue-500"></i> Informações Gerais
+            </h3>
+            
+            <div class="space-y-5">
+                <div class="flex items-center gap-4">
+                    <div class="w-10 h-10 rounded-xl bg-slate-100 dark:bg-white/5 flex items-center justify-center text-slate-500 dark:text-slate-400">
+                        <i class="fa-regular fa-calendar text-sm"></i>
+                    </div>
+                    <div>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Data do Registro</p>
+                        <p class="text-sm font-semibold text-slate-800 dark:text-white">{{ c.date.strftime('%d/%m/%Y %H:%M') }}</p>
+                    </div>
+                </div>
 
-    <!-- RESUMO -->
-    <div class="p-3 rounded border border-slate-900/10 bg-white/70 text-slate-900
-                dark:border-white/10 dark:bg-white/5 dark:text-gray-100">
-      <p><strong>Placa:</strong> {{ c.vehicle.plate if c.vehicle else '-' }}</p>
-      <p><strong>Técnico:</strong> {{ c.technician }}</p>
-      <p><strong>KM:</strong> {{ c.km }}</p>
-      <p><strong>Status:</strong> {{ c.status }}</p>
+                <div class="flex items-center gap-4">
+                    <div class="w-10 h-10 rounded-xl bg-slate-100 dark:bg-white/5 flex items-center justify-center text-slate-500 dark:text-slate-400">
+                        <i class="fa-solid fa-id-card text-sm"></i>
+                    </div>
+                    <div>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Placa do Veículo</p>
+                        <p class="text-sm font-semibold text-slate-800 dark:text-white">{{ c.vehicle.plate if c.vehicle else 'Não Informada' }}</p>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-4">
+                    <div class="w-10 h-10 rounded-xl bg-slate-100 dark:bg-white/5 flex items-center justify-center text-slate-500 dark:text-slate-400">
+                        <i class="fa-solid fa-user-astronaut text-sm"></i>
+                    </div>
+                    <div>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Técnico Responsável</p>
+                        <p class="text-sm font-semibold text-slate-800 dark:text-white">{{ c.technician or '-' }}</p>
+                    </div>
+                </div>
+
+                <div class="flex items-center gap-4">
+                    <div class="w-10 h-10 rounded-xl bg-slate-100 dark:bg-white/5 flex items-center justify-center text-slate-500 dark:text-slate-400">
+                        <i class="fa-solid fa-gauge-high text-sm"></i>
+                    </div>
+                    <div>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Quilometragem (KM)</p>
+                        <p class="text-sm font-semibold text-slate-800 dark:text-white">{{ c.km | default(0) }} km</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {% if photos and photos|length %}
+        <div class="card-premium p-6">
+            <h3 class="text-sm font-black text-slate-800 dark:text-white uppercase tracking-widest mb-6 flex items-center gap-2">
+                <i class="fa-solid fa-camera text-blue-500"></i> Galeria de Fotos
+            </h3>
+            <div class="grid grid-cols-2 gap-3">
+                {% for p in photos %}
+                <a href="{{ p }}" target="_blank" rel="noopener" class="group relative block overflow-hidden rounded-xl aspect-square border border-slate-900/10 dark:border-white/10">
+                    <img src="{{ p }}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" alt="Foto checklist">
+                    <div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <i class="fa-solid fa-expand text-white text-xl"></i>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
     </div>
 
-    <!-- TABELA -->
-    <div class="md:col-span-2 p-3 rounded border border-slate-900/10 bg-white/70 overflow-auto max-h-[60vh]
-                dark:border-white/10 dark:bg-white/5">
+    <!-- COLUNA DA DIREITA: ITENS DO CHECKLIST -->
+    <div class="lg:col-span-2">
+        <div class="card-premium p-0 overflow-hidden h-full">
+            <div class="p-6 border-b border-slate-900/5 dark:border-white/5 bg-slate-50/50 dark:bg-slate-900/20">
+                <h3 class="text-sm font-black text-slate-800 dark:text-white uppercase tracking-widest flex items-center gap-2">
+                    <i class="fa-solid fa-list-check text-blue-500"></i> Verificação Detalhada
+                </h3>
+            </div>
+            
+            <div class="p-6">
+                <div class="space-y-4">
+                    {% for nome, val in items.items() %}
+                        {% set tem_justificativa = val.justificativa and val.justificativa|trim != '' %}
+                        
+                        <div class="p-4 rounded-2xl border transition-all duration-300
+                            {% if tem_justificativa %}
+                                border-rose-500/30 bg-rose-50/50 dark:bg-rose-900/10 dark:border-rose-500/20
+                            {% else %}
+                                border-slate-900/5 dark:border-white/5 bg-slate-50 dark:bg-white/5 hover:border-blue-500/30
+                            {% endif %}">
+                            
+                            <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                                <div class="flex-1">
+                                    <h4 class="text-sm font-bold text-slate-800 dark:text-white mb-1">{{ nome }}</h4>
+                                </div>
+                                
+                                <div class="shrink-0">
+                                    {% set resposta_texto = val.resposta | join(', ') if val.resposta is iterable and val.resposta is not string else val.resposta %}
+                                    <span class="inline-flex px-3 py-1.5 rounded-xl text-xs font-bold shadow-sm
+                                        {% if tem_justificativa %}
+                                            bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300
+                                        {% elif resposta_texto == 'Sim' or resposta_texto == 'Bom' or resposta_texto == 'OK' %}
+                                            bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300
+                                        {% else %}
+                                            bg-white text-slate-700 border border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700
+                                        {% endif %}">
+                                        {{ resposta_texto }}
+                                    </span>
+                                </div>
+                            </div>
 
-      <table class="min-w-full text-sm">
-        <thead>
-          <tr class="text-slate-600 dark:text-gray-300">
-            <th class="py-2 pr-4 text-left">Item</th>
-            <th class="py-2 pr-4 text-left">Resposta</th>
-            <th class="py-2 pr-4 text-left">Justificativa</th>
-          </tr>
-        </thead>
-
-        <tbody class="text-slate-900 dark:text-gray-200">
-          {% for nome, val in items.items() %}
-          <tr class="border-t border-slate-900/10 dark:border-white/10">
-            <td class="py-2 pr-4">{{ nome }}</td>
-
-            <td class="py-2 pr-4">
-              {% if val.resposta is iterable and val.resposta is not string %}
-                {{ val.resposta | join(', ') }}
-              {% else %}
-                {{ val.resposta }}
-              {% endif %}
-            </td>
-
-            <td class="py-2 pr-4">
-              {{ val.justificativa if val.justificativa else '-' }}
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-
+                            {% if tem_justificativa %}
+                            <div class="mt-4 p-3 rounded-xl bg-white/60 dark:bg-slate-900/40 border border-rose-500/20 dark:border-rose-500/10">
+                                <p class="text-[10px] font-bold text-rose-600 dark:text-rose-400 uppercase tracking-widest mb-1 flex items-center gap-1.5">
+                                    <i class="fa-solid fa-triangle-exclamation"></i> Justificativa / Observação
+                                </p>
+                                <p class="text-sm text-slate-700 dark:text-slate-300">{{ val.justificativa }}</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
     </div>
-  </div>
-
-  {% if photos and photos|length %}
-  <div class="mt-6">
-    <h3 class="text-md font-semibold mb-2 text-slate-900 dark:text-gray-100">Fotos</h3>
-
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-      {% for p in photos %}
-      <a href="{{ p }}" target="_blank" rel="noopener">
-        <img src="{{ p }}"
-             class="w-full h-40 object-cover rounded-lg
-                    border border-slate-900/10
-                    dark:border-white/10"
-             alt="Foto checklist">
-      </a>
-      {% endfor %}
-    </div>
-  </div>
-  {% endif %}
-
 </div>
 
 {% endblock %}

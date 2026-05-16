@@ -1,0 +1,169 @@
+
+{% extends "layout.html" %}
+
+{% block content %}
+<div class="flex flex-col h-screen overflow-hidden">
+    <!-- Header da Página -->
+    <div class="p-6 flex justify-between items-center bg-white/5 backdrop-blur-md border-b border-white/10">
+        <div>
+            <h1 class="text-2xl font-bold text-white flex items-center gap-2">
+                <i class="fas fa-map-marked-alt text-teal-400"></i>
+                Monitoramento em Tempo Real
+            </h1>
+            <p class="text-sm text-gray-400">Rastreamento GPS via Protocolo TK103</p>
+        </div>
+        <div class="flex gap-4">
+            <span class="flex items-center gap-2 text-xs text-gray-300 px-3 py-1 bg-white/5 rounded-full border border-white/10">
+                <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                Servidor Online: Porta 5002
+            </span>
+        </div>
+    </div>
+
+    <div class="flex flex-1 overflow-hidden">
+        <!-- Barra Lateral de Veículos -->
+        <div class="w-80 bg-white/5 backdrop-blur-lg border-r border-white/10 flex flex-col">
+            <div class="p-4 border-b border-white/10">
+                <input type="text" id="searchVehicle" placeholder="Buscar placa ou técnico..." 
+                       class="w-full bg-black/20 border border-white/10 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-teal-500 transition-all">
+            </div>
+            <div id="vehicleList" class="flex-1 overflow-y-auto p-2 space-y-2">
+                <!-- Veículos serão carregados aqui -->
+                <div class="p-4 text-center text-gray-500 italic text-sm">Carregando frota...</div>
+            </div>
+        </div>
+
+        <!-- Área do Mapa -->
+        <div class="flex-1 relative">
+            <div id="map" class="absolute inset-0 z-0"></div>
+            
+            <!-- Legenda Flutuante -->
+            <div class="absolute bottom-6 right-6 z-[1000] bg-black/60 backdrop-blur-md p-3 rounded-xl border border-white/10 shadow-2xl space-y-2">
+                <div class="flex items-center gap-2 text-xs text-white">
+                    <span class="w-3 h-3 rounded-full bg-green-500"></span> Em Movimento
+                </div>
+                <div class="flex items-center gap-2 text-xs text-white">
+                    <span class="w-3 h-3 rounded-full bg-orange-500"></span> Parado (Ligado)
+                </div>
+                <div class="flex items-center gap-2 text-xs text-white">
+                    <span class="w-3 h-3 rounded-full bg-gray-500"></span> Desconectado
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Leaflet CSS & JS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<style>
+    .leaflet-container { background: #1a1a1a !important; }
+    .custom-marker { transition: all 0.5s ease-in-out; }
+    
+    /* Estilo Dark para o Mapa (Inversão de cores via CSS) */
+    .leaflet-tile-pane { filter: invert(100%) hue-rotate(180deg) brightness(95%) contrast(90%); }
+    
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 10px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(20, 184, 166, 0.5); }
+</style>
+
+<script>
+    let map;
+    let markers = {};
+    let vehiclesData = [];
+
+    function initMap() {
+        map = L.map('map').setView([-22.893, -43.682], 13); // Foco em Seropédica/RJ (AdaptLink)
+        
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+    }
+
+    async function updatePositions() {
+        try {
+            const response = await fetch('/api/gps/current');
+            const data = await response.json();
+            
+            vehiclesData = data.vehicles;
+            renderVehicleList();
+            updateMarkers();
+        } catch (error) {
+            console.error('Erro ao atualizar posições:', error);
+        }
+    }
+
+    function renderVehicleList() {
+        const list = document.getElementById('vehicleList');
+        list.innerHTML = '';
+        
+        vehiclesData.forEach(v => {
+            const card = document.createElement('div');
+            card.className = `p-3 rounded-xl border border-white/5 transition-all cursor-pointer hover:bg-white/10 ${v.is_online ? 'bg-white/5' : 'opacity-60 bg-black/20'}`;
+            card.onclick = () => focusVehicle(v.id);
+            
+            card.innerHTML = `
+                <div class="flex justify-between items-start mb-1">
+                    <span class="text-xs font-mono font-bold text-teal-400 bg-teal-400/10 px-2 py-0.5 rounded">${v.plate}</span>
+                    <span class="text-[10px] uppercase text-gray-400">${v.status_text}</span>
+                </div>
+                <div class="text-sm font-medium text-white">${v.model}</div>
+                <div class="text-[10px] text-gray-500 truncate">${v.technician || 'Sem técnico vinculado'}</div>
+                <div class="mt-2 flex items-center justify-between">
+                    <div class="flex items-center gap-1 text-[10px] text-gray-400">
+                        <i class="fas fa-tachometer-alt"></i> ${Math.round(v.speed)} km/h
+                    </div>
+                    <div class="text-[10px] text-gray-500">
+                        <i class="far fa-clock"></i> ${v.last_time}
+                    </div>
+                </div>
+            `;
+            list.appendChild(card);
+        });
+    }
+
+    function updateMarkers() {
+        vehiclesData.forEach(v => {
+            if (!v.lat || !v.lon) return;
+
+            const color = v.speed > 5 ? '#22c55e' : (v.ignition ? '#f97316' : '#6b7280');
+            const icon = L.divIcon({
+                className: 'custom-marker',
+                html: `
+                    <div style="background: ${color}; width: 30px; height: 30px; border-radius: 50%; border: 3px solid rgba(255,255,255,0.2); display: flex; align-items: center; justify-center: center; transform: rotate(${v.angle}deg); box-shadow: 0 0 15px ${color}88;">
+                        <i class="fas fa-location-arrow text-white text-[12px]" style="transform: rotate(-45deg); margin-left: 7px; margin-top: 1px;"></i>
+                    </div>
+                `,
+                iconSize: [30, 30],
+                iconAnchor: [15, 15]
+            });
+
+            if (markers[v.id]) {
+                markers[v.id].setLatLng([v.lat, v.lon]);
+                markers[v.id].setIcon(icon);
+            } else {
+                markers[v.id] = L.marker([v.lat, v.lon], { icon: icon }).addTo(map)
+                    .bindPopup(`<b>${v.plate}</b><br>${v.model}<br>Velocidade: ${Math.round(v.speed)} km/h`);
+            }
+        });
+    }
+
+    function focusVehicle(id) {
+        const v = vehiclesData.find(v => v.id === id);
+        if (v && v.lat) {
+            map.flyTo([v.lat, v.lon], 16);
+            markers[id].openPopup();
+        }
+    }
+
+    window.onload = () => {
+        initMap();
+        updatePositions();
+        setInterval(updatePositions, 10000); // Atualiza a cada 10 segundos
+    };
+</script>
+{% endblock %}

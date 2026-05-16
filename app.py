@@ -154,20 +154,40 @@ def br_datetime(dt):
         except Exception:
             return str(dt)
 
+import re
+from markupsafe import Markup
+
+@app.template_filter('urlize_custom')
+def urlize_custom_filter(s):
+    if not s:
+        return ""
+    # Regex para detectar URLs (http, https, www)
+    url_pattern = re.compile(
+        r'((https?://|www\.)[^\s<>"]+)',
+        re.IGNORECASE
+    )
+    
+    def replace(match):
+        url = match.group(0)
+        href = url
+        if not href.startswith('http'):
+            href = 'http://' + href
+        return f'<a href="{href}" target="_blank" class="text-blue-500 hover:underline">{url}</a>'
+        
+    return Markup(url_pattern.sub(replace, s))
+
 
 # ----------------- MODELOS -----------------
 class User(UserMixin, db.Model):
     __tablename__ = "user"
     id = db.Column(db.Integer, primary_key=True)
-
     username = db.Column(db.String(80), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
-
-    # legado
     is_admin_legacy = db.Column("is_admin", db.Boolean, default=False)
-
-    # novo campo
     role = db.Column(db.String(20), default=None)
+    email = db.Column(db.String(120))
+    phone = db.Column(db.String(20))
+    permissions = db.Column(db.Text) # JSON string
 
     def set_password(self, pwd: str):
         self.password_hash = generate_password_hash(pwd)
@@ -177,9 +197,20 @@ class User(UserMixin, db.Model):
 
     @property
     def is_admin(self):
-        if self.role is None:
-            return bool(self.is_admin_legacy)
-        return self.role == "admin"
+        if self.role == "admin":
+            return True
+        return bool(self.is_admin_legacy)
+
+    def has_permission(self, perm):
+        if self.is_admin:
+            return True
+        if not self.permissions:
+            return False
+        try:
+            p = json.loads(self.permissions)
+            return p.get(perm, False)
+        except:
+            return False
 
     @property
     def is_supervisor(self):
@@ -187,13 +218,12 @@ class User(UserMixin, db.Model):
 
     @property
     def is_tech(self):
-        if self.role is None and not self.is_admin_legacy:
-            return True
         return self.role == "tech"
 
     @property
     def is_manutencao(self):
         return self.role == "manutencao"
+
 
 
 # ===============================
@@ -299,12 +329,157 @@ class Checklist(db.Model):
 class ChecklistItem(db.Model):
     __tablename__ = "checklist_item"
     id = db.Column(db.Integer, primary_key=True)
-    order = db.Column(db.Integer, default=0)
+    order = db.Column(db.Integer)
     text = db.Column(db.String(255), nullable=False)
     required = db.Column(db.Boolean, default=True)
     require_justif_no = db.Column(db.Boolean, default=False)
     type = db.Column(db.String(50), default="texto_curto")
     options = db.Column(db.Text)
+
+# ===============================
+# 📢 COMUNICAÇÕES (AVISOS)
+# ===============================
+class Announcement(db.Model):
+    __tablename__ = "announcement"
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(200), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    target_type = db.Column(db.String(50))  # internal, external, company, all
+    target_id = db.Column(db.Integer)        # ID da empresa se target_type == company
+    created_at = db.Column(db.DateTime, default=agora)
+    created_by = db.Column(db.Integer, db.ForeignKey("user.id"))
+
+class AnnouncementRead(db.Model):
+    __tablename__ = "announcement_read"
+    id = db.Column(db.Integer, primary_key=True)
+    announcement_id = db.Column(db.Integer, db.ForeignKey("announcement.id"))
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
+    read_at = db.Column(db.DateTime, default=agora)
+
+# ===============================
+# 🎓 LMS (TREINAMENTOS)
+# ===============================
+class Training(db.Model):
+    __tablename__ = "training"
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+    target = db.Column(db.String(50))  # all, internal, specific_company
+    company_id = db.Column(db.Integer, db.ForeignKey("company.id"), nullable=True)
+    created_at = db.Column(db.DateTime, default=agora)
+    allow_retake = db.Column(db.Boolean, default=True)
+    badge_id = db.Column(db.Integer, db.ForeignKey("badge.id"), nullable=True)
+
+class TrainingModule(db.Model):
+    __tablename__ = "training_module"
+    id = db.Column(db.Integer, primary_key=True)
+    training_id = db.Column(db.Integer, db.ForeignKey("training.id"))
+    title = db.Column(db.String(200))
+    order = db.Column(db.Integer, default=0)
+
+class TrainingCourse(db.Model):
+    __tablename__ = "training_course"
+    id = db.Column(db.Integer, primary_key=True)
+    module_id = db.Column(db.Integer, db.ForeignKey("training_module.id"))
+    title = db.Column(db.String(200))
+    content_type = db.Column(db.String(20))  # video, pdf, text
+    content_url = db.Column(db.String(500))
+    description = db.Column(db.Text)
+    order = db.Column(db.Integer, default=0)
+
+class TrainingAttempt(db.Model):
+    __tablename__ = "training_attempt"
+    id = db.Column(db.Integer, primary_key=True)
+    training_id = db.Column(db.Integer, db.ForeignKey("training.id"))
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
+    score = db.Column(db.Float)
+    passed = db.Column(db.Boolean)
+    completed_at = db.Column(db.DateTime, default=agora)
+
+class TrainingQuestion(db.Model):
+    __tablename__ = "training_question"
+    id = db.Column(db.Integer, primary_key=True)
+    training_id = db.Column(db.Integer, db.ForeignKey("training.id"))
+    question_text = db.Column(db.Text)
+    options_json = db.Column(db.Text)  # JSON array of options
+    correct_option = db.Column(db.Integer)
+
+class Badge(db.Model):
+    __tablename__ = "badge"
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100))
+    icon = db.Column(db.String(50))
+    color = db.Column(db.String(20))
+    description = db.Column(db.Text)
+
+# ===============================
+# 🏗️ GESTÃO TÉCNICA E INFRA
+# ===============================
+class Generator(db.Model):
+    __tablename__ = "generator"
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    model = db.Column(db.String(100))
+    serial_number = db.Column(db.String(100))
+    location = db.Column(db.String(200))
+    last_maintenance = db.Column(db.DateTime)
+    status = db.Column(db.String(20), default="OPERACIONAL")
+
+class RFO(db.Model):
+    __tablename__ = "rfo"
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(200))
+    description = db.Column(db.Text)
+    generator_id = db.Column(db.Integer, db.ForeignKey("generator.id"))
+    technician_id = db.Column(db.Integer, db.ForeignKey("user.id"))
+    status = db.Column(db.String(20), default="ABERTO")
+    priority = db.Column(db.String(20), default="MEDIA")
+    created_at = db.Column(db.DateTime, default=agora)
+    pdf_path = db.Column(db.String(255))
+
+class Team(db.Model):
+    __tablename__ = "team"
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100))
+    leader_id = db.Column(db.Integer, db.ForeignKey("user.id"))
+
+class Task(db.Model):
+    __tablename__ = "task"
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(200))
+    description = db.Column(db.Text)
+    assigned_to = db.Column(db.Integer, db.ForeignKey("user.id"))
+    due_date = db.Column(db.DateTime)
+    status = db.Column(db.String(20), default="PENDENTE")
+    contract_id = db.Column(db.Integer, db.ForeignKey("contract.id"), nullable=True)
+
+# ===============================
+# 🏢 CONTRATOS E CLIENTES
+# ===============================
+class Company(db.Model):
+    __tablename__ = "company"
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(200), nullable=False)
+    cnpj = db.Column(db.String(20))
+    email = db.Column(db.String(120))
+
+class Contract(db.Model):
+    __tablename__ = "contract"
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(200))
+    company_id = db.Column(db.Integer, db.ForeignKey("company.id"))
+    start_date = db.Column(db.DateTime)
+    end_date = db.Column(db.DateTime)
+    status = db.Column(db.String(20))
+
+class ExternalCollaborator(db.Model):
+    __tablename__ = "external_collaborator"
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(200))
+    email = db.Column(db.String(120))
+    phone = db.Column(db.String(20))
+    company_id = db.Column(db.Integer, db.ForeignKey("company.id"))
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
 
 
 # ----------------------------------------
@@ -744,186 +919,187 @@ def index():
 @app.route("/dashboard")
 @supervisor_allowed
 def dashboard():
-
-    # -----------------------
-    # 📅 FILTRO DE PERÍODO
-    # -----------------------
+    view = request.args.get("view", "veiculos")
     periodo = request.args.get("periodo", "")
-    dt_inicio = None
-    dt_fim = None
-
-    if periodo and " - " in periodo:
-        try:
-            inicio_str, fim_str = periodo.split(" - ")
-            dt_inicio = datetime.strptime(inicio_str.strip(), "%Y-%m-%d")
-            dt_fim = datetime.strptime(fim_str.strip(), "%Y-%m-%d")
-
-            # Ajusta fim para o final do dia
-            dt_fim = dt_fim.replace(hour=23, minute=59, second=59)
-
-        except Exception as e:
-            print("Erro período dashboard:", e)
-
-    # -----------------------
-    # 🚗 FILTRO POR VEÍCULO
-    # -----------------------
-    veiculo_id = request.args.get("veiculo", "").strip()
-    veiculo_id_int = None
-    if veiculo_id:
-        try:
-            veiculo_id_int = int(veiculo_id)
-        except Exception:
-            veiculo_id_int = None
-
-    # lista de veículos pro select do template
+    
+    # Lista de veículos para filtros
     veiculos = Vehicle.query.order_by(Vehicle.plate.asc()).all()
 
-    # -----------------------
-    # 🔢 DADOS GERAIS
-    # (pode ser geral ou filtrado - aqui deixei geral)
-    # -----------------------
-    total_veiculos = Vehicle.query.count()
-    total_checklists = Checklist.query.count()
-    total_relatorios = count_files(RELATORIOS_DIR)
+    # --- Lógica comum de Checklists Recentes ---
+    recentes = Checklist.query.order_by(Checklist.date.desc()).limit(5).all()
 
-    lr = list_reports()
-    ultimo_relatorio = lr[0]["name"] if lr else "—"
+    # --- Lógica de Estatísticas de Usuários (necessário para view='veiculos') ---
+    user_stats_list = []
+    if view == "veiculos":
+        # Incluindo todos os usuários exceto o admin principal para garantir reconhecimento total
+        users = User.query.filter(User.username != 'admin').all()
+        now = agora()
+        start_week = now - timedelta(days=now.weekday())
+        start_month = now.replace(day=1, hour=0, minute=0, second=0)
+        start_year = now.replace(month=1, day=1, hour=0, minute=0, second=0)
 
-    # -----------------------
-    # 📄 CHECKLISTS RECENTES (com filtros)
-    # -----------------------
-    query_checklists = Checklist.query
-
-    if veiculo_id_int:
-        query_checklists = query_checklists.filter(Checklist.vehicle_id == veiculo_id_int)
-
-    if dt_inicio and dt_fim:
-        query_checklists = query_checklists.filter(
-            Checklist.date >= dt_inicio,
-            Checklist.date <= dt_fim
-        )
-
-    recentes = query_checklists.order_by(Checklist.date.desc()).limit(5).all()
-
-    # -----------------------
-    # 🚗 ALERTAS DE REVISÃO (com filtro veículo)
-    # -----------------------
-    alerts = []
-
-    veiculos_para_alerta = veiculos
-    if veiculo_id_int:
-        veiculos_para_alerta = [v for v in veiculos if v.id == veiculo_id_int]
-
-    for v in veiculos_para_alerta:
-        alert, next_rev, remaining = km_alert(v.km or 0)
-        if alert:
-            alerts.append({
-                "plate": v.plate,
-                "km": v.km or 0,
-                "next_rev": next_rev,
-                "remaining": remaining
+        for u in users:
+            total = Checklist.query.filter_by(technician=u.username).count()
+            semanal = Checklist.query.filter(Checklist.technician == u.username, Checklist.date >= start_week).count()
+            mensal = Checklist.query.filter(Checklist.technician == u.username, Checklist.date >= start_month).count()
+            anual = Checklist.query.filter(Checklist.technician == u.username, Checklist.date >= start_year).count()
+            
+            user_stats_list.append({
+                'username': u.username,
+                'semanal': semanal,
+                'mensal': mensal,
+                'anual': anual,
+                'total': total
             })
+        # Ordenar por total desc
+        user_stats_list.sort(key=lambda x: x['total'], reverse=True)
 
-    # -----------------------
-    # 📊 KM SEMANAL
-    # -----------------------
-    # Se sua função aceitar vehicle_id, use assim:
-    # labels, values = weekly_km_series(WEEKS_WINDOW, vehicle_id=veiculo_id_int)
-    #
-    # Se NÃO aceitar, mantém do jeito atual (geral):
-    labels, values = weekly_km_series(WEEKS_WINDOW)
-
-    # -----------------------
-    # ⚠️ AVARIAS (com filtros)
-    # -----------------------
-    query_avarias = AvariaOS.query
-
-    if veiculo_id_int:
-        query_avarias = query_avarias.filter(AvariaOS.vehicle_id == veiculo_id_int)
-
-    if dt_inicio and dt_fim:
-        print("Aplicando filtro:", dt_inicio, "→", dt_fim)
-        query_avarias = query_avarias.filter(
-            AvariaOS.data_abertura >= dt_inicio,
-            AvariaOS.data_abertura <= dt_fim
-        )
-
-    total_avarias = query_avarias.count()
-    avarias_pendentes = query_avarias.filter_by(status="aberta").count()
-    avarias_finalizadas = query_avarias.filter_by(status="finalizada").count()
-
-    valor_total_gasto = query_avarias.with_entities(
-        db.func.sum(AvariaOS.valor_gasto)
-    ).scalar() or 0
-
-    recentes_avarias = query_avarias.order_by(AvariaOS.id.desc()).limit(5).all()
-
-    # -----------------------
-    # RETORNO
-    # -----------------------
     return render_template(
         "dashboard.html",
-
-        periodo=periodo,
-        veiculos=veiculos,  # <-- necessário pro select
-        veiculo_selecionado=veiculo_id,  # opcional (se quiser usar no template)
-
-        total_veiculos=total_veiculos,
-        total_checklists=total_checklists,
-        total_relatorios=total_relatorios,
-        ultimo_relatorio=ultimo_relatorio,
-
+        view=view,
+        veiculos=veiculos,
         recentes=recentes,
-
-        alerts=alerts,
-        rev_interval=REV_INTERVAL,
-        rev_margin=REV_ALERT_MARGIN,
-
-        wk_labels=labels,
-        wk_values=values,
-
-        total_avarias=total_avarias,
-        avarias_pendentes=avarias_pendentes,
-        avarias_finalizadas=avarias_finalizadas,
-        valor_total_gasto=valor_total_gasto,
-        recentes_avarias=recentes_avarias
+        user_stats_list=user_stats_list,
+        periodo=periodo
     )
 
+# --- API DASHBOARD FROTA (DADOS REAIS) ---
+@app.route("/api/frota/dashboard_stats")
+@supervisor_allowed
+def api_frota_stats():
+    now = agora()
+    start_7d = now - timedelta(days=7)
+    start_month = now.replace(day=1, hour=0, minute=0, second=0)
+
+    # 1. Saúde da Frota (Percentual OK nos últimos 7 dias)
+    total_7d = Checklist.query.filter(Checklist.date >= start_7d).count()
+    ok_7d = Checklist.query.filter(Checklist.date >= start_7d, Checklist.status == "OK").count()
+    fleet_health = int((ok_7d / total_7d * 100)) if total_7d > 0 else 100
+
+    # 2. Custo de Manutenção (Mês)
+    total_cost = db.session.query(db.func.sum(AvariaOS.valor_gasto)).filter(AvariaOS.data_abertura >= start_month).scalar() or 0
+
+    # 3. Checklists Hoje e O.S Abertas
+    checklists_today = Checklist.query.filter(Checklist.date >= now.replace(hour=0, minute=0, second=0)).count()
+    open_os = AvariaOS.query.filter_by(status="aberta").count()
+
+    # 4. Histórico de KM (Últimos 7 dias)
+    km_labels = []
+    km_values = []
+    for i in range(6, -1, -1):
+        day = (now - timedelta(days=i)).date()
+        km_day = db.session.query(db.func.sum(VehicleMov.km)).filter(db.func.date(VehicleMov.data_hora) == day).scalar() or 0
+        km_labels.append(day.strftime("%d/%m"))
+        km_values.append(int(km_day))
+
+    # 5. Distribuição de Status (30d)
+    start_30d = now - timedelta(days=30)
+    status_dist = {}
+    for st in ["OK", "Atenção", "Crítico"]:
+        count = Checklist.query.filter(Checklist.date >= start_30d, Checklist.status == st).count()
+        status_dist[st] = count
+
+    # 6. Alertas de Revisão (Top 3 críticos)
+    rev_alerts = []
+    veiculos = Vehicle.query.all()
+    for v in veiculos:
+        if v.km:
+            rem = REV_INTERVAL - (v.km % REV_INTERVAL)
+            if rem <= REV_ALERT_MARGIN:
+                perc = int(((REV_INTERVAL - rem) / REV_INTERVAL) * 100)
+                rev_alerts.append({"plate": v.plate, "remaining": rem, "perc": perc})
+    rev_alerts.sort(key=lambda x: x["remaining"])
+
+    # 7. O.S Recentes
+    latest_os = []
+    recent_os_objs = AvariaOS.query.order_by(AvariaOS.data_abertura.desc()).limit(5).all()
+    for o in recent_os_objs:
+        latest_os.append({
+            "plate": o.vehicle.plate if o.vehicle else "N/A",
+            "desc": o.descricao[:30] + "..." if len(o.descricao) > 30 else o.descricao,
+            "gravity": o.gravidade or "Média"
+        })
+
+    return json.dumps({
+        "fleet_health": fleet_health,
+        "total_cost_month": float(total_cost),
+        "checklists_today": checklists_today,
+        "open_os": open_os,
+        "km_history": {"labels": km_labels, "values": km_values},
+        "status_dist": status_dist,
+        "rev_alerts": rev_alerts[:3],
+        "latest_os": latest_os
+    })
+
+# --- API DASHBOARD GESTÃO (DADOS REAIS) ---
+@app.route("/api/gestao/dashboard_stats")
+@supervisor_allowed
+def api_gestao_stats():
+    now = agora()
+    start_month = now.replace(day=1, hour=0, minute=0, second=0)
+
+    # 1. LMS Completion (Média de progresso de todos os usuários)
+    # Aqui assumimos que temos uma tabela de progresso ou calculamos por badges
+    total_trainings = Training.query.count()
+    if total_trainings > 0:
+        completions = TrainingCompletion.query.count()
+        total_users = User.query.filter(User.role == 'tech').count()
+        lms_completion = int((completions / (total_trainings * total_users) * 100)) if total_users > 0 else 0
+    else:
+        lms_completion = 0
+
+    # 2. Auditorias (Checklists feitos por supervisores no mês)
+    audits = Checklist.query.join(User, Checklist.technician == User.username).filter(
+        User.role == "supervisor",
+        Checklist.date >= start_month
+    ).count()
+
+    # 3. RFO e Tarefas
+    rfo_active = RFO.query.filter_by(status="ABERTO").count()
+    tasks_pending = Task.query.filter(Task.status != "CONCLUÍDO").count()
+
+    # 4. Atividades (Volume de Checklists nos últimos 7 dias)
+    act_labels = []
+    act_values = []
+    for i in range(6, -1, -1):
+        day = (now - timedelta(days=i)).date()
+        count = Checklist.query.filter(db.func.date(Checklist.date) == day).count()
+        act_labels.append(day.strftime("%d/%m"))
+        act_values.append(count)
+
+    # 5. RFO por Tipo
+    rfo_types = db.session.query(RFO.tipo, db.func.count(RFO.id)).group_by(RFO.tipo).all()
+    rfo_dist = {t[0]: t[1] for t in rfo_types}
+
+    # 6. Ranking (Top 5 por conclusões)
+    ranking = []
+    top_users = db.session.query(
+        User.username, db.func.count(TrainingCompletion.id).label('total')
+    ).join(TrainingCompletion, User.id == TrainingCompletion.user_id).group_by(User.id).order_by(db.text('total DESC')).limit(10).all()
+    
+    for u in top_users:
+        ranking.append({"name": u[0], "points": u[1] * 100}) # 100 pts por curso
+
+    return json.dumps({
+        "lms_completion": lms_completion,
+        "total_audits_month": audits,
+        "fleet_health": 100, # Seria similar ao de frota
+        "rfo_active": rfo_active,
+        "tasks_pending": tasks_pending,
+        "atividades_history": {"labels": act_labels, "values": act_values},
+        "rfo_by_type": rfo_dist,
+        "ranking": ranking,
+        "generator_alerts": [], # Implementar se houver modelo de geradores
+        "critical_tasks": []
+    })
+
+# ----------------- USUÁRIOS (admin) -----------------
 # ----------------- USUÁRIOS (admin) -----------------
 @app.route("/usuarios")
 @admin_required
 def users():
-    items = User.query.order_by(User.username.asc()).all()
-    return render_template("users.html", items=items)
-
-
-@app.route("/usuarios/novo", methods=["POST"])
-@admin_required
-def users_new():
-    username = request.form.get("username", "").strip()
-    password = request.form.get("password", "").strip()
-    role = request.form.get("role", "tech").strip().lower()
-
-    if not username or not password:
-        flash("Usuário e senha obrigatórios.", "error")
-        return redirect(url_for("users"))
-
-    if role not in {"admin", "supervisor", "tech", "manutencao"}:
-        flash("Papel inválido.", "error")
-        return redirect(url_for("users"))
-
-    if User.query.filter_by(username=username).first():
-        flash("Usuário já existe.", "error")
-        return redirect(url_for("users"))
-
-    u = User(username=username, role=role)
-    u.set_password(password)
-    db.session.add(u)
-    db.session.commit()
-
-    registrar_log(f"Usuário criado: {username} ({role})")
-    flash("Usuário cadastrado.", "success")
-    return redirect(url_for("users"))
+    users_list = User.query.order_by(User.id.asc()).all()
+    return render_template("users.html", items=users_list)
 
 
 @app.route("/usuarios/<int:uid>/senha", methods=["POST"])
@@ -958,6 +1134,47 @@ def users_pwd(uid):
     return redirect(url_for("users"))
 
 
+@app.route("/usuarios/novo", methods=["POST"])
+@admin_required
+def users_new():
+    username = request.form.get("username", "").strip()
+    password = request.form.get("password", "").strip()
+    role = request.form.get("role", "tech").strip().lower()
+    email = request.form.get("email", "").strip()
+    phone = request.form.get("phone", "").strip()
+
+    if not username or not password:
+        flash("Usuário e senha obrigatórios.", "error")
+        return redirect(url_for("users"))
+
+    if User.query.filter_by(username=username).first():
+        flash("Usuário já existe.", "error")
+        return redirect(url_for("users"))
+
+    # Define permissões padrão por papel (Sincronizado com perm_...)
+    perms = {}
+    if role == "tech":
+        perms = {"perm_checklist_mobile": True, "perm_treinamentos_mobile": True}
+    elif role == "manutencao":
+        perms = {"perm_manutencao_os": True}
+    elif role == "supervisor":
+        perms = {"perm_dashboard": True, "perm_relatorios": True, "perm_checklists_view": True}
+    elif role == "admin":
+        # Admin ganha tudo por padrão
+        perms = {
+            "perm_dashboard": True, "perm_logs": True, "perm_relatorios": True, "perm_avisos": True,
+            "perm_usuarios": True, "perm_veiculos": True, "perm_controle_veiculos": True,
+            "perm_checklist_mobile": True, "perm_treinamentos_mobile": True, "perm_manutencao_os": True
+        }
+
+    u = User(username=username, role=role, email=email, phone=phone, permissions=json.dumps(perms))
+    u.set_password(password)
+    db.session.add(u)
+    db.session.commit()
+
+    registrar_log(f"Usuário criado: {username} ({role})")
+    flash("Usuário cadastrado com permissões padrão.", "success")
+    return redirect(url_for("users"))
 
 
 @app.route("/usuarios/<int:uid>/papel", methods=["POST"])
@@ -965,16 +1182,68 @@ def users_pwd(uid):
 def users_role(uid):
     u = User.query.get_or_404(uid)
     role = request.form.get("role", "tech").strip().lower()
+    email = request.form.get("email", "").strip()
+    phone = request.form.get("phone", "").strip()
 
     if role not in {"admin", "supervisor", "tech", "manutencao"}:
         flash("Papel inválido.", "error")
         return redirect(url_for("users"))
 
+    # Atualiza dados básicos
     u.role = role
+    u.email = email
+    u.phone = phone
+
+    # Ao mudar o papel, resetamos para as permissões padrão daquele papel
+    perms = {}
+    if role == "tech":
+        perms = {"perm_checklist_mobile": True, "perm_treinamentos_mobile": True}
+    elif role == "manutencao":
+        perms = {"perm_manutencao_os": True}
+    elif role == "supervisor":
+        perms = {"perm_dashboard": True, "perm_relatorios": True, "perm_checklists_view": True}
+    
+    u.permissions = json.dumps(perms)
     db.session.commit()
 
-    registrar_log(f"Papel alterado: {u.username} -> {role}")
-    flash("Papel atualizado.", "success")
+    registrar_log(f"Perfil atualizado: {u.username} -> {role}")
+    flash(f"Dados e permissões padrão atualizados para {role}.", "success")
+    return redirect(url_for("users"))
+
+
+@app.route("/usuarios/<int:uid>/permissions", methods=["POST"])
+@admin_required
+def users_permissions(uid):
+    u = User.query.get_or_404(uid)
+    
+    # Mapeamento completo de todas as permissões presentes no template (users.html)
+    possible_perms = [
+        "perm_dashboard", "perm_logs", "perm_relatorios", "perm_avisos",
+        "perm_usuarios", "perm_veiculos", "perm_controle_veiculos",
+        "perm_checklist_mobile", "perm_treinamentos_mobile", "perm_vistorias_nova",
+        "perm_avarias", "perm_checklists_view", "perm_config_checklist",
+        "perm_manutencao_os", "perm_vistorias_list",
+        "perm_gestao_equipes", "perm_gestao_calendario", "perm_gestao_escalas",
+        "perm_gestao_reunioes", "perm_gestao_anotacoes", "perm_gestao_atividades",
+        "perm_gestao_encerramento", "perm_gestao_rfo", "perm_gestao_tarefas",
+        "perm_gestao_geradores", "perm_gestao_rota_exata", "perm_gestao_supervisao",
+        "perm_gestao_treinamentos", "perm_gestao_solicitacoes", "perm_gestao_relatorios"
+    ]
+    
+    perms_data = request.form.to_dict()
+    processed = {}
+    
+    for p in possible_perms:
+        if perms_data.get(p) == "on":
+            processed[p] = True
+        else:
+            processed[p] = False
+            
+    u.permissions = json.dumps(processed)
+    db.session.commit()
+    
+    registrar_log(f"Permissões granulares salvas: {u.username}")
+    flash("Permissões granulares salvas com sucesso.", "success")
     return redirect(url_for("users"))
 
 
@@ -1551,20 +1820,138 @@ def checklists_import():
 @app.route("/relatorios")
 @supervisor_allowed
 def reports():
-    return render_template("reports.html", items=list_reports())
+    veiculos = Vehicle.query.order_by(Vehicle.plate.asc()).all()
+    
+    REPORTS_DIR = Path("/var/www/checklist_veicular/static/reports")
+    REPORTS_DIR.mkdir(parents=True, exist_ok=True)
+    
+    items = []
+    for f in REPORTS_DIR.iterdir():
+        if f.is_file() and f.suffix.lower() == ".pdf":
+            stat = f.stat()
+            items.append({
+                "name": f.name,
+                "size": stat.st_size,
+                "mtime": datetime.fromtimestamp(stat.st_mtime)
+            })
+    
+    # Ordenar por data (mais recente primeiro)
+    items.sort(key=lambda x: x["mtime"], reverse=True)
+    
+    return render_template("reports.html", veiculos=veiculos, items=items)
 
+@app.route("/relatorios/gerar", methods=["POST"])
+@supervisor_allowed
+def reports_generate():
+    veiculo_id = request.form.get("veiculo_id")
+    periodo = request.form.get("periodo")
+    # Lógica de geração de PDF consolidado...
+    flash(f"Solicitação de relatório para veículo {veiculo_id} e período {periodo} recebida.", "info")
+    return redirect(url_for("reports"))
 
-@app.route("/relatorios/download/<path:nome>")
+@app.route("/relatorios/download/<nome>")
 @supervisor_allowed
 def report_download(nome):
-    return send_from_directory(RELATORIOS_DIR, nome, as_attachment=True)
+    REPORTS_DIR = Path("/var/www/checklist_veicular/static/reports")
+    return send_from_directory(str(REPORTS_DIR), nome)
 
-
-@app.route("/relatorios/excluir/<path:nome>", methods=["POST"])
-@login_required
+@app.route("/relatorios/excluir/<nome>", methods=["POST"])
+@supervisor_allowed
 def report_delete(nome):
-    if not current_user.is_admin:
-        abort(403)
+    REPORTS_DIR = Path("/var/www/checklist_veicular/static/reports")
+    path = REPORTS_DIR / nome
+    if path.exists():
+        path.unlink()
+        flash(f"Relatório {nome} excluído.", "success")
+    else:
+        flash("Arquivo não encontrado.", "error")
+    return redirect(url_for("reports"))
+
+# ===============================
+# 🏗️ MÓDULO: GESTÃO TÉCNICA
+# ===============================
+@app.route("/gestao-tecnica")
+@supervisor_allowed
+def gestao_tecnica():
+    # Reconhecer todos os colaboradores para gestão técnica
+    tecnicos = User.query.filter(User.username != 'admin').all()
+    tecnicos_js_data = [{"id": t.id, "username": t.username} for t in tecnicos]
+    return render_template("gestao_tecnica.html", tecnicos=tecnicos, tecnicos_js_data=tecnicos_js_data)
+
+
+# --- GERADORES ---
+@app.route("/api/gestao/geradores", methods=["GET", "POST"])
+@supervisor_allowed
+def api_geradores():
+    if request.method == "POST":
+        data = request.json
+        gid = data.get("id")
+        if gid:
+            g = Generator.query.get(gid)
+        else:
+            g = Generator()
+            db.session.add(g)
+        
+        g.name = data.get("name")
+        g.model = data.get("model")
+        g.serial_number = data.get("serial_number")
+        g.location = data.get("location")
+        g.status = data.get("status", "OPERACIONAL")
+        db.session.commit()
+        return json.dumps({"status": "ok", "id": g.id})
+
+    gs = Generator.query.all()
+    return json.dumps([{"id": g.id, "name": g.name, "location": g.location, "status": g.status} for g in gs])
+
+# --- RFO (RELATÓRIOS DE OCORRÊNCIA) ---
+@app.route("/api/gestao/rfo", methods=["GET", "POST"])
+@supervisor_allowed
+def api_rfo():
+    if request.method == "POST":
+        data = request.json
+        rid = data.get("id")
+        if rid:
+            r = RFO.query.get(rid)
+        else:
+            r = RFO(technician_id=current_user.id)
+            db.session.add(r)
+        
+        r.title = data.get("title")
+        r.description = data.get("description")
+        r.generator_id = data.get("generator_id")
+        r.status = data.get("status", "ABERTO")
+        r.priority = data.get("priority", "MEDIA")
+        db.session.commit()
+        return json.dumps({"status": "ok", "id": r.id})
+
+    rfos = RFO.query.order_by(RFO.created_at.desc()).all()
+    return json.dumps([{
+        "id": r.id, "title": r.title, "status": r.status, 
+        "created_at": r.created_at.isoformat(), 
+        "tech": User.query.get(r.technician_id).username if r.technician_id else "N/A"
+    } for r in rfos])
+
+# --- SUPERVISÃO DE CAMPO (REGISTRO ÚNICO / MÚLTIPLOS TÉCNICOS) ---
+@app.route("/api/gestao/supervisao", methods=["GET", "POST"])
+@supervisor_allowed
+def api_supervisao():
+    if request.method == "POST":
+        from sqlalchemy.orm.attributes import flag_modified
+        data = request.json
+        # Lógica de salvamento unificado
+        # ... (simplificada para o restauro inicial)
+        return json.dumps({"status": "ok"})
+    
+    # Placeholder para listagem
+    return json.dumps([])
+
+# --- SOLICITAÇÕES INTERNAS ---
+@app.route("/api/gestao/solicitacoes", methods=["GET", "POST"])
+@login_required
+def api_solicitacoes():
+    # Endpoints de solicitações de troca de plantão, etc.
+    return json.dumps([])
+
 
     p = RELATORIOS_DIR / nome
     if p.exists():
@@ -1631,6 +2018,23 @@ def checklist_detail(cid):
     photos = data.get("photos", [])
     items = data.get("items", {})
     return render_template("checklist_detail.html", c=c, items=items, photos=photos)
+
+
+@app.route("/checklists/<int:cid>/excluir", methods=["POST"])
+@supervisor_allowed
+def checklist_delete(cid):
+    c = Checklist.query.get_or_404(cid)
+    try:
+        db.session.delete(c)
+        db.session.commit()
+        registrar_log(f"Checklist excluído: ID {cid} (Técnico: {c.technician})")
+        flash("Checklist excluído com sucesso.", "success")
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Erro ao excluir checklist: {e}", "error")
+    return redirect(url_for("checklists"))
+
+
 
 
 # ----------------- CONFIGURAÇÃO DO CHECKLIST (ITENS + MODO) -----------------
@@ -2368,6 +2772,60 @@ def vistorias_nova():
     return render_template("vistorias_nova.html", veiculos=veiculos)
 
 
+# ----------------- ROTAS: COMUNICAÇÕES (AVISOS) -----------------
+@app.route("/avisos")
+@login_required
+def avisos():
+    notifications = Announcement.query.order_by(Announcement.created_at.desc()).all()
+    # Adicionando manuais para evitar UndefinedError no template
+    manuais = {
+        'admin_supervisor': '',
+        'tecnico_manutencao': ''
+    }
+    return render_template("avisos.html", notifications=notifications, manuais=manuais)
+
+@app.route("/avisos/novo", methods=["POST"])
+@supervisor_allowed
+def avisos_novo():
+    title = request.form.get("title")
+    message = request.form.get("message")
+    category = request.form.get("category", "Geral")
+    
+    if title and message:
+        a = Announcement(
+            title=title,
+            message=message,
+            category=category,
+            created_by=current_user.id
+        )
+        db.session.add(a)
+        db.session.commit()
+        flash("Comunicado enviado com sucesso!", "success")
+    else:
+        flash("Título e mensagem são obrigatórios.", "error")
+        
+    return redirect(url_for("avisos"))
+
+@app.route("/avisos/excluir/<int:aid>", methods=["POST"])
+@supervisor_allowed
+def avisos_excluir(aid):
+    a = Announcement.query.get_or_404(aid)
+    db.session.delete(a)
+    db.session.commit()
+    flash("Comunicado excluído.", "success")
+    return redirect(url_for("avisos"))
+
+
+@app.route("/rfo")
+@supervisor_allowed
+def rfo_list():
+    return render_template("rfo_list.html")
+
+@app.route("/geradores")
+@supervisor_allowed
+def geradores():
+    return render_template("geradores.html")
+
 
 
 @app.route("/vistorias/<int:vistoria_id>")
@@ -2388,5 +2846,173 @@ def vistorias_detail(vistoria_id):
 
 
 # ----------------- EXECUÇÃO -----------------
+# ===============================
+# 🎓 MÓDULO: LMS (TREINAMENTOS)
+# ===============================
+
+# ----------------- ROTAS: LMS (TREINAMENTOS) -----------------
+@app.route("/treinamentos/mobile")
+@login_required
+def treinamentos_mobile():
+    return render_template("treinamentos_mobile.html")
+
+@app.route("/treinamentos/admin")
+@supervisor_allowed
+def treinamentos_admin():
+    return render_template("treinamentos_admin.html")
+
+@app.route("/treinamentos/gerir")
+@supervisor_allowed
+def treinamentos_gerir():
+    return render_template("treinamentos_gerir.html")
+
+@app.route("/api/training/list")
+@login_required
+def api_training_list():
+    try:
+        courses = Training.query.order_by(Training.created_at.desc()).all()
+        return json.dumps([{
+            "id": c.id,
+            "title": c.title,
+            "description": c.description,
+            "allow_retake": c.allow_retake,
+            "badge": {
+                "name": c.badge.name,
+                "icon": c.badge.icon,
+                "color": c.badge.color
+            } if c.badge else None,
+            "module_count": len(c.modules)
+        } for c in courses])
+    except Exception as e:
+        return json.dumps({"error": str(e)}), 500
+
+@app.route("/api/training/save", methods=["POST"])
+@supervisor_allowed
+def api_training_save():
+    try:
+        data = request.json
+        course_id = data.get("id")
+        
+        if course_id:
+            course = Course.query.get(course_id)
+        else:
+            course = Course()
+            db.session.add(course)
+        
+        course.title = data.get("title")
+        course.description = data.get("description")
+        course.allow_retake = data.get("allow_retake", True)
+        
+        # Gestão de Badge
+        badge_data = data.get("badge")
+        if badge_data:
+            if not course.badge:
+                course.badge = Badge(course_id=course.id)
+            course.badge.name = badge_data.get("name")
+            course.badge.icon = badge_data.get("icon")
+            course.badge.color = badge_data.get("color")
+        
+        db.session.commit()
+        return json.dumps({"status": "ok", "id": course.id})
+    except Exception as e:
+        db.session.rollback()
+        return json.dumps({"error": str(e)}), 500
+
+@app.route("/api/training/submit", methods=["POST"])
+@login_required
+def api_training_submit():
+    try:
+        data = request.json
+        course_id = data.get("course_id")
+        answers = data.get("answers") # list of {question_id, answer_index}
+        
+        # Lógica de correção e atribuição de Badge
+        # ... (simplificada para restauro)
+        return json.dumps({"status": "ok", "score": 100})
+    except Exception as e:
+        return json.dumps({"error": str(e)}), 500
+
+@app.route("/api/badges/list")
+@login_required
+def api_badges_list():
+    try:
+        user_badges = Badge.query.join(Attempt).filter(Attempt.user_id == current_user.id, Attempt.score >= 70).all()
+        return json.dumps([{
+            "name": b.name,
+            "icon": b.icon,
+            "color": b.color,
+            "earned_at": "Recente"
+        } for b in user_badges])
+    except Exception as e:
+        return json.dumps({"error": str(e)}), 500
+
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    with app.app_context():
+        db.create_all()
+    app.run(host="0.0.0.0", port=5001, debug=True)
+
+# ============================================
+# 📡 MÓDULO GPS ISOLADO (TK103)
+# ============================================
+
+class GPSDevice(db.Model):
+    __tablename__ = "gps_device"
+    id = db.Column(db.Integer, primary_key=True)
+    imei = db.Column(db.String(50), unique=True, nullable=False)
+    vehicle_id = db.Column(db.Integer, db.ForeignKey('vehicle.id'), unique=True)
+    vehicle = db.relationship("Vehicle", backref=db.backref("gps_device", uselist=False))
+    model = db.Column(db.String(50), default="TK103")
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=agora)
+
+class GPSLog(db.Model):
+    __tablename__ = "gps_log"
+    id = db.Column(db.Integer, primary_key=True)
+    imei = db.Column(db.String(50), nullable=False, index=True)
+    vehicle_id = db.Column(db.Integer, db.ForeignKey('vehicle.id'), nullable=True)
+    lat = db.Column(db.Float)
+    lon = db.Column(db.Float)
+    speed = db.Column(db.Float)
+    angle = db.Column(db.Float)
+    ignition = db.Column(db.Boolean)
+    timestamp = db.Column(db.DateTime, default=agora)
+    raw_data = db.Column(db.Text)
+
+@app.route("/tracking")
+@login_required
+def tracking():
+    if not current_user.has_permission("frota"):
+        abort(403)
+    return render_template("tracking.html")
+
+@app.route("/api/gps/current")
+@login_required
+def api_gps_current():
+    vehicles = Vehicle.query.filter_by(status="ATIVO").all()
+    results = []
+    for v in vehicles:
+        last_log = GPSLog.query.filter_by(vehicle_id=v.id).order_by(GPSLog.timestamp.desc()).first()
+        if not last_log and v.gps_device:
+            last_log = GPSLog.query.filter_by(imei=v.gps_device.imei).order_by(GPSLog.timestamp.desc()).first()
+        
+        is_online = False
+        if last_log:
+            diff = (agora() - last_log.timestamp).total_seconds()
+            is_online = diff < 600
+            
+        data = {
+            "id": v.id,
+            "plate": v.plate,
+            "model": v.model,
+            "technician": "Equipamento: " + (v.gps_device.imei if v.gps_device else "Não vinculado"),
+            "lat": last_log.lat if last_log else None,
+            "lon": last_log.lon if last_log else None,
+            "speed": last_log.speed if last_log else 0,
+            "angle": last_log.angle if last_log else 0,
+            "ignition": last_log.ignition if last_log else False,
+            "last_time": last_log.timestamp.strftime("%d/%m %H:%M") if last_log else "Sem dados",
+            "is_online": is_online,
+            "status_text": "Em Movimento" if is_online and last_log.speed > 5 else ("Parado" if is_online else "Offline")
+        }
+        results.append(data)
+    return jsonify({"vehicles": results})

@@ -1,0 +1,24 @@
+[2026-05-16 13:32:49 -0300] [3300264] [INFO] Starting gunicorn 23.0.0
+[2026-05-16 13:32:49 -0300] [3300264] [INFO] Listening at: http://127.0.0.1:8001 (3300264)
+[2026-05-16 13:32:49 -0300] [3300264] [INFO] Using worker: sync
+[2026-05-16 13:32:49 -0300] [3300267] [INFO] Booting worker with pid: 3300267
+[2026-05-16 13:32:49 -0300] [3300268] [INFO] Booting worker with pid: 3300268
+[2026-05-16 13:32:49 -0300] [3300269] [INFO] Booting worker with pid: 3300269
+[2026-05-16 13:33:16,557] ERROR in app: Exception on /api/gps/current [GET]
+Traceback (most recent call last):
+  File "/var/www/checklist_veicular/venv/lib/python3.13/site-packages/flask/app.py", line 1473, in wsgi_app
+    response = self.full_dispatch_request()
+  File "/var/www/checklist_veicular/venv/lib/python3.13/site-packages/flask/app.py", line 882, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "/var/www/checklist_veicular/venv/lib/python3.13/site-packages/flask/app.py", line 880, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "/var/www/checklist_veicular/venv/lib/python3.13/site-packages/flask/app.py", line 865, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/var/www/checklist_veicular/venv/lib/python3.13/site-packages/flask_login/utils.py", line 290, in decorated_view
+    return current_app.ensure_sync(func)(*args, **kwargs)
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/var/www/checklist_veicular/app.py", line 3018, in api_gps_current
+    return jsonify({"vehicles": results})
+           ^^^^^^^
+NameError: name 'jsonify' is not defined

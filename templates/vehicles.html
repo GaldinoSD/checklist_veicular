@@ -3,6 +3,15 @@
 {% block content %}
 
 <style>
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .animate-fade-in-up {
+    animation: fadeInUp 0.4s ease-out forwards;
+    opacity: 0;
+  }
+
   /* backdrop premium (light/dark) */
   dialog::backdrop{
     background: rgba(0,0,0,.55);
@@ -18,37 +27,48 @@
 <!-- ===============================
       CABEÇALHO + BUSCA + NOVO
 ================================ -->
-<div class="flex flex-col lg:flex-row lg:items-center lg:justify-between mb-10 gap-4">
+<!-- ✅ HEADER PREMIUM VEÍCULOS COMPACT -->
+<div class="mb-8 animate-premium">
+    <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6 glass-premium p-6 rounded-[2rem] shadow-xl overflow-hidden relative">
+        <!-- Decorativos -->
+        <div class="absolute -top-24 -right-24 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl"></div>
+        <div class="absolute -bottom-24 -left-24 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl"></div>
 
-  <h2 class="text-3xl font-bold tracking-wide text-slate-900 dark:text-white drop-shadow">
-    🚗 Veículos
-  </h2>
+        <div class="flex items-center gap-5 relative z-10">
+            <div class="w-12 h-12 rounded-[1.25rem] bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-2xl shadow-blue-500/20">
+                <i class="fa-solid fa-car-side text-xl"></i>
+            </div>
+            <div>
+                <nav class="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-0.5">
+                    <span>Ativos</span>
+                    <i class="fa-solid fa-chevron-right text-[8px] opacity-30"></i>
+                    <span class="text-blue-500">Frota de Veículos</span>
+                </nav>
+                <h2 class="text-2xl font-black text-slate-800 dark:text-white tracking-tight">Gerenciamento de Frota</h2>
+            </div>
+        </div>
 
-  <div class="flex items-center gap-3 w-full lg:w-auto">
+        <div class="flex flex-wrap items-center gap-4 relative z-10">
+            <!-- BUSCA PREMIUM COMPACT -->
+            <form method="get" class="flex items-center gap-2 group">
+                <div class="relative">
+                    <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors text-xs"></i>
+                    <input name="q" value="{{ q }}" placeholder="Buscar placa ou modelo..." 
+                           class="bg-slate-900/5 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 rounded-xl pl-10 pr-4 py-2.5 text-xs font-bold text-slate-700 dark:text-white placeholder:text-slate-400 outline-none focus:border-blue-500/50 transition-all w-56">
+                </div>
+                <button class="p-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-lg shadow-blue-500/20 transition-all active:scale-95">
+                    <i class="fa-solid fa-magnifying-glass text-xs"></i>
+                </button>
+            </form>
 
-      <!-- BUSCA -->
-      <form method="get" class="flex items-center gap-2 flex-1">
-        <input name="q" value="{{ q }}" placeholder="Buscar por placa, marca ou modelo..."
-               class="flex-1 bg-white/70 dark:bg-gray-900/60
-                      border border-slate-900/10 dark:border-white/10
-                      rounded-xl px-4 py-2
-                      text-slate-900 dark:text-gray-200
-                      placeholder:text-slate-400 dark:placeholder:text-gray-500
-                      focus:outline-none focus:ring-2 focus:ring-blue-600/40
-                      shadow">
-        <button class="px-6 py-2 bg-blue-600 hover:bg-blue-500 rounded-xl text-white font-medium shadow">
-          Buscar
-        </button>
-      </form>
-
-      <!-- BOTÃO NOVO VEÍCULO -->
-      {% if ROLE_ADMIN %}
-      <button type="button" onclick="document.getElementById('modalNovoVeiculo').showModal()"
-              class="px-5 py-2 bg-green-600 hover:bg-green-500 rounded-xl text-white font-semibold shadow-lg whitespace-nowrap">
-          <i class="fa-solid fa-plus mr-1"></i> Novo
-      </button>
-      {% endif %}
-  </div>
+            {% if ROLE_ADMIN %}
+            <button type="button" onclick="document.getElementById('modalNovoVeiculo').showModal()"
+                    class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-emerald-500/20 transition-all active:scale-95 flex items-center gap-2">
+                <i class="fa-solid fa-plus text-xs"></i> Novo
+            </button>
+            {% endif %}
+        </div>
+    </div>
 </div>
 
 <!-- ===============================
@@ -80,14 +100,11 @@
 <!-- ========================
         CARD PREMIUM ULTRA
 ========================= -->
-<div class="group relative rounded-2xl border {{ card }} shadow-xl p-5
-            overflow-hidden transition-all duration-300
-            hover:scale-[1.04] hover:-translate-y-1
-            hover:shadow-blue-900/10 dark:hover:shadow-blue-900/40
-            backdrop-blur-xl bg-opacity-40 border-opacity-40">
+<div class="card-premium group relative p-6 animate-fade-in-up overflow-hidden"
+     style="animation-delay: {{ loop.index0 * 0.05 }}s;">
 
     <!-- BARRA LATERAL COLORIDA -->
-    <div class="absolute left-0 top-0 h-full w-1.5
+    <div class="absolute left-0 top-0 h-full w-2
                 {% if tipo == 'caminhao' %} bg-orange-500
                 {% elif tipo == 'moto' %} bg-yellow-500
                 {% elif tipo == 'van' %} bg-teal-500
@@ -189,33 +206,27 @@
 
     <!-- BOTÕES -->
     {% if ROLE_ADMIN %}
-    <div class="mt-5 border-t border-slate-900/10 dark:border-white/10 pt-4">
-
+    <div class="mt-6 flex flex-col gap-2 relative z-10">
       <div class="flex gap-2">
         <button type="button"
                 onclick="document.getElementById('info{{ v.id }}').showModal()"
-                class="w-1/2 px-2 py-1.5 text-xs
-                       bg-slate-800 hover:bg-slate-700
-                       dark:bg-gray-700 dark:hover:bg-gray-600
-                       rounded-lg text-white shadow font-semibold transit">
-            Ver info
+                class="flex-1 px-4 py-3 bg-slate-900/5 dark:bg-white/5 hover:bg-slate-900/10 dark:hover:bg-white/10 rounded-[1.25rem] text-slate-600 dark:text-gray-300 font-bold text-[10px] uppercase tracking-widest transition-all flex items-center justify-center gap-2">
+            <i class="fa-solid fa-circle-info text-xs"></i> Info
         </button>
 
         <button type="button"
                 onclick="document.getElementById('edit{{ v.id }}').showModal()"
-                class="w-1/2 px-2 py-1.5 text-xs bg-blue-600 hover:bg-blue-500 rounded-lg
-                       text-white shadow font-semibold transit">
-            Editar
+                class="flex-1 px-4 py-3 bg-blue-600/10 hover:bg-blue-600/20 rounded-[1.25rem] text-blue-600 dark:text-blue-400 font-bold text-[10px] uppercase tracking-widest transition-all flex items-center justify-center gap-2">
+            <i class="fa-solid fa-pen-to-square text-xs"></i> Editar
         </button>
       </div>
 
-      <form class="mt-2" method="post" action="{{ url_for('vehicle_delete', vid=v.id) }}"
-            onsubmit="return confirm('Excluir veículo {{ v.plate }}?');">
-        <button class="w-full px-2 py-1.5 text-xs bg-red-700 hover:bg-red-600 rounded-lg text-white shadow font-semibold">
-          Excluir
+      <form method="post" action="{{ url_for('vehicle_delete', vid=v.id) }}"
+            onsubmit="return confirm('Atenção: Tem certeza que deseja excluir o veículo {{ v.plate }}?');">
+        <button class="w-full px-4 py-3 bg-red-500/5 hover:bg-red-500/10 rounded-[1.25rem] text-red-500 font-bold text-[10px] uppercase tracking-widest transition-all flex items-center justify-center gap-2">
+          <i class="fa-solid fa-trash-can text-xs"></i> Excluir Registro
         </button>
       </form>
-
     </div>
     {% endif %}
 </div>
@@ -534,6 +545,26 @@
   </form>
 </dialog>
 
+{% else %}
+<div class="col-span-1 sm:col-span-2 lg:col-span-3 xl:col-span-4 flex flex-col items-center justify-center py-20 text-center animate-fade-in-up">
+    <div class="w-32 h-32 mb-6 text-slate-300 dark:text-gray-700 flex items-center justify-center rounded-full bg-slate-100 dark:bg-gray-800/50">
+        <i class="fa-solid fa-car-side text-6xl"></i>
+    </div>
+    <h3 class="text-2xl font-bold text-slate-800 dark:text-gray-200 mb-2">Nenhum veículo encontrado</h3>
+    <p class="text-slate-500 dark:text-gray-400 mb-6 max-w-md">
+        {% if q %}
+        Não encontramos resultados para a busca "{{ q }}". Tente utilizar termos diferentes ou limpe a busca.
+        {% else %}
+        Sua frota está vazia. Comece a cadastrar os veículos para acompanhá-los de perto.
+        {% endif %}
+    </p>
+    {% if ROLE_ADMIN %}
+    <button type="button" onclick="document.getElementById('modalNovoVeiculo').showModal()"
+            class="px-6 py-2.5 bg-green-600 hover:bg-green-500 rounded-xl text-white font-semibold shadow-lg transition-transform hover:-translate-y-1">
+        <i class="fa-solid fa-plus mr-2"></i> Cadastrar Primeiro Veículo
+    </button>
+    {% endif %}
+</div>
 {% endfor %}
 </div>
 

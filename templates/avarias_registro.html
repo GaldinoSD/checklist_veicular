@@ -3,18 +3,35 @@
 
 <div class="max-w-7xl mx-auto">
 
-  <!-- HEADER -->
-  <div class="flex items-center justify-between mb-8">
-    <h1 class="text-4xl font-bold text-slate-900 dark:text-white tracking-wide flex items-center gap-3">
-      <i class="fa-solid fa-car-burst text-red-500"></i>
-      Avarias e Ordens de Serviço
-    </h1>
+<!-- ✅ HEADER PREMIUM AVARIAS COMPACT -->
+<div class="mb-8 animate-premium">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 glass-premium p-6 rounded-[2rem] shadow-xl overflow-hidden relative">
+        <!-- Decorativos -->
+        <div class="absolute -top-24 -right-24 w-64 h-64 bg-red-500/10 rounded-full blur-3xl"></div>
+        <div class="absolute -bottom-24 -left-24 w-64 h-64 bg-orange-500/10 rounded-full blur-3xl"></div>
 
-    <button onclick="document.getElementById('modalNovaAvaria').showModal()"
-            class="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-lg transition">
-      <i class="fa-solid fa-plus mr-1"></i> Nova Avaria
-    </button>
-  </div>
+        <div class="flex items-center gap-5 relative z-10">
+            <div class="w-12 h-12 rounded-[1.25rem] bg-gradient-to-br from-red-500 to-orange-600 flex items-center justify-center text-white shadow-2xl shadow-red-500/20">
+                <i class="fa-solid fa-car-burst text-xl"></i>
+            </div>
+            <div>
+                <nav class="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-0.5">
+                    <span>Manutenção</span>
+                    <i class="fa-solid fa-chevron-right text-[8px] opacity-30"></i>
+                    <span class="text-red-500">Avarias & O.S.</span>
+                </nav>
+                <h2 class="text-2xl font-black text-slate-800 dark:text-white tracking-tight">Ordens de Serviço</h2>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-4 relative z-10">
+            <button onclick="document.getElementById('modalNovaAvaria').showModal()"
+                    class="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-red-500/20 transition-all active:scale-95 flex items-center gap-2">
+                <i class="fa-solid fa-plus text-xs"></i> Nova Avaria
+            </button>
+        </div>
+    </div>
+</div>
 
   <!-- ============================
        LISTA DE ORDENS DE SERVIÇO
@@ -100,8 +117,7 @@
 </div>
 
 <!-- =====================================
-      MODAL: NOVA AVARIA (MENOR)
-      ✅ REMOVIDO CAMPO RESPONSÁVEL
+      MODAL: NOVA AVARIA (KM AUTOMÁTICO)
 ===================================== -->
 <dialog id="modalNovaAvaria"
         class="rounded-2xl bg-white dark:bg-gray-900 border border-slate-900/10 dark:border-gray-700 p-5 shadow-2xl w-[380px]">
@@ -111,24 +127,33 @@
   <form action="{{ url_for('avarias_registro') }}" method="POST" class="space-y-4">
     <input type="hidden" name="acao" value="nova">
 
+    <!-- VEÍCULO -->
     <div>
       <label class="text-sm text-slate-700 dark:text-gray-300 font-medium">Veículo</label>
       <select name="veiculo_id"
+              id="veiculo_id"
+              onchange="atualizarKM()"
               class="w-full text-slate-900 dark:text-white bg-white dark:bg-gray-800 border border-slate-900/10 dark:border-gray-600 p-2.5 rounded-lg"
               required>
         {% for v in veiculos %}
-        <option value="{{ v.id }}">{{ v.brand }} {{ v.model }} - {{ v.plate }}</option>
+        <option value="{{ v.id }}" data-km="{{ v.km }}">
+          {{ v.brand }} {{ v.model }} - {{ v.plate }}
+        </option>
         {% endfor %}
       </select>
     </div>
 
+    <!-- 🔥 KM AUTOMÁTICO -->
     <div>
       <label class="text-sm text-slate-700 dark:text-gray-300 font-medium">KM Atual</label>
-      <input type="number" name="km"
-             class="w-full text-slate-900 dark:text-white bg-white dark:bg-gray-800 border border-slate-900/10 dark:border-gray-600 p-2.5 rounded-lg"
-             required>
+      <input type="number"
+             name="km"
+             id="km"
+             readonly
+             class="w-full text-slate-900 dark:text-white bg-gray-100 dark:bg-gray-700 border border-slate-900/10 dark:border-gray-600 p-2.5 rounded-lg">
     </div>
 
+    <!-- GRAVIDADE -->
     <div>
       <label class="text-sm text-slate-700 dark:text-gray-300 font-medium">Gravidade</label>
       <select name="gravidade"
@@ -141,6 +166,7 @@
       </select>
     </div>
 
+    <!-- DESCRIÇÃO -->
     <div>
       <label class="text-sm text-slate-700 dark:text-gray-300 font-medium">Descrição</label>
       <textarea name="descricao" rows="3"
@@ -287,6 +313,30 @@ function openDetalhes(id) {
   document.getElementById("det_fechamento").innerText = dados.data_fechamento || "-";
 
   document.getElementById("modalDetalhesOS").showModal();
+}
+
+/////////////////////////////////////////////////////
+// 🔥 NOVO: KM AUTOMÁTICO
+/////////////////////////////////////////////////////
+function atualizarKM() {
+  const select = document.getElementById("veiculo_id");
+  if (!select) return;
+
+  const km = select.options[select.selectedIndex].dataset.km;
+  document.getElementById("km").value = km || 0;
+}
+
+// quando abrir a página
+document.addEventListener("DOMContentLoaded", () => {
+  atualizarKM();
+});
+
+// quando abrir o modal
+const btnNova = document.querySelector('[onclick*="modalNovaAvaria"]');
+if (btnNova) {
+  btnNova.addEventListener("click", () => {
+    setTimeout(() => atualizarKM(), 100);
+  });
 }
 </script>
 

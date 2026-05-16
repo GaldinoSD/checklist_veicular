@@ -2,9 +2,53 @@
 {% set page_title = "Relatórios" %}
 {% block content %}
 
-<div class="bg-white/70 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl shadow p-5">
+<!-- ✅ HEADER PREMIUM RELATÓRIOS COMPACT -->
+<div class="mb-8 animate-premium">
+    <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-6 glass-premium p-6 rounded-[2rem] shadow-xl overflow-hidden relative">
+        <!-- Decorativos -->
+        <div class="absolute -top-24 -right-24 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl"></div>
+        <div class="absolute -bottom-24 -left-24 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl"></div>
 
-  <h2 class="text-lg font-semibold mb-4 text-slate-900 dark:text-white">Relatórios (PDF)</h2>
+        <div class="flex items-center gap-5 relative z-10">
+            <div class="w-12 h-12 rounded-[1.25rem] bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-2xl shadow-blue-500/20">
+                <i class="fa-solid fa-file-pdf text-xl"></i>
+            </div>
+            <div>
+                <nav class="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-0.5">
+                    <span>Inteligência</span>
+                    <i class="fa-solid fa-chevron-right text-[8px] opacity-30"></i>
+                    <span class="text-blue-500">Consolidado de Frota</span>
+                </nav>
+                <h2 class="text-2xl font-black text-slate-800 dark:text-white tracking-tight">Relatórios</h2>
+            </div>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-4 relative z-10">
+            <form action="{{ url_for('reports_generate') }}" method="post" class="flex flex-wrap items-center gap-3">
+                <select name="veiculo_id" required
+                        class="bg-slate-900/5 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-white outline-none focus:border-blue-500/50 transition-all w-48">
+                    <option value="">Selecione Veículo</option>
+                    {% for v in veiculos %}
+                        <option value="{{ v.id }}">{{ v.plate }} - {{ v.model }}</option>
+                    {% endfor %}
+                </select>
+                <input type="text" name="periodo" id="periodo_gerar" required readonly placeholder="Período (Início - Fim)"
+                       class="bg-slate-900/5 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-white placeholder:text-slate-400 outline-none focus:border-blue-500/50 transition-all w-48 cursor-pointer">
+                <button type="submit" 
+                        class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-blue-500/20 transition-all active:scale-95 flex items-center gap-2">
+                    <i class="fa-solid fa-wand-magic-sparkles text-xs"></i> Gerar
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="card-premium p-6">
+  <h3 class="text-sm font-black text-slate-800 dark:text-white uppercase tracking-wider mb-6">Arquivos Gerados</h3>
+
+  <div class="h-px bg-slate-900/10 dark:bg-white/10 mb-8"></div>
+
+  <h2 class="text-lg font-semibold mb-4 text-slate-900 dark:text-white">Arquivos Gerados</h2>
 
   {% set ns = namespace(last_group=None) %}
 
@@ -94,5 +138,24 @@
   </div>
 
 </div>
+
+<!-- ✅ LITEPICKER PARA O FORMULÁRIO -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/litepicker/dist/css/litepicker.css" />
+<script src="https://cdn.jsdelivr.net/npm/litepicker/dist/bundle.js"></script>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    new Litepicker({
+      element: document.getElementById('periodo_gerar'),
+      singleMode: false,
+      numberOfMonths: 2,
+      numberOfColumns: 2,
+      format: 'YYYY-MM-DD',
+      delimiter: ' - ',
+      autoApply: true,
+      maxDate: new Date()
+    });
+  });
+</script>
 
 {% endblock %}

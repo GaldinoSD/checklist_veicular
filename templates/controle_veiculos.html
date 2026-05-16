@@ -1,28 +1,37 @@
 {% extends "layout.html" %}
 {% block content %}
 
-<div class="glass border border-slate-900/10 dark:border-white/20 rounded-2xl p-6 space-y-5
-            bg-white/70 dark:bg-white/5">
+<!-- ✅ HEADER PREMIUM CONTROLE E/S COMPACT -->
+<div class="mb-8 animate-premium">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 glass-premium p-6 rounded-[2rem] shadow-xl overflow-hidden relative">
+        <!-- Decorativos -->
+        <div class="absolute -top-24 -right-24 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl"></div>
+        <div class="absolute -bottom-24 -left-24 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl"></div>
 
-  <!-- CABEÇALHO DA PÁGINA -->
-  <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-    <div>
-      <h1 class="text-2xl font-semibold text-slate-900 dark:text-white">
-        🚗 Controle de Entrada e Saída
-      </h1>
-      <p class="text-sm text-slate-600 dark:text-gray-300 mt-1">
-        O primeiro registro do veículo é sempre <b>Saída</b>. Depois, registre a <b>Chegada</b> no botão.
-      </p>
-    </div>
+        <div class="flex items-center gap-5 relative z-10">
+            <div class="w-12 h-12 rounded-[1.25rem] bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-2xl shadow-blue-500/20">
+                <i class="fa-solid fa-right-left text-xl"></i>
+            </div>
+            <div>
+                <nav class="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-0.5">
+                    <span>Atividade</span>
+                    <i class="fa-solid fa-chevron-right text-[8px] opacity-30"></i>
+                    <span class="text-blue-500">Fluxo de Movimentação</span>
+                </nav>
+                <h2 class="text-2xl font-black text-slate-800 dark:text-white tracking-tight">Controle E/S</h2>
+            </div>
+        </div>
 
-    <div class="flex items-center gap-2">
-      <button type="button"
-              onclick="abrirModalSaida()"
-              class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold shadow-lg">
-        + Nova Saída
-      </button>
+        <div class="flex items-center gap-4 relative z-10">
+            <button type="button" onclick="abrirModalSaida()"
+                    class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-blue-500/20 transition-all active:scale-95 flex items-center gap-2">
+                <i class="fa-solid fa-plus text-xs"></i> Nova Saída
+            </button>
+        </div>
     </div>
-  </div>
+</div>
+
+<div class="card-premium p-6">
 
   <!-- TABELA / HISTÓRICO -->
   <div class="border-t border-slate-900/10 dark:border-white/20 pt-5">

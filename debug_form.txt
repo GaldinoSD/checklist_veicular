@@ -1,0 +1,3 @@
+
+User: jonatas | Form: ImmutableMultiDict([('perm_checklist_mobile', 'on'), ('perm_vistorias_nova', 'on'), ('perm_avarias', 'on')])
+User: jonatas | Form: ImmutableMultiDict([('perm_checklist_mobile', 'on')])

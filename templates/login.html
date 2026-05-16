@@ -16,32 +16,60 @@
       max-height: 120px;
       object-fit: contain;
     }
+
+    /* Fundo Desktop */
+    .bg-container {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      background-image: url("{{ url_for('static', filename='img.png') }}");
+      background-size: 100% 100%;
+      background-position: center;
+      background-repeat: no-repeat;
+      /* Filtros para melhorar a "pegada" visual */
+      filter: brightness(1.05) contrast(1.05);
+      image-rendering: -webkit-optimize-contrast;
+    }
+
+    /* Ajustes para Mobile */
+    @media (max-width: 768px) {
+      .bg-container {
+        background-image: url("{{ url_for('static', filename='imgmbl.png') }}");
+        background-size: 100% 100%;
+        filter: brightness(1.0) contrast(1.1);
+      }
+      
+      .login-card {
+        max-width: 90% !important;
+        margin: 0 auto;
+      }
+    }
+
+    /* Camada de escurecimento */
+    .bg-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.15);
+      z-index: 1;
+      pointer-events: none;
+    }
   </style>
 </head>
 
-<body class="h-full flex items-center justify-center 
-             bg-gradient-to-br 
-             from-gray-950 via-gray-900 to-gray-800
+<body class="h-full flex items-end md:items-center justify-center md:justify-end px-6 md:px-0 md:pr-32 pb-32 md:pb-0
              relative overflow-hidden 
              text-gray-100">
 
-  <!-- EFEITOS DE FUNDO -->
-  <div class="absolute inset-0 pointer-events-none">
-    <div class="absolute -top-32 -left-20 w-[450px] h-[450px] 
-                bg-blue-600/20 
-                rounded-full blur-[130px]"></div>
-
-    <div class="absolute bottom-0 right-0 w-[350px] h-[350px] 
-                bg-purple-600/20 
-                rounded-full blur-[120px]"></div>
-  </div>
+  <!-- DIV DE FUNDO COM FILTROS -->
+  <div class="bg-container"></div>
+  <div class="bg-overlay"></div>
 
   <!-- CARD GLASS -->
   <form method="post"
-        class="relative z-10 w-full max-w-md backdrop-blur-2xl
-               bg-white/5 
+        class="login-card relative z-10 w-full max-w-sm backdrop-blur-md
+               bg-black/60 
                border border-white/10 
-               rounded-2xl shadow-2xl p-10">
+               rounded-2xl shadow-2xl p-8 md:p-10">
 
     <!-- LOGO -->
     <div class="w-full flex justify-center mb-8">
@@ -51,30 +79,30 @@
     </div>
 
     <!-- TÍTULO -->
-    <h1 class="text-2xl text-center font-bold 
+    <h1 class="text-xl text-center font-bold 
                text-white/90 
-               mb-8 tracking-wide">
+               mb-6 tracking-wide">
       <i class="fa-solid fa-user-shield 
                 text-blue-400 mr-2"></i>
       Acesso ao Sistema
     </h1>
 
     <!-- USUÁRIO -->
-    <div class="mb-6">
-      <label class="text-sm font-medium text-blue-200">
+    <div class="mb-5">
+      <label class="text-xs font-medium text-blue-200 uppercase tracking-wider">
         Usuário
       </label>
 
       <div class="flex items-center mt-1 
-                  bg-white/10 
-                  border border-white/20 
-                  backdrop-blur rounded-xl px-4 py-3 shadow-lg">
+                  bg-white/5 
+                  border border-white/10 
+                  backdrop-blur rounded-xl px-4 py-2.5 shadow-lg">
         <i class="fa-solid fa-user 
-                  text-blue-300 mr-3"></i>
+                  text-blue-300 mr-3 text-sm"></i>
 
         <input name="username"
                class="bg-transparent w-full 
-                      text-white
+                      text-white text-sm
                       placeholder-gray-400 
                       focus:outline-none"
                placeholder="Digite seu usuário" required>
@@ -82,21 +110,21 @@
     </div>
 
     <!-- SENHA -->
-    <div class="mb-10">
-      <label class="text-sm font-medium text-blue-200">
+    <div class="mb-8">
+      <label class="text-xs font-medium text-blue-200 uppercase tracking-wider">
         Senha
       </label>
 
       <div class="flex items-center mt-1 
-                  bg-white/10 
-                  border border-white/20 
-                  backdrop-blur rounded-xl px-4 py-3 shadow-lg">
+                  bg-white/5 
+                  border border-white/10 
+                  backdrop-blur rounded-xl px-4 py-2.5 shadow-lg">
         <i class="fa-solid fa-lock 
-                  text-blue-300 mr-3"></i>
+                  text-blue-300 mr-3 text-sm"></i>
 
         <input type="password" name="password"
                class="bg-transparent w-full 
-                      text-white
+                      text-white text-sm
                       placeholder-gray-400
                       focus:outline-none"
                placeholder="Digite sua senha" required>
@@ -104,11 +132,11 @@
     </div>
 
     <!-- BOTÃO -->
-    <button class="w-full py-3 rounded-xl font-semibold text-lg
+    <button class="w-full py-3 rounded-xl font-semibold text-base
                    bg-blue-600 hover:bg-blue-700 text-white 
                    shadow-xl
                    transition-all duration-300 transform 
-                   hover:-translate-y-[2px] active:scale-95">
+                   hover:-translate-y-[1px] active:scale-95">
       Entrar
     </button>
 
@@ -116,7 +144,7 @@
     {% with msgs = get_flashed_messages(with_categories=true) %}
       {% if msgs %}
         {% for cat, msg in msgs %}
-          <p class="text-red-400 text-center mt-4 font-semibold">
+          <p class="text-red-400 text-center mt-4 text-sm font-semibold">
             {{ msg }}
           </p>
         {% endfor %}

@@ -2,345 +2,243 @@
 {% set page_title = "Manutenção — Ordens de Serviço" %}
 {% block content %}
 
-<div class="max-w-7xl mx-auto">
+<div class="max-w-7xl mx-auto pb-12">
 
-  <!-- ============================================
-        TOPO — PERFIL + ALTERAR SENHA
-  ============================================ -->
-  <div class="p-4 rounded-2xl border shadow mb-8 backdrop-blur
-            bg-white/70 border-slate-900/10
-            dark:bg-white/5 dark:border-white/10">
+    <!-- ✅ HEADER PREMIUM MANUTENÇÃO -->
+    <div class="mb-10 animate-premium">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 glass-premium p-8 rounded-[2.5rem] shadow-xl overflow-hidden relative">
+            <!-- Decorativos -->
+            <div class="absolute -top-24 -right-24 w-64 h-64 bg-orange-500/10 rounded-full blur-3xl"></div>
+            <div class="absolute -bottom-24 -left-24 w-64 h-64 bg-yellow-500/10 rounded-full blur-3xl"></div>
 
-  <div class="flex items-center justify-between">
-
-    <!-- MINI PERFIL -->
-    <div class="flex items-center gap-3">
-      <div class="w-10 h-10 rounded-full border flex items-center justify-center text-lg font-bold
-                  bg-slate-900/5 border-slate-900/10 text-slate-900
-                  dark:bg-gray-900/60 dark:border-white/10 dark:text-white">
-        {{ current_user.username[:1] | upper }}
-      </div>
-
-      <div>
-        <p class="text-sm font-semibold text-slate-900 dark:text-white">
-          {{ current_user.username }}
-        </p>
-        <p class="text-xs text-slate-600 dark:text-gray-300">
-          Função: Manutenção
-        </p>
-      </div>
+            <div class="flex items-center gap-6 relative z-10">
+                <div class="w-16 h-16 rounded-[1.5rem] bg-gradient-to-br from-orange-500 to-yellow-600 flex items-center justify-center text-white shadow-2xl shadow-orange-500/30">
+                    <i class="fa-solid fa-screwdriver-wrench text-2xl"></i>
+                </div>
+                <div>
+                    <nav class="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">
+                        <span>Oficina Central</span>
+                        <i class="fa-solid fa-chevron-right text-[8px] opacity-30"></i>
+                        <span class="text-orange-500">Fluxo de Manutenção</span>
+                    </nav>
+                    <h2 class="text-3xl font-black text-slate-800 dark:text-white tracking-tight">Manutenção O.S</h2>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-4 relative z-10">
+                <div class="px-4 py-2 rounded-2xl bg-slate-900/5 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 relative z-10">
+                    <span class="text-[10px] font-black text-slate-500 dark:text-gray-400 uppercase tracking-widest block text-center">Etapa</span>
+                    <span class="text-xs font-black text-orange-600 dark:text-orange-400 uppercase block text-center">Manutenção</span>
+                </div>
+                
+                <div class="px-5 py-2.5 bg-orange-500/10 rounded-2xl border border-orange-500/20">
+                    <span class="text-[10px] font-black text-orange-600 dark:text-orange-400 uppercase tracking-widest block text-center">Pendentes</span>
+                    <span class="text-xl font-black text-slate-800 dark:text-white block text-center">
+                        {{ ordens | selectattr('status', 'equalto', 'aberta') | list | length }}
+                    </span>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <!-- BOTÃO ALTERAR SENHA -->
-    <button type="button"
-            onclick="document.getElementById('modalSenha').showModal()"
-            class="text-sm px-3 py-1.5 rounded-lg border transition
-                   bg-slate-900/5 hover:bg-slate-900/10 text-slate-900 border-slate-900/10
-                   dark:bg-gray-900/60 dark:hover:bg-gray-900/80 dark:text-white dark:border-white/10">
-      🔒 Alterar Senha
-    </button>
+    <!-- ✅ GRID DE O.S -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 animate-premium">
+        {% for os in ordens %}
+        {% if os.status == 'aberta' %}
+        <div class="card-premium p-6 flex flex-col group h-full">
+            <div class="flex justify-between items-start mb-6">
+                <div class="space-y-1">
+                    <div class="flex items-center gap-2">
+                        <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Protocolo</span>
+                        <span class="px-2 py-0.5 bg-slate-100 dark:bg-white/5 rounded-md text-[10px] font-bold text-slate-600 dark:text-gray-400">#{{ os.id }}</span>
+                    </div>
+                    <h3 class="text-xl font-black text-slate-800 dark:text-white tracking-tight group-hover:text-orange-500 transition-colors">
+                        {{ os.vehicle.plate }}
+                    </h3>
+                </div>
+                <div class="px-3 py-1 bg-amber-500/10 border border-amber-500/20 rounded-xl">
+                    <span class="text-[9px] font-black text-amber-600 uppercase tracking-widest">Aberta</span>
+                </div>
+            </div>
 
-  </div>
+            <div class="space-y-4 flex-1">
+                <div class="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-900/5 dark:border-white/5">
+                    <p class="text-[11px] font-bold text-slate-500 dark:text-gray-400 mb-1 uppercase tracking-tight">Descrição do Problema</p>
+                    <p class="text-sm font-medium text-slate-700 dark:text-gray-200 line-clamp-3 italic">
+                        "{{ os.descricao }}"
+                    </p>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="p-3 bg-white dark:bg-white/5 rounded-xl border border-slate-900/5 dark:border-white/5">
+                        <span class="text-[9px] font-black text-slate-400 uppercase block mb-1">Gravidade</span>
+                        <span class="text-xs font-bold {% if os.gravidade == 'alta' %}text-red-500{% else %}text-orange-500{% endif %} uppercase tracking-tighter">
+                            {{ os.gravidade }}
+                        </span>
+                    </div>
+                    <div class="p-3 bg-white dark:bg-white/5 rounded-xl border border-slate-900/5 dark:border-white/5">
+                        <span class="text-[9px] font-black text-slate-400 uppercase block mb-1">KM Atual</span>
+                        <span class="text-xs font-bold text-slate-700 dark:text-gray-200">{{ os.km }} KM</span>
+                    </div>
+                </div>
+                
+                <p class="text-[11px] font-bold text-slate-400 truncate">
+                    <i class="fa-solid fa-car-side mr-1"></i> {{ os.vehicle.brand }} {{ os.vehicle.model }}
+                </p>
+            </div>
+
+            <div class="mt-8 space-y-3">
+                <button onclick="openModal('modalInfoVeiculo{{ os.id }}')" 
+                        class="w-full py-3 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-600 dark:text-gray-300 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all">
+                    Ficha Técnica
+                </button>
+                <button onclick="openFinalizar({{ os.id }})" 
+                        class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest shadow-lg shadow-emerald-500/20 transition-all active:scale-95">
+                    Finalizar O.S
+                </button>
+            </div>
+        </div>
+        {% endif %}
+        {% endfor %}
+    </div>
+
+    {% if ordens | selectattr('status', 'equalto', 'aberta') | list | length == 0 %}
+    <div class="py-20 text-center glass-premium rounded-[3rem] animate-premium mt-6">
+        <div class="w-24 h-24 rounded-full bg-slate-100 dark:bg-white/5 flex items-center justify-center mx-auto mb-6">
+            <i class="fa-solid fa-check-double text-4xl text-emerald-500"></i>
+        </div>
+        <h3 class="text-2xl font-black text-slate-800 dark:text-white mb-2">Tudo em Ordem!</h3>
+        <p class="text-slate-500 max-w-sm mx-auto">Nenhuma ordem de serviço pendente para os veículos da frota.</p>
+    </div>
+    {% endif %}
 </div>
 
-
-  <!-- ============================================
-        LISTA DE O.S (SOMENTE ABERTAS)
-  ============================================ -->
-  <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-
-    {% for os in ordens %}
-    {% if os.status == 'aberta' %}
-    <div class="p-5 rounded-2xl border shadow-xl backdrop-blur transition hover:scale-[1.02]
-                bg-white/60 border-slate-900/10
-                dark:bg-white/5 dark:border-white/10">
-
-      <div class="flex justify-between items-center mb-3">
-        <h2 class="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
-          <i class="fa-solid fa-file-contract text-purple-500 dark:text-purple-300"></i>
-          #{{ os.id }}
-        </h2>
-
-        <span class="px-2 py-1 rounded-lg text-[11px] font-semibold border
-                     bg-yellow-500/10 border-yellow-600/20 text-yellow-800
-                     dark:bg-yellow-500/20 dark:border-yellow-600/40 dark:text-yellow-200">
-          ● Aberta
-        </span>
-      </div>
-
-      <p class="text-sm text-slate-800 dark:text-gray-200">
-        <b>Veículo:</b> {{ os.vehicle.plate }} — {{ os.vehicle.brand }} {{ os.vehicle.model }}
-      </p>
-
-      <p class="text-sm text-slate-800 dark:text-gray-200"><b>KM:</b> {{ os.km }}</p>
-      <p class="text-sm text-slate-800 dark:text-gray-200"><b>Gravidade:</b> {{ os.gravidade|capitalize }}</p>
-
-      <p class="text-xs mt-3 pt-2 border-t
-                text-slate-600 border-slate-900/10
-                dark:text-gray-400 dark:border-white/10">
-        {{ os.descricao }}
-      </p>
-
-      <div class="mt-3 space-y-2">
-        <button type="button"
-                onclick="document.getElementById('modalInfoVeiculo{{ os.id }}').showModal()"
-                class="w-full px-3 py-2 rounded-lg text-sm font-semibold shadow-md text-white
-                       bg-blue-600 hover:bg-blue-700">
-          Ver informações do veículo
-        </button>
-
-        <button type="button"
-                onclick="openFinalizar({{ os.id }})"
-                class="w-full px-3 py-2 rounded-lg text-sm font-semibold shadow-md text-white
-                       bg-green-600 hover:bg-green-700">
-          Finalizar O.S
-        </button>
-      </div>
+<!-- ✅ MODAIS FICHA TÉCNICA -->
+{% for os in ordens %}
+{% if os.status == 'aberta' %}
+<div id="modalInfoVeiculo{{ os.id }}" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden items-center justify-center z-[100] p-4">
+    <div class="bg-white dark:bg-slate-900 w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden border border-slate-900/10 dark:border-white/10 animate-premium">
+        <div class="px-8 py-6 border-b border-slate-900/10 dark:border-white/10 flex justify-between items-center bg-slate-50 dark:bg-white/5">
+            <div class="text-left">
+                <h3 class="text-xl font-black text-slate-800 dark:text-white tracking-tight">Ficha do Veículo</h3>
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">{{ os.vehicle.plate }} — {{ os.vehicle.brand }}</p>
+            </div>
+            <button onclick="closeModal('modalInfoVeiculo{{ os.id }}')" class="w-10 h-10 rounded-full hover:bg-slate-200 dark:hover:bg-white/10 text-slate-400 transition-all">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        
+        <div class="p-8 space-y-3 max-h-[60vh] overflow-y-auto custom-scrollbar text-left">
+            {% set info = os.vehicle.info %}
+            <div class="grid grid-cols-2 gap-3">
+                <div class="p-4 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-900/5 dark:border-white/5">
+                    <span class="text-[9px] font-black text-slate-400 uppercase block mb-1 tracking-widest">Óleo (Tipo)</span>
+                    <span class="text-xs font-bold text-slate-800 dark:text-white">{{ info.oil_type if info else '-' }}</span>
+                </div>
+                <div class="p-4 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-900/5 dark:border-white/5">
+                    <span class="text-[9px] font-black text-slate-400 uppercase block mb-1 tracking-widest">Óleo (Marca)</span>
+                    <span class="text-xs font-bold text-slate-800 dark:text-white">{{ info.oil_brand if info else '-' }}</span>
+                </div>
+                <div class="p-4 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-900/5 dark:border-white/5">
+                    <span class="text-[9px] font-black text-slate-400 uppercase block mb-1 tracking-widest">Capacidade (L)</span>
+                    <span class="text-xs font-bold text-slate-800 dark:text-white">{{ info.oil_capacity_l if info else '-' }}</span>
+                </div>
+                <div class="p-4 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-900/5 dark:border-white/5">
+                    <span class="text-[9px] font-black text-slate-400 uppercase block mb-1 tracking-widest">Filtro Óleo</span>
+                    <span class="text-xs font-bold text-slate-800 dark:text-white">{{ info.filter_oil if info else '-' }}</span>
+                </div>
+                <div class="p-4 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-900/5 dark:border-white/5">
+                    <span class="text-[9px] font-black text-slate-400 uppercase block mb-1 tracking-widest">Filtro Ar</span>
+                    <span class="text-xs font-bold text-slate-800 dark:text-white">{{ info.filter_air if info else '-' }}</span>
+                </div>
+                <div class="p-4 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-900/5 dark:border-white/5">
+                    <span class="text-[9px] font-black text-slate-400 uppercase block mb-1 tracking-widest">Filtro Comb.</span>
+                    <span class="text-xs font-bold text-slate-800 dark:text-white">{{ info.filter_fuel if info else '-' }}</span>
+                </div>
+                <div class="p-4 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-900/5 dark:border-white/5">
+                    <span class="text-[9px] font-black text-slate-400 uppercase block mb-1 tracking-widest">Arrefecimento</span>
+                    <span class="text-xs font-bold text-slate-800 dark:text-white">{{ info.coolant_type if info else '-' }}</span>
+                </div>
+                <div class="p-4 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-900/5 dark:border-white/5">
+                    <span class="text-[9px] font-black text-slate-400 uppercase block mb-1 tracking-widest">Pneus (PSI)</span>
+                    <span class="text-xs font-bold text-slate-800 dark:text-white">{{ info.tire_pressure if info else '-' }}</span>
+                </div>
+            </div>
+            <div class="p-4 bg-orange-500/5 rounded-2xl border border-orange-500/10 mt-4">
+                <span class="text-[9px] font-black text-orange-600 dark:text-orange-400 uppercase block mb-2 tracking-widest">Observações</span>
+                <p class="text-xs text-slate-600 dark:text-gray-300 italic">{{ info.notes if info and info.notes else 'Nenhuma observação.' }}</p>
+            </div>
+        </div>
+        <div class="p-6 bg-slate-50 dark:bg-white/5 border-t border-slate-900/10 dark:border-white/10">
+            <button onclick="closeModal('modalInfoVeiculo{{ os.id }}')" class="w-full py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-black uppercase tracking-[0.2em] text-[11px] transition-all active:scale-95">
+                Fechar Visualização
+            </button>
+        </div>
     </div>
-
-    <!-- ============================================
-          MODAL — INFORMAÇÕES DO VEÍCULO
-    ============================================= -->
-    <dialog id="modalInfoVeiculo{{ os.id }}"
-            class="rounded-2xl border p-6 shadow-2xl w-[520px] max-w-[92vw]
-                   bg-white border-slate-900/10
-                   dark:bg-gray-900 dark:border-white/10 backdrop:bg-black/70">
-
-      <div class="flex items-start justify-between gap-3 mb-3">
-        <div>
-          <h2 class="text-xl font-bold text-slate-900 dark:text-white">
-            Informações do Veículo — {{ os.vehicle.plate }}
-          </h2>
-          <p class="text-xs mt-1 text-slate-600 dark:text-gray-400">
-            {{ os.vehicle.brand }} {{ os.vehicle.model }} · {{ os.vehicle.year or '-' }}
-          </p>
-        </div>
-
-        <button type="button"
-                onclick="document.getElementById('modalInfoVeiculo{{ os.id }}').close()"
-                class="px-2 py-1 rounded-lg border transition
-                       bg-slate-900/5 hover:bg-slate-900/10 text-slate-700 border-slate-900/10
-                       dark:bg-white/5 dark:hover:bg-white/10 dark:text-gray-200 dark:border-white/10">
-          ✕
-        </button>
-      </div>
-
-      <div class="border-t border-slate-900/10 dark:border-white/10 my-4"></div>
-
-      {% set info = os.vehicle.info %}
-
-      <div class="space-y-2 text-sm text-slate-800 dark:text-gray-200">
-
-        <div class="flex justify-between">
-          <span class="text-slate-600 dark:text-gray-400">Óleo (tipo)</span>
-          <span class="font-medium">{{ info.oil_type if info else '-' }}</span>
-        </div>
-
-        <div class="flex justify-between">
-          <span class="text-slate-600 dark:text-gray-400">Óleo (marca)</span>
-          <span class="font-medium">{{ info.oil_brand if info else '-' }}</span>
-        </div>
-
-        <div class="flex justify-between">
-          <span class="text-slate-600 dark:text-gray-400">Capacidade (L)</span>
-          <span class="font-medium">
-            {% if info and info.oil_capacity_l is not none %}{{ info.oil_capacity_l }}{% else %}-{% endif %}
-          </span>
-        </div>
-
-        <div class="flex justify-between">
-          <span class="text-slate-600 dark:text-gray-400">Filtro de óleo</span>
-          <span class="font-medium">{{ info.filter_oil if info else '-' }}</span>
-        </div>
-
-        <div class="flex justify-between">
-          <span class="text-slate-600 dark:text-gray-400">Filtro de ar</span>
-          <span class="font-medium">{{ info.filter_air if info else '-' }}</span>
-        </div>
-
-        <div class="flex justify-between">
-          <span class="text-slate-600 dark:text-gray-400">Filtro combustível</span>
-          <span class="font-medium">{{ info.filter_fuel if info else '-' }}</span>
-        </div>
-
-        <div class="flex justify-between">
-          <span class="text-slate-600 dark:text-gray-400">Arrefecimento</span>
-          <span class="font-medium">{{ info.coolant_type if info else '-' }}</span>
-        </div>
-
-        <div class="flex justify-between">
-          <span class="text-slate-600 dark:text-gray-400">Fluido de freio</span>
-          <span class="font-medium">{{ info.brake_fluid if info else '-' }}</span>
-        </div>
-
-        <div class="flex justify-between">
-          <span class="text-slate-600 dark:text-gray-400">Pressão dos pneus</span>
-          <span class="font-medium">{{ info.tire_pressure if info else '-' }}</span>
-        </div>
-
-        <div>
-          <div class="text-slate-600 dark:text-gray-400 mb-1">Observações</div>
-          <div class="rounded-xl p-3 border min-h-[60px]
-                      bg-slate-900/5 border-slate-900/10 text-slate-800
-                      dark:bg-white/5 dark:border-white/10 dark:text-gray-200">
-            {{ info.notes if info and info.notes else '-' }}
-          </div>
-        </div>
-      </div>
-
-    </dialog>
-    {% endif %}
-    {% endfor %}
-
-    {% if ordens|length == 0 %}
-      <p class="text-center col-span-full text-lg text-slate-600 dark:text-gray-400">
-        Nenhuma O.S aberta no momento.
-      </p>
-    {% endif %}
-  </div>
 </div>
+{% endif %}
+{% endfor %}
 
-<!-- ============================================
-      MODAL — FINALIZAR O.S
-============================================= -->
-<dialog id="modalFinalizarOS"
-        class="rounded-2xl border p-5 shadow-2xl w-[420px] max-w-[92vw]
-               bg-white border-slate-900/10
-               dark:bg-gray-900 dark:border-white/10 backdrop:bg-black/70">
+<!-- ✅ MODAL: FINALIZAR O.S -->
+<div id="modalFinalizarOS" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden items-center justify-center z-[100] p-4">
+    <div class="bg-white dark:bg-slate-900 w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden border border-slate-900/10 dark:border-white/10 animate-premium">
+        <div class="px-8 py-6 border-b border-slate-900/10 dark:border-white/10 bg-slate-50 dark:bg-white/5 text-left">
+            <h3 class="text-xl font-black text-slate-800 dark:text-white tracking-tight">Finalizar Manutenção</h3>
+            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Preencha os custos e serviços realizados</p>
+        </div>
 
-  <h2 class="text-xl font-bold mb-3 text-slate-900 dark:text-white">Finalizar O.S</h2>
+        <form method="POST" action="{{ url_for('manutencao_os') }}" class="p-8 space-y-5 text-left">
+            <input type="hidden" name="acao" value="finalizar">
+            <input type="hidden" id="os_id_hidden" name="os_id">
 
-  <form method="POST" action="{{ url_for('manutencao_os') }}" class="space-y-4">
+            <div class="space-y-2">
+                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Valor Total (R$)</label>
+                <div class="relative">
+                    <input type="number" name="valor" step="0.01" placeholder="0,00"
+                           class="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-900/5 dark:border-white/5 rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 dark:text-white focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none">
+                    <div class="absolute right-5 top-1/2 -translate-y-1/2 text-emerald-500 font-black">R$</div>
+                </div>
+            </div>
 
-    <input type="hidden" name="acao" value="finalizar">
-    <input type="hidden" id="os_id_hidden" name="os_id">
+            <div class="space-y-2">
+                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Peças Trocadas</label>
+                <textarea name="pecas" rows="2" placeholder="Ex: Filtro de óleo, Pastilhas..."
+                          class="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-900/5 dark:border-white/5 rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 dark:text-white focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none resize-none"></textarea>
+            </div>
 
-    <div>
-      <label class="text-sm font-medium text-slate-700 dark:text-gray-300">Valor gasto</label>
-      <input type="number" name="valor" step="0.01"
-             class="w-full rounded-lg px-3 py-2 border
-                    bg-white text-slate-900 border-slate-900/10
-                    dark:bg-gray-800 dark:text-white dark:border-white/10">
+            <div class="space-y-2">
+                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Resumo do Serviço</label>
+                <textarea name="servico" rows="2" placeholder="Descreva a intervenção realizada..."
+                          class="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-900/5 dark:border-white/5 rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 dark:text-white focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none resize-none"></textarea>
+            </div>
+
+            <div class="flex gap-4 pt-4">
+                <button type="button" onclick="closeModal('modalFinalizarOS')" class="flex-1 py-4 text-xs font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-all">
+                    Cancelar
+                </button>
+                <button type="submit" class="flex-[2] py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black uppercase tracking-[0.2em] text-[11px] shadow-xl shadow-emerald-500/30 transition-all active:scale-95">
+                    Confirmar Encerramento
+                </button>
+            </div>
+        </form>
     </div>
-
-    <div>
-      <label class="text-sm font-medium text-slate-700 dark:text-gray-300">Peças trocadas</label>
-      <textarea name="pecas" rows="2"
-                class="w-full rounded-lg px-3 py-2 border
-                       bg-white text-slate-900 border-slate-900/10
-                       dark:bg-gray-800 dark:text-white dark:border-white/10"></textarea>
-    </div>
-
-    <div>
-      <label class="text-sm font-medium text-slate-700 dark:text-gray-300">Serviço realizado</label>
-      <textarea name="servico" rows="2"
-                class="w-full rounded-lg px-3 py-2 border
-                       bg-white text-slate-900 border-slate-900/10
-                       dark:bg-gray-800 dark:text-white dark:border-white/10"></textarea>
-    </div>
-
-    <div class="flex justify-end gap-2 pt-1">
-      <button type="button"
-              onclick="document.getElementById('modalFinalizarOS').close()"
-              class="px-3 py-2 rounded-lg text-sm border transition
-                     bg-slate-900/5 hover:bg-slate-900/10 text-slate-800 border-slate-900/10
-                     dark:bg-white/5 dark:hover:bg-white/10 dark:text-gray-200 dark:border-white/10">
-        Cancelar
-      </button>
-
-      <button type="submit"
-              class="px-4 py-2 rounded-lg text-white font-semibold text-sm
-                     bg-green-600 hover:bg-green-700">
-        Finalizar
-      </button>
-    </div>
-
-  </form>
-</dialog>
-
-<!-- ============================================
-      MODAL — ALTERAR SENHA
-============================================= -->
-<dialog id="modalSenha"
-        class="rounded-2xl border p-5 shadow-2xl w-[380px] max-w-[92vw]
-               bg-white border-slate-900/10
-               dark:bg-gray-900 dark:border-white/10 backdrop:bg-black/70">
-
-  <div class="flex items-start justify-between gap-3 mb-3">
-    <div>
-      <h2 class="text-xl font-bold text-slate-900 dark:text-white">🔒 Alterar Senha</h2>
-      <p class="text-xs mt-1 text-slate-600 dark:text-gray-300">Confirme sua senha atual para atualizar.</p>
-    </div>
-
-    <button type="button"
-            onclick="document.getElementById('modalSenha').close()"
-            class="px-2 py-1 rounded-lg border transition
-                   bg-slate-900/5 hover:bg-slate-900/10 text-slate-700 border-slate-900/10
-                   dark:bg-white/5 dark:hover:bg-white/10 dark:text-gray-200 dark:border-white/10">
-      ✕
-    </button>
-  </div>
-
-  <form method="POST" action="{{ url_for('perfil_alterar_senha') }}" class="space-y-4">
-
-    <div>
-      <label class="text-sm text-slate-700 dark:text-gray-300">Senha atual</label>
-      <input type="password" name="current_password" required
-             class="w-full rounded-lg px-3 py-2 border
-                    bg-white text-slate-900 border-slate-900/10
-                    dark:bg-gray-800 dark:text-white dark:border-white/10">
-    </div>
-
-    <div>
-      <label class="text-sm text-slate-700 dark:text-gray-300">Nova senha</label>
-      <input type="password" name="new_password" minlength="6" required
-             class="w-full rounded-lg px-3 py-2 border
-                    bg-white text-slate-900 border-slate-900/10
-                    dark:bg-gray-800 dark:text-white dark:border-white/10">
-      <p class="text-[11px] mt-1 text-slate-500 dark:text-gray-400">Recomendado: 6+ caracteres.</p>
-    </div>
-
-    <div>
-      <label class="text-sm text-slate-700 dark:text-gray-300">Confirmar nova senha</label>
-      <input type="password" name="confirm_password" minlength="6" required
-             class="w-full rounded-lg px-3 py-2 border
-                    bg-white text-slate-900 border-slate-900/10
-                    dark:bg-gray-800 dark:text-white dark:border-white/10">
-    </div>
-
-    <div class="flex justify-end gap-2 pt-1">
-      <button type="button"
-              onclick="document.getElementById('modalSenha').close()"
-              class="px-3 py-2 rounded-lg text-sm border transition
-                     bg-slate-900/5 hover:bg-slate-900/10 text-slate-800 border-slate-900/10
-                     dark:bg-white/5 dark:hover:bg-white/10 dark:text-gray-200 dark:border-white/10">
-        Cancelar
-      </button>
-
-      <button type="submit"
-              class="px-4 py-2 rounded-lg text-sm font-semibold text-white
-                     bg-blue-600 hover:bg-blue-700">
-        Atualizar
-      </button>
-    </div>
-
-  </form>
-</dialog>
+</div>
 
 <script>
 function openFinalizar(id) {
-  document.getElementById("os_id_hidden").value = id;
-  document.getElementById("modalFinalizarOS").showModal();
+    document.getElementById("os_id_hidden").value = id;
+    openModal("modalFinalizarOS");
 }
-
-document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape") {
-    const m1 = document.getElementById("modalFinalizarOS");
-    const m2 = document.getElementById("modalSenha");
-    if (m1 && m1.open) m1.close();
-    if (m2 && m2.open) m2.close();
-  }
-});
 </script>
+
+<style>
+    .animate-premium {
+        animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+    @keyframes slideUp {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+</style>
 
 {% endblock %}
