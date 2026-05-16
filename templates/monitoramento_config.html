@@ -1,9 +1,9 @@
 
 {% extends "layout.html" %}
-{% set page_title = "Configurações de Telemetria" %}
+{% set page_title = "Configurações Avançadas de Telemetria" %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto space-y-8 animate-premium">
+<div class="max-w-6xl mx-auto space-y-8 animate-premium">
     
     <!-- ✅ HEADER -->
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 glass-premium p-8 rounded-[2.5rem] shadow-xl overflow-hidden relative">
@@ -16,98 +16,171 @@
                 <nav class="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">
                     <span>Monitoramento</span>
                     <i class="fa-solid fa-chevron-right text-[8px] opacity-30"></i>
-                    <span class="text-slate-600 dark:text-slate-300">Parâmetros do Sistema</span>
+                    <span class="text-slate-600 dark:text-slate-300">Infraestrutura GPS</span>
                 </nav>
-                <h2 class="text-3xl font-black text-slate-800 dark:text-white tracking-tight">Configurações</h2>
+                <h2 class="text-3xl font-black text-slate-800 dark:text-white tracking-tight">Painel de Controle</h2>
             </div>
         </div>
     </div>
 
-    <!-- ✅ GRID DE CONFIGURAÇÕES -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
-        <!-- Alertas de Velocidade -->
-        <div class="card-premium p-8 space-y-6">
-            <div class="flex items-center gap-4">
-                <div class="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center text-red-500">
-                    <i class="fa-solid fa-gauge-high"></i>
+        <!-- ✅ COLUNA ESQUERDA: PARÂMETROS -->
+        <div class="lg:col-span-1 space-y-6">
+            <div class="card-premium p-8 space-y-6">
+                <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                    <i class="fa-solid fa-sliders text-blue-500"></i>
+                    Parâmetros Globais
+                </h3>
+                
+                <div class="space-y-4">
+                    <div class="p-4 rounded-2xl bg-slate-900/5 dark:bg-white/5 space-y-3">
+                        <label class="text-[10px] font-black text-slate-500 uppercase tracking-widest">Limite de Velocidade Alerta</label>
+                        <div class="flex items-center gap-4">
+                            <input type="range" min="40" max="120" value="80" class="flex-1 accent-teal-500">
+                            <span class="text-sm font-black text-slate-800 dark:text-white">80 KM/H</span>
+                        </div>
+                    </div>
+
+                    <div class="p-4 rounded-2xl bg-slate-900/5 dark:bg-white/5 flex items-center justify-between">
+                        <div class="flex flex-col">
+                            <span class="text-[10px] font-black text-slate-500 uppercase">Alertar Ignição</span>
+                            <span class="text-[8px] text-slate-400 font-bold uppercase">Fora do horário comercial</span>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" checked class="sr-only peer">
+                            <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-teal-500"></div>
+                        </label>
+                    </div>
+
+                    <div class="p-4 rounded-2xl bg-slate-900/5 dark:bg-white/5 flex items-center justify-between">
+                        <span class="text-[10px] font-black text-slate-500 uppercase">Frequência de Update</span>
+                        <span class="text-xs font-black text-teal-600">30 Segundos</span>
+                    </div>
                 </div>
-                <h3 class="font-black text-slate-800 dark:text-white uppercase tracking-widest text-xs">Alertas de Velocidade</h3>
             </div>
-            
-            <div class="space-y-4">
-                <div class="flex items-center justify-between">
-                    <span class="text-xs font-bold text-slate-500">Limite Máximo (KM/H)</span>
-                    <input type="number" value="80" class="w-20 bg-slate-900/5 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-lg px-3 py-1 text-center font-black text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-red-500">
-                </div>
-                <div class="flex items-center justify-between">
-                    <span class="text-xs font-bold text-slate-500">Notificar Supervisor</span>
-                    <label class="relative inline-flex items-center cursor-pointer">
-                        <input type="checkbox" checked class="sr-only peer">
-                        <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-red-500"></div>
-                    </label>
+
+            <!-- Card Servidor -->
+            <div class="card-premium p-8 bg-gradient-to-br from-slate-800 to-slate-950 text-white border-none shadow-2xl">
+                <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2 mb-6">
+                    <i class="fa-solid fa-satellite text-teal-400"></i>
+                    Gateway Endpoint
+                </h3>
+                <div class="space-y-4">
+                    <div class="p-4 rounded-2xl bg-white/5 border border-white/10">
+                        <p class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-2">DNS Principal</p>
+                        <p class="text-xs font-mono text-teal-400 break-all">gps.checklistveicular.com.br</p>
+                    </div>
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="p-4 rounded-2xl bg-white/5 border border-white/10 text-center">
+                            <p class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Porta TK103</p>
+                            <p class="text-lg font-black text-white">5002</p>
+                        </div>
+                        <div class="p-4 rounded-2xl bg-white/5 border border-white/10 text-center">
+                            <p class="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1">Porta GT06</p>
+                            <p class="text-lg font-black text-white">5023</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- Parâmetros do Servidor -->
-        <div class="card-premium p-8 space-y-6">
-            <div class="flex items-center gap-4">
-                <div class="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500">
-                    <i class="fa-solid fa-server"></i>
+        <!-- ✅ COLUNA DIREITA: CENTRAL DE COMANDOS -->
+        <div class="lg:col-span-2 space-y-8">
+            <div class="card-premium p-8 h-full flex flex-col">
+                <div class="flex items-center justify-between mb-8">
+                    <div class="flex items-center gap-4">
+                        <div class="w-12 h-12 rounded-2xl bg-teal-500/10 flex items-center justify-center text-teal-500">
+                            <i class="fa-solid fa-terminal text-xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-black text-slate-800 dark:text-white tracking-tight">Console de Comandos</h3>
+                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Envio Remoto via GPRS/SMS</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-900/5 dark:bg-white/5">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        <span class="text-[10px] font-black text-slate-500 uppercase">Socket Ativo</span>
+                    </div>
                 </div>
-                <h3 class="font-black text-slate-800 dark:text-white uppercase tracking-widest text-xs">Servidor de Gateway</h3>
-            </div>
-            
-            <div class="space-y-4">
-                <div class="flex items-center justify-between">
-                    <span class="text-xs font-bold text-slate-500">Porta Escuta (TK103)</span>
-                    <span class="text-xs font-black text-blue-500">5002</span>
-                </div>
-                <div class="flex items-center justify-between">
-                    <span class="text-xs font-bold text-slate-500">Intervalo de Logs</span>
-                    <select class="bg-slate-900/5 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-lg px-2 py-1 text-[10px] font-black outline-none">
-                        <option>10 Segundos</option>
-                        <option selected>30 Segundos</option>
-                        <option>1 Minuto</option>
-                    </select>
+
+                <!-- Interface de Comando -->
+                <div class="flex-1 grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <!-- Seleção de Dispositivo -->
+                    <div class="space-y-6">
+                        <div class="space-y-3">
+                            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Selecionar Rastreador</label>
+                            <select id="cmdDevice" class="w-full bg-slate-900/5 dark:bg-white/5 border-none ring-1 ring-slate-900/10 dark:ring-white/10 rounded-2xl px-5 py-4 text-sm font-bold text-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-teal-500 transition-all">
+                                <option value="">Escolha um aparelho...</option>
+                                <option value="865243000001">IMEI: 865243000001 - TK103</option>
+                                <option value="865243000002">IMEI: 865243000002 - TK303</option>
+                            </select>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3">
+                            <button onclick="sendCommand('REBOOT')" class="flex flex-col items-center justify-center gap-3 p-6 rounded-3xl bg-slate-900/5 dark:bg-white/5 border border-slate-900/5 dark:border-white/10 hover:border-teal-500/30 hover:bg-teal-500/5 transition-all group">
+                                <i class="fa-solid fa-rotate text-xl text-slate-400 group-hover:text-teal-500"></i>
+                                <span class="text-[10px] font-black text-slate-500 uppercase group-hover:text-teal-600">Reboot</span>
+                            </button>
+                            <button onclick="sendCommand('POSITION')" class="flex flex-col items-center justify-center gap-3 p-6 rounded-3xl bg-slate-900/5 dark:bg-white/5 border border-slate-900/5 dark:border-white/10 hover:border-blue-500/30 hover:bg-blue-500/5 transition-all group">
+                                <i class="fa-solid fa-location-crosshairs text-xl text-slate-400 group-hover:text-blue-500"></i>
+                                <span class="text-[10px] font-black text-slate-500 uppercase group-hover:text-blue-600">Loc. Agora</span>
+                            </button>
+                            <button onclick="sendCommand('RELAY_OFF')" class="flex flex-col items-center justify-center gap-3 p-6 rounded-3xl bg-slate-900/5 dark:bg-white/5 border border-slate-900/5 dark:border-white/10 hover:border-red-500/30 hover:bg-red-500/5 transition-all group">
+                                <i class="fa-solid fa-power-off text-xl text-slate-400 group-hover:text-red-500"></i>
+                                <span class="text-[10px] font-black text-slate-500 uppercase group-hover:text-red-600">Corte Combu.</span>
+                            </button>
+                            <button onclick="sendCommand('CONFIG_IP')" class="flex flex-col items-center justify-center gap-3 p-6 rounded-3xl bg-slate-900/5 dark:bg-white/5 border border-slate-900/5 dark:border-white/10 hover:border-amber-500/30 hover:bg-amber-500/5 transition-all group">
+                                <i class="fa-solid fa-network-wired text-xl text-slate-400 group-hover:text-amber-500"></i>
+                                <span class="text-[10px] font-black text-slate-500 uppercase group-hover:text-amber-600">Config IP</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Log do Console -->
+                    <div class="flex flex-col bg-slate-900 dark:bg-[#020617] rounded-[2rem] overflow-hidden shadow-inner border border-white/5">
+                        <div class="p-4 border-b border-white/5 bg-white/5 flex items-center justify-between">
+                            <span class="text-[9px] font-black text-slate-500 uppercase tracking-widest">Terminal Output</span>
+                            <div class="flex gap-1.5">
+                                <div class="w-2.5 h-2.5 rounded-full bg-red-500/20"></div>
+                                <div class="w-2.5 h-2.5 rounded-full bg-amber-500/20"></div>
+                                <div class="w-2.5 h-2.5 rounded-full bg-emerald-500/20"></div>
+                            </div>
+                        </div>
+                        <div id="consoleLog" class="flex-1 p-6 font-mono text-[11px] text-teal-500/80 overflow-y-auto space-y-2 custom-scrollbar">
+                            <p class="text-slate-500">> Aguardando seleção de dispositivo...</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
-
-        <!-- Cercas Virtuais (Placeholder) -->
-        <div class="card-premium p-8 space-y-6 opacity-50 grayscale cursor-not-allowed">
-            <div class="flex items-center gap-4">
-                <div class="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500">
-                    <i class="fa-solid fa-draw-polygon"></i>
-                </div>
-                <div class="flex flex-col">
-                    <h3 class="font-black text-slate-800 dark:text-white uppercase tracking-widest text-xs">Cercas Virtuais</h3>
-                    <span class="text-[8px] font-black text-emerald-600 uppercase">Em breve</span>
-                </div>
-            </div>
-            <p class="text-[10px] font-medium text-slate-400">Defina perímetros geográficos e receba alertas automáticos de entrada e saída.</p>
-        </div>
-
-        <!-- Chips M2M / Dados -->
-        <div class="card-premium p-8 space-y-6">
-            <div class="flex items-center gap-4">
-                <div class="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500">
-                    <i class="fa-solid fa-sim-card"></i>
-                </div>
-                <h3 class="font-black text-slate-800 dark:text-white uppercase tracking-widest text-xs">Gestão de Conectividade</h3>
-            </div>
-            <button class="w-full btn-premium bg-slate-900/5 dark:bg-white/5 text-slate-600 dark:text-slate-300 border border-slate-900/10 dark:border-white/10 text-[10px] uppercase tracking-widest font-black">
-                Configurar APN
-            </button>
-        </div>
-
-    </div>
-
-    <div class="flex justify-end pt-4">
-        <button class="btn-premium bg-blue-600 hover:bg-blue-700 text-white shadow-xl shadow-blue-500/20 px-12">
-            Salvar Configurações
-        </button>
     </div>
 </div>
+
+<script>
+    function sendCommand(cmd) {
+        const device = document.getElementById('cmdDevice').value;
+        const console = document.getElementById('consoleLog');
+        
+        if(!device) {
+            showToast('Selecione um dispositivo primeiro!', 'error');
+            return;
+        }
+
+        const time = new Date().toLocaleTimeString();
+        const log = document.createElement('p');
+        log.innerHTML = `<span class="text-slate-600">[${time}]</span> <span class="text-white">EXECUTING:</span> ${cmd} -> ${device}`;
+        console.appendChild(log);
+        console.scrollTop = console.scrollHeight;
+
+        // Simulação de resposta
+        setTimeout(() => {
+            const resp = document.createElement('p');
+            resp.innerHTML = `<span class="text-slate-600">[${time}]</span> <span class="text-emerald-500">SUCCESS:</span> OK, command received by device.`;
+            console.appendChild(resp);
+            console.scrollTop = console.scrollHeight;
+            showToast('Comando enviado com sucesso!', 'success');
+        }, 1500);
+    }
+</script>
 {% endblock %}

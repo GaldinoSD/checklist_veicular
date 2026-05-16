@@ -1,129 +1,90 @@
 
 {% extends "layout.html" %}
-{% set page_title = "Tracking em Tempo Real" %}
+{% set page_title = "Mapa ao Vivo" %}
 
 {% block content %}
 <div class="flex flex-col h-[calc(100vh-2rem)] overflow-hidden animate-premium">
     
-    <!-- ✅ HEADER TRACKING COMPACT -->
-    <div class="mb-4">
-        <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 glass-premium p-5 rounded-[2rem] shadow-xl overflow-hidden relative">
-            <!-- Decorativos -->
-            <div class="absolute -top-24 -right-24 w-64 h-64 bg-teal-500/10 rounded-full blur-3xl"></div>
-            
-            <div class="flex items-center gap-5 relative z-10">
-                <div class="w-12 h-12 rounded-[1.25rem] bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center text-white shadow-2xl shadow-teal-500/20">
-                    <i class="fa-solid fa-satellite-dish text-xl animate-pulse"></i>
-                </div>
-                <div>
-                    <nav class="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-0.5">
-                        <span>Operacional</span>
-                        <i class="fa-solid fa-chevron-right text-[8px] opacity-30"></i>
-                        <span class="text-teal-500">Telemetria ao Vivo</span>
-                    </nav>
-                    <h2 class="text-2xl font-black text-slate-800 dark:text-white tracking-tight">Monitoramento de Frota</h2>
-                </div>
+    <!-- ✅ HEADER OPERACIONAL -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 glass-premium p-6 rounded-[2.5rem] shadow-xl overflow-hidden relative mb-6">
+        <div class="absolute -top-24 -right-24 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl"></div>
+        <div class="flex items-center gap-6 relative z-10">
+            <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center text-white shadow-2xl">
+                <i class="fa-solid fa-map-location-dot text-xl"></i>
             </div>
+            <div>
+                <nav class="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">
+                    <span>Monitoramento</span>
+                    <i class="fa-solid fa-chevron-right text-[8px] opacity-30"></i>
+                    <span class="text-blue-500">Frota em Tempo Real</span>
+                </nav>
+                <h2 class="text-2xl font-black text-slate-800 dark:text-white tracking-tight">Mapa de Operações</h2>
+            </div>
+        </div>
 
-            <div class="flex items-center gap-3 relative z-10">
-                <div class="flex bg-slate-900/5 dark:bg-white/5 p-1 rounded-2xl border border-slate-900/5 dark:border-white/5">
-                    <button onclick="filterStatus('all')" class="filter-btn active px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all">Todos</button>
-                    <button onclick="filterStatus('moving')" class="filter-btn px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all">Em Movimento</button>
-                    <button onclick="filterStatus('offline')" class="filter-btn px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all">Offline</button>
-                </div>
-            </div>
+        <div class="flex items-center gap-2 relative z-10">
+            <button onclick="setFilter('all')" id="filter-all" class="px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all bg-blue-600 text-white shadow-lg shadow-blue-500/20">Todos</button>
+            <button onclick="setFilter('moving')" id="filter-moving" class="px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all bg-slate-900/5 dark:bg-white/5 text-slate-500">Em Movimento</button>
+            <button onclick="setFilter('offline')" id="filter-offline" class="px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all bg-slate-900/5 dark:bg-white/5 text-slate-500">Offline</button>
         </div>
     </div>
 
+    <!-- ✅ MAPA E BARRA LATERAL -->
     <div class="flex flex-1 gap-6 overflow-hidden">
         
-        <!-- ✅ BARRA LATERAL DE VEÍCULOS -->
-        <div class="w-80 flex flex-col gap-4 overflow-hidden">
-            <div class="glass-premium p-4 rounded-[2rem] border border-slate-900/5 dark:border-white/5">
-                <div class="relative">
-                    <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
-                    <input type="text" id="searchVehicle" placeholder="Placa ou Equipamento..." 
-                           class="w-full bg-slate-900/5 dark:bg-white/5 border-none ring-1 ring-slate-900/10 dark:ring-white/10 rounded-xl pl-10 pr-4 py-2.5 text-xs text-slate-700 dark:text-white focus:ring-2 focus:ring-teal-500 transition-all outline-none">
+        <!-- ✅ SIDEBAR DE CONTROLE -->
+        <div class="w-80 flex flex-col gap-6 overflow-hidden">
+            <!-- 1. Estatísticas -->
+            <div class="grid grid-cols-2 gap-4">
+                <div class="card-premium p-4 flex flex-col items-center justify-center text-center">
+                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Em Movimento</span>
+                    <span id="stat-moving" class="text-xl font-black text-emerald-500">0</span>
+                </div>
+                <div class="card-premium p-4 flex flex-col items-center justify-center text-center">
+                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Offline</span>
+                    <span id="stat-offline" class="text-xl font-black text-slate-400">0</span>
                 </div>
             </div>
 
-            <div id="vehicleList" class="flex-1 overflow-y-auto space-y-3 pr-2 custom-scrollbar">
-                <!-- Veículos serão carregados aqui -->
-                <div class="flex flex-col items-center justify-center py-20 opacity-30">
-                    <i class="fa-solid fa-circle-notch fa-spin text-3xl mb-4"></i>
-                    <p class="text-[10px] font-black uppercase tracking-widest">Sincronizando satélites...</p>
+            <!-- 2. Busca e Lista de Veículos -->
+            <div class="flex-[1.5] glass-premium rounded-[2.5rem] border border-slate-900/5 dark:border-white/5 p-6 overflow-hidden flex flex-col">
+                <div class="relative mb-4">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[10px]"></i>
+                    <input type="text" id="searchVehicle" placeholder="Buscar placa ou técnico..." 
+                           class="w-full bg-slate-900/5 dark:bg-white/5 rounded-xl pl-9 pr-4 py-2.5 text-[11px] font-bold outline-none focus:ring-2 focus:ring-blue-500 transition-all border border-slate-900/5 dark:border-white/5">
+                </div>
+                
+                <div id="vehicle-list" class="flex-1 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+                    <div class="text-center py-10 opacity-30">
+                        <p class="text-[9px] font-black uppercase">Carregando frota...</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. Feed de Eventos -->
+            <div class="flex-1 glass-premium rounded-[2.5rem] border border-slate-900/5 dark:border-white/5 p-6 overflow-hidden flex flex-col">
+                <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <i class="fa-solid fa-bolt-lightning text-amber-500"></i>
+                    Eventos da Frota
+                </h3>
+                <div id="event-feed" class="flex-1 overflow-y-auto pr-2 space-y-3 custom-scrollbar text-[10px]">
+                    <div class="text-center py-10 opacity-30">
+                        <p class="text-[9px] font-black uppercase">Monitorando...</p>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- ✅ ÁREA DO MAPA -->
+        <!-- ✅ ÁREA DO MAPA (LIMPA) -->
         <div class="flex-1 relative rounded-[2.5rem] overflow-hidden shadow-2xl border border-slate-900/5 dark:border-white/5">
             <div id="map" class="absolute inset-0 z-0"></div>
-            
-            <!-- Painel Flutuante de Estatísticas -->
-            <div class="absolute top-6 right-6 z-[1000] flex flex-col gap-3">
-                <div class="glass-premium p-4 rounded-2xl shadow-2xl border border-white/10 flex items-center gap-4 animate-slide-in">
-                    <div class="w-10 h-10 rounded-xl bg-teal-500/20 flex items-center justify-center text-teal-500">
-                        <i class="fa-solid fa-car-side"></i>
-                    </div>
-                    <div>
-                        <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Veículos Online</p>
-                        <h4 id="stat-online" class="text-xl font-black text-slate-800 dark:text-white">0</h4>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Legenda Estilizada -->
-            <div class="absolute bottom-6 right-6 z-[1000] glass-premium p-4 rounded-2xl border border-white/10 shadow-2xl">
-                <div class="space-y-3">
-                    <div class="flex items-center gap-3 text-[10px] font-black text-slate-600 dark:text-gray-300 uppercase tracking-widest">
-                        <span class="w-3 h-3 rounded-full bg-emerald-500 shadow-[0_0_10px_#10b981]"></span> Em Movimento
-                    </div>
-                    <div class="flex items-center gap-3 text-[10px] font-black text-slate-600 dark:text-gray-300 uppercase tracking-widest">
-                        <span class="w-3 h-3 rounded-full bg-amber-500 shadow-[0_0_10px_#f59e0b]"></span> Parado / Ign. Ligada
-                    </div>
-                    <div class="flex items-center gap-3 text-[10px] font-black text-slate-600 dark:text-gray-300 uppercase tracking-widest">
-                        <span class="w-3 h-3 rounded-full bg-slate-400"></span> Desconectado
-                    </div>
-                </div>
-            </div>
         </div>
     </div>
 </div>
 
-<!-- Leaflet & Icons -->
+<!-- Leaflet -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
-<style>
-    .leaflet-container { background: #f8fafc !important; }
-    .custom-marker { transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1); }
-    
-    /* Forçando clareza absoluta !important */
-    .leaflet-tile-pane { 
-        filter: none !important; 
-        -webkit-filter: none !important;
-    }
-    
-    .filter-btn.active {
-        background: white;
-        color: #0d9488;
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-    }
-    .dark .filter-btn.active { background: rgba(255,255,255,0.1); color: white; }
-
-    .vehicle-card.active {
-        border-color: #14b8a6;
-        background: rgba(20, 184, 166, 0.05);
-        transform: translateX(8px);
-    }
-
-    /* Scrollbar minimalista */
-    .custom-scrollbar::-webkit-scrollbar { width: 4px; }
-    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-    .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 10px; }
-    .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.05); }
-</style>
 
 <script>
     let map;
@@ -135,80 +96,57 @@
         map = L.map('map', {
             zoomControl: false,
             attributionControl: false
-        }).setView([-22.893, -43.682], 13);
+        }).setView([-22.75, -43.70], 13);
         
-        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-            maxZoom: 19
-        }).addTo(map);
-        L.control.zoom({ position: 'bottomleft' }).addTo(map);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png').addTo(map);
+        L.control.zoom({ position: 'bottomright' }).addTo(map);
+        
+        fetchData();
+        setInterval(fetchData, 5000);
     }
 
-    async function updatePositions() {
+    async function fetchData() {
         try {
-            const response = await fetch('/api/gps/current');
-            const data = await response.json();
-            
+            const res = await fetch('/api/gps/current');
+            const data = await res.json();
             vehiclesData = data.vehicles;
             renderVehicleList();
             updateMarkers();
-            
-            // Update stats
-            const onlineCount = vehiclesData.filter(v => v.is_online).length;
-            document.getElementById('stat-online').textContent = onlineCount;
-            
-        } catch (error) {
-            console.error('Erro de telemetria:', error);
+            updateStats();
+        } catch (e) {
+            console.error("Erro ao buscar GPS:", e);
         }
     }
 
-    function filterStatus(status) {
-        currentFilter = status;
-        document.querySelectorAll('.filter-btn').forEach(btn => {
-            btn.classList.remove('active');
-            if(btn.textContent.toLowerCase().includes(status == 'all' ? 'todos' : (status == 'moving' ? 'movimento' : 'offline'))) {
-                btn.classList.add('active');
-            }
-        });
-        renderVehicleList();
-        updateMarkers();
-    }
-
     function renderVehicleList() {
-        const list = document.getElementById('vehicleList');
+        const list = document.getElementById('vehicle-list');
         const search = document.getElementById('searchVehicle').value.toLowerCase();
         
-        let filtered = vehiclesData.filter(v => {
-            const matchesSearch = v.plate.toLowerCase().includes(search) || v.model.toLowerCase().includes(search);
-            if(currentFilter === 'moving') return matchesSearch && v.is_online && v.speed > 5;
-            if(currentFilter === 'offline') return matchesSearch && !v.is_online;
-            return matchesSearch;
-        });
+        const filtered = vehiclesData
+            .filter(v => (v.plate.toLowerCase().includes(search) || v.technician.toLowerCase().includes(search)))
+            .filter(v => {
+                if(currentFilter === 'moving') return v.is_online && v.speed > 5;
+                if(currentFilter === 'offline') return !v.is_online;
+                return true;
+            });
 
-        if(filtered.length === 0) {
-            list.innerHTML = '<div class="text-center py-10 opacity-30 text-[10px] font-black uppercase">Nenhum veículo encontrado</div>';
+        if (filtered.length === 0) {
+            list.innerHTML = `<div class="text-center py-10 opacity-30 text-[9px] font-black uppercase">Nenhum veículo encontrado</div>`;
             return;
         }
 
         list.innerHTML = filtered.map(v => `
-            <div onclick="focusVehicle(${v.id})" class="vehicle-card group glass-premium p-4 rounded-2xl border border-slate-900/5 dark:border-white/5 cursor-pointer transition-all hover:border-teal-500/30 ${v.is_online ? '' : 'opacity-50'}">
-                <div class="flex justify-between items-start mb-2">
-                    <span class="text-xs font-black text-slate-800 dark:text-white group-hover:text-teal-500 transition-colors">${v.plate}</span>
-                    <span class="flex items-center gap-1.5 text-[8px] font-black uppercase tracking-tighter ${v.is_online ? 'text-emerald-500' : 'text-slate-400'}">
-                        <span class="w-1.5 h-1.5 rounded-full ${v.is_online ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}"></span>
-                        ${v.status_text}
-                    </span>
-                </div>
-                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate">${v.model}</p>
-                <div class="mt-3 flex items-center justify-between border-t border-slate-900/5 dark:border-white/5 pt-3">
-                    <div class="flex items-center gap-3">
-                        <div class="flex items-center gap-1 text-[10px] font-black text-slate-600 dark:text-slate-300">
-                            <i class="fa-solid fa-gauge-high text-teal-500"></i> ${Math.round(v.speed)} <span class="text-[8px] opacity-50">KM/H</span>
-                        </div>
-                        <div class="flex items-center gap-1 text-[10px] font-black text-slate-600 dark:text-slate-300">
-                            <i class="fa-solid fa-key ${v.ignition ? 'text-amber-500' : 'text-slate-400'}"></i>
-                        </div>
+            <div onclick="focusVehicle(${v.id})" class="p-3 rounded-2xl bg-white dark:bg-white/5 border border-slate-900/5 dark:border-white/5 hover:border-blue-500/30 transition-all cursor-pointer group">
+                <div class="flex items-center justify-between mb-1">
+                    <span class="text-[11px] font-black text-slate-800 dark:text-white">${v.plate}</span>
+                    <div class="flex items-center gap-1.5">
+                        <span class="text-[8px] font-black ${v.is_online ? 'text-emerald-500' : 'text-slate-400'} uppercase">${v.is_online ? 'Online' : 'Offline'}</span>
+                        <span class="w-2 h-2 rounded-full ${v.is_online ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}"></span>
                     </div>
-                    <span class="text-[9px] font-medium text-slate-400">${v.last_time}</span>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span class="text-[9px] font-bold text-slate-400 uppercase truncate pr-2">${v.model}</span>
+                    <span class="text-[10px] font-black ${v.speed > 5 ? 'text-teal-500' : 'text-slate-500'}">${Math.round(v.speed)} KM/H</span>
                 </div>
             </div>
         `).join('');
@@ -218,7 +156,6 @@
         vehiclesData.forEach(v => {
             if (!v.lat || !v.lon) return;
 
-            // Filtro visual no mapa também
             const isVisible = currentFilter === 'all' || 
                              (currentFilter === 'moving' && v.is_online && v.speed > 5) ||
                              (currentFilter === 'offline' && !v.is_online);
@@ -228,15 +165,16 @@
                 return;
             }
 
-            const color = v.speed > 5 ? '#10b981' : (v.ignition ? '#f59e0b' : '#94a3b8');
+            const color = v.is_online ? (v.speed > 5 ? '#10b981' : '#f59e0b') : '#94a3b8';
             const icon = L.divIcon({
                 className: 'custom-marker',
                 html: `
-                    <div class="relative flex items-center justify-center">
-                        <div class="absolute w-10 h-10 rounded-full bg-white/20 blur-md animate-pulse" style="background: ${color}44"></div>
-                        <div style="background: ${color}; width: 32px; height: 32px; border-radius: 12px; border: 3px solid rgba(255,255,255,0.9); display: flex; align-items: center; justify-content: center; transform: rotate(${v.angle}deg); box-shadow: 0 10px 20px -5px ${color}88;">
-                            <i class="fa-solid fa-location-arrow text-white text-[14px]" style="transform: rotate(-45deg);"></i>
+                    <div class="relative">
+                        <div class="w-10 h-10 rounded-2xl flex items-center justify-center text-white shadow-xl transition-all duration-500" 
+                             style="background: ${color}; transform: rotate(${v.angle}deg)">
+                            <i class="fa-solid fa-location-arrow"></i>
                         </div>
+                        ${v.is_online ? '<div class="absolute -top-1 -right-1 w-3.5 h-3.5 bg-emerald-500 border-2 border-white dark:border-slate-900 rounded-full"></div>' : ''}
                     </div>
                 `,
                 iconSize: [40, 40],
@@ -249,39 +187,70 @@
                 markers[v.id].setIcon(icon);
             } else {
                 markers[v.id] = L.marker([v.lat, v.lon], { icon: icon }).addTo(map)
-                    .bindPopup(`
-                        <div class="p-2 min-w-[150px]">
-                            <h4 class="text-sm font-black text-slate-800 mb-1">${v.plate}</h4>
-                            <p class="text-[10px] text-slate-500 mb-2 uppercase font-bold">${v.model}</p>
-                            <div class="flex items-center justify-between text-[10px] font-black">
-                                <span class="text-teal-600">${Math.round(v.speed)} KM/H</span>
-                                <span class="text-slate-400">${v.last_time}</span>
-                            </div>
-                        </div>
-                    `);
+                    .bindPopup(`<div class="p-2 min-w-[120px]">
+                        <h4 class="font-black text-slate-800">${v.plate}</h4>
+                        <p class="text-[10px] text-slate-500 uppercase">${v.model}</p>
+                        <div class="mt-2 text-[10px] font-bold text-teal-600">${Math.round(v.speed)} KM/H</div>
+                    </div>`);
             }
         });
     }
 
+    function updateStats() {
+        let moving = 0;
+        let offline = 0;
+        const eventFeed = document.getElementById('event-feed');
+        
+        vehiclesData.forEach(v => {
+            if (v.is_online && v.speed > 5) moving++;
+            if (!v.is_online) offline++;
+            
+            // Simulação de Evento de Conexão
+            if (v.is_online && !v.was_online) {
+                const event = document.createElement('div');
+                event.className = 'p-3 rounded-2xl bg-teal-500/5 border border-teal-500/10 animate-premium mb-2';
+                event.innerHTML = `
+                    <div class="flex justify-between items-start mb-1">
+                        <span class="text-[8px] font-black text-teal-600 uppercase tracking-tighter">Sinal GPS Recebido</span>
+                        <span class="text-[8px] font-bold text-slate-400">${new Date().toLocaleTimeString()}</span>
+                    </div>
+                    <p class="text-[10px] font-black text-slate-700 dark:text-white">${v.plate}</p>
+                `;
+                if(eventFeed.children.length > 10) eventFeed.lastElementChild.remove();
+                eventFeed.prepend(event);
+            }
+            v.was_online = v.is_online;
+        });
+
+        document.getElementById('stat-moving').textContent = moving;
+        document.getElementById('stat-offline').textContent = offline;
+    }
+
     function focusVehicle(id) {
         const v = vehiclesData.find(v => v.id === id);
-        if (v && v.lat) {
-            map.flyTo([v.lat, v.lon], 16, { duration: 1.5 });
-            markers[id].openPopup();
-            
-            // Highlight card
-            document.querySelectorAll('.vehicle-card').forEach(c => c.classList.remove('active'));
-            // Find and add class (simplified for this demo)
+        if (v && v.lat && v.lon) {
+            map.flyTo([v.lat, v.lon], 16);
+            if (markers[id]) markers[id].openPopup();
         }
     }
 
-    // Busca
-    document.getElementById('searchVehicle').addEventListener('input', renderVehicleList);
+    function setFilter(f) {
+        currentFilter = f;
+        ['all', 'moving', 'offline'].forEach(i => {
+            const btn = document.getElementById(`filter-${i}`);
+            if(i === f) {
+                btn.classList.add('bg-blue-600', 'text-white', 'shadow-lg', 'shadow-blue-500/20');
+                btn.classList.remove('bg-slate-900/5', 'dark:bg-white/5', 'text-slate-500');
+            } else {
+                btn.classList.remove('bg-blue-600', 'text-white', 'shadow-lg', 'shadow-blue-500/20');
+                btn.classList.add('bg-slate-900/5', 'dark:bg-white/5', 'text-slate-500');
+            }
+        });
+        renderVehicleList();
+        updateMarkers();
+    }
 
-    window.onload = () => {
-        initMap();
-        updatePositions();
-        setInterval(updatePositions, 5000); // Mais rápido: 5 segundos
-    };
+    document.getElementById('searchVehicle').addEventListener('input', renderVehicleList);
+    window.onload = initMap;
 </script>
 {% endblock %}

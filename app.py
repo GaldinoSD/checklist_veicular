@@ -2959,10 +2959,20 @@ class GPSDevice(db.Model):
     __tablename__ = "gps_device"
     id = db.Column(db.Integer, primary_key=True)
     imei = db.Column(db.String(50), unique=True, nullable=False)
+    
+    # ✅ Conectividade (M2M)
+    iccid = db.Column(db.String(30)) # ID do Chip
+    phone_number = db.Column(db.String(20)) # Número do Chip
+    provider = db.Column(db.String(50)) # Vivo, Tim, Claro, etc.
+    
     vehicle_id = db.Column(db.Integer, db.ForeignKey('vehicle.id'), unique=True)
     vehicle = db.relationship("Vehicle", backref=db.backref("gps_device", uselist=False))
+    
     model = db.Column(db.String(50), default="TK103")
     is_active = db.Column(db.Boolean, default=True)
+    
+    # ✅ Status de Operação
+    last_seen = db.Column(db.DateTime)
     created_at = db.Column(db.DateTime, default=agora)
 
 class GPSLog(db.Model):
@@ -2993,12 +3003,22 @@ def monitoramento_aparelhos():
         if acao == "novo":
             imei = request.form.get("imei").strip()
             model = request.form.get("model", "TK103").strip()
+            iccid = request.form.get("iccid", "").strip()
+            phone = request.form.get("phone_number", "").strip()
+            provider = request.form.get("provider", "").strip()
             v_id = request.form.get("vehicle_id")
             
             if GPSDevice.query.filter_by(imei=imei).first():
                 flash("IMEI já cadastrado.", "error")
             else:
-                d = GPSDevice(imei=imei, model=model, vehicle_id=v_id if v_id else None)
+                d = GPSDevice(
+                    imei=imei, 
+                    model=model, 
+                    iccid=iccid,
+                    phone_number=phone,
+                    provider=provider,
+                    vehicle_id=v_id if v_id else None
+                )
                 db.session.add(d)
                 db.session.commit()
                 flash("Aparelho GPS cadastrado com sucesso!", "success")
@@ -3009,6 +3029,9 @@ def monitoramento_aparelhos():
             if d:
                 d.imei = request.form.get("imei").strip()
                 d.model = request.form.get("model").strip()
+                d.iccid = request.form.get("iccid", "").strip()
+                d.phone_number = request.form.get("phone_number", "").strip()
+                d.provider = request.form.get("provider", "").strip()
                 v_id = request.form.get("vehicle_id")
                 d.vehicle_id = v_id if v_id else None
                 db.session.commit()
@@ -3082,3 +3105,40 @@ def api_gps_current():
         }
         results.append(data)
     return jsonify({"vehicles": results})
+
+@app.route("/api/gps/gateway", methods=["POST"])
+def api_gps_gateway():
+    """
+    Endpoint Gateway: Recebe dados dos rastreadores.
+    Formato esperado: JSON { imei, lat, lon, speed, angle, ignition, raw }
+    """
+    data = request.get_json()
+    if not data or 'imei' not in data:
+        return jsonify({"status": "error", "message": "IMEI missing"}), 400
+    
+    imei = data.get('imei')
+    device = GPSDevice.query.filter_by(imei=imei).first()
+    
+    if not device:
+        return jsonify({"status": "error", "message": "Device not found"}), 404
+    
+    # Atualiza status do dispositivo
+    device.last_seen = agora()
+    
+    # Registra o Log
+    log = GPSLog(
+        imei=imei,
+        vehicle_id=device.vehicle_id,
+        lat=data.get('lat'),
+        lon=data.get('lon'),
+        speed=data.get('speed', 0),
+        angle=data.get('angle', 0),
+        ignition=data.get('ignition', False),
+        raw_data=data.get('raw', ""),
+        timestamp=agora()
+    )
+    
+    db.session.add(log)
+    db.session.commit()
+    
+    return jsonify({"status": "success", "device": imei, "received_at": str(agora())})

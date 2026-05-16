@@ -5,7 +5,7 @@
 {% block content %}
 <div class="space-y-8 animate-premium">
     
-    <!-- ✅ HEADER -->
+    <!-- ✅ HEADER OPERACIONAL -->
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 glass-premium p-8 rounded-[2.5rem] shadow-xl overflow-hidden relative">
         <div class="absolute -top-24 -right-24 w-64 h-64 bg-teal-500/10 rounded-full blur-3xl"></div>
         <div class="flex items-center gap-6 relative z-10">
@@ -16,111 +16,186 @@
                 <nav class="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">
                     <span>Monitoramento</span>
                     <i class="fa-solid fa-chevron-right text-[8px] opacity-30"></i>
-                    <span class="text-teal-500">Inventário de Hardware</span>
+                    <span class="text-teal-500">Gestão de Ativos</span>
                 </nav>
-                <h2 class="text-3xl font-black text-slate-800 dark:text-white tracking-tight">Aparelhos GPS</h2>
+                <h2 class="text-3xl font-black text-slate-800 dark:text-white tracking-tight">Inventário GPS</h2>
             </div>
         </div>
-        <button onclick="openModal('modalAparelho')" class="btn-premium bg-teal-600 hover:bg-teal-700 text-white shadow-xl shadow-teal-500/20 relative z-10">
-            <i class="fa-solid fa-plus"></i>
-            Novo Aparelho
-        </button>
+        <div class="flex items-center gap-4 relative z-10">
+            <div class="text-right hidden md:block">
+                <p class="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Total de Dispositivos</p>
+                <div class="flex items-center justify-end gap-2">
+                    <span class="text-2xl font-black text-slate-800 dark:text-white">{{ aparelhos|length }}</span>
+                    <span class="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 text-[9px] font-black uppercase">Ativos</span>
+                </div>
+            </div>
+            <button onclick="openModal('modalAparelho')" class="btn-premium bg-teal-600 hover:bg-teal-700 text-white shadow-xl shadow-teal-500/20">
+                <i class="fa-solid fa-plus"></i>
+                Adicionar Hardware
+            </button>
+        </div>
     </div>
 
-    <!-- ✅ LISTA DE APARELHOS -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <!-- ✅ FILTROS RÁPIDOS -->
+    <div class="flex gap-4 overflow-x-auto pb-2 custom-scrollbar">
+        <button onclick="filterDevices('all', this)" id="btn-filter-all" class="filter-btn px-6 py-3 rounded-2xl bg-teal-600 text-white text-xs font-black uppercase tracking-widest shadow-lg shadow-teal-500/20 shrink-0">Todos</button>
+        <button onclick="filterDevices('online', this)" id="btn-filter-online" class="filter-btn px-6 py-3 rounded-2xl bg-white dark:bg-white/5 text-slate-500 dark:text-slate-400 text-xs font-black uppercase tracking-widest border border-slate-900/5 dark:border-white/5 shrink-0">Online</button>
+        <button onclick="filterDevices('offline', this)" id="btn-filter-offline" class="filter-btn px-6 py-3 rounded-2xl bg-white dark:bg-white/5 text-slate-500 dark:text-slate-400 text-xs font-black uppercase tracking-widest border border-slate-900/5 dark:border-white/5 shrink-0">Sem Sinal</button>
+        <button onclick="filterDevices('estoque', this)" id="btn-filter-estoque" class="filter-btn px-6 py-3 rounded-2xl bg-white dark:bg-white/5 text-slate-500 dark:text-slate-400 text-xs font-black uppercase tracking-widest border border-slate-900/5 dark:border-white/5 shrink-0">Em Estoque</button>
+    </div>
+
+    <!-- ✅ GRID DE APARELHOS -->
+    <div id="devices-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {% for a in aparelhos %}
-        <div class="card-premium p-6 group">
-            <div class="flex justify-between items-start mb-4">
-                <div class="w-12 h-12 rounded-2xl bg-slate-900/5 dark:bg-white/5 flex items-center justify-center text-slate-400 group-hover:bg-teal-500 group-hover:text-white transition-all duration-500">
-                    <i class="fa-solid fa-broadcast-tower text-lg"></i>
+        <div class="device-card card-premium p-6 group relative overflow-hidden" 
+             data-status="{% if not a.vehicle %}estoque{% elif a.last_seen %}online{% else %}offline{% endif %}">
+            <!-- Status Indicator -->
+            <div class="absolute top-0 right-0 p-4">
+                <div class="flex items-center gap-2 px-3 py-1 rounded-full {% if a.last_seen %}bg-emerald-500/10 text-emerald-500{% else %}bg-slate-500/10 text-slate-500{% endif %}">
+                    <span class="relative flex h-2 w-2">
+                        {% if a.last_seen %}
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                        {% else %}
+                        <span class="relative inline-flex rounded-full h-2 w-2 bg-slate-400"></span>
+                        {% endif %}
+                    </span>
+                    <span class="text-[9px] font-black uppercase tracking-widest">{{ 'Online' if a.last_seen else 'Offline' }}</span>
                 </div>
-                <div class="flex gap-2">
-                    <button onclick="editAparelho('{{ a.id }}', '{{ a.imei }}', '{{ a.model }}', '{{ a.vehicle_id or '' }}')" 
-                            class="w-8 h-8 rounded-lg bg-slate-900/5 dark:bg-white/5 flex items-center justify-center text-slate-400 hover:bg-blue-500 hover:text-white transition-all">
-                        <i class="fa-solid fa-pen text-xs"></i>
-                    </button>
-                    <button onclick="deleteAparelho('{{ a.id }}', '{{ a.imei }}')" 
-                            class="w-8 h-8 rounded-lg bg-slate-900/5 dark:bg-white/5 flex items-center justify-center text-slate-400 hover:bg-red-500 hover:text-white transition-all">
-                        <i class="fa-solid fa-trash text-xs"></i>
-                    </button>
-                </div>
-            </div>
-            
-            <div class="space-y-1 mb-4">
-                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">IMEI / Identificação</p>
-                <h4 class="text-xl font-black text-slate-800 dark:text-white">{{ a.imei }}</h4>
             </div>
 
-            <div class="flex flex-col gap-3">
-                <div class="flex items-center justify-between p-3 rounded-xl bg-slate-900/5 dark:bg-white/5">
-                    <span class="text-[10px] font-black text-slate-400 uppercase">Modelo</span>
-                    <span class="text-xs font-bold text-slate-700 dark:text-slate-200">{{ a.model }}</span>
+            <div class="flex items-center gap-4 mb-6">
+                <div class="w-14 h-14 rounded-2xl bg-slate-900/5 dark:bg-white/5 flex items-center justify-center text-slate-400 group-hover:bg-teal-500 group-hover:text-white transition-all duration-500">
+                    <i class="fa-solid fa-satellite-dish text-xl"></i>
                 </div>
-                <div class="flex items-center justify-between p-3 rounded-xl {% if a.vehicle %}bg-teal-500/10 border border-teal-500/20{% else %}bg-slate-900/5 dark:bg-white/5{% endif %}">
-                    <span class="text-[10px] font-black text-slate-400 uppercase">Veículo Atribuído</span>
-                    <span class="text-xs font-bold {% if a.vehicle %}text-teal-600{% else %}text-slate-500{% endif %}">
-                        {{ a.vehicle.plate if a.vehicle else 'Nenhum' }}
-                    </span>
+                <div>
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">IMEI</p>
+                    <h4 class="text-lg font-black text-slate-800 dark:text-white">{{ a.imei }}</h4>
                 </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 mb-6">
+                <div class="p-3 rounded-xl bg-slate-900/5 dark:bg-white/5">
+                    <p class="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Operadora</p>
+                    <p class="text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1">
+                        <i class="fa-solid fa-sim-card text-[10px] text-teal-500"></i>
+                        {{ a.provider or 'N/A' }}
+                    </p>
+                </div>
+                <div class="p-3 rounded-xl bg-slate-900/5 dark:bg-white/5">
+                    <p class="text-[8px] font-black text-slate-400 uppercase tracking-widest mb-1">Modelo</p>
+                    <p class="text-xs font-bold text-slate-700 dark:text-slate-200">{{ a.model }}</p>
+                </div>
+            </div>
+
+            <div class="p-4 rounded-2xl {% if a.vehicle %}bg-teal-500/5 border border-teal-500/20{% else %}bg-amber-500/5 border border-amber-500/20{% endif %} mb-6">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-[9px] font-black text-slate-400 uppercase">Vinculação</span>
+                    <i class="fa-solid fa-car text-[10px] {% if a.vehicle %}text-teal-500{% else %}text-amber-500{% endif %}"></i>
+                </div>
+                <h5 class="text-sm font-black {% if a.vehicle %}text-teal-600{% else %}text-amber-600{% endif %}">
+                    {{ a.vehicle.plate if a.vehicle else 'Disponível em Estoque' }}
+                </h5>
+                {% if a.vehicle %}
+                <p class="text-[10px] font-bold text-slate-500 mt-1">{{ a.vehicle.model }}</p>
+                {% endif %}
+            </div>
+
+            <div class="flex gap-2">
+                <button onclick="editAparelho('{{ a.id }}', '{{ a.imei }}', '{{ a.model }}', '{{ a.iccid|default('') }}', '{{ a.phone_number|default('') }}', '{{ a.provider|default('') }}', '{{ a.vehicle_id|default('') }}')" 
+                        class="flex-1 py-3 rounded-xl bg-slate-900/5 dark:bg-white/5 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:bg-blue-600 hover:text-white transition-all">
+                    Configurar
+                </button>
+                <button onclick="deleteAparelho('{{ a.id }}', '{{ a.imei }}')" 
+                        class="w-12 py-3 rounded-xl bg-slate-900/5 dark:bg-white/5 text-slate-400 hover:bg-red-500 hover:text-white transition-all">
+                    <i class="fa-solid fa-trash-can text-xs"></i>
+                </button>
             </div>
         </div>
         {% endfor %}
     </div>
 </div>
 
-<!-- ✅ MODAL CADASTRO/EDIÇÃO -->
+<!-- ✅ MODAL CADASTRO/EDIÇÃO (AVANÇADO) -->
 <div id="modalAparelho" class="fixed inset-0 hidden items-center justify-center z-[100] p-4">
     <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="closeModal('modalAparelho')"></div>
-    <div class="relative w-full max-w-md glass-premium rounded-[2.5rem] border border-white/10 shadow-2xl p-8 animate-premium">
+    <div class="relative w-full max-w-lg glass-premium rounded-[2.5rem] border border-white/10 shadow-2xl p-8 animate-premium">
         <h3 id="modalTitle" class="text-2xl font-black text-slate-800 dark:text-white mb-2">Novo Aparelho</h3>
-        <p class="text-xs text-slate-500 dark:text-slate-400 mb-8 uppercase tracking-widest font-bold">Configuração de Hardware</p>
+        <p class="text-xs text-slate-500 dark:text-slate-400 mb-8 uppercase tracking-widest font-bold">Hardware & Conectividade M2M</p>
         
-        <form method="post" class="space-y-5">
+        <form method="post" class="space-y-6">
             <input type="hidden" name="acao" id="formAcao" value="novo">
             <input type="hidden" name="id" id="formId">
             
-            <div class="space-y-2">
-                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">IMEI do Dispositivo</label>
-                <input type="text" name="imei" id="formImei" required placeholder="Ex: 865243..." 
-                       class="w-full bg-white dark:bg-slate-800/50 border border-slate-900/10 dark:border-white/10 rounded-2xl px-5 py-3.5 text-sm outline-none focus:ring-4 focus:ring-teal-500/20 focus:border-teal-500 transition-all">
+            <div class="grid grid-cols-2 gap-4">
+                <div class="space-y-2">
+                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">IMEI do Dispositivo</label>
+                    <input type="text" name="imei" id="formImei" required placeholder="865243..." 
+                           class="w-full bg-white dark:bg-slate-800/50 border border-slate-900/10 dark:border-white/10 rounded-2xl px-5 py-3.5 text-sm outline-none focus:ring-4 focus:ring-teal-500/20 focus:border-teal-500 transition-all">
+                </div>
+                <div class="space-y-2">
+                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Modelo / Protocolo</label>
+                    <select name="model" id="formModel" class="w-full bg-white dark:bg-slate-800/50 border border-slate-900/10 dark:border-white/10 rounded-2xl px-5 py-3.5 text-sm outline-none focus:ring-4 focus:ring-teal-500/20 transition-all">
+                        <option value="TK103">TK103 (Padrão)</option>
+                        <option value="TK303">TK303 (Coban)</option>
+                        <option value="GT06">GT06 / Accurate</option>
+                        <option value="FMB920">Teltonika FMB920</option>
+                    </select>
+                </div>
             </div>
 
-            <div class="space-y-2">
-                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Modelo / Protocolo</label>
-                <select name="model" id="formModel" class="w-full bg-white dark:bg-slate-800/50 border border-slate-900/10 dark:border-white/10 rounded-2xl px-5 py-3.5 text-sm outline-none focus:ring-4 focus:ring-teal-500/20 focus:border-teal-500 transition-all">
-                    <option value="TK103">TK103 (Padrão)</option>
-                    <option value="TK303">TK303</option>
-                    <option value="GT06">GT06 / Accurate</option>
-                    <option value="Teltonika">Teltonika</option>
-                </select>
+            <div class="p-6 rounded-3xl bg-slate-900/5 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 space-y-4">
+                <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                    <i class="fa-solid fa-sim-card text-teal-500"></i>
+                    Dados do Chip M2M
+                </h4>
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="space-y-2">
+                        <label class="text-[9px] font-bold text-slate-500 uppercase ml-1">ICCID</label>
+                        <input type="text" name="iccid" id="formIccid" placeholder="8955..." 
+                               class="w-full bg-white dark:bg-slate-800/50 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-xs outline-none focus:ring-2 focus:ring-teal-500 transition-all">
+                    </div>
+                    <div class="space-y-2">
+                        <label class="text-[9px] font-bold text-slate-500 uppercase ml-1">Telefone</label>
+                        <input type="text" name="phone_number" id="formPhone" placeholder="2199999..." 
+                               class="w-full bg-white dark:bg-slate-800/50 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-xs outline-none focus:ring-2 focus:ring-teal-500 transition-all">
+                    </div>
+                </div>
+                <div class="space-y-2">
+                    <label class="text-[9px] font-bold text-slate-500 uppercase ml-1">Operadora / Fornecedor</label>
+                    <input type="text" name="provider" id="formProvider" placeholder="Ex: Vivo / Links / Arqia" 
+                           class="w-full bg-white dark:bg-slate-800/50 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-xs outline-none focus:ring-2 focus:ring-teal-500 transition-all">
+                </div>
             </div>
 
             <div class="space-y-2">
                 <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Vincular a Veículo</label>
-                <select name="vehicle_id" id="formVehicleId" class="w-full bg-white dark:bg-slate-800/50 border border-slate-900/10 dark:border-white/10 rounded-2xl px-5 py-3.5 text-sm outline-none focus:ring-4 focus:ring-teal-500/20 focus:border-teal-500 transition-all">
-                    <option value="">Nenhum Veículo</option>
+                <select name="vehicle_id" id="formVehicleId" class="w-full bg-white dark:bg-slate-800/50 border border-slate-900/10 dark:border-white/10 rounded-2xl px-5 py-3.5 text-sm outline-none focus:ring-4 focus:ring-teal-500/20 transition-all">
+                    <option value="">Nenhum Veículo (Estoque)</option>
                     {% for v in veiculos %}
                     <option value="{{ v.id }}">{{ v.plate }} - {{ v.model }}</option>
                     {% endfor %}
                 </select>
             </div>
 
-            <div class="flex gap-3 pt-6">
+            <div class="flex gap-3 pt-4">
                 <button type="button" onclick="closeModal('modalAparelho')" class="flex-1 py-4 text-xs font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-colors">Cancelar</button>
-                <button type="submit" class="flex-[2] bg-teal-600 hover:bg-teal-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-teal-500/20 transition-all active:scale-95">Salvar Dispositivo</button>
+                <button type="submit" class="flex-[2] bg-teal-600 hover:bg-teal-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-teal-500/20 transition-all active:scale-95">Salvar Configurações</button>
             </div>
         </form>
     </div>
 </div>
 
 <script>
-    function editAparelho(id, imei, model, vehicleId) {
+    function editAparelho(id, imei, model, iccid, phone, provider, vehicleId) {
         document.getElementById('modalTitle').textContent = 'Editar Aparelho';
         document.getElementById('formAcao').value = 'editar';
         document.getElementById('formId').value = id;
         document.getElementById('formImei').value = imei;
         document.getElementById('formModel').value = model;
+        document.getElementById('formIccid').value = iccid;
+        document.getElementById('formPhone').value = phone;
+        document.getElementById('formProvider').value = provider;
         document.getElementById('formVehicleId').value = vehicleId;
         openModal('modalAparelho');
     }
@@ -129,10 +204,7 @@
         if(confirm(`Deseja realmente excluir o aparelho IMEI ${imei}?`)) {
             const form = document.createElement('form');
             form.method = 'POST';
-            form.innerHTML = `
-                <input type="hidden" name="acao" value="excluir">
-                <input type="hidden" name="id" value="${id}">
-            `;
+            form.innerHTML = `<input type="hidden" name="acao" value="excluir"><input type="hidden" name="id" value="${id}">`;
             document.body.appendChild(form);
             form.submit();
         }
