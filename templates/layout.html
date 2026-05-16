@@ -689,6 +689,19 @@
         }, 4000);
       }
 
+      // Trigger Flashed Messages as Toasts
+      {% with msgs = get_flashed_messages(with_categories=true) %}
+        {% if msgs %}
+          window.addEventListener('DOMContentLoaded', () => {
+            {% for category, message in msgs %}
+              {% if category != 'login_error' %}
+                showToast("{{ message }}", "{{ 'error' if category == 'danger' or category == 'error' else (category or 'success') }}");
+              {% endif %}
+            {% endfor %}
+          });
+        {% endif %}
+      {% endwith %}
+
       // Sidebar Logic
       (function() {
         const sidebar = document.getElementById('sidebar');

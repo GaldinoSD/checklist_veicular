@@ -934,7 +934,7 @@ def login():
                 return redirect(url_for("manutencao_os"))
             return redirect(url_for("checklist_mobile"))
 
-        flash("Usuário ou senha inválidos.", "error")
+        flash("Usuário ou senha inválidos.", "login_error")
 
     return render_template("login.html")
 

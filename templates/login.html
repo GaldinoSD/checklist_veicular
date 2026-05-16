@@ -141,9 +141,9 @@
     </button>
 
     <!-- ERROS -->
-    {% with msgs = get_flashed_messages(with_categories=true) %}
+    {% with msgs = get_flashed_messages(category_filter=["login_error"]) %}
       {% if msgs %}
-        {% for cat, msg in msgs %}
+        {% for msg in msgs %}
           <p class="text-red-400 text-center mt-4 text-sm font-semibold">
             {{ msg }}
           </p>
