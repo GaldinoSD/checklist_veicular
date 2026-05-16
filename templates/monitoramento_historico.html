@@ -3,39 +3,47 @@
 {% set page_title = "Histórico de Rotas" %}
 
 {% block content %}
-<div class="flex flex-col h-[calc(100vh-2rem)] overflow-hidden animate-premium">
+<div class="flex flex-col h-[calc(100vh-8rem)] lg:h-[calc(100vh-10rem)] overflow-hidden animate-premium">
     
     <!-- ✅ HEADER DE FILTRO -->
     <div class="mb-4">
-        <form id="filterForm" method="GET" class="flex flex-col md:flex-row md:items-end justify-between gap-6 glass-premium p-6 rounded-[2.5rem] shadow-xl overflow-hidden relative">
-            <div class="flex flex-col md:flex-row items-center gap-4 relative z-10">
-                <div class="space-y-1">
+        <form id="filterForm" method="GET" class="flex flex-col lg:flex-row lg:items-end justify-between gap-6 glass-premium p-6 rounded-[2.5rem] shadow-xl overflow-hidden relative">
+            <div class="flex flex-col md:flex-row items-stretch md:items-end gap-4 relative z-10 w-full lg:w-auto">
+                <div class="space-y-1 w-full md:w-64">
                     <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Veículo</label>
-                    <select name="vehicle_id" required class="w-full md:w-64 bg-slate-900/5 dark:bg-white/5 border-none ring-1 ring-slate-900/10 dark:ring-white/10 rounded-xl px-4 py-2 text-xs text-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-teal-500 transition-all">
+                    <select name="vehicle_id" required class="w-full bg-slate-900/5 dark:bg-white/5 border-none ring-1 ring-slate-900/10 dark:ring-white/10 rounded-xl px-4 py-2 text-xs text-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-teal-500 transition-all">
                         <option value="">Selecione um veículo</option>
                         {% for v in veiculos %}
                         <option value="{{ v.id }}" {% if request.args.get('vehicle_id')|int == v.id %}selected{% endif %}>{{ v.plate }} - {{ v.model }}</option>
                         {% endfor %}
                     </select>
                 </div>
-                <div class="space-y-1">
+                <div class="space-y-1 w-full md:w-auto">
                     <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Data Início</label>
                     <input type="datetime-local" name="data_ini" required value="{{ request.args.get('data_ini', '') }}"
                            class="w-full bg-slate-900/5 dark:bg-white/5 border-none ring-1 ring-slate-900/10 dark:ring-white/10 rounded-xl px-4 py-2 text-xs text-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-teal-500 transition-all">
                 </div>
-                <div class="space-y-1">
+                <div class="space-y-1 w-full md:w-auto">
                     <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Data Fim</label>
                     <input type="datetime-local" name="data_fim" required value="{{ request.args.get('data_fim', '') }}"
                            class="w-full bg-slate-900/5 dark:bg-white/5 border-none ring-1 ring-slate-900/10 dark:ring-white/10 rounded-xl px-4 py-2 text-xs text-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-teal-500 transition-all">
                 </div>
-                <button type="submit" class="btn-premium bg-slate-800 dark:bg-white text-white dark:text-slate-900 py-2.5 px-6 rounded-xl shadow-lg hover:scale-105 transition-all">
+                <button type="submit" class="w-full md:w-auto btn-premium bg-slate-800 dark:bg-white text-white dark:text-slate-900 py-2.5 px-6 rounded-xl shadow-lg hover:scale-105 transition-all shrink-0">
                     <i class="fa-solid fa-play text-[10px]"></i>
-                    Consultar Trajeto
+                    Consultar
                 </button>
+                {% if request.args.get('vehicle_id') and logs %}
+                <a href="/monitoramento/relatorio/pdf?vehicle_id={{ request.args.get('vehicle_id') }}&data_ini={{ request.args.get('data_ini') }}&data_fim={{ request.args.get('data_fim') }}" 
+                   target="_blank" 
+                   class="w-full md:w-auto btn-premium bg-teal-600 hover:bg-teal-700 text-white py-2.5 px-6 rounded-xl shadow-lg shadow-teal-500/20 hover:scale-105 transition-all shrink-0 text-center flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-file-pdf"></i>
+                    Exportar PDF
+                </a>
+                {% endif %}
             </div>
             
-            <div class="relative z-10 flex gap-4">
-                <div class="text-right">
+            <div class="relative z-10 flex gap-4 pr-2">
+                <div class="text-left lg:text-right">
                     <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Pontos Localizados</p>
                     <h4 class="text-xl font-black text-slate-800 dark:text-white leading-none">{{ logs|length }}</h4>
                 </div>
@@ -44,10 +52,10 @@
     </div>
 
     <!-- ✅ MAPA E LISTA -->
-    <div class="flex flex-1 gap-6 overflow-hidden">
+    <div class="flex flex-col lg:flex-row flex-1 gap-6 overflow-hidden min-h-0">
         
         <!-- Área do Mapa -->
-        <div class="flex-1 relative rounded-[2.5rem] overflow-hidden shadow-2xl border border-slate-900/5 dark:border-white/5 bg-slate-100 dark:bg-slate-900/50">
+        <div class="flex-1 min-h-[350px] lg:min-h-0 relative rounded-[2.5rem] overflow-hidden shadow-2xl border border-slate-900/5 dark:border-white/5 bg-slate-100 dark:bg-slate-900/50">
             {% if logs %}
             <div id="map" class="absolute inset-0 z-0"></div>
             {% else %}
@@ -71,8 +79,8 @@
         </div>
 
         <!-- Lista de Pontos Críticos -->
-        <div class="w-80 flex flex-col gap-4 overflow-hidden">
-            <div class="glass-premium p-5 rounded-[2rem] border border-slate-900/5 dark:border-white/5 h-full overflow-hidden flex flex-col">
+        <div class="w-full lg:w-80 h-[280px] lg:h-full flex flex-col gap-4 overflow-hidden shrink-0">
+            <div class="glass-premium p-4 md:p-5 rounded-[2rem] border border-slate-900/5 dark:border-white/5 h-full overflow-hidden flex flex-col">
                 <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
                     <i class="fa-solid fa-list-ol text-teal-500"></i>
                     Eventos de Telemetria

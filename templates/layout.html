@@ -550,6 +550,7 @@
       <div id="main-content" class="flex flex-col min-h-screen flex-1 min-w-0 bg-[#f8fafc] dark:bg-[#020617]">
         
         <!-- TOPBAR (Modern & Functional) -->
+        {% if not hide_header %}
         <header class="h-20 border-b border-slate-900/5 dark:border-white/5 flex items-center justify-between px-8 sticky top-0 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl z-40">
           <div class="flex items-center gap-6">
             <button id="btnMobileToggle" class="lg:hidden p-3 rounded-2xl bg-slate-900/5 dark:bg-white/5 text-slate-500 hover:text-slate-900 dark:hover:text-white transition-all active:scale-95">
@@ -615,8 +616,9 @@
              </div>
           </div>
         </header>
+        {% endif %}
 
-        <main class="p-4 md:p-6 lg:p-10">
+        <main class="{% if hide_header %}p-0 h-screen overflow-hidden{% else %}p-4 md:p-6 lg:p-10{% endif %}">
 
           {% block content %}{% endblock %}
         </main>

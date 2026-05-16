@@ -530,6 +530,42 @@
       </select>
     </div>
 
+    <div>
+      <label class="text-sm text-slate-700 dark:text-gray-300">Motorista Vinculado (Opcional)</label>
+      <select name="driver_id"
+              class="w-full bg-white dark:bg-gray-800 border border-slate-900/10 dark:border-gray-700 rounded-lg px-3 py-2
+                     text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/40">
+        <option value="">Nenhum Motorista</option>
+        {% for c in colaboradores %}
+        <option value="{{ c.id }}" {% if v.driver_id == c.id %}selected{% endif %}>{{ c.username }} ({{ c.role or 'Colaborador' }})</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div>
+      <label class="text-sm text-slate-700 dark:text-gray-300">Ícone no Mapa</label>
+      <select name="map_icon"
+              class="w-full bg-white dark:bg-gray-800 border border-slate-900/10 dark:border-gray-700 rounded-lg px-3 py-2
+                     text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/40">
+        <option value="fa-location-arrow" {% if v.map_icon == 'fa-location-arrow' %}selected{% endif %}>Seta de Navegação</option>
+        <option value="fa-car" {% if v.map_icon == 'fa-car' %}selected{% endif %}>Carro</option>
+        <option value="fa-truck" {% if v.map_icon == 'fa-truck' %}selected{% endif %}>Caminhão</option>
+        <option value="fa-motorcycle" {% if v.map_icon == 'fa-motorcycle' %}selected{% endif %}>Moto</option>
+        <option value="fa-bus" {% if v.map_icon == 'fa-bus' %}selected{% endif %}>Ônibus</option>
+        <option value="fa-van-shuttle" {% if v.map_icon == 'fa-van-shuttle' %}selected{% endif %}>Van / Utilitário</option>
+        <option value="fa-tractor" {% if v.map_icon == 'fa-tractor' %}selected{% endif %}>Trator</option>
+      </select>
+    </div>
+
+    <div>
+      <label class="text-sm text-slate-700 dark:text-gray-300">Cor do Marcador no Mapa</label>
+      <div class="flex items-center gap-3">
+        <input type="color" name="map_color" value="{{ v.map_color or '#10b981' }}"
+               class="w-12 h-10 border-0 bg-transparent rounded cursor-pointer">
+        <span class="text-xs text-slate-500 dark:text-gray-400">Identificação visual exclusiva</span>
+      </div>
+    </div>
+
     <div class="flex justify-end gap-3 pt-3">
       <button type="button"
               onclick="document.getElementById('edit{{ v.id }}').close()"
@@ -634,6 +670,42 @@
         <option value="MANUTENCAO">MANUTENÇÃO</option>
         <option value="INATIVO">INATIVO</option>
       </select>
+    </div>
+
+    <div>
+      <label class="text-sm text-slate-700 dark:text-gray-300">Motorista Vinculado (Opcional)</label>
+      <select name="driver_id"
+              class="w-full bg-white dark:bg-gray-800 border border-slate-900/10 dark:border-gray-700 rounded-lg px-3 py-2
+                     text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/40">
+        <option value="">Nenhum Motorista</option>
+        {% for c in colaboradores %}
+        <option value="{{ c.id }}">{{ c.username }} ({{ c.role or 'Colaborador' }})</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div>
+      <label class="text-sm text-slate-700 dark:text-gray-300">Ícone no Mapa</label>
+      <select name="map_icon"
+              class="w-full bg-white dark:bg-gray-800 border border-slate-900/10 dark:border-gray-700 rounded-lg px-3 py-2
+                     text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/40">
+        <option value="fa-location-arrow">Seta de Navegação</option>
+        <option value="fa-car">Carro</option>
+        <option value="fa-truck">Caminhão</option>
+        <option value="fa-motorcycle">Moto</option>
+        <option value="fa-bus">Ônibus</option>
+        <option value="fa-van-shuttle">Van / Utilitário</option>
+        <option value="fa-tractor">Trator</option>
+      </select>
+    </div>
+
+    <div>
+      <label class="text-sm text-slate-700 dark:text-gray-300">Cor do Marcador no Mapa</label>
+      <div class="flex items-center gap-3">
+        <input type="color" name="map_color" value="#10b981"
+               class="w-12 h-10 border-0 bg-transparent rounded cursor-pointer">
+        <span class="text-xs text-slate-500 dark:text-gray-400">Identificação visual exclusiva</span>
+      </div>
     </div>
 
     <div class="flex justify-end gap-3 pt-3">

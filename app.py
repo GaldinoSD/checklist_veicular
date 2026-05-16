@@ -242,7 +242,13 @@ class Vehicle(db.Model):
     status = db.Column(db.String(20), default="ATIVO")
     type = db.Column(db.String(20), default="carro")  # carro / moto / caminhao / van
 
-    # ✅ NOVO: 1 ficha de informações por veículo
+    # Custom tracking customization fields
+    driver_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
+    driver = db.relationship('User', foreign_keys=[driver_id])
+    map_icon = db.Column(db.String(50), default="fa-location-arrow")
+    map_color = db.Column(db.String(20), default="#10b981")
+
+    # ✅ 1 ficha de informações por veículo
     info = db.relationship(
         "VehicleInfo",
         backref="vehicle",
@@ -633,6 +639,12 @@ class SystemConfig(db.Model):
     __tablename__ = "system_config"
     id = db.Column(db.Integer, primary_key=True)
     mode = db.Column(db.String(20), default="start_only")
+    
+    # Telemetria Parâmetros
+    speed_limit = db.Column(db.Integer, default=80)
+    ignition_alert = db.Column(db.Boolean, default=True)
+    update_frequency = db.Column(db.Integer, default=30)
+    simulator_active = db.Column(db.Boolean, default=False)
 
 
 @login_manager.user_loader
@@ -651,9 +663,40 @@ def ensure_min_schema():
         text('ALTER TABLE "user" ADD COLUMN IF NOT EXISTS role VARCHAR(20)'),
         # type em vehicle
         text('ALTER TABLE vehicle ADD COLUMN IF NOT EXISTS type VARCHAR(20) DEFAULT \'carro\''),
+        text('ALTER TABLE vehicle ADD COLUMN IF NOT EXISTS driver_id INTEGER REFERENCES "user"(id)'),
+        text('ALTER TABLE vehicle ADD COLUMN IF NOT EXISTS map_icon VARCHAR(50) DEFAULT \'fa-location-arrow\''),
+        text('ALTER TABLE vehicle ADD COLUMN IF NOT EXISTS map_color VARCHAR(20) DEFAULT \'#10b981\''),
         # campos em checklist_item
         text('ALTER TABLE checklist_item ADD COLUMN IF NOT EXISTS type VARCHAR(50) DEFAULT \'texto_curto\''),
         text('ALTER TABLE checklist_item ADD COLUMN IF NOT EXISTS options TEXT'),
+        # campos em system_config
+        text('ALTER TABLE system_config ADD COLUMN IF NOT EXISTS speed_limit INTEGER DEFAULT 80'),
+        text('ALTER TABLE system_config ADD COLUMN IF NOT EXISTS ignition_alert BOOLEAN DEFAULT TRUE'),
+        text('ALTER TABLE system_config ADD COLUMN IF NOT EXISTS update_frequency INTEGER DEFAULT 30'),
+        text('ALTER TABLE system_config ADD COLUMN IF NOT EXISTS simulator_active BOOLEAN DEFAULT FALSE'),
+        text('''
+            CREATE TABLE IF NOT EXISTS gps_geofence (
+                id SERIAL PRIMARY KEY,
+                vehicle_id INTEGER NOT NULL UNIQUE REFERENCES vehicle(id),
+                lat FLOAT NOT NULL,
+                lon FLOAT NOT NULL,
+                radius FLOAT DEFAULT 500.0,
+                is_active BOOLEAN DEFAULT TRUE
+            )
+        '''),
+        text('''
+            CREATE TABLE IF NOT EXISTS gps_alert (
+                id SERIAL PRIMARY KEY,
+                imei VARCHAR(50),
+                vehicle_id INTEGER NOT NULL REFERENCES vehicle(id),
+                alert_type VARCHAR(50) NOT NULL,
+                description VARCHAR(255),
+                latitude FLOAT,
+                longitude FLOAT,
+                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                is_dismissed BOOLEAN DEFAULT FALSE
+            )
+        ''')
     ]
     for stmt in stmts:
         try:
@@ -1291,7 +1334,8 @@ def vehicles():
         if not v.status:
             v.status = "ATIVO"
 
-    return render_template("vehicles.html", veiculos=veiculos, q=q)
+    colaboradores = User.query.order_by(User.username.asc()).all()
+    return render_template("vehicles.html", veiculos=veiculos, q=q, colaboradores=colaboradores)
 
 
 @app.route("/veiculos/novo", methods=["POST"])
@@ -1326,6 +1370,11 @@ def vehicle_new():
     year = int(year_raw) if year_raw.isdigit() else None
     km = int(km_raw) if km_raw.isdigit() else 0
 
+    driver_id_raw = request.form.get("driver_id")
+    driver_id = int(driver_id_raw) if driver_id_raw and driver_id_raw.isdigit() else None
+    map_icon = request.form.get("map_icon", "fa-location-arrow").strip()
+    map_color = request.form.get("map_color", "#10b981").strip()
+
     v = Vehicle(
         plate=plate,
         brand=brand or None,
@@ -1334,6 +1383,9 @@ def vehicle_new():
         km=km,
         status=status_raw,
         type=type_,
+        driver_id=driver_id,
+        map_icon=map_icon,
+        map_color=map_color
     )
 
     db.session.add(v)
@@ -1396,6 +1448,11 @@ def vehicle_edit(vid):
 
     v.type = type_raw or "carro"
     v.status = status_raw
+
+    driver_id_raw = request.form.get("driver_id")
+    v.driver_id = int(driver_id_raw) if driver_id_raw and driver_id_raw.isdigit() else None
+    v.map_icon = request.form.get("map_icon", "fa-location-arrow").strip()
+    v.map_color = request.form.get("map_color", "#10b981").strip()
 
     db.session.commit()
 
@@ -2988,6 +3045,27 @@ class GPSLog(db.Model):
     timestamp = db.Column(db.DateTime, default=agora)
     raw_data = db.Column(db.Text)
 
+class GPSGeofence(db.Model):
+    __tablename__ = "gps_geofence"
+    id = db.Column(db.Integer, primary_key=True)
+    vehicle_id = db.Column(db.Integer, db.ForeignKey('vehicle.id'), unique=True, nullable=False)
+    lat = db.Column(db.Float, nullable=False)
+    lon = db.Column(db.Float, nullable=False)
+    radius = db.Column(db.Float, default=500.0) # raio em metros
+    is_active = db.Column(db.Boolean, default=True)
+
+class GPSAlert(db.Model):
+    __tablename__ = "gps_alert"
+    id = db.Column(db.Integer, primary_key=True)
+    imei = db.Column(db.String(50), nullable=True)
+    vehicle_id = db.Column(db.Integer, db.ForeignKey('vehicle.id'), nullable=False)
+    alert_type = db.Column(db.String(50), nullable=False) # SPEED_LIMIT, IGNITION_OFF_HOURS, GEOFENCE_EXIT
+    description = db.Column(db.String(255))
+    latitude = db.Column(db.Float)
+    longitude = db.Column(db.Float)
+    timestamp = db.Column(db.DateTime, default=agora)
+    is_dismissed = db.Column(db.Boolean, default=False)
+
 @app.route("/tracking")
 @login_required
 def tracking():
@@ -3011,6 +3089,11 @@ def monitoramento_aparelhos():
             if GPSDevice.query.filter_by(imei=imei).first():
                 flash("IMEI já cadastrado.", "error")
             else:
+                if v_id:
+                    existing_linked = GPSDevice.query.filter_by(vehicle_id=v_id).first()
+                    if existing_linked:
+                        flash("Este veículo já está associado a outro rastreador.", "error")
+                        return redirect(url_for("monitoramento_aparelhos"))
                 d = GPSDevice(
                     imei=imei, 
                     model=model, 
@@ -3027,12 +3110,24 @@ def monitoramento_aparelhos():
             id = request.form.get("id")
             d = GPSDevice.query.get(id)
             if d:
-                d.imei = request.form.get("imei").strip()
+                new_imei = request.form.get("imei").strip()
+                existing_imei = GPSDevice.query.filter_by(imei=new_imei).first()
+                if existing_imei and existing_imei.id != d.id:
+                    flash("Este IMEI já está cadastrado em outro aparelho.", "error")
+                    return redirect(url_for("monitoramento_aparelhos"))
+                
+                v_id = request.form.get("vehicle_id")
+                if v_id:
+                    existing_linked = GPSDevice.query.filter_by(vehicle_id=v_id).first()
+                    if existing_linked and existing_linked.id != d.id:
+                        flash("Este veículo já está associado a outro rastreador.", "error")
+                        return redirect(url_for("monitoramento_aparelhos"))
+                
+                d.imei = new_imei
                 d.model = request.form.get("model").strip()
                 d.iccid = request.form.get("iccid", "").strip()
                 d.phone_number = request.form.get("phone_number", "").strip()
                 d.provider = request.form.get("provider", "").strip()
-                v_id = request.form.get("vehicle_id")
                 d.vehicle_id = v_id if v_id else None
                 db.session.commit()
                 flash("Aparelho atualizado.", "success")
@@ -3050,6 +3145,86 @@ def monitoramento_aparelhos():
     aparelhos = GPSDevice.query.all()
     veiculos = Vehicle.query.filter_by(status="ATIVO").all()
     return render_template("monitoramento_aparelhos.html", aparelhos=aparelhos, veiculos=veiculos)
+
+def haversine_distance(lat1, lon1, lat2, lon2):
+    import math
+    R = 6371000 # Raio da Terra em metros
+    phi1 = math.radians(lat1)
+    phi2 = math.radians(lat2)
+    delta_phi = math.radians(lat2 - lat1)
+    delta_lambda = math.radians(lon2 - lon1)
+    a = math.sin(delta_phi/2)**2 + math.cos(phi1)*math.cos(phi2)*math.sin(delta_lambda/2)**2
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
+    return R * c
+
+def processar_telemetria(device, lat, lon, speed, ignition):
+    config = SystemConfig.query.first()
+    speed_limit = config.speed_limit if config else 80
+    ignition_alert = config.ignition_alert if config else True
+
+    # 1. Verificar excesso de velocidade
+    if speed and speed > speed_limit:
+        five_mins_ago = agora() - timedelta(minutes=5)
+        recent = GPSAlert.query.filter(
+            GPSAlert.vehicle_id == device.vehicle_id,
+            GPSAlert.alert_type == "SPEED_LIMIT",
+            GPSAlert.timestamp >= five_mins_ago
+        ).first()
+        if not recent:
+            alert = GPSAlert(
+                imei=device.imei,
+                vehicle_id=device.vehicle_id,
+                alert_type="SPEED_LIMIT",
+                description=f"Excesso de velocidade detectado: {round(speed)} KM/H (Limite: {speed_limit} KM/H)",
+                latitude=lat,
+                longitude=lon
+            )
+            db.session.add(alert)
+
+    # 2. Verificar ignição fora do horário comercial (ex: das 20h às 06h)
+    if ignition and ignition_alert:
+        current_hour = agora().hour
+        if current_hour >= 20 or current_hour < 6:
+            one_hour_ago = agora() - timedelta(hours=1)
+            recent = GPSAlert.query.filter(
+                GPSAlert.vehicle_id == device.vehicle_id,
+                GPSAlert.alert_type == "IGNITION_OFF_HOURS",
+                GPSAlert.timestamp >= one_hour_ago
+            ).first()
+            if not recent:
+                alert = GPSAlert(
+                    imei=device.imei,
+                    vehicle_id=device.vehicle_id,
+                    alert_type="IGNITION_OFF_HOURS",
+                    description=f"Ignição ativada fora do horário comercial: {agora().strftime('%H:%M:%S')}",
+                    latitude=lat,
+                    longitude=lon
+                )
+                db.session.add(alert)
+
+    # 3. Verificar cerca virtual
+    if lat and lon:
+        geofence = GPSGeofence.query.filter_by(vehicle_id=device.vehicle_id, is_active=True).first()
+        if geofence:
+            dist = haversine_distance(lat, lon, geofence.lat, geofence.lon)
+            if dist > geofence.radius:
+                ten_mins_ago = agora() - timedelta(minutes=10)
+                recent = GPSAlert.query.filter(
+                    GPSAlert.vehicle_id == device.vehicle_id,
+                    GPSAlert.alert_type == "GEOFENCE_EXIT",
+                    GPSAlert.timestamp >= ten_mins_ago
+                ).first()
+                if not recent:
+                    alert = GPSAlert(
+                        imei=device.imei,
+                        vehicle_id=device.vehicle_id,
+                        alert_type="GEOFENCE_EXIT",
+                        description=f"Veículo violou a Cerca Virtual: {round(dist)}m de distância do centro (Limite: {round(geofence.radius)}m)",
+                        latitude=lat,
+                        longitude=lon
+                    )
+                    db.session.add(alert)
+    db.session.commit()
 
 @app.route("/monitoramento/historico")
 @supervisor_allowed
@@ -3069,10 +3244,422 @@ def monitoramento_historico():
 
     return render_template("monitoramento_historico.html", veiculos=veiculos, logs=logs)
 
-@app.route("/monitoramento/config")
+@app.route("/monitoramento/config", methods=["GET", "POST"])
 @supervisor_allowed
 def monitoramento_config():
-    return render_template("monitoramento_config.html")
+    config = SystemConfig.query.first()
+    if not config:
+        config = SystemConfig(mode="start_only")
+        db.session.add(config)
+        db.session.commit()
+
+    if request.method == "POST":
+        config.speed_limit = request.form.get("speed_limit", 80, type=int)
+        config.ignition_alert = "ignition_alert" in request.form
+        config.update_frequency = request.form.get("update_frequency", 30, type=int)
+        config.simulator_active = "simulator_active" in request.form
+        db.session.commit()
+        flash("Configurações de telemetria atualizadas com sucesso!", "success")
+        return redirect(url_for("monitoramento_config"))
+
+    aparelhos = GPSDevice.query.all()
+    return render_template("monitoramento_config.html", config=config, aparelhos=aparelhos)
+
+@app.route("/api/gps/send_command", methods=["POST"])
+@login_required
+def api_gps_send_command():
+    if not current_user.has_permission("frota"):
+        return jsonify({"success": False, "error": "Sem permissão."}), 403
+
+    data = request.json or {}
+    imei = data.get("imei")
+    cmd_type = data.get("command")
+
+    if not imei or not cmd_type:
+        return jsonify({"success": False, "error": "Parâmetros imei e command são obrigatórios."}), 400
+
+    device = GPSDevice.query.filter_by(imei=imei).first()
+    if not device:
+        return jsonify({"success": False, "error": "Dispositivo não encontrado."}), 404
+
+    # Simular o mapeamento de comandos de acordo com o protocolo TK103
+    cmd_mapping = {
+        "REBOOT": {
+            "sent": "RESET",
+            "resp": "reset ok."
+        },
+        "POSITION": {
+            "sent": "fix030s001n",
+            "resp": "lat:-22.9068, lon:-43.1729, speed:0.0km/h"
+        },
+        "RELAY_OFF": {
+            "sent": "stop123456",
+            "resp": "Cut engine success."
+        },
+        "CONFIG_IP": {
+            "sent": "adminip123456 gps.checklistveicular.com.br 5002",
+            "resp": "adminip ok."
+        }
+    }
+
+    cmd_info = cmd_mapping.get(cmd_type, {
+        "sent": cmd_type,
+        "resp": "Command executed successfully."
+    })
+
+    # Adicionar o comando aos logs
+    new_log = GPSLog(
+        imei=imei,
+        vehicle_id=device.vehicle_id,
+        raw_data=f"COMMAND_SENT: {cmd_info['sent']} | RESPONSE: {cmd_info['resp']}"
+    )
+    db.session.add(new_log)
+    db.session.commit()
+
+    return jsonify({
+        "success": True,
+        "imei": imei,
+        "command_sent": cmd_info["sent"],
+        "device_response": cmd_info["resp"]
+    })
+
+@app.route("/api/gps/geofence", methods=["GET", "POST"])
+@login_required
+def api_gps_geofence():
+    if request.method == "POST":
+        data = request.json or {}
+        v_id = data.get("vehicle_id")
+        lat = data.get("lat")
+        lon = data.get("lon")
+        radius = data.get("radius", 500)
+        is_active = data.get("is_active", True)
+        
+        if not v_id or lat is None or lon is None:
+            return jsonify({"success": False, "error": "Parâmetros incompletos."}), 400
+            
+        fence = GPSGeofence.query.filter_by(vehicle_id=v_id).first()
+        if not fence:
+            fence = GPSGeofence(vehicle_id=v_id)
+            db.session.add(fence)
+            
+        fence.lat = float(lat)
+        fence.lon = float(lon)
+        fence.radius = float(radius)
+        fence.is_active = bool(is_active)
+        db.session.commit()
+        return jsonify({"success": True, "message": "Cerca virtual salva com sucesso!"})
+
+    v_id = request.args.get("vehicle_id")
+    if not v_id:
+        return jsonify({"success": False, "error": "vehicle_id é obrigatório."}), 400
+        
+    fence = GPSGeofence.query.filter_by(vehicle_id=v_id).first()
+    if fence:
+        return jsonify({
+            "success": True,
+            "vehicle_id": fence.vehicle_id,
+            "lat": fence.lat,
+            "lon": fence.lon,
+            "radius": fence.radius,
+            "is_active": fence.is_active
+        })
+    return jsonify({"success": False, "message": "Nenhuma cerca configurada para este veículo."})
+
+@app.route("/api/gps/alerts", methods=["GET"])
+@login_required
+def api_gps_alerts():
+    alerts = GPSAlert.query.filter_by(is_dismissed=False).order_by(GPSAlert.timestamp.desc()).all()
+    results = []
+    for a in alerts:
+        results.append({
+            "id": a.id,
+            "imei": a.imei,
+            "vehicle_id": a.vehicle_id,
+            "vehicle_plate": a.vehicle.plate if a.vehicle else "N/A",
+            "alert_type": a.alert_type,
+            "description": a.description,
+            "lat": a.latitude,
+            "lon": a.longitude,
+            "timestamp": a.timestamp.strftime("%d/%m %H:%M:%S")
+        })
+    return jsonify({"success": True, "alerts": results})
+
+@app.route("/api/gps/alerts/dismiss/<int:alert_id>", methods=["POST"])
+@login_required
+def api_gps_alerts_dismiss(alert_id):
+    alert = GPSAlert.query.get(alert_id)
+    if not alert:
+        return jsonify({"success": False, "error": "Alerta não encontrado."}), 404
+        
+    alert.is_dismissed = True
+    db.session.commit()
+    return jsonify({"success": True, "message": "Alerta dispensado com sucesso!"})
+
+@app.route("/api/gps/simulator/tick", methods=["POST"])
+@login_required
+def api_gps_simulator_tick():
+    db.session.commit()  # Evita cache de sessão do SQLAlchemy entre workers
+    config = SystemConfig.query.first()
+    if not config or not config.simulator_active:
+        return jsonify({"success": False, "message": "O Simulador GPRS está desativado globalmente."})
+
+    devices = GPSDevice.query.all()
+    associated_devices = [d for d in devices if d.vehicle_id]
+    if not associated_devices:
+        vehicle = Vehicle.query.filter_by(status="ATIVO").first()
+        if not vehicle:
+            vehicle = Vehicle(
+                plate="SIM-9999",
+                brand="Chevrolet",
+                model="Tracker",
+                year=2024,
+                color="Preto",
+                chassis="9BW12345678901234",
+                renavam="12345678901",
+                status="ATIVO"
+            )
+            db.session.add(vehicle)
+            db.session.commit()
+        mock_device = GPSDevice(
+            imei="999999999999999",
+            iccid="8955123456789012345F",
+            phone_number="21999999999",
+            provider="Vivo M2M",
+            vehicle_id=vehicle.id
+        )
+        db.session.add(mock_device)
+        db.session.commit()
+        associated_devices = [mock_device]
+    
+    devices = associated_devices
+    
+    # Rota simulada por Seropédica (BR-465 / Próximo à UFRRJ)
+    ROUTE_COORDINATES = [
+        (-22.7686, -43.7061, 0, True),    # Entrada da UFRRJ, Ignição Ligada
+        (-22.7712, -43.7085, 35, True),   # 35 km/h, Ignição Ligada
+        (-22.7745, -43.7112, 55, True),   # 55 km/h, Ignição Ligada
+        (-22.7788, -43.7145, 95, True),   # 95 km/h (Alerta de Excesso!), Ignição Ligada
+        (-22.7831, -43.7178, 60, True),   # 60 km/h, Ignição Ligada
+        (-22.7874, -43.7211, 45, True),   # 45 km/h, Ignição Ligada
+        (-22.7917, -43.7244, 0, False)    # Centro de Seropédica, Ignição Desligada
+    ]
+    
+    simulated_count = 0
+    for device in devices:
+        if not device.vehicle_id:
+            continue
+            
+        log_count = GPSLog.query.filter_by(imei=device.imei).count()
+        lat, lon, speed, ignition = ROUTE_COORDINATES[log_count % len(ROUTE_COORDINATES)]
+        
+        # Adicionar o log simulado
+        new_log = GPSLog(
+            imei=device.imei,
+            vehicle_id=device.vehicle_id,
+            lat=lat,
+            lon=lon,
+            speed=speed,
+            ignition=ignition,
+            raw_data="SIMULATED_GPRS_PACKET"
+        )
+        db.session.add(new_log)
+        db.session.commit()
+        
+        # Processar as regras de alertas
+        processar_telemetria(device, lat, lon, speed, ignition)
+        simulated_count += 1
+        
+    return jsonify({
+        "success": True, 
+        "simulated_count": simulated_count,
+        "message": f"Telemetria simulada atualizada para {simulated_count} rastreadores ativos."
+    })
+
+@app.route("/monitoramento/relatorio/pdf")
+@supervisor_allowed
+def monitoramento_relatorio_pdf():
+    import io
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.units import mm
+    from reportlab.lib import colors
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+
+    vehicle_id = request.args.get("vehicle_id", type=int)
+    data_ini = request.args.get("data_ini")
+    data_fim = request.args.get("data_fim")
+
+    if not vehicle_id or not data_ini or not data_fim:
+        flash("Parâmetros incompletos para geração de relatório.", "error")
+        return redirect(url_for("monitoramento_historico"))
+
+    vehicle = Vehicle.query.get(vehicle_id)
+    if not vehicle:
+        flash("Veículo não encontrado.", "error")
+        return redirect(url_for("monitoramento_historico"))
+
+    logs = GPSLog.query.filter(
+        GPSLog.vehicle_id == vehicle_id,
+        GPSLog.timestamp >= data_ini,
+        GPSLog.timestamp <= data_fim
+    ).order_by(GPSLog.timestamp.asc()).all()
+
+    # Calcular estatísticas
+    total_logs = len(logs)
+    engine_run_time = timedelta()
+    total_distance = 0.0 # em metros
+    speeds = []
+
+    for i in range(total_logs):
+        if logs[i].speed is not None:
+            speeds.append(logs[i].speed)
+            
+    for i in range(total_logs - 1):
+        if logs[i].lat and logs[i].lon and logs[i+1].lat and logs[i+1].lon:
+            total_distance += haversine_distance(logs[i].lat, logs[i].lon, logs[i+1].lat, logs[i+1].lon)
+            
+        if logs[i].ignition and logs[i+1].ignition:
+            diff = logs[i+1].timestamp - logs[i].timestamp
+            if diff.total_seconds() < 600:
+                engine_run_time += diff
+
+    max_speed = max(speeds) if speeds else 0.0
+    avg_speed = sum(speeds) / len(speeds) if speeds else 0.0
+    distance_km = total_distance / 1000.0
+
+    # Converter horas de ignição
+    hours = engine_run_time.seconds // 3600 + engine_run_time.days * 24
+    minutes = (engine_run_time.seconds % 3600) // 60
+    engine_run_time_str = f"{hours}h {minutes}m"
+
+    # Buscar quantidade de alertas
+    alerts_count = GPSAlert.query.filter(
+        GPSAlert.vehicle_id == vehicle_id,
+        GPSAlert.timestamp >= data_ini,
+        GPSAlert.timestamp <= data_fim
+    ).count()
+
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        rightMargin=15 * mm,
+        leftMargin=15 * mm,
+        topMargin=20 * mm,
+        bottomMargin=20 * mm
+    )
+
+    styles = getSampleStyleSheet()
+    
+    title_style = ParagraphStyle(
+        'DocTitle',
+        parent=styles['Normal'],
+        fontName='Helvetica-Bold',
+        fontSize=24,
+        textColor=colors.HexColor("#0f172a"),
+        spaceAfter=15
+    )
+    
+    section_style = ParagraphStyle(
+        'SectionTitle',
+        parent=styles['Normal'],
+        fontName='Helvetica-Bold',
+        fontSize=14,
+        textColor=colors.HexColor("#0d9488"),
+        spaceBefore=15,
+        spaceAfter=10
+    )
+    
+    body_bold = ParagraphStyle(
+        'BodyBold',
+        parent=styles['Normal'],
+        fontName='Helvetica-Bold',
+        fontSize=10,
+        textColor=colors.HexColor("#1e293b")
+    )
+    
+    body_text = ParagraphStyle(
+        'BodyTextCustom',
+        parent=styles['Normal'],
+        fontName='Helvetica',
+        fontSize=10,
+        textColor=colors.HexColor("#475569")
+    )
+
+    elements = []
+
+    elements.append(Paragraph("Relatório de Telemetria e Tráfego", title_style))
+    elements.append(Paragraph(f"Período: {data_ini.replace('T', ' ')} a {data_fim.replace('T', ' ')}", body_text))
+    elements.append(Spacer(1, 15))
+
+    elements.append(Paragraph("Informações Gerais do Veículo", section_style))
+    vehicle_info = [
+        [Paragraph("<b>Veículo</b>", body_bold), Paragraph(f"{vehicle.brand or ''} {vehicle.model or ''}", body_text)],
+        [Paragraph("<b>Placa</b>", body_bold), Paragraph(vehicle.plate, body_text)],
+        [Paragraph("<b>Modelo GPS</b>", body_bold), Paragraph(vehicle.gps_device.model if vehicle.gps_device else "Não vinculado", body_text)],
+        [Paragraph("<b>IMEI Associado</b>", body_bold), Paragraph(vehicle.gps_device.imei if vehicle.gps_device else "N/A", body_text)],
+    ]
+    t_vehicle = Table(vehicle_info, colWidths=[50 * mm, 130 * mm])
+    t_vehicle.setStyle(TableStyle([
+        ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor("#e2e8f0")),
+        ('PADDING', (0,0), (-1,-1), 8),
+        ('BACKGROUND', (0,0), (0,-1), colors.HexColor("#f8fafc")),
+    ]))
+    elements.append(t_vehicle)
+    elements.append(Spacer(1, 15))
+
+    elements.append(Paragraph("Indicadores Operacionais e Telemetria", section_style))
+    indicators = [
+        [Paragraph("<b>Total de Coordenadas Capturadas</b>", body_bold), Paragraph(str(total_logs), body_text)],
+        [Paragraph("<b>Distância Total Percorrida</b>", body_bold), Paragraph(f"{round(distance_km, 2)} KM", body_text)],
+        [Paragraph("<b>Tempo de Motor Ligado (Horas de Motor)</b>", body_bold), Paragraph(engine_run_time_str, body_text)],
+        [Paragraph("<b>Velocidade Máxima Registrada</b>", body_bold), Paragraph(f"{round(max_speed, 1)} KM/H", body_text)],
+        [Paragraph("<b>Velocidade Média no Percurso</b>", body_bold), Paragraph(f"{round(avg_speed, 1)} KM/H", body_text)],
+        [Paragraph("<b>Incidentes Críticos Gerados</b>", body_bold), Paragraph(str(alerts_count), body_text)],
+    ]
+    t_indicators = Table(indicators, colWidths=[80 * mm, 100 * mm])
+    t_indicators.setStyle(TableStyle([
+        ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor("#e2e8f0")),
+        ('PADDING', (0,0), (-1,-1), 8),
+        ('BACKGROUND', (0,0), (0,-1), colors.HexColor("#f8fafc")),
+    ]))
+    elements.append(t_indicators)
+    elements.append(Spacer(1, 20))
+
+    if alerts_count > 0:
+        elements.append(Paragraph("Alertas e Incidentes de Telemetria", section_style))
+        alerts_list = GPSAlert.query.filter(
+            GPSAlert.vehicle_id == vehicle_id,
+            GPSAlert.timestamp >= data_ini,
+            GPSAlert.timestamp <= data_fim
+        ).order_by(GPSAlert.timestamp.desc()).all()
+        
+        alert_data = [
+            [Paragraph("<b>Horário</b>", body_bold), Paragraph("<b>Tipo de Alerta</b>", body_bold), Paragraph("<b>Descrição do Incidente</b>", body_bold)]
+        ]
+        for a in alerts_list:
+            alert_data.append([
+                Paragraph(a.timestamp.strftime("%d/%m/%Y %H:%M:%S"), body_text),
+                Paragraph(a.alert_type, body_text),
+                Paragraph(a.description, body_text)
+            ])
+        t_alerts = Table(alert_data, colWidths=[40 * mm, 40 * mm, 100 * mm])
+        t_alerts.setStyle(TableStyle([
+            ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor("#e2e8f0")),
+            ('PADDING', (0,0), (-1,-1), 6),
+            ('BACKGROUND', (0,0), (-1,0), colors.HexColor("#fee2e2")),
+        ]))
+        elements.append(t_alerts)
+    else:
+        elements.append(Paragraph("Nenhum incidente crítico ou infração foi gerado pelo veículo no período analisado.", body_text))
+
+    doc.build(elements)
+    buffer.seek(0)
+    
+    response = make_response(buffer.getvalue())
+    response.headers['Content-Type'] = 'application/pdf'
+    response.headers['Content-Disposition'] = f'inline; filename=relatorio_telemetria_{vehicle.plate}.pdf'
+    return response
 
 @app.route("/api/gps/current")
 @login_required
@@ -3089,11 +3676,12 @@ def api_gps_current():
             diff = (agora() - last_log.timestamp).total_seconds()
             is_online = diff < 600
             
+        driver_name = v.driver.username if v.driver else None
         data = {
             "id": v.id,
             "plate": v.plate,
             "model": v.model,
-            "technician": "Equipamento: " + (v.gps_device.imei if v.gps_device else "Não vinculado"),
+            "technician": f"Motorista: {driver_name}" if driver_name else ("Equipamento: " + (v.gps_device.imei if v.gps_device else "Não vinculado")),
             "lat": last_log.lat if last_log else None,
             "lon": last_log.lon if last_log else None,
             "speed": last_log.speed if last_log else 0,
@@ -3101,7 +3689,9 @@ def api_gps_current():
             "ignition": last_log.ignition if last_log else False,
             "last_time": last_log.timestamp.strftime("%d/%m %H:%M") if last_log else "Sem dados",
             "is_online": is_online,
-            "status_text": "Em Movimento" if is_online and last_log.speed > 5 else ("Parado" if is_online else "Offline")
+            "status_text": "Em Movimento" if is_online and last_log.speed > 5 else ("Parado" if is_online else "Offline"),
+            "map_icon": v.map_icon or "fa-location-arrow",
+            "map_color": v.map_color or "#10b981"
         }
         results.append(data)
     return jsonify({"vehicles": results})
