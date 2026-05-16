@@ -1,0 +1,167 @@
+
+{% extends "layout.html" %}
+{% set page_title = "Histórico de Rotas" %}
+
+{% block content %}
+<div class="flex flex-col h-[calc(100vh-2rem)] overflow-hidden animate-premium">
+    
+    <!-- ✅ HEADER DE FILTRO -->
+    <div class="mb-4">
+        <form id="filterForm" method="GET" class="flex flex-col md:flex-row md:items-end justify-between gap-6 glass-premium p-6 rounded-[2.5rem] shadow-xl overflow-hidden relative">
+            <div class="flex flex-col md:flex-row items-center gap-4 relative z-10">
+                <div class="space-y-1">
+                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Veículo</label>
+                    <select name="vehicle_id" required class="w-full md:w-64 bg-slate-900/5 dark:bg-white/5 border-none ring-1 ring-slate-900/10 dark:ring-white/10 rounded-xl px-4 py-2 text-xs text-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-teal-500 transition-all">
+                        <option value="">Selecione um veículo</option>
+                        {% for v in veiculos %}
+                        <option value="{{ v.id }}" {% if request.args.get('vehicle_id')|int == v.id %}selected{% endif %}>{{ v.plate }} - {{ v.model }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="space-y-1">
+                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Data Início</label>
+                    <input type="datetime-local" name="data_ini" required value="{{ request.args.get('data_ini', '') }}"
+                           class="w-full bg-slate-900/5 dark:bg-white/5 border-none ring-1 ring-slate-900/10 dark:ring-white/10 rounded-xl px-4 py-2 text-xs text-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-teal-500 transition-all">
+                </div>
+                <div class="space-y-1">
+                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Data Fim</label>
+                    <input type="datetime-local" name="data_fim" required value="{{ request.args.get('data_fim', '') }}"
+                           class="w-full bg-slate-900/5 dark:bg-white/5 border-none ring-1 ring-slate-900/10 dark:ring-white/10 rounded-xl px-4 py-2 text-xs text-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-teal-500 transition-all">
+                </div>
+                <button type="submit" class="btn-premium bg-slate-800 dark:bg-white text-white dark:text-slate-900 py-2.5 px-6 rounded-xl shadow-lg hover:scale-105 transition-all">
+                    <i class="fa-solid fa-play text-[10px]"></i>
+                    Consultar Trajeto
+                </button>
+            </div>
+            
+            <div class="relative z-10 flex gap-4">
+                <div class="text-right">
+                    <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Pontos Localizados</p>
+                    <h4 class="text-xl font-black text-slate-800 dark:text-white leading-none">{{ logs|length }}</h4>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- ✅ MAPA E LISTA -->
+    <div class="flex flex-1 gap-6 overflow-hidden">
+        
+        <!-- Área do Mapa -->
+        <div class="flex-1 relative rounded-[2.5rem] overflow-hidden shadow-2xl border border-slate-900/5 dark:border-white/5 bg-slate-100 dark:bg-slate-900/50">
+            {% if logs %}
+            <div id="map" class="absolute inset-0 z-0"></div>
+            {% else %}
+            <div class="absolute inset-0 flex flex-col items-center justify-center text-center p-10 opacity-30">
+                <i class="fa-solid fa-route text-6xl mb-4"></i>
+                <h3 class="text-xl font-black uppercase tracking-widest">Nenhum histórico carregado</h3>
+                <p class="text-xs font-bold max-w-xs">Selecione um veículo e o período acima para visualizar o rastro de telemetria.</p>
+            </div>
+            {% endif %}
+
+            <!-- Controle de Playback (Placeholder para o futuro) -->
+            {% if logs %}
+            <div class="absolute bottom-6 left-6 z-[1000] glass-premium p-4 rounded-2xl border border-white/10 flex items-center gap-4">
+                <button class="w-10 h-10 rounded-xl bg-teal-500 text-white shadow-lg"><i class="fa-solid fa-play"></i></button>
+                <div class="w-64 h-1.5 bg-slate-200 dark:bg-white/10 rounded-full overflow-hidden">
+                    <div class="h-full bg-teal-500 w-0"></div>
+                </div>
+                <span class="text-[10px] font-black text-slate-500 uppercase tracking-widest">00:00:00</span>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Lista de Pontos Críticos -->
+        <div class="w-80 flex flex-col gap-4 overflow-hidden">
+            <div class="glass-premium p-5 rounded-[2rem] border border-slate-900/5 dark:border-white/5 h-full overflow-hidden flex flex-col">
+                <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <i class="fa-solid fa-list-ol text-teal-500"></i>
+                    Eventos de Telemetria
+                </h4>
+                
+                <div class="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-3">
+                    {% for log in logs %}
+                    {% if loop.index0 % 10 == 0 or log.speed > 80 %} {# Mostrar apenas a cada 10 pontos ou se for excesso de velocidade #}
+                    <div class="p-3 rounded-xl bg-slate-900/5 dark:bg-white/5 border border-transparent hover:border-teal-500/30 transition-all cursor-pointer"
+                         onclick="focusPoint({{ log.lat }}, {{ log.lon }}, '{{ log.timestamp.strftime('%H:%M:%S') }}', {{ log.speed }})">
+                        <div class="flex justify-between items-start mb-1">
+                            <span class="text-[9px] font-black text-slate-500">{{ log.timestamp.strftime('%H:%M:%S') }}</span>
+                            {% if log.speed > 80 %}
+                            <span class="px-2 py-0.5 rounded-full bg-red-500/10 text-red-500 text-[8px] font-black uppercase tracking-tighter">Excesso</span>
+                            {% endif %}
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-bold text-slate-700 dark:text-white">{{ log.speed|round|int if log.speed else 0 }} KM/H</span>
+                            <i class="fa-solid fa-location-dot text-[10px] {% if log.ignition %}text-amber-500{% else %}text-slate-400{% endif %}"></i>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% else %}
+                    <div class="text-center py-20 opacity-20">
+                        <i class="fa-solid fa-hourglass-start text-2xl mb-2"></i>
+                        <p class="text-[9px] font-black uppercase">Aguardando filtros</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if logs %}
+<!-- Leaflet -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+    let map;
+    const pathData = [
+        {% for log in logs %}
+        [{{ log.lat }}, {{ log.lon }}, "{{ log.timestamp.strftime('%H:%M:%S') }}", {{ log.speed if log.speed else 0 }}],
+        {% endfor %}
+    ];
+
+    function initMap() {
+        if (!pathData.length) return;
+
+        map = L.map('map', {
+            zoomControl: false,
+            attributionControl: false
+        }).setView(pathData[0], 15);
+        
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png').addTo(map);
+        L.control.zoom({ position: 'bottomleft' }).addTo(map);
+
+        // Criar Linha do Trajeto
+        const points = pathData.map(p => [p[0], p[1]]);
+        const polyline = L.polyline(points, {
+            color: '#14b8a6',
+            weight: 5,
+            opacity: 0.7,
+            lineJoin: 'round',
+            dashArray: '1, 10'
+        }).addTo(map);
+
+        // Ajustar zoom para caber todo o trajeto
+        map.fitBounds(polyline.getBounds(), { padding: [50, 50] });
+
+        // Marcador de Início e Fim
+        L.marker(points[0]).addTo(map).bindPopup("<b>Início do Percurso</b>");
+        L.marker(points[points.length-1]).addTo(map).bindPopup("<b>Fim do Percurso</b>");
+    }
+
+    function focusPoint(lat, lon, time, speed) {
+        map.flyTo([lat, lon], 17);
+        L.popup()
+            .setLatLng([lat, lon])
+            .setContent(`<div class="p-1"><b class="text-teal-600">${time}</b><br><span class="text-[10px]">Velocidade: ${Math.round(speed)} KM/H</span></div>`)
+            .openOn(map);
+    }
+
+    window.onload = initMap;
+</script>
+{% endif %}
+
+<style>
+    .leaflet-container { background: #f8fafc !important; }
+</style>
+{% endblock %}

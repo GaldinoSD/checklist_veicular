@@ -275,7 +275,6 @@
           
             {% set menu_items = [
               ('Dashboard', 'dashboard', 'fa-chart-pie', 'dashboard'),
-              ('Monitoramento', 'tracking', 'fa-location-dot', 'frota'),
               ('Veículos', 'vehicles', 'fa-car', 'veiculos'),
               ('Checklists', 'checklists', 'fa-clipboard-check', 'checklists_view'),
               ('Vistoria', 'vistorias_list', 'fa-magnifying-glass', 'vistorias_list'),
@@ -309,6 +308,52 @@
               {% endif %}
             {% endfor %}
             {% endif %}
+
+          {% if current_user.has_permission('frota') %}
+          <!-- ✅ MONITORAMENTO COLLAPSIBLE -->
+          <div class="space-y-1 mb-2">
+            <button onclick="toggleSubmenu('submenu-monitoramento', this)" 
+                    class="w-full flex items-center justify-between gap-3.5 px-4 py-3 rounded-2xl transition-all duration-300 group
+                           {% if request.path.startswith('/monitoramento') or request.endpoint == 'tracking' %}
+                             bg-teal-600/10 text-teal-600 dark:text-teal-400 border border-teal-500/20
+                           {% else %}
+                             text-slate-500 dark:text-gray-400 hover:bg-slate-900/5 dark:hover:bg-white/5
+                           {% endif %}">
+              <div class="flex items-center gap-3.5">
+                <i class="fa-solid fa-satellite-dish w-5 text-center text-base transition-colors {% if request.path.startswith('/monitoramento') or request.endpoint == 'tracking' %}text-teal-500{% else %}text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200{% endif %}"></i>
+                <span class="text-[13px] font-bold tracking-tight">Monitoramento</span>
+              </div>
+              <i class="fa-solid fa-chevron-down text-[10px] chevron-rotate {% if request.path.startswith('/monitoramento') or request.endpoint == 'tracking' %}open-chevron{% endif %}"></i>
+            </button>
+            
+            <div id="submenu-monitoramento" class="submenu-container {% if request.path.startswith('/monitoramento') or request.endpoint == 'tracking' %}open{% endif %} ml-4 border-l border-slate-900/5 dark:border-white/5 pl-2 space-y-1 mt-1">
+                <a href="{{ url_for('tracking') }}" 
+                   class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-[12px] font-bold transition-all
+                          {% if request.endpoint == 'tracking' %}text-teal-500 bg-teal-500/5{% else %}text-slate-500 dark:text-gray-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-900/5 dark:hover:bg-white/5{% endif %}">
+                  <i class="fa-solid fa-map-location-dot w-4 text-center opacity-70"></i>
+                  Mapa ao Vivo
+                </a>
+                <a href="{{ url_for('monitoramento_aparelhos') }}" 
+                   class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-[12px] font-bold transition-all
+                          {% if request.endpoint == 'monitoramento_aparelhos' %}text-teal-500 bg-teal-500/5{% else %}text-slate-500 dark:text-gray-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-900/5 dark:hover:bg-white/5{% endif %}">
+                  <i class="fa-solid fa-microchip w-4 text-center opacity-70"></i>
+                  Aparelhos GPS
+                </a>
+                <a href="{{ url_for('monitoramento_historico') }}" 
+                   class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-[12px] font-bold transition-all
+                          {% if request.endpoint == 'monitoramento_historico' %}text-teal-500 bg-teal-500/5{% else %}text-slate-500 dark:text-gray-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-900/5 dark:hover:bg-white/5{% endif %}">
+                  <i class="fa-solid fa-clock-rotate-left w-4 text-center opacity-70"></i>
+                  Histórico de Rotas
+                </a>
+                <a href="{{ url_for('monitoramento_config') }}" 
+                   class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-[12px] font-bold transition-all
+                          {% if request.endpoint == 'monitoramento_config' %}text-teal-500 bg-teal-500/5{% else %}text-slate-500 dark:text-gray-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-900/5 dark:hover:bg-white/5{% endif %}">
+                  <i class="fa-solid fa-gears w-4 text-center opacity-70"></i>
+                  Configurações
+                </a>
+            </div>
+          </div>
+          {% endif %}
 
           {% if current_user.has_permission('checklist_mobile') or current_user.has_permission('treinamentos_mobile') or current_user.has_permission('manutencao_os') %}
           <div class="py-3 px-4 text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-gray-500 mt-6">Operacional</div>
@@ -601,7 +646,7 @@
           </div>
           <div class="flex gap-3 pt-4">
             <button type="button" onclick="closeModal('modalSenha')" class="flex-1 py-3 text-sm font-bold text-slate-400 hover:text-slate-600 transition-colors">Cancelar</button>
-            <button type="submit" class="flex-[2] bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold shadow-xl shadow-blue-500/40 transition-all active:scale-95">Salvar Alterações</button>
+            <button type="submit" class="flex-[2] bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold shadow-xl shadow-blue-500/40 transition-all active:scale(0.95)">Salvar Alterações</button>
           </div>
         </form>
       </div>
@@ -696,15 +741,10 @@
           const tabId = tabLink.getAttribute('data-tab');
           if (typeof switchTab === 'function') {
             switchTab(tabId);
-            // Update URL without refresh
             const url = new URL(window.location);
             url.searchParams.set('tab', tabId);
             window.history.pushState({}, '', url);
-            
-            // Mobile auto-close
-            if (window.innerWidth <= 1024) {
-              document.getElementById('sidebar')?.classList.remove('mobile-open');
-            }
+            if (window.innerWidth <= 1024) document.getElementById('sidebar')?.classList.remove('mobile-open');
           } else {
             window.location.href = tabLink.href;
           }
@@ -740,7 +780,6 @@
             </button>
         </div>
         <div id="notif-list" class="p-4 space-y-3 overflow-y-auto h-[calc(100vh-100px)] custom-scrollbar">
-            <!-- Dinâmico -->
             <div class="text-center py-20">
                 <div class="animate-spin inline-block w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full mb-4"></div>
                 <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Carregando...</p>
@@ -751,7 +790,7 @@
     <!-- ✅ HELP MODAL -->
     <div id="modalHelp" class="fixed inset-0 hidden items-center justify-center z-[110] p-4">
         <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="closeModal('modalHelp')"></div>
-        <div class="relative w-full max-w-2xl rounded-[2.5rem] bg-white dark:bg-slate-900 border border-slate-900/10 dark:border-white/10 shadow-2xl overflow-hidden animate-premium">
+        <div class="relative w-full max-w-2xl rounded-[2.5rem] bg-white dark:bg-slate-900 border border-slate-900/10 dark:border-white/10 shadow-2xl overflow-hidden">
             <div class="p-8 border-b border-slate-900/5 dark:border-white/5 bg-slate-500/5 flex items-center justify-between">
                 <div class="flex items-center gap-4">
                     <div class="w-12 h-12 rounded-2xl bg-slate-500/10 flex items-center justify-center text-slate-600">
@@ -767,152 +806,12 @@
                 </button>
             </div>
             <div class="p-8 max-h-[60vh] overflow-y-auto custom-scrollbar">
-                <div id="help-content" class="text-sm text-slate-600 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">
-                    Carregando manuais...
-                </div>
+                <div id="help-content" class="text-sm text-slate-600 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">Carregando manuais...</div>
             </div>
             <div class="p-6 bg-slate-50 dark:bg-white/5 border-t border-slate-900/5 dark:border-white/5 text-center">
                 <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Em caso de dúvidas persistentes, entre em contato com o suporte.</p>
             </div>
         </div>
     </div>
-
-    <script>
-      // ✅ NOTIFICATION LOGIC
-      async function updateNotifBadge() {
-        try {
-          const res = await fetch('/api/notificacoes/unread_count');
-          const data = await res.json();
-          const badge = document.getElementById('notif-badge');
-          if (data.count > 0) {
-            badge.textContent = data.count;
-            badge.classList.remove('hidden');
-          } else {
-            badge.classList.add('hidden');
-          }
-        } catch (e) {}
-      }
-
-      async function toggleNotifications() {
-        const drawer = document.getElementById('notification-drawer');
-        const overlay = document.getElementById('drawer-overlay');
-        const isOpen = drawer.classList.contains('open');
-        
-        if (!isOpen) {
-          drawer.classList.add('open');
-          overlay.classList.add('visible');
-          await loadNotifs();
-        } else {
-          drawer.classList.remove('open');
-          overlay.classList.remove('visible');
-        }
-      }
-
-      async function loadNotifs() {
-        const list = document.getElementById('notif-list');
-        try {
-          const res = await fetch('/api/notificacoes/list');
-          const data = await res.json();
-          
-          if (data.notifications.length === 0) {
-            list.innerHTML = `
-              <div class="text-center py-20 opacity-50">
-                <i class="fa-solid fa-inbox text-4xl mb-4"></i>
-                <p class="text-[10px] font-black uppercase tracking-widest">Tudo limpo por aqui</p>
-              </div>
-            `;
-            return;
-          }
-
-          list.innerHTML = data.notifications.map(n => `
-            <div onclick="markRead(${n.id}, this)" class="p-4 rounded-[1.5rem] border ${n.read ? 'border-slate-900/5 dark:border-white/5 opacity-70' : 'border-blue-500/20 bg-blue-500/5'} transition-all cursor-pointer group">
-              <div class="flex justify-between items-start mb-2">
-                <h4 class="text-xs font-black text-slate-800 dark:text-white group-hover:text-blue-500 transition-colors">${n.title}</h4>
-                <span class="text-[9px] font-black text-slate-400 font-mono">${n.date}</span>
-              </div>
-              <p class="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">${urlize(n.message)}</p>
-              ${!n.read ? '<div class="w-1.5 h-1.5 rounded-full bg-blue-500 mt-3"></div>' : ''}
-            </div>
-          `).join('');
-        } catch (e) {
-          list.innerHTML = '<p class="text-center py-10 text-xs text-red-500">Erro ao carregar</p>';
-        }
-      }
-
-      async function markRead(id, el) {
-        try {
-          await fetch('/api/notificacoes/mark_read', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({id: id})
-          });
-          el.classList.add('opacity-70');
-          el.classList.remove('bg-blue-500/5', 'border-blue-500/20');
-          el.querySelector('.bg-blue-500')?.remove();
-          updateNotifBadge();
-        } catch (e) {}
-      }
-
-      // ✅ HELP LOGIC
-      function urlize(text) {
-        if (!text) return "";
-        const pattern = /(https?:\/\/[^\s]+)/g;
-        return text.replace(pattern, '<a href="$1" target="_blank" class="text-blue-500 hover:underline font-bold">$1</a>');
-      }
-
-      async function toggleHelp() {
-        const content = document.getElementById('help-content');
-        openModal('modalHelp');
-        try {
-          const res = await fetch('/api/informacoes');
-          const data = await res.json();
-          content.innerHTML = urlize(data.content);
-        } catch (e) {
-          content.textContent = "Erro ao carregar orientações.";
-        }
-      }
-
-      // ✅ WEATHER LOGIC (Seropédica)
-      async function updateWeather() {
-        try {
-          const res = await fetch('https://api.open-meteo.com/v1/forecast?latitude=-22.7486&longitude=-43.7081&current_weather=true');
-          const data = await res.json();
-          const temp = Math.round(data.current_weather.temperature);
-          const code = data.current_weather.weathercode;
-          
-          document.getElementById('weather-temp').textContent = temp + '°C';
-          document.getElementById('weather-temp-mobile').textContent = temp + '°C';
-          
-          const iconEl = document.getElementById('weather-icon');
-          const boxEl = document.getElementById('weather-icon-box');
-          
-          // Mapeamento simples de weathercode (WMO)
-          if (code === 0) { iconEl.className = 'fa-solid fa-sun text-sm'; boxEl.className = 'w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-500'; }
-          else if (code <= 3) { iconEl.className = 'fa-solid fa-cloud-sun text-sm'; boxEl.className = 'w-8 h-8 rounded-lg bg-blue-400/10 flex items-center justify-center text-blue-400'; }
-          else if (code <= 48) { iconEl.className = 'fa-solid fa-cloud text-sm'; boxEl.className = 'w-8 h-8 rounded-lg bg-slate-400/10 flex items-center justify-center text-slate-400'; }
-          else if (code <= 67) { iconEl.className = 'fa-solid fa-cloud-showers-heavy text-sm'; boxEl.className = 'w-8 h-8 rounded-lg bg-indigo-400/10 flex items-center justify-center text-indigo-400'; }
-          else { iconEl.className = 'fa-solid fa-cloud-bolt text-sm'; boxEl.className = 'w-8 h-8 rounded-lg bg-red-400/10 flex items-center justify-center text-red-400'; }
-          
-        } catch (e) {}
-      }
-
-      // Ciclo de vida
-      updateWeather();
-      setInterval(updateWeather, 900000); // Atualiza a cada 15 min
-      
-      updateNotifBadge();
-      setInterval(updateNotifBadge, 60000); // Sincroniza a cada 1 min
-
-      // ✅ FLASH MESSAGES TO TOASTS
-      {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-          {% for category, message in messages %}
-            {% set t = 'success' if category in ['success', 'message'] else 'error' if category in ['error', 'danger'] else 'warning' if category == 'warning' else 'info' %}
-            showToast("{{ message }}", "{{ t }}");
-          {% endfor %}
-        {% endif %}
-      {% endwith %}
-
-    </script>
   </body>
 </html>

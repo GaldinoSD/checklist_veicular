@@ -1,0 +1,113 @@
+
+{% extends "layout.html" %}
+{% set page_title = "Configurações de Telemetria" %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto space-y-8 animate-premium">
+    
+    <!-- ✅ HEADER -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 glass-premium p-8 rounded-[2.5rem] shadow-xl overflow-hidden relative">
+        <div class="absolute -top-24 -right-24 w-64 h-64 bg-slate-500/10 rounded-full blur-3xl"></div>
+        <div class="flex items-center gap-6 relative z-10">
+            <div class="w-16 h-16 rounded-[1.5rem] bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center text-white shadow-2xl">
+                <i class="fa-solid fa-gears text-2xl"></i>
+            </div>
+            <div>
+                <nav class="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">
+                    <span>Monitoramento</span>
+                    <i class="fa-solid fa-chevron-right text-[8px] opacity-30"></i>
+                    <span class="text-slate-600 dark:text-slate-300">Parâmetros do Sistema</span>
+                </nav>
+                <h2 class="text-3xl font-black text-slate-800 dark:text-white tracking-tight">Configurações</h2>
+            </div>
+        </div>
+    </div>
+
+    <!-- ✅ GRID DE CONFIGURAÇÕES -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        
+        <!-- Alertas de Velocidade -->
+        <div class="card-premium p-8 space-y-6">
+            <div class="flex items-center gap-4">
+                <div class="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center text-red-500">
+                    <i class="fa-solid fa-gauge-high"></i>
+                </div>
+                <h3 class="font-black text-slate-800 dark:text-white uppercase tracking-widest text-xs">Alertas de Velocidade</h3>
+            </div>
+            
+            <div class="space-y-4">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold text-slate-500">Limite Máximo (KM/H)</span>
+                    <input type="number" value="80" class="w-20 bg-slate-900/5 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-lg px-3 py-1 text-center font-black text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-red-500">
+                </div>
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold text-slate-500">Notificar Supervisor</span>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" checked class="sr-only peer">
+                        <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-red-500"></div>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Parâmetros do Servidor -->
+        <div class="card-premium p-8 space-y-6">
+            <div class="flex items-center gap-4">
+                <div class="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500">
+                    <i class="fa-solid fa-server"></i>
+                </div>
+                <h3 class="font-black text-slate-800 dark:text-white uppercase tracking-widest text-xs">Servidor de Gateway</h3>
+            </div>
+            
+            <div class="space-y-4">
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold text-slate-500">Porta Escuta (TK103)</span>
+                    <span class="text-xs font-black text-blue-500">5002</span>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold text-slate-500">Intervalo de Logs</span>
+                    <select class="bg-slate-900/5 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-lg px-2 py-1 text-[10px] font-black outline-none">
+                        <option>10 Segundos</option>
+                        <option selected>30 Segundos</option>
+                        <option>1 Minuto</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cercas Virtuais (Placeholder) -->
+        <div class="card-premium p-8 space-y-6 opacity-50 grayscale cursor-not-allowed">
+            <div class="flex items-center gap-4">
+                <div class="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+                    <i class="fa-solid fa-draw-polygon"></i>
+                </div>
+                <div class="flex flex-col">
+                    <h3 class="font-black text-slate-800 dark:text-white uppercase tracking-widest text-xs">Cercas Virtuais</h3>
+                    <span class="text-[8px] font-black text-emerald-600 uppercase">Em breve</span>
+                </div>
+            </div>
+            <p class="text-[10px] font-medium text-slate-400">Defina perímetros geográficos e receba alertas automáticos de entrada e saída.</p>
+        </div>
+
+        <!-- Chips M2M / Dados -->
+        <div class="card-premium p-8 space-y-6">
+            <div class="flex items-center gap-4">
+                <div class="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500">
+                    <i class="fa-solid fa-sim-card"></i>
+                </div>
+                <h3 class="font-black text-slate-800 dark:text-white uppercase tracking-widest text-xs">Gestão de Conectividade</h3>
+            </div>
+            <button class="w-full btn-premium bg-slate-900/5 dark:bg-white/5 text-slate-600 dark:text-slate-300 border border-slate-900/10 dark:border-white/10 text-[10px] uppercase tracking-widest font-black">
+                Configurar APN
+            </button>
+        </div>
+
+    </div>
+
+    <div class="flex justify-end pt-4">
+        <button class="btn-premium bg-blue-600 hover:bg-blue-700 text-white shadow-xl shadow-blue-500/20 px-12">
+            Salvar Configurações
+        </button>
+    </div>
+</div>
+{% endblock %}

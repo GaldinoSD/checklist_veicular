@@ -31,7 +31,7 @@ def agora():
 # ===============================
 from flask import (
     Flask, render_template, request, redirect, url_for,
-    flash, send_from_directory, abort
+    flash, send_from_directory, abort, jsonify
 )
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import (
@@ -2984,6 +2984,72 @@ def tracking():
     if not current_user.has_permission("frota"):
         abort(403)
     return render_template("tracking.html")
+
+@app.route("/monitoramento/aparelhos", methods=["GET", "POST"])
+@supervisor_allowed
+def monitoramento_aparelhos():
+    if request.method == "POST":
+        acao = request.form.get("acao")
+        if acao == "novo":
+            imei = request.form.get("imei").strip()
+            model = request.form.get("model", "TK103").strip()
+            v_id = request.form.get("vehicle_id")
+            
+            if GPSDevice.query.filter_by(imei=imei).first():
+                flash("IMEI já cadastrado.", "error")
+            else:
+                d = GPSDevice(imei=imei, model=model, vehicle_id=v_id if v_id else None)
+                db.session.add(d)
+                db.session.commit()
+                flash("Aparelho GPS cadastrado com sucesso!", "success")
+        
+        elif acao == "editar":
+            id = request.form.get("id")
+            d = GPSDevice.query.get(id)
+            if d:
+                d.imei = request.form.get("imei").strip()
+                d.model = request.form.get("model").strip()
+                v_id = request.form.get("vehicle_id")
+                d.vehicle_id = v_id if v_id else None
+                db.session.commit()
+                flash("Aparelho atualizado.", "success")
+
+        elif acao == "excluir":
+            id = request.form.get("id")
+            d = GPSDevice.query.get(id)
+            if d:
+                db.session.delete(d)
+                db.session.commit()
+                flash("Aparelho removido.", "success")
+
+        return redirect(url_for("monitoramento_aparelhos"))
+
+    aparelhos = GPSDevice.query.all()
+    veiculos = Vehicle.query.filter_by(status="ATIVO").all()
+    return render_template("monitoramento_aparelhos.html", aparelhos=aparelhos, veiculos=veiculos)
+
+@app.route("/monitoramento/historico")
+@supervisor_allowed
+def monitoramento_historico():
+    veiculos = Vehicle.query.filter_by(status="ATIVO").all()
+    v_id = request.args.get("vehicle_id")
+    data_ini = request.args.get("data_ini")
+    data_fim = request.args.get("data_fim")
+    
+    logs = []
+    if v_id and data_ini and data_fim:
+        logs = GPSLog.query.filter(
+            GPSLog.vehicle_id == v_id,
+            GPSLog.timestamp >= data_ini,
+            GPSLog.timestamp <= data_fim
+        ).order_by(GPSLog.timestamp.asc()).all()
+
+    return render_template("monitoramento_historico.html", veiculos=veiculos, logs=logs)
+
+@app.route("/monitoramento/config")
+@supervisor_allowed
+def monitoramento_config():
+    return render_template("monitoramento_config.html")
 
 @app.route("/api/gps/current")
 @login_required
