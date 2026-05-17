@@ -1,172 +1,283 @@
 {% extends "layout.html" %}
 {% block content %}
-<div class="max-w-6xl mx-auto">
 
-<!-- ✅ HEADER PREMIUM LOGS COMPACT -->
-<div class="mb-8 animate-premium">
-    <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6 glass-premium p-6 rounded-[2rem] shadow-xl overflow-hidden relative">
-        <!-- Decorativos -->
-        <div class="absolute -top-24 -right-24 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl"></div>
-        <div class="absolute -bottom-24 -left-24 w-64 h-64 bg-slate-500/10 rounded-full blur-3xl"></div>
+<!-- IMPORT GOOGLE FONTS FOR MONOSPACE TYPOGRAPHY -->
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;700&display=swap');
+  
+  /* Monospace Typography Overrides */
+  .glass-terminal, .glass-terminal * {
+    font-family: 'Fira Code', 'Courier New', Courier, monospace !important;
+  }
+  
+  /* Blinking Cursor */
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+  }
+  .animate-blink {
+    animation: blink 1.2s infinite steps(2, start);
+  }
+  
+  /* Scanline CRT overlay styling */
+  .bg-scanlines {
+    background: linear-gradient(
+      rgba(18, 16, 16, 0) 50%, 
+      rgba(0, 0, 0, 0.12) 50%
+    );
+    background-size: 100% 4px;
+  }
 
-        <div class="flex items-center gap-5 relative z-10">
-            <div class="w-12 h-12 rounded-[1.25rem] bg-gradient-to-br from-blue-500 to-slate-700 flex items-center justify-center text-white shadow-2xl shadow-blue-500/20">
-                <i class="fas fa-clipboard-list text-xl"></i>
-            </div>
-            <div>
-                <nav class="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-0.5">
-                    <span>Sistema</span>
-                    <i class="fa-solid fa-chevron-right text-[8px] opacity-30"></i>
-                    <span class="text-blue-500">Auditoria de Atividades</span>
-                </nav>
-                <h2 class="text-2xl font-black text-slate-800 dark:text-white tracking-tight">Logs</h2>
-            </div>
-        </div>
+  /* Scrollbar Customization */
+  .scrollbar-custom::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .scrollbar-custom::-webkit-scrollbar-track {
+    background: #020617; /* slate-950 */
+    border-radius: 6px;
+  }
+  .scrollbar-custom::-webkit-scrollbar-thumb {
+    background: #1e293b; /* slate-800 */
+    border-radius: 6px;
+  }
+  .scrollbar-custom::-webkit-scrollbar-thumb:hover {
+    background: #334155; /* slate-700 */
+  }
+</style>
 
-        <div class="flex flex-wrap items-center gap-3 relative z-10">
-            <form method="get" class="flex flex-wrap items-center gap-3">
-                <input id="periodo" type="text" name="periodo" value="{{ request.args.get('periodo', '') }}" placeholder="Selecione o período"
-                       class="bg-slate-900/5 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-white placeholder:text-slate-400 outline-none focus:border-blue-500/50 transition-all w-48">
-                
-                <div class="relative group">
-                    <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors text-xs"></i>
-                    <input id="filtro" type="text" name="busca" value="{{ request.args.get('busca', '') }}" placeholder="Filtrar logs..." 
-                           class="bg-slate-900/5 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 rounded-xl pl-10 pr-4 py-2.5 text-xs font-bold text-slate-700 dark:text-white placeholder:text-slate-400 outline-none focus:border-blue-500/50 transition-all w-48">
-                </div>
+<div class="max-w-6xl mx-auto px-4 sm:px-6">
 
-                <button class="p-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-lg shadow-blue-500/20 transition-all active:scale-95">
-                    <i class="fa-solid fa-filter text-xs"></i>
-                </button>
-                <a href="{{ url_for('logs') }}" class="p-2.5 bg-slate-500 hover:bg-slate-600 text-white rounded-xl shadow-lg transition-all active:scale-95">
-                    <i class="fa-solid fa-rotate-left text-xs"></i>
-                </a>
-            </form>
-        </div>
+  <!-- 🖥️ TERMINAL CONTAINER WINDOW -->
+  <div class="glass-terminal rounded-[1.5rem] overflow-hidden shadow-2xl border border-slate-800 bg-slate-950/90 text-slate-200 font-mono text-sm leading-relaxed p-0 relative">
+    
+    <!-- CRT Scanlines Overlay -->
+    <div class="pointer-events-none absolute inset-0 bg-scanlines z-40 opacity-10"></div>
+    
+    <!-- TERMINAL TITLE BAR -->
+    <div class="bg-slate-900 border-b border-slate-800/80 px-4 py-3 flex items-center justify-between relative select-none z-10">
+      <!-- Window Buttons (macOS style circular dots) -->
+      <div class="flex items-center gap-2">
+        <span class="w-3 h-3 rounded-full bg-rose-500/80 inline-block border border-rose-600/30"></span>
+        <span class="w-3 h-3 rounded-full bg-amber-500/80 inline-block border border-amber-600/30"></span>
+        <span class="w-3 h-3 rounded-full bg-emerald-500/80 inline-block border border-emerald-600/30"></span>
+      </div>
+      <!-- Center Title -->
+      <div class="text-xs text-slate-500 font-semibold absolute left-1/2 -translate-x-1/2 whitespace-nowrap">
+        system@checklist_veicular: ~/audit_logs
+      </div>
+      <!-- Right Status -->
+      <div class="text-[10px] text-slate-600 font-mono tracking-tight hidden sm:block">
+        TERM=xterm-256color (session: root)
+      </div>
     </div>
-</div>
 
-  <!-- LISTAGEM COM SCROLL -->
-  <div class="bg-white/70 border border-slate-900/10 shadow-xl p-5 rounded-xl backdrop-blur
-              dark:bg-gray-900/60 dark:border-gray-700">
+    <!-- TERMINAL INTERNAL WORKSPACE -->
+    <div class="p-4 sm:p-6 relative z-10">
+      
+      <!-- System Boot / Last Login Header Info -->
+      <div class="text-emerald-500/80 mb-6 text-xs leading-relaxed select-none border-b border-slate-900 pb-4">
+        <div>CHECKLIST-VEICULAR [Version 2.5.0] - Central de Logs de Auditoria</div>
+        <div>(c) 2026 GaldinoSD Corp. Todos os direitos reservados.</div>
+        <div class="mt-2 text-slate-500">Last login: Sun May 17 16:26:03 2026 from 127.0.0.1 (tys001)</div>
+        <div class="text-slate-500">Active hardware: PostgreSQL DB (Remote) | Gunicorn Server (Hot-Reloaded)</div>
+      </div>
 
-    <!-- ÁREA COM SCROLL -->
-    <div class="max-h-[500px] overflow-y-auto rounded-lg
-                border border-slate-900/10
-                dark:border-gray-800">
+      <!-- 🐚 CLI FILTER ARGS PANEL (FLAGS INPUT) -->
+      <div class="bg-slate-900/40 border border-slate-800/60 rounded-xl p-4 mb-6">
+        <div class="text-[10px] text-slate-500 font-bold uppercase tracking-wider mb-3 select-none flex items-center gap-1.5">
+          <i class="fa-solid fa-sliders text-teal-400"></i> Parâmetros de Filtro do Console
+        </div>
+        <form method="get" class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center">
+          
+          <!-- Period Flag Input -->
+          <div class="lg:col-span-5 flex items-center gap-2">
+            <span class="text-emerald-400 font-semibold text-xs select-none">--period</span>
+            <div class="relative w-full">
+              <input id="periodo" type="text" name="periodo" value="{{ request.args.get('periodo', '') }}" placeholder="Selecione o período"
+                     class="w-full bg-slate-950 border border-slate-800 rounded-lg pl-3 pr-8 py-2 text-xs font-mono text-slate-200 placeholder:text-slate-700 focus:border-teal-500/50 outline-none transition-all">
+              <i class="fa-solid fa-calendar text-[10px] text-slate-600 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+            </div>
+          </div>
 
-      <table id="tabelaLogs" class="min-w-full divide-y divide-slate-200 dark:divide-gray-700">
-        <thead class="bg-slate-100/70 sticky top-0 z-10
-                      dark:bg-gray-800/60">
-          <tr>
-            <th class="px-4 py-3 text-left text-slate-600 dark:text-gray-300 uppercase text-xs tracking-wider">
-              Usuário
-            </th>
-            <th class="px-4 py-3 text-left text-slate-600 dark:text-gray-300 uppercase text-xs tracking-wider">
-              Ação
-            </th>
-            <th class="px-4 py-3 text-left text-slate-600 dark:text-gray-300 uppercase text-xs tracking-wider">
-              Data/Hora
-            </th>
-          </tr>
-        </thead>
+          <!-- Search Flag Input -->
+          <div class="lg:col-span-5 flex items-center gap-2">
+            <span class="text-emerald-400 font-semibold text-xs select-none">--search</span>
+            <div class="relative w-full">
+              <input id="filtro" type="text" name="busca" value="{{ request.args.get('busca', '') }}" placeholder="Filtrar logs..."
+                     class="w-full bg-slate-950 border border-slate-800 rounded-lg pl-3 pr-8 py-2 text-xs font-mono text-slate-200 placeholder:text-slate-700 focus:border-teal-500/50 outline-none transition-all">
+              <i class="fa-solid fa-magnifying-glass text-[10px] text-slate-600 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+            </div>
+          </div>
 
-        <tbody class="divide-y divide-slate-200 dark:divide-gray-800
-                      text-slate-900 dark:text-gray-200"
-               id="tbodyLogs">
+          <!-- Buttons -->
+          <div class="lg:col-span-2 flex items-center gap-2 justify-end">
+            <!-- Submit (grep execution) -->
+            <button type="submit" class="px-3 py-2 bg-teal-950/40 hover:bg-teal-900/60 border border-teal-800/40 text-teal-400 hover:text-teal-300 rounded-lg text-xs font-bold transition-all active:scale-95 flex items-center gap-1.5 w-full justify-center">
+              <i class="fa-solid fa-play text-[10px]"></i> grep
+            </button>
+            <!-- Reset -->
+            <a href="{{ url_for('logs') }}" class="px-2 py-2 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-slate-300 rounded-lg text-xs font-bold transition-all active:scale-95 flex items-center justify-center">
+              <i class="fa-solid fa-rotate-left text-[10px]"></i>
+            </a>
+          </div>
+        </form>
+      </div>
 
+      <!-- 💡 INTERACTIVE LIVE COMMAND SIMULATOR -->
+      <div class="bg-slate-950 border border-slate-900/60 rounded-lg px-4 py-2.5 mb-6 select-none flex items-center gap-2 overflow-x-auto whitespace-nowrap">
+        <span class="text-teal-400 font-semibold text-xs">system@checklist</span>
+        <span class="text-slate-600">:</span>
+        <span class="text-blue-400 text-xs">~/logs_auditoria</span>
+        <span class="text-slate-400 text-xs">$</span>
+        <span id="cliCmdDisplay" class="text-slate-300 font-mono text-xs">
+          grep -i <span class="text-amber-400">"{{ request.args.get('busca', '') or '*' }}"</span> --period=<span class="text-cyan-400">"{{ request.args.get('periodo', '') or 'ALL' }}"</span> /var/log/audit.log
+        </span>
+      </div>
+
+      <!-- 📊 SYSLOG STREAM OUTPUT VIEWPORT -->
+      <div class="max-h-[500px] overflow-y-auto rounded-xl border border-slate-900 bg-slate-950/80 p-4 scrollbar-custom" id="syslogViewport">
+        <div class="space-y-2" id="tbodyLogs">
+          
           {% for r in registros %}
-          <tr class="hover:bg-slate-50/70 dark:hover:bg-gray-800/40 transition">
-            <td class="px-4 py-3 font-medium">{{ r.usuario }}</td>
+            <div class="log-row flex flex-col lg:flex-row lg:items-start gap-1 lg:gap-3 hover:bg-slate-900/40 px-2.5 py-1.5 rounded transition text-xs font-mono border-b border-slate-900/30 lg:border-b-0">
+              
+              <!-- Timestamp (Tech Color) -->
+              <span class="text-slate-500 select-none whitespace-nowrap">
+                [{{ r.data_hora|br_datetime }}]
+              </span>
 
-            <td class="px-4 py-3">
+              <!-- Action Tag (ANSI Color Coded) -->
               {% set text = r.acao.lower() %}
-              {% if "criado" in text %}
-                <span class="text-emerald-600 dark:text-green-400 font-semibold">
-                  <i class="fas fa-plus-circle mr-1"></i>{{ r.acao }}
+              {% if "criado" in text or "criar" in text or "salvar" in text or "adicionar" in text %}
+                <span class="text-emerald-400 border border-emerald-500/20 bg-emerald-950/20 px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wider select-none uppercase w-fit min-w-[70px] text-center">
+                  [CREATE]
                 </span>
-              {% elif "excluído" in text or "delet" in text %}
-                <span class="text-red-600 dark:text-red-400 font-semibold">
-                  <i class="fas fa-trash-alt mr-1"></i>{{ r.acao }}
+              {% elif "excluído" in text or "delet" in text or "excluir" in text or "remover" in text %}
+                <span class="text-rose-400 border border-rose-500/20 bg-rose-950/20 px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wider select-none uppercase w-fit min-w-[70px] text-center">
+                  [DELETE]
                 </span>
-              {% elif "edit" in text or "alter" in text %}
-                <span class="text-amber-600 dark:text-yellow-400 font-semibold">
-                  <i class="fas fa-edit mr-1"></i>{{ r.acao }}
+              {% elif "edit" in text or "alter" in text or "atualiz" in text or "mudar" in text %}
+                <span class="text-amber-400 border border-amber-500/20 bg-amber-950/20 px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wider select-none uppercase w-fit min-w-[70px] text-center">
+                  [EDIT]
                 </span>
               {% elif "login" in text %}
-                <span class="text-blue-600 dark:text-blue-400 font-semibold">
-                  <i class="fas fa-sign-in-alt mr-1"></i>{{ r.acao }}
+                <span class="text-cyan-400 border border-cyan-500/20 bg-cyan-950/20 px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wider select-none uppercase w-fit min-w-[70px] text-center">
+                  [AUTH]
                 </span>
               {% elif "logout" in text %}
-                <span class="text-purple-600 dark:text-purple-400 font-semibold">
-                  <i class="fas fa-sign-out-alt mr-1"></i>{{ r.acao }}
+                <span class="text-purple-400 border border-purple-500/20 bg-purple-950/20 px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wider select-none uppercase w-fit min-w-[70px] text-center">
+                  [TERM]
                 </span>
               {% else %}
-                <span class="text-slate-700 dark:text-gray-300">{{ r.acao }}</span>
+                <span class="text-slate-400 border border-slate-500/20 bg-slate-900 px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wider select-none uppercase w-fit min-w-[70px] text-center">
+                  [INFO]
+                </span>
               {% endif %}
-            </td>
 
-            <td class="px-4 py-3 text-slate-500 dark:text-gray-400">
-              {{ r.data_hora|br_datetime }}
-            </td>
-          </tr>
+              <!-- User Tag -->
+              <span class="text-emerald-500/90 font-bold select-none whitespace-nowrap">
+                [user: {{ r.usuario }}]
+              </span>
+
+              <!-- Description Message -->
+              <span class="text-slate-300 break-all lg:break-normal">
+                - {{ r.acao }}
+              </span>
+            </div>
           {% endfor %}
 
           {% if registros|length == 0 %}
-          <tr>
-            <td colspan="3" class="px-4 py-4 text-center text-slate-500 dark:text-gray-500">
-              Nenhum log encontrado para este período.
-            </td>
-          </tr>
+            <div class="text-center text-slate-600 py-12 select-none text-xs">
+              [EOF] Nenhum log encontrado para os parâmetros selecionados.
+            </div>
           {% endif %}
-        </tbody>
-      </table>
+          
+          <!-- Blinking Shell Cursor Line at EOF -->
+          <div class="flex items-center gap-1.5 px-2.5 pt-3 select-none border-t border-slate-900/50 mt-4">
+            <span class="text-emerald-500/60 font-semibold text-xs">guest@checklist:~$</span>
+            <span class="w-1.5 h-3.5 bg-emerald-500 animate-blink rounded-sm inline-block"></span>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- 📜 PAGINATION / LOAD MORE STYLED AS CLI COMMAND -->
+      {% if limit < total_logs %}
+        <div class="flex justify-center mt-6 select-none">
+          <a href="{{ url_for('logs', limit=limit+20, periodo=request.args.get('periodo', ''), busca=request.args.get('busca', '')) }}"
+             class="px-5 py-2.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-300 hover:text-emerald-400 rounded-xl text-xs font-bold transition-all hover:border-emerald-500/30 flex items-center gap-2 group shadow-xl active:scale-95">
+            <i class="fa-solid fa-angles-down text-[10px] group-hover:translate-y-0.5 transition-transform"></i> 
+            <span>tail -n +{{ limit + 20 }} --logs (current: {{ limit }}/{{ total_logs }})</span>
+          </a>
+        </div>
+      {% endif %}
 
     </div>
   </div>
 
-  <!-- BOTÃO CARREGAR MAIS -->
-  {% if limit < total_logs %}
-  <div class="flex justify-center mt-4">
-    <a href="{{ url_for('logs', limit=limit+20, periodo=request.args.get('periodo', ''), busca=request.args.get('busca', '')) }}"
-       class="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow">
-      Carregar mais ({{ limit }}/{{ total_logs }})
-    </a>
-  </div>
-  {% endif %}
-
 </div>
 
-<!-- LITEPICKER -->
+<!-- LITEPICKER INTEGRATION -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/litepicker/dist/css/litepicker.css" />
 <script src="https://cdn.jsdelivr.net/npm/litepicker/dist/bundle.js"></script>
 
 <script>
-new Litepicker({
-  element: document.getElementById('periodo'),
-  singleMode: false,
-  numberOfMonths: 2,
-  numberOfColumns: 2,
-  format: 'YYYY-MM-DD',
-  autoApply: true,
-  showTooltip: true
-});
+  // Initialize Period Picker
+  new Litepicker({
+    element: document.getElementById('periodo'),
+    singleMode: false,
+    numberOfMonths: 2,
+    numberOfColumns: 2,
+    format: 'YYYY-MM-DD',
+    autoApply: true,
+    showTooltip: true
+  });
 </script>
 
-<!-- FILTRAGEM IMEDIATA POR TEXTO (com null-check) -->
+<!-- DYNAMIC GREP COMMAND SIMULATION DISPLAY SCRIPT -->
 <script>
-(function () {
-  const filtroEl = document.getElementById("filtro");
-  const linhas = () => document.querySelectorAll("#tbodyLogs tr");
-  if (!filtroEl) return;
+  (function() {
+    const filtroEl = document.getElementById("filtro");
+    const periodoEl = document.getElementById("periodo");
+    const cmdDisplay = document.getElementById("cliCmdDisplay");
+    
+    function updateCommandDisplay() {
+      const searchVal = (filtroEl ? filtroEl.value : "") || "*";
+      const periodVal = (periodoEl ? periodoEl.value : "") || "ALL";
+      
+      if (cmdDisplay) {
+        cmdDisplay.innerHTML = `grep -i <span class="text-amber-400">"${searchVal}"</span> --period=<span class="text-cyan-400">"${periodVal}"</span> /var/log/audit.log`;
+      }
+    }
+    
+    if (filtroEl) {
+      filtroEl.addEventListener("input", updateCommandDisplay);
+      filtroEl.addEventListener("change", updateCommandDisplay);
+    }
+    if (periodoEl) {
+      periodoEl.addEventListener("change", updateCommandDisplay);
+      // capture Litepicker dynamic selections
+      setInterval(updateCommandDisplay, 500);
+    }
+  })();
+</script>
 
-  filtroEl.addEventListener("keyup", function () {
-    const filtro = (this.value || "").toLowerCase();
-    linhas().forEach(linha => {
-      const texto = (linha.innerText || "").toLowerCase();
-      linha.style.display = texto.includes(filtro) ? "" : "none";
+<!-- INSTANT CLIENT-SIDE LOG ROW FILTERING -->
+<script>
+  (function () {
+    const filtroEl = document.getElementById("filtro");
+    const rows = () => document.querySelectorAll("#tbodyLogs .log-row");
+    if (!filtroEl) return;
+
+    filtroEl.addEventListener("keyup", function () {
+      const filterText = (this.value || "").toLowerCase();
+      rows().forEach(row => {
+        const textContent = (row.innerText || "").toLowerCase();
+        row.style.display = textContent.includes(filterText) ? "" : "none";
+      });
     });
-  });
-})();
+  })();
 </script>
 
 {% endblock %}

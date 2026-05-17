@@ -368,47 +368,80 @@ class AnnouncementRead(db.Model):
 class Training(db.Model):
     __tablename__ = "training"
     id = db.Column(db.Integer, primary_key=True)
-    title = db.Column(db.String(200), nullable=False)
+    name = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text)
-    target = db.Column(db.String(50))  # all, internal, specific_company
-    company_id = db.Column(db.Integer, db.ForeignKey("company.id"), nullable=True)
-    created_at = db.Column(db.DateTime, default=agora)
-    allow_retake = db.Column(db.Boolean, default=True)
-    badge_id = db.Column(db.Integer, db.ForeignKey("badge.id"), nullable=True)
-
-class TrainingModule(db.Model):
-    __tablename__ = "training_module"
-    id = db.Column(db.Integer, primary_key=True)
-    training_id = db.Column(db.Integer, db.ForeignKey("training.id"))
-    title = db.Column(db.String(200))
-    order = db.Column(db.Integer, default=0)
+    responsible_id = db.Column(db.Integer, db.ForeignKey("user.id"))
+    participants_json = db.Column(db.Text)
+    date_planned = db.Column(db.Date)
+    status = db.Column(db.String(20))
+    obs = db.Column(db.Text)
 
 class TrainingCourse(db.Model):
     __tablename__ = "training_course"
     id = db.Column(db.Integer, primary_key=True)
-    module_id = db.Column(db.Integer, db.ForeignKey("training_module.id"))
-    title = db.Column(db.String(200))
-    content_type = db.Column(db.String(20))  # video, pdf, text
-    content_url = db.Column(db.String(500))
+    title = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text)
-    order = db.Column(db.Integer, default=0)
+    category = db.Column(db.String(100))
+    passing_grade = db.Column(db.Integer)
+    is_mandatory = db.Column(db.Boolean)
+    is_published = db.Column(db.Boolean)
+    deadline = db.Column(db.Date)
+    created_by_id = db.Column(db.Integer, db.ForeignKey("user.id"))
+    created_at = db.Column(db.DateTime, default=agora)
+    badge_name = db.Column(db.String(100), default='Certificado')
+    badge_icon = db.Column(db.String(50), default='fa-award')
+    badge_color = db.Column(db.String(20), default='#0d9488')
+    allow_retake = db.Column(db.Boolean, default=False)
 
-class TrainingAttempt(db.Model):
-    __tablename__ = "training_attempt"
+    # Relationships
+    modules = db.relationship("TrainingModule", backref="course", cascade="all, delete-orphan", lazy=True, order_by="TrainingModule.order")
+    questions = db.relationship("TrainingQuestion", backref="course", cascade="all, delete-orphan", lazy=True, order_by="TrainingQuestion.order")
+    assignments = db.relationship("TrainingAssignment", backref="course", cascade="all, delete-orphan", lazy=True)
+
+class TrainingModule(db.Model):
+    __tablename__ = "training_module"
     id = db.Column(db.Integer, primary_key=True)
-    training_id = db.Column(db.Integer, db.ForeignKey("training.id"))
-    user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
-    score = db.Column(db.Float)
-    passed = db.Column(db.Boolean)
-    completed_at = db.Column(db.DateTime, default=agora)
+    course_id = db.Column(db.Integer, db.ForeignKey("training_course.id", ondelete="CASCADE"), nullable=False)
+    title = db.Column(db.String(200), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    order = db.Column(db.Integer, default=0)
 
 class TrainingQuestion(db.Model):
     __tablename__ = "training_question"
     id = db.Column(db.Integer, primary_key=True)
-    training_id = db.Column(db.Integer, db.ForeignKey("training.id"))
-    question_text = db.Column(db.Text)
-    options_json = db.Column(db.Text)  # JSON array of options
-    correct_option = db.Column(db.Integer)
+    course_id = db.Column(db.Integer, db.ForeignKey("training_course.id", ondelete="CASCADE"), nullable=False)
+    question_text = db.Column(db.Text, nullable=False)
+    option_a = db.Column(db.String(255), nullable=False)
+    option_b = db.Column(db.String(255), nullable=False)
+    option_c = db.Column(db.String(255), nullable=False)
+    option_d = db.Column(db.String(255), nullable=False)
+    correct_option = db.Column(db.String(1), nullable=False)
+    order = db.Column(db.Integer, default=0)
+
+class TrainingAssignment(db.Model):
+    __tablename__ = "training_assignment"
+    id = db.Column(db.Integer, primary_key=True)
+    course_id = db.Column(db.Integer, db.ForeignKey("training_course.id", ondelete="CASCADE"), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="CASCADE"), nullable=False)
+    status = db.Column(db.String(20), default="pendente") # pendente, em_andamento, aprovado, reprovado
+    best_score = db.Column(db.Integer)
+    modules_read = db.Column(db.Text) # list of module_ids marked read
+    started_at = db.Column(db.DateTime)
+    completed_at = db.Column(db.DateTime)
+
+    # Relationships
+    attempts = db.relationship("TrainingAttempt", backref="assignment", cascade="all, delete-orphan", lazy=True, order_by="desc(TrainingAttempt.attempted_at)")
+    user = db.relationship("User", backref="assignments", lazy=True)
+
+class TrainingAttempt(db.Model):
+    __tablename__ = "training_attempt"
+    id = db.Column(db.Integer, primary_key=True)
+    assignment_id = db.Column(db.Integer, db.ForeignKey("training_assignment.id", ondelete="CASCADE"), nullable=False)
+    score = db.Column(db.Integer, nullable=False)
+    total_questions = db.Column(db.Integer, nullable=False)
+    correct_answers = db.Column(db.Integer, nullable=False)
+    answers_json = db.Column(db.Text)
+    attempted_at = db.Column(db.DateTime, default=agora)
 
 class Badge(db.Model):
     __tablename__ = "badge"
@@ -417,6 +450,7 @@ class Badge(db.Model):
     icon = db.Column(db.String(50))
     color = db.Column(db.String(20))
     description = db.Column(db.Text)
+
 
 # ===============================
 # 🏗️ GESTÃO TÉCNICA E INFRA
@@ -4503,29 +4537,31 @@ def gestao_relatorios_gerar():
     if report_type == "lms":
         title = "Relatório Consolidado de Treinamentos (LMS)"
         query = TrainingAttempt.query.filter(
-            TrainingAttempt.completed_at >= start_datetime,
-            TrainingAttempt.completed_at <= end_datetime
+            TrainingAttempt.attempted_at >= start_datetime,
+            TrainingAttempt.attempted_at <= end_datetime
         )
         if user_id:
-            query = query.filter(TrainingAttempt.user_id == user_id)
-        attempts = query.order_by(TrainingAttempt.completed_at.desc()).all()
+            query = query.join(TrainingAssignment).filter(TrainingAssignment.user_id == user_id)
+        attempts = query.order_by(TrainingAttempt.attempted_at.desc()).all()
         
         headers = ["Data", "Treinamento / Curso", "Colaborador", "Pontuação", "Resultado"]
         col_widths = [30*mm, 55*mm, 45*mm, 25*mm, 25*mm]
         
         passed_count = 0
         for att in attempts:
-            t_title = att.training.title if att.training else "N/A"
-            u_name = att.user.username if att.user else "N/A"
-            res = "Aprovado" if att.passed else "Reprovado"
-            if att.passed:
+            t_title = att.assignment.course.title if att.assignment and att.assignment.course else "N/A"
+            u_name = att.assignment.user.username if att.assignment and att.assignment.user else "N/A"
+            passing_grade = att.assignment.course.passing_grade or 70 if att.assignment and att.assignment.course else 70
+            is_passed = (att.score or 0) >= passing_grade
+            res = "Aprovado" if is_passed else "Reprovado"
+            if is_passed:
                 passed_count += 1
             
             rows.append([
-                att.completed_at.strftime("%d/%m/%Y %H:%M"),
+                att.attempted_at.strftime("%d/%m/%Y %H:%M"),
                 t_title,
                 u_name,
-                f"{att.score or 0.0}%",
+                f"{att.score or 0}%",
                 res
             ])
             
@@ -4533,7 +4569,7 @@ def gestao_relatorios_gerar():
             "Total de Tentativas": len(attempts),
             "Aprovados": passed_count,
             "Reprovados": len(attempts) - passed_count,
-            "Taxa de Sucesso": f"{(passed_count / len(attempts) * 100):.1f}%" if attempts else "0.0%"
+            "Taxa de Sucesso": f"{(passed_count / len(attempts) * 100):.1f}%" if attempts else "100.0%"
         }
 
     elif report_type == "supervisao":
@@ -5025,6 +5061,563 @@ def gestao_relatorios_gerar():
         as_attachment=False,
         download_name=f"relatorio_consolidado_{report_type}.pdf"
     )
+
+
+@app.route("/api/gestao/relatorios/preview", methods=["GET"])
+@supervisor_allowed
+def gestao_relatorios_preview():
+    import json
+    from flask import request, jsonify
+    from datetime import datetime, date
+
+    report_type = request.args.get("type", "lms")
+    start_date_str = request.args.get("start_date")
+    end_date_str = request.args.get("end_date")
+    user_id_str = request.args.get("user_id")
+
+    today = date.today()
+    first_day_of_month = today.replace(day=1)
+
+    try:
+        start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date() if start_date_str else first_day_of_month
+        end_date = datetime.strptime(end_date_str, "%Y-%m-%d").date() if end_date_str else today
+    except ValueError:
+        return jsonify({"error": "Formato de data inválido. Use AAAA-MM-DD."}), 400
+
+    user_id = int(user_id_str) if user_id_str else None
+    user_obj = User.query.get(user_id) if user_id else None
+    username = user_obj.username if user_obj else None
+
+    records = []
+    metrics = {}
+
+    start_datetime = datetime.combine(start_date, datetime.min.time())
+    end_datetime = datetime.combine(end_date, datetime.max.time())
+
+    if report_type == "lms":
+        query = TrainingAttempt.query.filter(
+            TrainingAttempt.attempted_at >= start_datetime,
+            TrainingAttempt.attempted_at <= end_datetime
+        )
+        if user_id:
+            query = query.join(TrainingAssignment).filter(TrainingAssignment.user_id == user_id)
+        attempts = query.order_by(TrainingAttempt.attempted_at.desc()).all()
+
+        passed_count = 0
+        for att in attempts:
+            t_title = att.assignment.course.title if att.assignment and att.assignment.course else "N/A"
+            u_name = att.assignment.user.username if att.assignment and att.assignment.user else "N/A"
+            passing_grade = att.assignment.course.passing_grade or 70 if att.assignment and att.assignment.course else 70
+            is_passed = (att.score or 0) >= passing_grade
+            res = "Aprovado" if is_passed else "Reprovado"
+            if is_passed:
+                passed_count += 1
+
+            records.append({
+                "id": att.id,
+                "date": att.attempted_at.strftime("%d/%m/%Y %H:%M"),
+                "col1": t_title,
+                "col2": u_name,
+                "col3": f"{att.score or 0}%",
+                "col4": res,
+                "status": "success" if is_passed else "danger"
+            })
+
+        success_rate = f"{(passed_count / len(attempts) * 100):.1f}%" if attempts else "100.0%"
+        metrics = {
+            "Total de Tentativas": len(attempts),
+            "Aprovados": passed_count,
+            "Reprovados": len(attempts) - passed_count,
+            "Taxa de Sucesso": success_rate
+        }
+
+    elif report_type == "supervisao":
+        query = SupervisaoTecnica.query.filter(
+            SupervisaoTecnica.date >= start_date,
+            SupervisaoTecnica.date <= end_date
+        )
+        sups = query.order_by(SupervisaoTecnica.date.desc()).all()
+
+        filtered_sups = []
+        for s in sups:
+            is_match = False
+            if not user_id:
+                is_match = True
+            elif s.supervisor_id == user_id:
+                is_match = True
+            elif s.techs_data:
+                try:
+                    techs = s.techs_data
+                    if isinstance(techs, str):
+                        techs = json.loads(techs)
+                    if isinstance(techs, list):
+                        for t in techs:
+                            tid = t.get('tech_id')
+                            tname = t.get('tech_name') or t.get('name')
+                            if tid and int(tid) == user_id:
+                                is_match = True
+                                break
+                            if username and tname and tname.lower() == username.lower():
+                                is_match = True
+                                break
+                except Exception:
+                    pass
+            
+            if is_match:
+                filtered_sups.append(s)
+
+        irregular_count = 0
+        for s in filtered_sups:
+            supervisor_name = s.supervisor.username if s.supervisor else "N/A"
+            techs_summary = "N/A"
+            if s.techs_data:
+                try:
+                    techs = s.techs_data
+                    if isinstance(techs, str):
+                        techs = json.loads(techs)
+                    if isinstance(techs, list):
+                        techs_summary = ", ".join([f"{t.get('name') or t.get('tech_name', '')}" for t in techs])
+                except Exception:
+                    techs_summary = str(s.techs_data)
+
+            has_irr = bool(s.irregularities and s.irregularities.strip() and s.irregularities.lower() != "nenhuma")
+            if has_irr:
+                irregular_count += 1
+
+            records.append({
+                "id": s.id,
+                "date": s.date.strftime("%d/%m/%Y"),
+                "col1": supervisor_name,
+                "col2": techs_summary,
+                "col3": s.action or "Nenhuma",
+                "col4": s.irregularities or "Nenhuma",
+                "status": "danger" if has_irr else "success"
+            })
+
+        metrics = {
+            "Total de Supervisões": len(filtered_sups),
+            "Sem Irregularidades": len(filtered_sups) - irregular_count,
+            "Com Irregularidades": irregular_count,
+            "Taxa de Conformidade": f"{((len(filtered_sups) - irregular_count) / len(filtered_sups) * 100):.1f}%" if filtered_sups else "100.0%"
+        }
+
+    elif report_type == "rfo":
+        query = RFO.query.filter(
+            RFO.date >= start_date,
+            RFO.date <= end_date
+        )
+        if user_id:
+            u = User.query.get(user_id)
+            if u:
+                query = query.filter((RFO.tech_responsible == u.username) | (RFO.technicians_json.contains(str(user_id))))
+        rfos = query.order_by(RFO.date.desc()).all()
+
+        resolved_count = 0
+        for r in rfos:
+            is_resolved = r.status in ["CONCLUIDO", "RESOLVIDO"]
+            if is_resolved:
+                resolved_count += 1
+
+            records.append({
+                "id": r.id,
+                "date": r.date.strftime("%d/%m/%Y"),
+                "col1": r.number or "N/A",
+                "col2": f"{r.title or 'Sem Título'} ({r.problem_type or 'N/A'})",
+                "col3": r.tech_responsible or "N/A",
+                "col4": r.status or "ABERTO",
+                "status": "success" if is_resolved else "warning"
+            })
+
+        metrics = {
+            "Total de Ocorrências (RFO)": len(rfos),
+            "Abertas / Pendentes": len(rfos) - resolved_count,
+            "Concluídas / Resolvidas": resolved_count,
+            "Taxa de Resolução": f"{(resolved_count / len(rfos) * 100):.1f}%" if rfos else "100.0%"
+        }
+
+    elif report_type == "atividades":
+        query = Activity.query.filter(
+            Activity.date >= start_date,
+            Activity.date <= end_date
+        )
+        if user_id:
+            query = query.filter(Activity.user_id == user_id)
+        acts = query.order_by(Activity.date.desc()).all()
+
+        concluded = 0
+        in_progress = 0
+        pending = 0
+
+        for a in acts:
+            u_name = a.user.username if a.user else (a.tech_responsible or "N/A")
+            status_lower = (a.status or "").lower()
+
+            if status_lower == "concluido":
+                concluded += 1
+                status_class = "success"
+            elif status_lower == "em_andamento":
+                in_progress += 1
+                status_class = "warning"
+            else:
+                pending += 1
+                status_class = "danger"
+
+            records.append({
+                "id": a.id,
+                "date": a.date.strftime("%d/%m/%Y"),
+                "col1": u_name,
+                "col2": a.type or "N/A",
+                "col3": a.client_name or "N/A",
+                "col4": a.status or "ABERTO",
+                "status": status_class
+            })
+
+        metrics = {
+            "Total de Vistorias": len(acts),
+            "Concluídas": concluded,
+            "Em Andamento": in_progress,
+            "Abertas / Pendentes": pending
+        }
+
+    elif report_type == "rota":
+        query = RotaExata.query.filter(
+            RotaExata.date >= start_date,
+            RotaExata.date <= end_date
+        )
+        rotas = query.order_by(RotaExata.date.desc()).all()
+
+        filtered_rotas = []
+        for r in rotas:
+            is_match = False
+            if not user_id:
+                is_match = True
+            elif r.supervisor_id == user_id:
+                is_match = True
+            elif r.techs_data:
+                try:
+                    techs = r.techs_data
+                    if isinstance(techs, str):
+                        techs = json.loads(techs)
+                    if isinstance(techs, list):
+                        for t in techs:
+                            tid = t.get('tech_id')
+                            tname = t.get('tech_name') or t.get('name')
+                            if tid and int(tid) == user_id:
+                                is_match = True
+                                break
+                            if username and tname and tname.lower() == username.lower():
+                                is_match = True
+                                break
+                except Exception:
+                    pass
+
+            if is_match:
+                filtered_rotas.append(r)
+
+        delay_count = 0
+        deviation_count = 0
+
+        for r in filtered_rotas:
+            sup_name = r.supervisor.username if r.supervisor else "N/A"
+            techs_summary = "N/A"
+            has_delay = False
+            has_deviation = False
+
+            if r.techs_data:
+                try:
+                    techs = r.techs_data
+                    if isinstance(techs, str):
+                        techs = json.loads(techs)
+                    if isinstance(techs, list):
+                        techs_summary = ", ".join([f"{t.get('name') or t.get('tech_name', '')}" for t in techs])
+                        for t in techs:
+                            if t.get("delay_reason") or t.get("yard_departure_time_delayed") == True:
+                                has_delay = True
+                            if t.get("route_deviation") or t.get("identified_reason"):
+                                has_deviation = True
+                except Exception:
+                    pass
+
+            if has_delay:
+                delay_count += 1
+            if has_deviation:
+                deviation_count += 1
+
+            records.append({
+                "id": r.id,
+                "date": r.date.strftime("%d/%m/%Y"),
+                "col1": sup_name,
+                "col2": r.location or "N/A",
+                "col3": techs_summary,
+                "col4": r.status or "PENDENTE",
+                "status": "danger" if (has_delay or has_deviation) else "success"
+            })
+
+        metrics = {
+            "Total de Auditorias de Rota": len(filtered_rotas),
+            "Atrasos Identificados": delay_count,
+            "Desvios Identificados": deviation_count,
+            "Rotas Regulares": len(filtered_rotas) - max(delay_count, deviation_count)
+        }
+
+    elif report_type == "reunioes":
+        query = Meeting.query.filter(
+            Meeting.date >= start_date,
+            Meeting.date <= end_date
+        )
+        meetings = query.order_by(Meeting.date.desc()).all()
+
+        if user_id:
+            meetings = [m for m in meetings if (m.participants and str(user_id) in [x.strip() for x in m.participants.split(",")]) or (username and m.responsible == username)]
+
+        realized = 0
+        scheduled = 0
+
+        for m in meetings:
+            status_lower = (m.status or "").lower()
+            is_realized = status_lower in ["realizada", "concluida"]
+            if is_realized:
+                realized += 1
+            else:
+                scheduled += 1
+
+            records.append({
+                "id": m.id,
+                "date": m.date.strftime("%d/%m/%Y"),
+                "col1": m.title,
+                "col2": m.subject or "N/A",
+                "col3": m.responsible or "N/A",
+                "col4": m.status or "AGENDADA",
+                "status": "success" if is_realized else "warning"
+            })
+
+        metrics = {
+            "Total de Reuniões": len(meetings),
+            "Realizadas": realized,
+            "Agendadas": scheduled
+        }
+
+    elif report_type == "escalas":
+        query = Scale.query.filter(
+            Scale.date >= start_date,
+            Scale.date <= end_date
+        )
+        scales = query.order_by(Scale.date.desc()).all()
+
+        if user_id:
+            scales = [s for s in scales if s.technician_ids and str(user_id) in [x.strip() for x in s.technician_ids.split(",")]]
+
+        weekend_count = 0
+        holiday_count = 0
+
+        for s in scales:
+            scale_type = (s.type or "").lower()
+            if scale_type in ["sabado", "domingo"]:
+                weekend_count += 1
+            elif scale_type == "feriado":
+                holiday_count += 1
+
+            # Resolve names
+            teams_str = "N/A"
+            if s.team_ids:
+                try:
+                    tids = [int(x.strip()) for x in s.team_ids.split(",") if x.strip().isdigit()]
+                    if tids:
+                        teams_str = ", ".join([t.name for t in Team.query.filter(Team.id.in_(tids))])
+                except Exception:
+                    teams_str = s.team_ids
+
+            techs_str = "N/A"
+            if s.technician_ids:
+                try:
+                    tids = [int(x.strip()) for x in s.technician_ids.split(",") if x.strip().isdigit()]
+                    if tids:
+                        techs_str = ", ".join([u.username for u in User.query.filter(User.id.in_(tids))])
+                except Exception:
+                    techs_str = s.technician_ids
+
+            records.append({
+                "id": s.id,
+                "date": s.date.strftime("%d/%m/%Y"),
+                "col1": s.type or "Plantão",
+                "col2": teams_str,
+                "col3": techs_str,
+                "col4": s.obs or "",
+                "status": "info"
+            })
+
+        metrics = {
+            "Total de Plantões": len(scales),
+            "Finais de Semana": weekend_count,
+            "Feriados": holiday_count
+        }
+
+    elif report_type == "geradores":
+        query = Generator.query
+        if user_id:
+            query = query.filter(Generator.responsible_id == user_id)
+        gens = query.all()
+
+        total_capacity = 0.0
+        current_fuel = 0.0
+        operational_count = 0
+
+        for g in gens:
+            total_capacity += g.capacity_total or 0.0
+            current_fuel += g.current_qty or 0.0
+            is_operational = g.status == "OPERACIONAL"
+            if is_operational:
+                operational_count += 1
+
+            records.append({
+                "id": g.id,
+                "date": g.last_refill_date.strftime("%d/%m/%Y") if g.last_refill_date else "N/A",
+                "col1": g.name,
+                "col2": g.location or "N/A",
+                "col3": f"{g.current_qty or 0.0} L / {g.capacity_total or 0.0} L",
+                "col4": g.status or "OPERACIONAL",
+                "status": "success" if is_operational else "danger"
+            })
+
+        fuel_percentage = f"{(current_fuel / total_capacity * 100):.1f}%" if total_capacity else "0.0%"
+        metrics = {
+            "Total de Geradores": len(gens),
+            "Status Operacional": f"{operational_count} / {len(gens)}",
+            "Combustível Total": f"{current_fuel:.1f} L / {total_capacity:.1f} L",
+            "Nível de Reserva": fuel_percentage
+        }
+
+    elif report_type == "encerramento":
+        query = Encerramento.query.filter(
+            Encerramento.date >= start_date,
+            Encerramento.date <= end_date
+        )
+        encs = query.order_by(Encerramento.date.desc()).all()
+
+        if user_id:
+            encs_filtered = []
+            for e in encs:
+                if e.technicians_json:
+                    try:
+                        ids = json.loads(e.technicians_json)
+                        if isinstance(ids, list) and user_id in ids:
+                            encs_filtered.append(e)
+                    except Exception:
+                        if str(user_id) in str(e.technicians_json):
+                            encs_filtered.append(e)
+            encs = encs_filtered
+
+        patios_ids = set()
+        for e in encs:
+            p_name = e.patio.name if e.patio else "N/A"
+            if e.patio_id:
+                patios_ids.add(e.patio_id)
+
+            techs_summary = "N/A"
+            if e.technicians_json:
+                try:
+                    ids = json.loads(e.technicians_json)
+                    if isinstance(ids, list):
+                        techs_summary = ", ".join([u.username for u in User.query.filter(User.id.in_([int(x) for x in ids]))])
+                except Exception:
+                    techs_summary = str(e.technicians_json)
+
+            records.append({
+                "id": e.id,
+                "date": e.date.strftime("%d/%m/%Y"),
+                "col1": p_name,
+                "col2": e.closing_time or "N/A",
+                "col3": techs_summary,
+                "col4": e.obs or "Nenhum",
+                "status": "info"
+            })
+
+        metrics = {
+            "Total de Encerramentos": len(encs),
+            "Pátios Atendidos": len(patios_ids)
+        }
+
+    elif report_type == "anotacoes":
+        query = Note.query.filter(
+            Note.event_date >= start_date,
+            Note.event_date <= end_date
+        )
+        if user_id:
+            query = query.filter(Note.user_id == user_id)
+        notes = query.order_by(Note.event_date.desc()).all()
+
+        high_priority = 0
+
+        for n in notes:
+            u_name = n.user.username if n.user else "N/A"
+            is_high = n.priority == "ALTA"
+            if is_high:
+                high_priority += 1
+
+            records.append({
+                "id": n.id,
+                "date": n.event_date.strftime("%d/%m/%Y") if n.event_date else "N/A",
+                "col1": n.title,
+                "col2": n.category or "Geral",
+                "col3": u_name,
+                "col4": n.priority or "MEDIA",
+                "status": "danger" if is_high else "info"
+            })
+
+        metrics = {
+            "Total de Anotações": len(notes),
+            "Alta Prioridade": high_priority,
+            "Média/Baixa Prioridade": len(notes) - high_priority
+        }
+
+    elif report_type == "tarefas":
+        query = Task.query.filter(
+            Task.deadline >= start_date,
+            Task.deadline <= end_date
+        )
+        if user_id:
+            query = query.filter(Task.responsible_id == user_id)
+        tasks = query.order_by(Task.deadline.desc()).all()
+
+        concluded = 0
+        in_progress = 0
+        pending = 0
+
+        for t in tasks:
+            resp = t.responsible.username if t.responsible else "N/A"
+            status_lower = (t.status or "").lower()
+
+            if status_lower == "concluido":
+                concluded += 1
+                status_class = "success"
+            elif status_lower == "em_andamento":
+                in_progress += 1
+                status_class = "warning"
+            else:
+                pending += 1
+                status_class = "danger"
+
+            records.append({
+                "id": t.id,
+                "date": t.deadline.strftime("%d/%m/%Y") if t.deadline else "N/A",
+                "col1": t.title,
+                "col2": resp,
+                "col3": t.priority or "MEDIA",
+                "col4": t.status or "PENDENTE",
+                "status": status_class
+            })
+
+        metrics = {
+            "Total de Tarefas": len(tasks),
+            "Concluídas": concluded,
+            "Em Andamento": in_progress,
+            "Pendentes": pending
+        }
+
+    return jsonify({
+        "records": records,
+        "metrics": metrics
+    })
 
 
 @app.route("/relatorios/upload", methods=["POST"])
@@ -5968,85 +6561,416 @@ def treinamentos_admin():
 def treinamentos_gerir():
     return render_template("treinamentos_gerir.html")
 
-@app.route("/api/training/list")
-@login_required
-def api_training_list():
-    try:
-        courses = Training.query.order_by(Training.created_at.desc()).all()
-        return json.dumps([{
-            "id": c.id,
-            "title": c.title,
-            "description": c.description,
-            "allow_retake": c.allow_retake,
-            "badge": {
-                "name": c.badge.name,
-                "icon": c.badge.icon,
-                "color": c.badge.color
-            } if c.badge else None,
-            "module_count": len(c.modules)
-        } for c in courses])
-    except Exception as e:
-        return json.dumps({"error": str(e)}), 500
-
-@app.route("/api/training/save", methods=["POST"])
+# ----------------- ROTAS ADMINISTRATIVAS DO LMS -----------------
+@app.route("/api/gestao/treinamentos_lms", methods=["GET"])
 @supervisor_allowed
-def api_training_save():
+def api_gestao_treinamentos_lms_list():
+    try:
+        courses = TrainingCourse.query.order_by(TrainingCourse.created_at.desc()).all()
+        results = []
+        for c in courses:
+            total_assigns = len(c.assignments)
+            approved_assigns = sum(1 for a in c.assignments if a.status == 'aprovado')
+            results.append({
+                "id": c.id,
+                "title": c.title,
+                "description": c.description,
+                "category": c.category,
+                "is_published": c.is_published,
+                "deadline": c.deadline.strftime("%Y-%m-%d") if c.deadline else None,
+                "badge_name": c.badge_name,
+                "badge_icon": c.badge_icon,
+                "badge_color": c.badge_color,
+                "allow_retake": c.allow_retake,
+                "total_assignments": total_assigns,
+                "approved_assignments": approved_assigns
+            })
+        return jsonify(results)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/gestao/treinamentos_lms", methods=["POST"])
+@supervisor_allowed
+def api_gestao_treinamentos_lms_save():
     try:
         data = request.json
         course_id = data.get("id")
         
         if course_id:
-            course = Course.query.get(course_id)
+            course = TrainingCourse.query.get(course_id)
+            if not course:
+                return jsonify({"error": "Treinamento não encontrado"}), 404
+            # Remove old modules and questions for update
+            TrainingModule.query.filter_by(course_id=course_id).delete()
+            TrainingQuestion.query.filter_by(course_id=course_id).delete()
         else:
-            course = Course()
+            course = TrainingCourse()
+            course.created_by_id = current_user.id
             db.session.add(course)
-        
+            
         course.title = data.get("title")
         course.description = data.get("description")
-        course.allow_retake = data.get("allow_retake", True)
+        course.category = data.get("category")
+        course.passing_grade = int(data.get("passing_grade") or 70)
+        course.is_mandatory = bool(data.get("is_mandatory"))
         
-        # Gestão de Badge
-        badge_data = data.get("badge")
-        if badge_data:
-            if not course.badge:
-                course.badge = Badge(course_id=course.id)
-            course.badge.name = badge_data.get("name")
-            course.badge.icon = badge_data.get("icon")
-            course.badge.color = badge_data.get("color")
+        deadline_str = data.get("deadline")
+        if deadline_str:
+            course.deadline = datetime.strptime(deadline_str, "%Y-%m-%d").date()
+        else:
+            course.deadline = None
+            
+        course.badge_name = data.get("badge_name") or 'Certificado'
+        course.badge_icon = data.get("badge_icon") or 'fa-award'
+        course.badge_color = data.get("badge_color") or '#0d9488'
+        course.allow_retake = bool(data.get("allow_retake"))
         
+        # Flush so new courses get an ID
+        db.session.flush()
+        
+        # Add modules
+        modules_data = data.get("modules") or []
+        for i, m in enumerate(modules_data):
+            mod = TrainingModule(
+                course_id=course.id,
+                title=m.get("title"),
+                content=m.get("content"),
+                order=i
+            )
+            db.session.add(mod)
+            
+        # Add questions
+        questions_data = data.get("questions") or []
+        for i, q in enumerate(questions_data):
+            quest = TrainingQuestion(
+                course_id=course.id,
+                question_text=q.get("question_text"),
+                option_a=q.get("option_a"),
+                option_b=q.get("option_b"),
+                option_c=q.get("option_c"),
+                option_d=q.get("option_d"),
+                correct_option=q.get("correct_option"),
+                order=i
+            )
+            db.session.add(quest)
+            
+        # Auto-assign to all technicians if it's a new course
+        if not course_id:
+            # Fetch all active users
+            users = User.query.all()
+            for u in users:
+                assign = TrainingAssignment(
+                    course_id=course.id,
+                    user_id=u.id,
+                    status="pendente"
+                )
+                db.session.add(assign)
+                
         db.session.commit()
-        return json.dumps({"status": "ok", "id": course.id})
+        return jsonify({"status": "ok", "id": course.id})
     except Exception as e:
         db.session.rollback()
-        return json.dumps({"error": str(e)}), 500
+        return jsonify({"error": str(e)}), 500
 
-@app.route("/api/training/submit", methods=["POST"])
-@login_required
-def api_training_submit():
+@app.route("/api/gestao/treinamentos_lms/<int:id>", methods=["GET"])
+@supervisor_allowed
+def api_gestao_treinamentos_lms_get(id):
     try:
-        data = request.json
-        course_id = data.get("course_id")
-        answers = data.get("answers") # list of {question_id, answer_index}
+        c = TrainingCourse.query.get(id)
+        if not c:
+            return jsonify({"error": "Treinamento não encontrado"}), 404
+            
+        modules = [{
+            "id": m.id,
+            "title": m.title,
+            "content": m.content,
+            "order": m.order
+        } for m in c.modules]
         
-        # Lógica de correção e atribuição de Badge
-        # ... (simplificada para restauro)
-        return json.dumps({"status": "ok", "score": 100})
+        questions = [{
+            "id": q.id,
+            "question_text": q.question_text,
+            "option_a": q.option_a,
+            "option_b": q.option_b,
+            "option_c": q.option_c,
+            "option_d": q.option_d,
+            "correct_option": q.correct_option,
+            "order": q.order
+        } for q in c.questions]
+        
+        return jsonify({
+            "id": c.id,
+            "title": c.title,
+            "description": c.description,
+            "category": c.category,
+            "passing_grade": c.passing_grade,
+            "is_mandatory": c.is_mandatory,
+            "is_published": c.is_published,
+            "deadline": c.deadline.strftime("%Y-%m-%d") if c.deadline else None,
+            "badge_name": c.badge_name,
+            "badge_icon": c.badge_icon,
+            "badge_color": c.badge_color,
+            "allow_retake": c.allow_retake,
+            "modules": modules,
+            "questions": questions
+        })
     except Exception as e:
-        return json.dumps({"error": str(e)}), 500
+        return jsonify({"error": str(e)}), 500
 
-@app.route("/api/badges/list")
-@login_required
-def api_badges_list():
+@app.route("/api/gestao/treinamentos_lms/<int:id>", methods=["DELETE"])
+@supervisor_allowed
+def api_gestao_treinamentos_lms_delete(id):
     try:
-        user_badges = Badge.query.join(Attempt).filter(Attempt.user_id == current_user.id, Attempt.score >= 70).all()
-        return json.dumps([{
-            "name": b.name,
-            "icon": b.icon,
-            "color": b.color,
-            "earned_at": "Recente"
-        } for b in user_badges])
+        c = TrainingCourse.query.get(id)
+        if not c:
+            return jsonify({"error": "Treinamento não encontrado"}), 404
+            
+        db.session.delete(c)
+        db.session.commit()
+        return jsonify({"status": "ok"})
     except Exception as e:
-        return json.dumps({"error": str(e)}), 500
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/gestao/treinamentos_lms/<int:id>/publicar", methods=["POST"])
+@supervisor_allowed
+def api_gestao_treinamentos_lms_publish(id):
+    try:
+        c = TrainingCourse.query.get(id)
+        if not c:
+            return jsonify({"error": "Treinamento não encontrado"}), 404
+            
+        c.is_published = not c.is_published
+        db.session.commit()
+        return jsonify({"status": "ok", "is_published": c.is_published})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+
+# ----------------- ROTAS OPERACIONAIS DO LMS (MOBILE) -----------------
+@app.route("/api/treinamentos/meus", methods=["GET"])
+@login_required
+def api_treinamentos_meus():
+    try:
+        # Fetch only published assigned courses
+        assigns = TrainingAssignment.query.filter_by(user_id=current_user.id).join(TrainingCourse).filter(TrainingCourse.is_published == True).all()
+        results = []
+        for a in assigns:
+            c = a.course
+            if not c:
+                continue
+            
+            # count modules read
+            read_count = 0
+            if a.modules_read:
+                try:
+                    read_ids = [int(x) for x in a.modules_read.split(",") if x.strip().isdigit()]
+                    read_count = len(read_ids)
+                except Exception:
+                    pass
+                    
+            results.append({
+                "course_id": c.id,
+                "title": c.title,
+                "description": c.description,
+                "category": c.category or "Geral",
+                "is_mandatory": c.is_mandatory,
+                "deadline": c.deadline.strftime("%d/%m/%Y") if c.deadline else None,
+                "status": a.status or "pendente",
+                "best_score": a.best_score,
+                "modules_read": read_count,
+                "modules_total": len(c.modules),
+                "questions_total": len(c.questions),
+                "badge_name": c.badge_name,
+                "badge_icon": c.badge_icon,
+                "badge_color": c.badge_color
+            })
+        return jsonify(results)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/treinamentos/meus_selos", methods=["GET"])
+@login_required
+def api_treinamentos_meus_selos():
+    try:
+        assigns = TrainingAssignment.query.filter_by(user_id=current_user.id, status="aprovado").all()
+        results = []
+        for a in assigns:
+            c = a.course
+            if not c:
+                continue
+            results.append({
+                "title": c.title,
+                "badge_name": c.badge_name,
+                "badge_icon": c.badge_icon,
+                "badge_color": c.badge_color,
+                "score": a.best_score or 100
+            })
+        return jsonify(results)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/treinamentos/<int:course_id>/conteudo", methods=["GET"])
+@login_required
+def api_treinamentos_conteudo(course_id):
+    try:
+        c = TrainingCourse.query.get(course_id)
+        if not c or not c.is_published:
+            return jsonify({"error": "Treinamento não encontrado"}), 404
+            
+        a = TrainingAssignment.query.filter_by(course_id=course_id, user_id=current_user.id).first()
+        if not a:
+            # Auto-assign if not exists
+            a = TrainingAssignment(course_id=course_id, user_id=current_user.id, status="pendente")
+            db.session.add(a)
+            db.session.commit()
+            
+        modules = [{
+            "id": m.id,
+            "title": m.title,
+            "content": m.content,
+            "order": m.order
+        } for m in c.modules]
+        
+        questions = [{
+            "id": q.id,
+            "question_text": q.question_text,
+            "option_a": q.option_a,
+            "option_b": q.option_b,
+            "option_c": q.option_c,
+            "option_d": q.option_d,
+            "order": q.order
+        } for q in c.questions]
+        
+        attempts_count = len(a.attempts)
+        
+        return jsonify({
+            "course_id": c.id,
+            "title": c.title,
+            "description": c.description,
+            "allow_retake": c.allow_retake,
+            "attempts_count": attempts_count,
+            "modules": modules,
+            "questions": questions
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/treinamentos/<int:course_id>/mark_module", methods=["POST"])
+@login_required
+def api_treinamentos_mark_module(course_id):
+    try:
+        data = request.json or {}
+        module_id = data.get("module_id")
+        if not module_id:
+            return jsonify({"error": "ID do módulo é obrigatório"}), 400
+            
+        a = TrainingAssignment.query.filter_by(course_id=course_id, user_id=current_user.id).first()
+        if not a:
+            return jsonify({"error": "Atribuição não encontrada"}), 404
+            
+        # Update modules read
+        current_reads = set()
+        if a.modules_read:
+            current_reads = set(x.strip() for x in a.modules_read.split(",") if x.strip())
+            
+        current_reads.add(str(module_id))
+        a.modules_read = ",".join(sorted(list(current_reads)))
+        
+        if a.status == "pendente":
+            a.status = "em_andamento"
+            a.started_at = agora()
+            
+        db.session.commit()
+        return jsonify({"status": "ok"})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/treinamentos/<int:course_id>/responder", methods=["POST"])
+@login_required
+def api_treinamentos_responder(course_id):
+    try:
+        data = request.json or {}
+        answers = data.get("answers") or {} # dict of question_id -> letter
+        
+        c = TrainingCourse.query.get(course_id)
+        if not c or not c.is_published:
+            return jsonify({"error": "Treinamento não encontrado"}), 404
+            
+        a = TrainingAssignment.query.filter_by(course_id=course_id, user_id=current_user.id).first()
+        if not a:
+            return jsonify({"error": "Atribuição não encontrada"}), 404
+            
+        if not c.allow_retake and len(a.attempts) > 0:
+            return jsonify({"error": "Este treinamento não permite refazer a avaliação"}), 403
+            
+        # Grade the answers
+        questions = c.questions
+        total = len(questions)
+        correct = 0
+        corrections = []
+        
+        for q in questions:
+            user_ans = (answers.get(str(q.id)) or "").lower().strip()
+            correct_ans = (q.correct_option or "").lower().strip()
+            is_correct = user_ans == correct_ans
+            if is_correct:
+                correct += 1
+                
+            corrections.append({
+                "question": q.question_text,
+                "user_answer": user_ans,
+                "correct_answer": correct_ans,
+                "is_correct": is_correct,
+                "options": {
+                    "a": q.option_a,
+                    "b": q.option_b,
+                    "c": q.option_c,
+                    "d": q.option_d
+                }
+            })
+            
+        score = int(round((correct / total) * 100)) if total > 0 else 100
+        passing_grade = c.passing_grade or 70
+        passed = score >= passing_grade
+        
+        # Save attempt
+        att = TrainingAttempt(
+            assignment_id=a.id,
+            score=score,
+            total_questions=total,
+            correct_answers=correct,
+            answers_json=json.dumps(answers),
+            attempted_at=agora()
+        )
+        db.session.add(att)
+        
+        # Update assignment
+        if a.best_score is None or score > a.best_score:
+            a.best_score = score
+            
+        if passed:
+            a.status = "aprovado"
+            a.completed_at = agora()
+        elif a.status != "aprovado":
+            a.status = "reprovado"
+            
+        db.session.commit()
+        
+        return jsonify({
+            "passed": passed,
+            "score": score,
+            "correct": correct,
+            "total": total,
+            "passing_grade": passing_grade,
+            "attempts_count": len(a.attempts),
+            "corrections": corrections
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
     with app.app_context():

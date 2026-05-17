@@ -681,30 +681,53 @@
                 </div>
 
                 <!-- Histórico / Preview -->
-                <div class="lg:col-span-3">
-                    <div class="card-premium p-8 h-full flex flex-col items-center justify-center text-center">
-                        <div class="w-24 h-24 rounded-full bg-slate-50 dark:bg-white/5 flex items-center justify-center mb-6">
-                            <i class="fa-solid fa-file-invoice text-4xl text-slate-300"></i>
+                <div class="lg:col-span-3 flex flex-col space-y-6">
+                    <!-- Cards de Métricas Dinâmicas -->
+                    <div id="relatorio-metrics-container" class="grid grid-cols-2 md:grid-cols-4 gap-4 w-full">
+                        <!-- Gerado Dinamicamente por JS -->
+                        <div class="p-5 rounded-[2rem] border border-slate-900/5 dark:border-white/5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-md shadow-sm">
+                            <div class="text-slate-400 text-[10px] font-black uppercase tracking-wider mb-1">Métrica 1</div>
+                            <div class="text-xl font-black text-slate-800 dark:text-white">-</div>
                         </div>
-                        <h3 class="text-xl font-black text-slate-800 dark:text-white mb-2">Pronto para Gerar</h3>
-                        <p class="text-sm text-slate-500 max-w-sm">Selecione o tipo de relatório e o período desejado à esquerda para processar os dados.</p>
-                        
-                        <div class="mt-12 grid grid-cols-2 md:grid-cols-4 gap-4 w-full opacity-40">
-                            <div class="p-4 rounded-2xl border border-slate-900/5 dark:border-white/5 bg-slate-50 dark:bg-white/5">
-                                <div class="text-lg font-black text-slate-400">-</div>
-                                <div class="text-[8px] font-black uppercase tracking-widest">Total Eventos</div>
+                        <div class="p-5 rounded-[2rem] border border-slate-900/5 dark:border-white/5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-md shadow-sm">
+                            <div class="text-slate-400 text-[10px] font-black uppercase tracking-wider mb-1">Métrica 2</div>
+                            <div class="text-xl font-black text-slate-800 dark:text-white">-</div>
+                        </div>
+                        <div class="p-5 rounded-[2rem] border border-slate-900/5 dark:border-white/5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-md shadow-sm">
+                            <div class="text-slate-400 text-[10px] font-black uppercase tracking-wider mb-1">Métrica 3</div>
+                            <div class="text-xl font-black text-slate-800 dark:text-white">-</div>
+                        </div>
+                        <div class="p-5 rounded-[2rem] border border-slate-900/5 dark:border-white/5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-md shadow-sm">
+                            <div class="text-slate-400 text-[10px] font-black uppercase tracking-wider mb-1">Métrica 4</div>
+                            <div class="text-xl font-black text-slate-800 dark:text-white">-</div>
+                        </div>
+                    </div>
+
+                    <!-- Card da Tabela de Preview -->
+                    <div class="card-premium p-6 flex flex-col h-full space-y-4">
+                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-4 border-b border-slate-900/5 dark:border-white/5">
+                            <div>
+                                <h3 class="text-base font-black text-slate-800 dark:text-white flex items-center gap-2">
+                                    <i class="fa-solid fa-magnifying-glass-chart text-purple-500"></i> Pré-visualização dos Dados
+                                </h3>
+                                <p class="text-[10px] text-slate-500 mt-1 uppercase font-bold tracking-widest">Registros correspondentes aos filtros selecionados</p>
                             </div>
-                            <div class="p-4 rounded-2xl border border-slate-900/5 dark:border-white/5 bg-slate-50 dark:bg-white/5">
-                                <div class="text-lg font-black text-slate-400">-</div>
-                                <div class="text-[8px] font-black uppercase tracking-widest">Efetividade</div>
+                            <!-- Barra de Pesquisa Rápida -->
+                            <div class="relative w-full sm:w-64">
+                                <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-xs text-slate-400"></i>
+                                <input type="text" id="report_search" placeholder="Pesquisar nesta tabela..." oninput="filtrarTabelaRelatorioPreview()" class="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-900/5 dark:border-white/5 rounded-2xl pl-10 pr-4 py-2.5 text-xs font-bold text-slate-800 dark:text-white outline-none focus:ring-4 focus:ring-purple-500/10 transition-all">
                             </div>
-                            <div class="p-4 rounded-2xl border border-slate-900/5 dark:border-white/5 bg-slate-50 dark:bg-white/5">
-                                <div class="text-lg font-black text-slate-400">-</div>
-                                <div class="text-[8px] font-black uppercase tracking-widest">Pendências</div>
-                            </div>
-                            <div class="p-4 rounded-2xl border border-slate-900/5 dark:border-white/5 bg-slate-50 dark:bg-white/5">
-                                <div class="text-lg font-black text-slate-400">-</div>
-                                <div class="text-[8px] font-black uppercase tracking-widest">Concluídos</div>
+                        </div>
+
+                        <!-- Área de Conteúdo Dinâmico (Tabela, Loader ou Empty State) -->
+                        <div id="relatorio-preview-content" class="overflow-x-auto min-h-[350px] flex flex-col justify-start">
+                            <!-- Estado inicial / Placeholder -->
+                            <div class="flex flex-col items-center justify-center text-center py-16">
+                                <div class="w-16 h-16 rounded-full bg-slate-50 dark:bg-white/5 flex items-center justify-center mb-4">
+                                    <i class="fa-solid fa-file-invoice text-2xl text-slate-400"></i>
+                                </div>
+                                <h4 class="text-sm font-black text-slate-700 dark:text-slate-200">Pronto para Carregar</h4>
+                                <p class="text-xs text-slate-500 mt-1 max-w-xs font-medium">Os dados correspondentes serão carregados automaticamente conforme os filtros aplicados.</p>
                             </div>
                         </div>
                     </div>
@@ -1986,6 +2009,7 @@ function loadTabData(tabId) {
     if(tabId === 'supervisao') loadItems('supervisao');
     if(tabId === 'solicitacoes') loadItems('solicitacoes');
     if(tabId === 'treinamentos') loadLMSCourses();
+    if(tabId === 'relatorios') initRelatoriosTab();
 }
 
 async function loadItems(slug) {
@@ -5240,6 +5264,225 @@ function updateBadgePreview() {
         nameEl.textContent = name;
         nameEl.style.color = color;
     }
+}
+
+let currentReportRecords = [];
+
+const headersMap = {
+    'lms': { col1: 'Título do Treinamento', col2: 'Colaborador', col3: 'Nota / Pontuação', col4: 'Resultado' },
+    'supervisao': { col1: 'Supervisor', col2: 'Técnicos Presentes', col3: 'Ação Recomendada', col4: 'Irregularidades' },
+    'rfo': { col1: 'Número RFO', col2: 'Título e Tipo', col3: 'Técnico Responsável', col4: 'Status' },
+    'atividades': { col1: 'Responsável', col2: 'Tipo de Vistoria', col3: 'Cliente', col4: 'Status' },
+    'rota': { col1: 'Supervisor', col2: 'Localização', col3: 'Técnicos Presentes', col4: 'Status' },
+    'reunioes': { col1: 'Título Reunião', col2: 'Assunto Principal', col3: 'Responsável', col4: 'Status' },
+    'escalas': { col1: 'Tipo de Escala', col2: 'Equipes Operacionais', col3: 'Técnicos Escalados', col4: 'Obs' },
+    'geradores': { col1: 'Nome / Identificação', col2: 'Localização', col3: 'Capacidade / Nível', col4: 'Status' },
+    'encerramento': { col1: 'Pátio Operacional', col2: 'Horário Fechamento', col3: 'Técnicos de Plantão', col4: 'Observações' },
+    'anotacoes': { col1: 'Título da Anotação', col2: 'Categoria', col3: 'Criador', col4: 'Prioridade' },
+    'tarefas': { col1: 'Título da Tarefa', col2: 'Responsável', col3: 'Prioridade', col4: 'Status' }
+};
+
+function initRelatoriosTab() {
+    const startInput = document.getElementById('report_start');
+    const endInput = document.getElementById('report_end');
+    
+    // Set default dates if not set: from first day of month to today
+    const today = new Date();
+    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+    
+    const formatDate = (d) => {
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+
+    if (!startInput.value) {
+        startInput.value = formatDate(firstDay);
+    }
+    if (!endInput.value) {
+        endInput.value = formatDate(today);
+    }
+
+    // Set change listeners if not set
+    const inputs = ['report_type', 'report_start', 'report_end', 'report_user'];
+    inputs.forEach(id => {
+        const el = document.getElementById(id);
+        if (el && !el.dataset.listenerAttached) {
+            el.addEventListener('change', () => carregarRelatorioPreview());
+            el.dataset.listenerAttached = 'true';
+        }
+    });
+
+    carregarRelatorioPreview();
+}
+
+async function carregarRelatorioPreview() {
+    const type = document.getElementById('report_type').value;
+    const start = document.getElementById('report_start').value;
+    const end = document.getElementById('report_end').value;
+    const user_id = document.getElementById('report_user').value;
+    const previewContent = document.getElementById('relatorio-preview-content');
+    const metricsContainer = document.getElementById('relatorio-metrics-container');
+
+    if (!start || !end) {
+        return;
+    }
+
+    // Render skeleton loading
+    previewContent.innerHTML = `
+        <div class="space-y-4 p-6 w-full animate-premium">
+            <div class="h-4 bg-slate-200 dark:bg-slate-700/50 rounded w-1/4 animate-pulse"></div>
+            <div class="space-y-3 mt-4">
+                <div class="grid grid-cols-5 gap-4">
+                    <div class="h-4 bg-slate-200 dark:bg-slate-700/50 rounded col-span-1 animate-pulse"></div>
+                    <div class="h-4 bg-slate-200 dark:bg-slate-700/50 rounded col-span-1 animate-pulse"></div>
+                    <div class="h-4 bg-slate-200 dark:bg-slate-700/50 rounded col-span-1 animate-pulse"></div>
+                    <div class="h-4 bg-slate-200 dark:bg-slate-700/50 rounded col-span-1 animate-pulse"></div>
+                    <div class="h-4 bg-slate-200 dark:bg-slate-700/50 rounded col-span-1 animate-pulse"></div>
+                </div>
+                <div class="h-10 bg-slate-100 dark:bg-slate-800/30 rounded w-full animate-pulse"></div>
+                <div class="h-10 bg-slate-100 dark:bg-slate-800/30 rounded w-full animate-pulse"></div>
+                <div class="h-10 bg-slate-100 dark:bg-slate-800/30 rounded w-full animate-pulse"></div>
+            </div>
+        </div>
+    `;
+
+    // Clear search
+    document.getElementById('report_search').value = '';
+
+    try {
+        const params = new URLSearchParams({
+            type: type,
+            start_date: start,
+            end_date: end,
+            user_id: user_id
+        });
+
+        const res = await fetch(`/api/gestao/relatorios/preview?${params.toString()}`);
+        if (!res.ok) {
+            throw new Error('Falha ao carregar preview');
+        }
+
+        const data = await res.json();
+        currentReportRecords = data.records || [];
+        const metrics = data.metrics || {};
+
+        // 1. Render Metrics dynamically
+        let metricsHtml = '';
+        Object.entries(metrics).forEach(([key, val]) => {
+            metricsHtml += `
+                <div class="p-5 rounded-[2rem] border border-slate-900/5 dark:border-white/5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-md shadow-sm transition-all hover:scale-105 duration-300">
+                    <div class="text-slate-400 dark:text-slate-500 text-[9px] font-black uppercase tracking-wider mb-1">${key}</div>
+                    <div class="text-lg font-black text-slate-800 dark:text-white">${val}</div>
+                </div>
+            `;
+        });
+        if (!metricsHtml) {
+            metricsHtml = `
+                <div class="p-5 rounded-[2rem] border border-slate-900/5 dark:border-white/5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-md shadow-sm">
+                    <div class="text-slate-400 text-[9px] font-black uppercase tracking-wider mb-1">Status</div>
+                    <div class="text-lg font-black text-slate-800 dark:text-white">Sem Métricas</div>
+                </div>
+            `;
+        }
+        metricsContainer.innerHTML = metricsHtml;
+
+        // 2. Render Table
+        renderTabelaRelatorios(currentReportRecords, type);
+
+    } catch (e) {
+        console.error(e);
+        previewContent.innerHTML = `
+            <div class="flex flex-col items-center justify-center text-center py-16">
+                <div class="w-16 h-16 rounded-full bg-rose-500/10 flex items-center justify-center mb-4">
+                    <i class="fa-solid fa-circle-xmark text-2xl text-rose-500"></i>
+                </div>
+                <h4 class="text-sm font-black text-slate-700 dark:text-slate-200">Erro ao Carregar Dados</h4>
+                <p class="text-xs text-slate-500 mt-1 max-w-xs font-medium">Verifique os filtros selecionados ou recarregue a página.</p>
+            </div>
+        `;
+    }
+}
+
+function renderTabelaRelatorios(records, type) {
+    const previewContent = document.getElementById('relatorio-preview-content');
+    
+    if (!records || records.length === 0) {
+        previewContent.innerHTML = `
+            <div class="flex flex-col items-center justify-center text-center py-16">
+                <div class="w-16 h-16 rounded-full bg-slate-50 dark:bg-white/5 flex items-center justify-center mb-4">
+                    <i class="fa-solid fa-folder-open text-2xl text-slate-400"></i>
+                </div>
+                <h4 class="text-sm font-black text-slate-700 dark:text-slate-200">Nenhum Registro Encontrado</h4>
+                <p class="text-xs text-slate-500 mt-1 max-w-xs font-medium">Não há dados correspondentes ao período e filtros selecionados.</p>
+            </div>
+        `;
+        return;
+    }
+
+    const headers = headersMap[type] || { col1: 'Coluna 1', col2: 'Coluna 2', col3: 'Coluna 3', col4: 'Coluna 4' };
+
+    let rowsHtml = '';
+    records.forEach(r => {
+        let statusBadge = '';
+        if (r.status === 'success') {
+            statusBadge = `<span class="px-3 py-1.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-full text-[9px] font-black uppercase tracking-wider">${r.col4}</span>`;
+        } else if (r.status === 'warning') {
+            statusBadge = `<span class="px-3 py-1.5 bg-amber-500/10 text-amber-600 dark:text-amber-400 rounded-full text-[9px] font-black uppercase tracking-wider">${r.col4}</span>`;
+        } else if (r.status === 'danger') {
+            statusBadge = `<span class="px-3 py-1.5 bg-rose-500/10 text-rose-600 dark:text-rose-400 rounded-full text-[9px] font-black uppercase tracking-wider">${r.col4}</span>`;
+        } else {
+            statusBadge = `<span class="px-3 py-1.5 bg-blue-500/10 text-blue-600 dark:text-blue-400 rounded-full text-[9px] font-black uppercase tracking-wider">${r.col4 || r.status}</span>`;
+        }
+
+        rowsHtml += `
+            <tr class="hover:bg-slate-50 dark:hover:bg-white/5 transition-all duration-150 border-b border-slate-900/5 dark:border-white/5">
+                <td class="py-3.5 pl-3 font-bold text-slate-800 dark:text-white whitespace-nowrap">${r.date}</td>
+                <td class="py-3.5 font-bold text-slate-700 dark:text-slate-300 max-w-[200px] truncate" title="${r.col1}">${r.col1}</td>
+                <td class="py-3.5 font-medium text-slate-600 dark:text-slate-400 max-w-[200px] truncate" title="${r.col2}">${r.col2}</td>
+                <td class="py-3.5 font-bold text-slate-700 dark:text-slate-300 max-w-[200px] truncate" title="${r.col3}">${r.col3}</td>
+                <td class="py-3.5 pr-3 text-right whitespace-nowrap">${statusBadge}</td>
+            </tr>
+        `;
+    });
+
+    previewContent.innerHTML = `
+        <table class="w-full text-left border-collapse">
+            <thead>
+                <tr class="border-b border-slate-900/5 dark:border-white/5 text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                    <th class="pb-3 pl-3">Data/Hora</th>
+                    <th class="pb-3">${headers.col1}</th>
+                    <th class="pb-3">${headers.col2}</th>
+                    <th class="pb-3">${headers.col3}</th>
+                    <th class="pb-3 text-right pr-3">${headers.col4}</th>
+                </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-900/5 dark:divide-white/5 text-xs">
+                ${rowsHtml}
+            </tbody>
+        </table>
+    `;
+}
+
+function filtrarTabelaRelatorioPreview() {
+    const searchVal = document.getElementById('report_search').value.toLowerCase();
+    const type = document.getElementById('report_type').value;
+
+    if (!searchVal) {
+        renderTabelaRelatorios(currentReportRecords, type);
+        return;
+    }
+
+    const filtered = currentReportRecords.filter(r => {
+        return (r.date && r.date.toLowerCase().includes(searchVal)) ||
+               (r.col1 && r.col1.toLowerCase().includes(searchVal)) ||
+               (r.col2 && r.col2.toLowerCase().includes(searchVal)) ||
+               (r.col3 && r.col3.toLowerCase().includes(searchVal)) ||
+               (r.col4 && r.col4.toLowerCase().includes(searchVal));
+    });
+
+    renderTabelaRelatorios(filtered, type);
 }
 
 async function gerarRelatorioPDF() {

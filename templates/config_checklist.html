@@ -141,15 +141,23 @@
   <!-- ======================= 🔹 LISTAGEM DE PERGUNTAS EXISTENTES ======================= -->
   <!-- ======================= 🔹 LISTAGEM DE PERGUNTAS EXISTENTES ======================= -->
   {% for it in items %}
-  <div class="card-premium p-8 hover:border-indigo-500/30 transition-all group/card animate-premium">
+  <div class="card-premium py-3 px-6 hover:border-indigo-500/30 transition-all group/card animate-premium">
 
     <div class="flex items-start justify-between gap-6">
       <div class="flex-1">
-        <form method="post" action="{{ url_for('config_checklist_edit', iid=it.id) }}" class="space-y-6">
+        <form method="post" action="{{ url_for('config_checklist_edit', iid=it.id) }}" class="space-y-3">
 
-          <div class="grid md:grid-cols-2 gap-6">
+          <!-- ✅ Badge de Ordem da Pergunta -->
+          <div class="flex items-center gap-2 mb-1 select-none">
+            <span class="w-6 h-6 rounded-lg bg-indigo-600 text-white flex items-center justify-center text-xs font-black shrink-0 shadow-lg shadow-indigo-500/20">
+              #{{ loop.index }}
+            </span>
+            <span class="text-[10px] font-black text-slate-400 dark:text-gray-400 uppercase tracking-widest">Ordem da Pergunta</span>
+          </div>
+
+          <div class="grid md:grid-cols-2 gap-3">
             <div>
-              <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Texto da Pergunta</label>
+              <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5 block">Texto da Pergunta</label>
               <input name="text" value="{{ it.text }}"
                 class="w-full rounded-2xl px-5 py-3.5 border
                        bg-slate-50 text-slate-900 border-slate-900/5
@@ -158,7 +166,7 @@
             </div>
 
             <div>
-              <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Tipo de Resposta</label>
+              <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5 block">Tipo de Resposta</label>
               <select name="type"
                 class="w-full rounded-2xl px-5 py-3.5 border cursor-pointer type-select
                        bg-slate-50 text-slate-900 border-slate-900/5
@@ -209,7 +217,7 @@
           </div>
 
           <!-- Ações -->
-          <div class="flex flex-wrap items-center justify-between gap-6 pt-6 border-t border-slate-900/5 dark:border-white/5">
+          <div class="flex flex-wrap items-center justify-between gap-4 pt-3 border-t border-slate-900/5 dark:border-white/5">
             <div class="flex gap-6">
               <label class="flex items-center gap-3 cursor-pointer group">
                 <input type="checkbox" name="required" {% if it.required %}checked{% endif %} class="w-5 h-5 rounded-lg border-slate-300 accent-indigo-500">
