@@ -1419,18 +1419,35 @@ def api_gestao_stats():
     approved_assigns = TrainingAssignment.query.filter_by(status="aprovado").count()
     lms_completion = int((approved_assigns / total_assigns * 100)) if total_assigns > 0 else 0
 
-    # 2. Auditorias (Checklists feitos por supervisores no período)
+    # 2. Auditorias consolidadas (Checklists de supervisor + Supervisão em Campo + Rota Exata + Vistorias no período)
     audits = Checklist.query.join(User, Checklist.technician == User.username).filter(
         User.role == "supervisor",
         Checklist.date >= start_month,
         Checklist.date <= now
     ).count()
 
+    supervisoes = SupervisaoTecnica.query.filter(
+        SupervisaoTecnica.date >= start_month.date(),
+        SupervisaoTecnica.date <= now.date()
+    ).count()
+
+    rotas = RotaExata.query.filter(
+        RotaExata.date >= start_month.date(),
+        RotaExata.date <= now.date()
+    ).count()
+
+    vistorias = Vistoria.query.filter(
+        Vistoria.created_at >= start_month,
+        Vistoria.created_at <= now
+    ).count()
+
+    total_audits = audits + supervisoes + rotas + vistorias
+
     # 3. RFO e Tarefas
     rfo_active = RFO.query.filter_by(status="ABERTO").count()
     tasks_pending = Task.query.filter(Task.status != "CONCLUÍDO").count()
 
-    # 4. Atividades (Volume de Checklists no período)
+    # 4. Atividades consolidado (Volume de Checklists + Vistorias + RFOs no período)
     act_labels = []
     act_values = []
     
@@ -1439,9 +1456,14 @@ def api_gestao_stats():
     
     for i in range(max_days, -1, -1):
         day = (now - timedelta(days=i)).date()
-        count = Checklist.query.filter(db.func.date(Checklist.date) == day).count()
+        checklists_count = Checklist.query.filter(db.func.date(Checklist.date) == day).count()
+        vistorias_count = Vistoria.query.filter(db.func.date(Vistoria.created_at) == day).count()
+        rfos_count = RFO.query.filter(RFO.date == day).count()
+        
+        total_day_act = checklists_count + vistorias_count + rfos_count
+        
         act_labels.append(day.strftime("%d/%m"))
-        act_values.append(count)
+        act_values.append(total_day_act)
 
     # 5. RFO por Tipo / Categoria
     rfo_types = db.session.query(RFO.problem_type, db.func.count(RFO.id)).group_by(RFO.problem_type).all()
@@ -1499,9 +1521,36 @@ def api_gestao_stats():
     ok_fleet = Checklist.query.filter(Checklist.date >= start_month, Checklist.date <= now, Checklist.status == "OK").count()
     real_fleet_health = int((ok_fleet / total_fleet * 100)) if total_fleet > 0 else 100
 
+    # 10. Escalas de Plantão Ativo Hoje
+    today_date = now.date()
+    escalas_hoje = []
+    escalas_objs = Scale.query.filter(Scale.date == today_date, Scale.status == "ATIVO").all()
+    for esc in escalas_objs:
+        tech_names = []
+        if esc.technician_ids:
+            ids = [int(i.strip()) for i in esc.technician_ids.split(",") if i.strip().isdigit()]
+            users = User.query.filter(User.id.in_(ids)).all()
+            tech_names = [u.username for u in users]
+        
+        escalas_hoje.append({
+            "type": esc.type or "Plantão",
+            "obs": esc.obs or "Sem observações",
+            "techs": tech_names
+        })
+
+    # 11. Últimos Encerramentos Diários
+    recent_encerramentos = []
+    enc_objs = Encerramento.query.order_by(Encerramento.date.desc()).limit(5).all()
+    for enc in enc_objs:
+        recent_encerramentos.append({
+            "date": enc.date.strftime("%d/%m/%Y") if enc.date else "N/A",
+            "patio": enc.patio.name if enc.patio else "Geral",
+            "closing_time": enc.closing_time or "N/A"
+        })
+
     return json.dumps({
         "lms_completion": lms_completion,
-        "total_audits_month": audits,
+        "total_audits_month": total_audits,
         "fleet_health": real_fleet_health,
         "rfo_active": rfo_active,
         "tasks_pending": tasks_pending,
@@ -1509,7 +1558,9 @@ def api_gestao_stats():
         "rfo_by_type": rfo_dist,
         "ranking": ranking,
         "generator_alerts": generator_alerts,
-        "critical_tasks": critical_tasks
+        "critical_tasks": critical_tasks,
+        "escalas_hoje": escalas_hoje,
+        "recent_encerramentos": recent_encerramentos
     })
 
 # ----------------- USUÁRIOS (admin) -----------------
