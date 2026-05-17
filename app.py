@@ -3095,6 +3095,35 @@ def api_escalas(id=None):
                     }
                 })
                 
+    # 4. Carrega Reuniões Agendadas / Não Concluídas no Calendário (Soma ao ser marcada como Concluída)
+    meetings = Meeting.query.filter(Meeting.status != "Concluída").all()
+    for m in meetings:
+        if m.date:
+            m_start = m.date.isoformat()
+            all_day = True
+            # Se tiver hora formatada no padrão HH:MM, envia o datetime exato para posicionamento de hora
+            if m.time and len(m.time.strip()) == 5 and ":" in m.time:
+                try:
+                    m_start = f"{m.date.isoformat()}T{m.time.strip()}:00"
+                    all_day = False
+                except Exception:
+                    pass
+                
+            events.append({
+                "id": f"r_{m.id}",
+                "title": f"🤝 REUNIÃO: {m.subject or 'Pauta Geral'}",
+                "start": m_start,
+                "allDay": all_day,
+                "color": "#8B5CF6",  # Violeta premium elegante
+                "extendedProps": {
+                    "type": "reuniao",
+                    "title": m.title,
+                    "responsible": m.responsible,
+                    "location": m.location,
+                    "obs": m.obs
+                }
+            })
+            
     return jsonify(events)
 
 @app.route("/api/gestao/proximos_feriados", methods=["GET"])
