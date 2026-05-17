@@ -517,8 +517,10 @@ class Team(db.Model):
     obs = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=agora)
     rotation_order = db.Column(db.Integer, default=0)
+    leader_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="SET NULL"), nullable=True)
     
-    # Relação many-to-many
+    # Relationships
+    leader = db.relationship("User", foreign_keys=[leader_id])
     members = db.relationship("User", secondary=team_members, backref=db.backref("teams", lazy="dynamic"))
 
 class Task(db.Model):
@@ -2719,6 +2721,7 @@ def api_equipes(id=None):
         t.color = data.get("color")
         t.obs = data.get("obs")
         t.rotation_order = int(data.get("rotation_order")) if data.get("rotation_order") else 0
+        t.leader_id = int(data.get("leader_id")) if data.get("leader_id") else None
         
         # Vincular técnicos N:N
         member_ids = data.get("member_ids") or []
@@ -2740,6 +2743,8 @@ def api_equipes(id=None):
             "color": t.color,
             "obs": t.obs,
             "rotation_order": t.rotation_order,
+            "leader_id": t.leader_id,
+            "leader_name": t.leader.username if t.leader else None,
             "member_ids": [m.id for m in t.members],
             "member_names": ", ".join([m.username for m in t.members]),
             "members": [{"id": m.id, "username": m.username} for m in t.members]
