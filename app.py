@@ -1317,8 +1317,9 @@ def api_frota_stats():
     ok_7d = Checklist.query.filter(Checklist.date >= start_7d, Checklist.date <= now, Checklist.status == "OK").count()
     fleet_health = int((ok_7d / total_7d * 100)) if total_7d > 0 else 100
 
-    # 2. Custo de Manutenção (Período)
+    # 2. Custo de Manutenção (Período - Apenas OS Finalizadas)
     total_cost = db.session.query(db.func.sum(AvariaOS.valor_gasto)).filter(
+        AvariaOS.status == "finalizada",
         AvariaOS.data_abertura >= start_month, 
         AvariaOS.data_abertura <= now
     ).scalar() or 0
