@@ -6575,6 +6575,8 @@ def avisos():
             if aid and aid.isdigit():
                 a = Announcement.query.get(int(aid))
                 if a:
+                    # Deleta registros de leitura vinculados para evitar erro de chave estrangeira
+                    AnnouncementRead.query.filter_by(announcement_id=a.id).delete()
                     db.session.delete(a)
                     db.session.commit()
                     registrar_log(f"Comunicado excluído: {a.title}")
@@ -6638,18 +6640,16 @@ def api_comunicados_recent():
         db.or_(Announcement.expires_at.is_(None), Announcement.expires_at > now_dt)
     )
     
-    # Administradores e Supervisores vêem tudo ou o que é destinado a eles
-    if current_user.is_admin or current_user.is_supervisor:
-        avisos_list = query.order_by(Announcement.created_at.desc()).limit(10).all()
-    else:
-        avisos_list = query.filter(
-            db.or_(
-                Announcement.target_role.is_(None),
-                Announcement.target_role == "all",
-                Announcement.target_role == current_user.role,
-                Announcement.user_id == current_user.id
-            )
-        ).order_by(Announcement.created_at.desc()).limit(10).all()
+    # Todos os colaboradores (incluindo admins e supervisores) devem ver apenas avisos destinados ao seu perfil, a todos, especificamente a si, ou criados por si
+    avisos_list = query.filter(
+        db.or_(
+            Announcement.target_role.is_(None),
+            Announcement.target_role == "all",
+            Announcement.target_role == current_user.role,
+            Announcement.user_id == current_user.id,
+            Announcement.created_by == current_user.id
+        )
+    ).order_by(Announcement.created_at.desc()).limit(10).all()
         
     read_ids = {r.announcement_id for r in AnnouncementRead.query.filter_by(user_id=current_user.id).all()}
     
