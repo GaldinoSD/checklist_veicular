@@ -534,6 +534,7 @@ class Task(db.Model):
     deadline = db.Column(db.Date)
     status = db.Column(db.String(20), default="PENDENTE")
     obs = db.Column(db.Text)
+    show_on_calendar = db.Column(db.Boolean, default=False)
 
 class Patio(db.Model):
     __tablename__ = "patio"
@@ -2458,19 +2459,32 @@ def api_geradores(id=None):
             g = Generator()
             db.session.add(g)
         
-        g.name = data.get("name")
-        g.location = data.get("location")
-        g.capacity_total = float(data.get("capacity_total")) if data.get("capacity_total") else None
-        g.current_qty = float(data.get("current_qty")) if data.get("current_qty") else None
-        g.fuel_type = data.get("fuel_type")
-        refill_date = data.get("last_refill_date")
-        if refill_date:
-            g.last_refill_date = datetime.strptime(refill_date, "%Y-%m-%d").date()
-        g.responsible_id = int(data.get("responsible_id")) if data.get("responsible_id") else None
-        g.status = data.get("status", "OPERACIONAL")
-        g.obs = data.get("obs")
-        g.reserve_cans = int(data.get("reserve_cans")) if data.get("reserve_cans") else None
-        g.reserve_liters = float(data.get("reserve_liters")) if data.get("reserve_liters") else None
+        if "name" in data:
+            g.name = data.get("name")
+        if "location" in data:
+            g.location = data.get("location")
+        if "capacity_total" in data:
+            g.capacity_total = float(data.get("capacity_total")) if data.get("capacity_total") else None
+        if "current_qty" in data:
+            g.current_qty = float(data.get("current_qty")) if data.get("current_qty") else None
+        if "fuel_type" in data:
+            g.fuel_type = data.get("fuel_type")
+        if "last_refill_date" in data:
+            refill_date = data.get("last_refill_date")
+            if refill_date:
+                g.last_refill_date = datetime.strptime(refill_date, "%Y-%m-%d").date()
+            else:
+                g.last_refill_date = None
+        if "responsible_id" in data:
+            g.responsible_id = int(data.get("responsible_id")) if data.get("responsible_id") else None
+        if "status" in data:
+            g.status = data.get("status", "OPERACIONAL")
+        if "obs" in data:
+            g.obs = data.get("obs")
+        if "reserve_cans" in data:
+            g.reserve_cans = int(data.get("reserve_cans")) if data.get("reserve_cans") else None
+        if "reserve_liters" in data:
+            g.reserve_liters = float(data.get("reserve_liters")) if data.get("reserve_liters") else None
         
         db.session.commit()
         return jsonify({"status": "ok", "id": g.id})
@@ -2510,9 +2524,9 @@ def api_rfo(id=None):
     if request.method in ["POST", "PUT"]:
         # RFO pode enviar fotos, então suporta multipart form data e JSON
         if request.is_json:
-            data = request.json
+            data = request.json or {}
         else:
-            data = request.form
+            data = request.form or {}
 
         rid = id or data.get("id")
         if rid:
@@ -2523,31 +2537,52 @@ def api_rfo(id=None):
             r = RFO()
             db.session.add(r)
         
-        r.number = data.get("number")
-        r.title = data.get("title")
-        r.description = data.get("description")
+        # Mapeamentos robustos de campos do HTML para o banco de dados
+        r.number = data.get("protocol") or data.get("number")
+        r.problem_type = data.get("problem_type")
+        r.tech_responsible = data.get("tech_responsible")
         r.root_cause = data.get("root_cause")
-        r.impact = data.get("impact")
-        r.action = data.get("action")
+        
+        # Ações para solução: "solution_actions" (HTML) ou "action" (DB)
+        r.action = data.get("solution_actions") or data.get("action")
+        
+        # Localização: "lng" (HTML) ou "lon" (DB)
         r.city = data.get("city")
         r.neighborhood = data.get("neighborhood")
         r.lat = data.get("lat")
-        r.lon = data.get("lon")
+        r.lon = data.get("lng") or data.get("lon")
+        
+        # Tempos: "maintenance_start" (HTML) ou "start_time" (DB)
+        r.start_time = data.get("maintenance_start") or data.get("start_time")
+        r.end_time = data.get("resolution_time") or data.get("end_time")
+        
+        # Observações adicionais mapeadas para "description" (DB)
+        r.description = data.get("observations") or data.get("description")
+        
+        # Outros metadados
+        r.impact = data.get("impact", "Não informado")
         r.status = data.get("status", "ABERTO")
-        r.problem_type = data.get("problem_type")
-        r.tech_responsible = data.get("tech_responsible")
+        
+        # Título dinâmico premium
+        r.title = f"RFO: {r.problem_type or 'Ocorrência'} - {r.city or 'Local'}"
+        
+        # Equipe vinculada (opcional)
         r.team_id = int(data.get("team_id")) if data.get("team_id") else None
         
+        # Tratamento de Data inteligente
         date_str = data.get("date")
         if date_str:
-            r.date = datetime.strptime(date_str, "%Y-%m-%d").date()
-        r.start_time = data.get("start_time")
-        r.end_time = data.get("end_time")
-        
-        # Técnicos vinculados em JSON
-        tech_ids = request.form.getlist("technicians[]") or data.get("technicians", [])
-        if tech_ids:
-            r.technicians_json = json.dumps(tech_ids)
+            try:
+                r.date = datetime.strptime(date_str, "%Y-%m-%d").date()
+            except Exception:
+                r.date = agora().date()
+        elif r.start_time:
+            try:
+                r.date = datetime.strptime(r.start_time.split("T")[0], "%Y-%m-%d").date()
+            except Exception:
+                r.date = agora().date()
+        else:
+            r.date = agora().date()
         
         # Upload de fotos
         photos = request.files.getlist("photos") or request.files.getlist("photos[]")
@@ -2578,6 +2613,11 @@ def api_rfo(id=None):
             "neighborhood": r.neighborhood,
             "lat": r.lat,
             "lon": r.lon,
+            # Chaves extras de compatibilidade para frontend legível
+            "lng": r.lon,
+            "tech": r.tech_responsible,
+            "observations": r.description,
+            
             "description": r.description,
             "root_cause": r.root_cause,
             "impact": r.impact,
@@ -2804,24 +2844,39 @@ def api_encerramento(id=None):
             e = Encerramento()
             db.session.add(e)
             
-        e.patio_id = int(data.get("patio_id")) if data.get("patio_id") else None
-        date_str = data.get("date")
-        if date_str:
-            e.date = datetime.strptime(date_str, "%Y-%m-%d").date()
-        e.closing_time = data.get("closing_time")
-        
-        # Suporta tanto lista/dicionário quanto string para technicians_json e patios_json
-        techs = data.get("technicians_json")
+        # Pega a lista de pátios e técnicos da requisição
+        patios_js = data.get("patios") or data.get("patios_json")
+        techs = data.get("technicians") or data.get("technicians_json")
+
+        # Salva em formato JSON string
+        if isinstance(patios_js, (list, dict)):
+            e.patios_json = json.dumps(patios_js)
+        else:
+            e.patios_json = patios_js
+
         if isinstance(techs, (list, dict)):
             e.technicians_json = json.dumps(techs)
         else:
             e.technicians_json = techs
 
-        patios_js = data.get("patios_json")
-        if isinstance(patios_js, (list, dict)):
-            e.patios_json = json.dumps(patios_js)
+        # Extrai patio_id e closing_time do primeiro pátio para retrocompatibilidade
+        if isinstance(patios_js, list) and len(patios_js) > 0:
+            try:
+                first_patio = patios_js[0]
+                e.patio_id = int(first_patio.get("patio_id"))
+                e.closing_time = first_patio.get("closing_time")
+            except Exception as ex:
+                print("⚠️ Erro parsing first patio in post:", ex)
         else:
-            e.patios_json = patios_js
+            e.patio_id = int(data.get("patio_id")) if data.get("patio_id") else None
+            e.closing_time = data.get("closing_time")
+
+        # Define a data do encerramento (hoje se não fornecida)
+        date_str = data.get("date")
+        if date_str:
+            e.date = datetime.strptime(date_str, "%Y-%m-%d").date()
+        elif not e.date:
+            e.date = agora().date()
 
         e.obs = data.get("obs")
         db.session.commit()
@@ -2830,15 +2885,32 @@ def api_encerramento(id=None):
     items = Encerramento.query.order_by(Encerramento.date.desc()).all()
     res = []
     for i in items:
+        # Decodifica pátios e técnicos para retornar em formato array
+        try:
+            patios_list = json.loads(i.patios_json) if i.patios_json else []
+        except Exception:
+            patios_list = []
+
+        try:
+            techs_list = json.loads(i.technicians_json) if i.technicians_json else []
+        except Exception:
+            techs_list = []
+
+        # Junta nomes dos pátios fechados no dia para exibir no badge
+        patios_names = [p.get("patio_name") or p.get("name") for p in patios_list if p.get("patio_name") or p.get("name")]
+        patio_name = ", ".join(patios_names) if patios_names else (i.patio.name if i.patio else "N/A")
+
         res.append({
             "id": i.id,
             "patio_id": i.patio_id,
-            "patio_name": i.patio.name if i.patio else "N/A",
+            "patio_name": patio_name,
             "date": str(i.date) if i.date else "",
             "closing_time": i.closing_time,
-            "technicians_json": i.technicians_json,
             "obs": i.obs,
-            "patios_json": i.patios_json
+            "patios_json": i.patios_json,
+            "technicians_json": i.technicians_json,
+            "patios": patios_list,
+            "techs": techs_list
         })
     return jsonify(res)
 
@@ -2863,19 +2935,37 @@ def api_tarefas(id=None):
                 return jsonify({"error": "Tarefa não encontrada"}), 404
         else:
             t = Task()
+            t.title = data.get("title", "")
+            t.priority = data.get("priority", "Média")
+            t.status = data.get("status", "Pendente")
             db.session.add(t)
         
-        t.title = data.get("title")
-        t.description = data.get("description")
-        t.responsible_id = int(data.get("responsible_id")) if data.get("responsible_id") else None
-        t.priority = data.get("priority", "MEDIA")
-        
-        deadline_str = data.get("deadline")
-        if deadline_str:
-            t.deadline = datetime.strptime(deadline_str, "%Y-%m-%d").date()
+        if "title" in data:
+            t.title = data.get("title")
+        if "description" in data:
+            t.description = data.get("description")
+        if "responsible_id" in data:
+            t.responsible_id = int(data.get("responsible_id")) if data.get("responsible_id") else None
+        if "priority" in data:
+            t.priority = data.get("priority")
             
-        t.status = data.get("status", "PENDENTE")
-        t.obs = data.get("obs")
+        if "deadline" in data:
+            deadline_str = data.get("deadline")
+            if deadline_str:
+                try:
+                    t.deadline = datetime.strptime(deadline_str, "%Y-%m-%d").date()
+                except Exception:
+                    pass
+            else:
+                t.deadline = None
+                
+        if "status" in data:
+            t.status = data.get("status")
+        if "obs" in data:
+            t.obs = data.get("obs")
+        if "show_on_calendar" in data:
+            t.show_on_calendar = data.get("show_on_calendar") in [True, "true", "True", 1, "1"]
+            
         db.session.commit()
         return jsonify({"status": "ok", "id": t.id})
 
@@ -2888,10 +2978,12 @@ def api_tarefas(id=None):
             "description": i.description,
             "responsible_id": i.responsible_id,
             "responsible_name": i.responsible.username if i.responsible else "Sem responsável",
+            "responsible": i.responsible.username if i.responsible else "Sem responsável",
             "priority": i.priority,
             "deadline": str(i.deadline) if i.deadline else "",
             "status": i.status,
-            "obs": i.obs
+            "obs": i.obs,
+            "show_on_calendar": i.show_on_calendar or False
         })
     return jsonify(res)
 
@@ -3140,6 +3232,27 @@ def api_escalas(id=None):
                 "description": n.description
             }
         })
+
+    # 6. Carrega Tarefas Agendadas no Calendário (Task model)
+    tasks = Task.query.filter(Task.show_on_calendar == True, Task.status != "Concluída").all()
+    for t in tasks:
+        if t.deadline:
+            events.append({
+                "id": f"t_{t.id}",
+                "title": f"🚀 TAREFA: {t.title or 'Sem Título'}",
+                "start": t.deadline.isoformat(),
+                "allDay": True,
+                "color": "#3B82F6",  # Lindo Royal Blue premium para tarefas
+                "extendedProps": {
+                    "type": "tarefa",
+                    "title": t.title,
+                    "responsible": t.responsible.username if t.responsible else "Sem responsável",
+                    "priority": t.priority,
+                    "deadline": str(t.deadline),
+                    "status": t.status,
+                    "description": t.description
+                }
+            })
             
     return jsonify(events)
 
@@ -3580,10 +3693,10 @@ def api_status_toggle(slug, id):
 # 🔥 GERADORES DE RELATÓRIO PDF PREMIUM 🔥
 # ==========================================
 
-def make_premium_pdf(buffer, title, metadata, content_table_data):
+def make_premium_pdf(buffer, title, metadata, content_table_data, image_paths=None):
     from reportlab.lib.pagesizes import A4
     from reportlab.lib import colors
-    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 
     doc = SimpleDocTemplate(
@@ -3681,7 +3794,43 @@ def make_premium_pdf(buffer, title, metadata, content_table_data):
     ]))
     story.append(content_table)
 
+    # 4. Optional Photo Grid (ReportLab Image rendering)
+    if image_paths:
+        story.append(Spacer(1, 10*mm))
+        story.append(Paragraph("<b>Registros Fotográficos</b>", styles["Heading2"]))
+        story.append(Spacer(1, 3*mm))
+        
+        photo_elements = []
+        for img_path in image_paths:
+            try:
+                # 80mm width / 60mm height is perfect for dual-column grid on A4
+                img = Image(str(img_path), width=80*mm, height=60*mm)
+                img.hAlign = 'LEFT'
+                photo_elements.append(img)
+            except Exception as ex:
+                print("⚠️ Erro ao renderizar foto no PDF:", ex)
+        
+        if photo_elements:
+            table_data = []
+            for i in range(0, len(photo_elements), 2):
+                row = [photo_elements[i]]
+                if i + 1 < len(photo_elements):
+                    row.append(photo_elements[i+1])
+                else:
+                    row.append("")
+                table_data.append(row)
+            
+            photos_table = Table(table_data, colWidths=[85*mm, 85*mm])
+            photos_table.setStyle(TableStyle([
+                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('TOPPADDING', (0, 0), (-1, -1), 6),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            ]))
+            story.append(photos_table)
+
     doc.build(story)
+
 
 @app.route("/api/gestao/encerramento/<int:id>/pdf", methods=["GET"])
 @supervisor_allowed
@@ -3698,40 +3847,65 @@ def encerramento_pdf(id):
         try:
             techs = json.loads(e.technicians_json)
             if isinstance(techs, list):
-                # busca usernames
-                techs_str = ", ".join([u.username for u in User.query.filter(User.id.in_([int(x) for x in techs]))])
+                if len(techs) > 0 and isinstance(techs[0], dict):
+                    # Formato novo: [{"user_id": "...", "username": "...", "arrival_time": "..."}]
+                    techs_str = ", ".join([f"{t.get('username')} ({t.get('arrival_time')})" for t in techs])
+                else:
+                    # Formato antigo: [1, 2, 3]
+                    tech_users = User.query.filter(User.id.in_([int(x) for x in techs])).all()
+                    techs_str = ", ".join([u.username for u in tech_users])
         except Exception:
             techs_str = str(e.technicians_json)
 
+    # Decodifica pátios
+    patios_list = []
+    if e.patios_json:
+        try:
+            patios_list = json.loads(e.patios_json)
+        except Exception:
+            pass
+
+    # Calcula nome exibido dos pátios e horários
+    patios_names = [p.get("patio_name") or p.get("name") for p in patios_list if p.get("patio_name") or p.get("name")]
+    patio_display_name = ", ".join(patios_names) if patios_names else (e.patio.name if e.patio else "N/A")
+
+    closing_display_time = e.closing_time
+    if not closing_display_time and patios_list:
+        closing_times = [p.get("closing_time") or p.get("status") for p in patios_list if p.get("closing_time") or p.get("status")]
+        closing_display_time = ", ".join(closing_times) if closing_times else "N/A"
+
     metadata = {
-        "Pátio": e.patio.name if e.patio else "N/A",
+        "Pátio(s)": patio_display_name,
         "Data": e.date.strftime("%d/%m/%Y") if e.date else "N/A",
-        "Horário de Fechamento": e.closing_time or "N/A",
+        "Horário de Fechamento": closing_display_time or "N/A",
         "Técnicos Presentes": techs_str
     }
 
     patios_str = ""
-    if e.patios_json:
+    if patios_list:
         try:
-            pjs = json.loads(e.patios_json)
-            if isinstance(pjs, list):
-                patios_str = "\n".join([f"- {p.get('name')}: {p.get('status')}" for p in pjs])
+            lines = []
+            for p in patios_list:
+                name = p.get('patio_name') or p.get('name') or "N/A"
+                val = p.get('closing_time') or p.get('status') or "N/A"
+                lines.append(f"- {name}: {val}")
+            patios_str = "\n".join(lines)
         except Exception:
             patios_str = str(e.patios_json)
 
     content = [
-        ("Status dos Veículos por Pátio", patios_str or "Sem observações detalhadas de pátio"),
+        ("Horários dos Pátios Registrados", patios_str or "Nenhum pátio registrado"),
         ("Observações Gerais", e.obs or "Nenhuma observação informada.")
     ]
 
-    make_premium_pdf(buffer, "Relatório de Encerramento de Pátio", metadata, content)
+    make_premium_pdf(buffer, "Relatório de Encerramento Diário", metadata, content)
     buffer.seek(0)
     
     return send_file(
         buffer,
         mimetype="application/pdf",
         as_attachment=False,
-        download_name=f"encerramento_patio_{id}.pdf"
+        download_name=f"encerramento_diario_{id}.pdf"
     )
 
 @app.route("/api/gestao/atividades/<int:id>/pdf", methods=["GET"])
@@ -4074,26 +4248,48 @@ def rfo_pdf(id):
         except Exception:
             techs_str = str(r.technicians_json)
 
+    def format_dt(dt_str):
+        if not dt_str:
+            return "N/A"
+        try:
+            dt = datetime.strptime(dt_str.replace("T", " "), "%Y-%m-%d %H:%M")
+            return dt.strftime("%d/%m/%Y %H:%M")
+        except Exception:
+            return dt_str
+
+    start_formatted = format_dt(r.start_time)
+    end_formatted = format_dt(r.end_time)
+
     metadata = {
         "Número RFO": r.number or "N/A",
         "Cidade / Bairro": f"{r.city or 'N/A'} / {r.neighborhood or 'N/A'}",
         "Data": r.date.strftime("%d/%m/%Y") if r.date else "N/A",
-        "Horário": f"{r.start_time or 'N/A'} até {r.end_time or 'N/A'}",
+        "Horário": f"{start_formatted} até {end_formatted}",
         "Técnico Responsável": r.tech_responsible or "N/A"
     }
 
     content = [
         ("Tipo de Problema", r.problem_type or "N/A"),
-        ("Equipe Associada", r.team.name if r.team else "N/A"),
-        ("Técnicos de Campo", techs_str),
-        ("Descrição da Ocorrência", r.description or "Sem descrição"),
+        ("Descrição / Observações", r.description or "Sem observações adicionais"),
         ("Causa Raiz", r.root_cause or "Não informada"),
-        ("Impacto Causado", r.impact or "Não informado"),
         ("Ações Corretivas / Plano", r.action or "Não informado"),
         ("Coordenadas GPS", f"{r.lat or 'N/A'}, {r.lon or 'N/A'}")
     ]
 
-    make_premium_pdf(buffer, f"Relatório de Ocorrência (RFO): {r.title}", metadata, content)
+    # Fetch physical image paths for ReportLab
+    image_paths = []
+    if r.photos_json:
+        try:
+            filenames = json.loads(r.photos_json)
+            if isinstance(filenames, list):
+                for fn in filenames:
+                    p_path = VISTORIAS_UPLOAD_DIR / fn
+                    if p_path.exists():
+                        image_paths.append(p_path)
+        except Exception as ex:
+            print("⚠️ Erro ao carregar fotos do RFO para o PDF:", ex)
+
+    make_premium_pdf(buffer, f"Relatório de Ocorrência (RFO): {r.title or 'Sem Título'}", metadata, content, image_paths=image_paths)
     buffer.seek(0)
     
     return send_file(
