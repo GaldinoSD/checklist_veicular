@@ -4006,28 +4006,84 @@ def api_status_toggle(slug, id):
 def make_premium_pdf(buffer, title, metadata, content_table_data, image_paths=None):
     from reportlab.lib.pagesizes import A4
     from reportlab.lib import colors
-    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image as RLImage
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import mm
+    import os
+
+    logo_path = "logo.png"
+    if not os.path.exists(logo_path):
+        logo_path = "/var/www/checklist_veicular/logo.png"
+
+    RODAPE_LINHAS = [
+        "ADAPT LINK SERVIÇOS EM COMUNICAÇÃO MULTIMÍDIA EIRELI",
+        "CNPJ: 08.980.148/0001-41       Inscr. Est.: 78.342.480",
+        "Rua Waldir Pedro de Medeiros, 253 – São Miguel – Seropédica – RJ",
+        "CEP: 23.893-725",
+        "Tel.: (21) 3812-5900 / (21) 2682-7822",
+        "WWW.ADAPTLINK.COM.BR",
+    ]
+
+    def draw_background(c, doc):
+        width, height = A4
+        
+        # 1. Cabeçalho / Logotipo
+        if os.path.exists(logo_path):
+            try:
+                from reportlab.lib.utils import ImageReader
+                logo = ImageReader(logo_path)
+                c.drawImage(logo, 20, height - 60, width=60, height=25, preserveAspectRatio=True, mask="auto")
+            except Exception as e:
+                print("⚠️ Erro ao carregar logo no header:", e)
+
+        # 2. Título Centralizado
+        c.setFont("Helvetica-Bold", 14)
+        c.setFillColor(colors.HexColor("#0F172A"))
+        c.drawCentredString(width / 2, height - 40, title.upper())
+        c.setFont("Helvetica", 11)
+        c.drawCentredString(width / 2, height - 55, "Registro Formal – AdaptLink")
+
+        # 3. Linha Azul Divisória Premium
+        c.setStrokeColor(colors.HexColor("#1F3C78"))
+        c.setLineWidth(2)
+        c.line(20, height - 65, width - 20, height - 65)
+
+        # 4. Metadados do topo: Emitido em / Número do Relatório
+        c.setFont("Helvetica", 8)
+        c.setFillColor(colors.HexColor("#475569"))
+        now_str = agora().strftime("%d/%m/%Y %H:%M")
+        c.drawString(25, height - 75, f"Emitido em: {now_str}")
+        
+        # Tenta pegar um código ou ID dos metadados para colocar como número do relatório
+        ref_id = metadata.get("ID") or metadata.get("Código") or metadata.get("Placa") or metadata.get("Nº") or "N/A"
+        c.drawRightString(width - 25, height - 75, f"Doc Ref: {ref_id}")
+
+        # 5. Rodapé Institucional AdaptLink
+        c.setStrokeColor(colors.HexColor("#E2E8F0"))
+        c.setLineWidth(0.8)
+        c.line(25, 90, width - 25, 90)
+        
+        c.setFont("Helvetica", 7)
+        c.setFillColor(colors.HexColor("#475569"))
+        y_footer = 75
+        for linha in RODAPE_LINHAS:
+            c.drawCentredString(width / 2, y_footer, linha)
+            y_footer -= 9
+        
+        # Paginação
+        c.setFont("Helvetica-Oblique", 8)
+        c.drawRightString(width - 25, 30, f"Página {c.getPageNumber()}")
 
     doc = SimpleDocTemplate(
         buffer,
         pagesize=A4,
-        rightMargin=15*mm, leftMargin=15*mm,
-        topMargin=15*mm, bottomMargin=15*mm
+        rightMargin=20*mm, leftMargin=20*mm,
+        topMargin=45*mm, bottomMargin=40*mm
     )
 
     styles = getSampleStyleSheet()
     
     # Custom styles
-    title_style = ParagraphStyle(
-        name="PremiumTitle",
-        parent=styles["Heading1"],
-        fontName="Helvetica-Bold",
-        fontSize=18,
-        textColor=colors.HexColor("#0F172A"),
-        spaceAfter=15
-    )
-    
     label_style = ParagraphStyle(
         name="PremiumLabel",
         parent=styles["Normal"],
@@ -4046,11 +4102,10 @@ def make_premium_pdf(buffer, title, metadata, content_table_data, image_paths=No
 
     story = []
 
-    # 1. Logo/Header Placeholder or Decorative Banner
-    story.append(Paragraph(title, title_style))
-    story.append(Spacer(1, 5*mm))
+    # Seção 1: Metadados do Documento (Tabela formatada com Grid moderno)
+    story.append(Paragraph("<b>Metadados do Registro</b>", styles["Heading3"]))
+    story.append(Spacer(1, 3*mm))
 
-    # 2. Metadata Grid
     meta_table_data = []
     keys = list(metadata.keys())
     for i in range(0, len(keys), 2):
@@ -4081,10 +4136,10 @@ def make_premium_pdf(buffer, title, metadata, content_table_data, image_paths=No
         ('LINEBELOW', (0, 0), (-1, -1), 0.5, colors.HexColor("#E2E8F0")),
     ]))
     story.append(meta_table)
-    story.append(Spacer(1, 10*mm))
+    story.append(Spacer(1, 8*mm))
 
-    # 3. Main content
-    story.append(Paragraph("<b>Detalhamento do Registro</b>", styles["Heading2"]))
+    # Seção 2: Detalhes do Registro
+    story.append(Paragraph("<b>Detalhamento do Registro</b>", styles["Heading3"]))
     story.append(Spacer(1, 3*mm))
 
     content_rows = []
@@ -4104,17 +4159,16 @@ def make_premium_pdf(buffer, title, metadata, content_table_data, image_paths=No
     ]))
     story.append(content_table)
 
-    # 4. Optional Photo Grid (ReportLab Image rendering)
+    # Seção 3: Registros Fotográficos
     if image_paths:
-        story.append(Spacer(1, 10*mm))
-        story.append(Paragraph("<b>Registros Fotográficos</b>", styles["Heading2"]))
+        story.append(Spacer(1, 8*mm))
+        story.append(Paragraph("<b>Registros Fotográficos</b>", styles["Heading3"]))
         story.append(Spacer(1, 3*mm))
         
         photo_elements = []
         for img_path in image_paths:
             try:
-                # 80mm width / 60mm height is perfect for dual-column grid on A4
-                img = Image(str(img_path), width=80*mm, height=60*mm)
+                img = RLImage(str(img_path), width=80*mm, height=60*mm)
                 img.hAlign = 'LEFT'
                 photo_elements.append(img)
             except Exception as ex:
@@ -4139,7 +4193,7 @@ def make_premium_pdf(buffer, title, metadata, content_table_data, image_paths=No
             ]))
             story.append(photos_table)
 
-    doc.build(story)
+    doc.build(story, onFirstPage=draw_background, onLaterPages=draw_background)
 
 
 @app.route("/api/gestao/encerramento/<int:id>/pdf", methods=["GET"])
