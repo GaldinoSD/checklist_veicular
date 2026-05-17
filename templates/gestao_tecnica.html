@@ -840,6 +840,46 @@
     </div>
 </div>
 
+<!-- Modal: Detalhes da Escala (Visualização) -->
+<div id="modal-escala-detalhes" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden items-center justify-center z-[60] p-4">
+    <div class="bg-white dark:bg-gray-900 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden border border-slate-900/10 dark:border-white/10">
+        <div class="px-6 py-4 border-b border-slate-900/10 dark:border-white/10 flex justify-between items-center bg-slate-50 dark:bg-gray-800/50">
+            <h3 class="text-md font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                <i class="fa-solid fa-calendar-day text-purple-600"></i>
+                <span>Detalhes do Plantão</span>
+            </h3>
+            <button onclick="closeModal('modal-escala-detalhes')" class="text-slate-400 hover:text-slate-600 transition-colors">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div class="p-6 space-y-4 text-sm">
+            <div class="flex justify-between items-center border-b border-slate-100 dark:border-white/5 pb-2">
+                <span class="text-xs font-bold text-slate-400 uppercase">Tipo de Plantão</span>
+                <span id="detalhe-escala-tipo" class="px-2.5 py-1 rounded-lg text-xs font-bold uppercase tracking-wider"></span>
+            </div>
+            <div class="flex justify-between items-center border-b border-slate-100 dark:border-white/5 pb-2">
+                <span class="text-xs font-bold text-slate-400 uppercase">Data</span>
+                <span id="detalhe-escala-data" class="font-bold text-slate-800 dark:text-white"></span>
+            </div>
+            <div class="space-y-1.5 border-b border-slate-100 dark:border-white/5 pb-3">
+                <span class="text-xs font-bold text-slate-400 uppercase block">Equipe(s) Responsável(is)</span>
+                <div id="detalhe-escala-equipes" class="flex flex-wrap gap-1.5 pt-0.5"></div>
+            </div>
+            <div class="space-y-1.5 border-b border-slate-100 dark:border-white/5 pb-3">
+                <span class="text-xs font-bold text-slate-400 uppercase block">Técnicos Escalados</span>
+                <div id="detalhe-escala-tecnicos" class="flex flex-wrap gap-1.5 pt-0.5"></div>
+            </div>
+            <div class="space-y-1 bg-slate-50 dark:bg-gray-800/40 p-3 rounded-xl border border-slate-900/5 dark:border-white/5">
+                <span class="text-xs font-bold text-slate-400 uppercase block">Observações</span>
+                <p id="detalhe-escala-obs" class="text-slate-600 dark:text-gray-300 italic text-xs leading-relaxed"></p>
+            </div>
+        </div>
+        <div class="px-6 py-3 bg-slate-50 dark:bg-gray-800/30 border-t border-slate-900/10 dark:border-white/10 flex justify-end">
+            <button onclick="closeModal('modal-escala-detalhes')" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 dark:bg-gray-800 dark:hover:bg-gray-700 text-slate-700 dark:text-gray-300 rounded-xl text-xs font-bold transition-all active:scale-95">Fechar</button>
+        </div>
+    </div>
+</div>
+
 <!-- Modal: Reunião -->
 <div id="modal-reuniao" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden items-center justify-center z-[60] p-4">
     <div class="bg-white dark:bg-gray-900 w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden max-h-[95vh] flex flex-col">
@@ -2829,6 +2869,62 @@ async function deleteEscala(id) {
     if(res.ok) loadItems('escalas');
 }
 
+async function showEscalaDetalhes(id) {
+    const res = await fetch(`/api/gestao/escalas?view=list&t=${Date.now()}`);
+    if(!res.ok) return alert("Erro ao carregar dados do plantão.");
+    const items = await res.json();
+    const item = items.find(x => parseInt(x.id) === parseInt(id));
+    if(!item) return alert("Plantão não encontrado.");
+
+    const tipoEl = document.getElementById('detalhe-escala-tipo');
+    tipoEl.textContent = item.type;
+    tipoEl.className = 'px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ';
+    if (item.type === 'sabado') {
+        tipoEl.classList.add('bg-emerald-100', 'text-emerald-700', 'dark:bg-emerald-900/30', 'dark:text-emerald-400');
+    } else if (item.type === 'domingo') {
+        tipoEl.classList.add('bg-indigo-100', 'text-indigo-700', 'dark:bg-indigo-900/30', 'dark:text-indigo-400');
+    } else {
+        tipoEl.classList.add('bg-amber-100', 'text-amber-700', 'dark:bg-amber-900/30', 'dark:text-amber-400');
+    }
+
+    document.getElementById('detalhe-escala-data').textContent = new Date(item.date + 'T00:00:00').toLocaleDateString();
+
+    const equipesEl = document.getElementById('detalhe-escala-equipes');
+    equipesEl.innerHTML = '';
+    if (item.team_ids) {
+        const ids = item.team_ids.split(',').map(x => parseInt(x));
+        const matched = globalEquipes.filter(e => ids.includes(e.id));
+        if (matched.length > 0) {
+            equipesEl.innerHTML = matched.map(e => `
+                <span class="px-2 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 rounded-md text-[10px] font-bold">
+                    <i class="fa-solid fa-users text-[9px] mr-1"></i> ${e.name}
+                </span>
+            `).join('');
+        } else {
+            equipesEl.innerHTML = '<span class="text-slate-400 text-xs italic">Sem equipe vinculada</span>';
+        }
+    } else {
+        equipesEl.innerHTML = '<span class="text-slate-400 text-xs italic">Sem equipe vinculada</span>';
+    }
+
+    const tecnicosEl = document.getElementById('detalhe-escala-tecnicos');
+    tecnicosEl.innerHTML = '';
+    if (item.technician_names) {
+        const names = item.technician_names.split(',').map(x => x.trim());
+        tecnicosEl.innerHTML = names.map(name => `
+            <span class="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-md text-[10px] font-bold">
+                <i class="fa-solid fa-user-gear text-[9px] mr-1"></i> ${name}
+            </span>
+        `).join('');
+    } else {
+        tecnicosEl.innerHTML = '<span class="text-slate-400 text-xs italic">Nenhum técnico escalado</span>';
+    }
+
+    document.getElementById('detalhe-escala-obs').textContent = item.obs || 'Nenhuma observação registrada para este plantão.';
+
+    openModal('modal-escala-detalhes');
+}
+
 // --- ENVIO GENÉRICO PARA JSON ---
 async function handleJsonSubmit(formId, apiPath, tabToReload) {
     document.getElementById(formId).onsubmit = async (e) => {
@@ -2966,8 +3062,14 @@ function initCalendar() {
         dayMaxEvents: true,
         height: 'auto',
         eventClick: function(info) {
+            const props = info.event.extendedProps || {};
             if(info.event.id && info.event.id.startsWith('m_')) {
-                editEscala(info.event.id.replace('m_', ''));
+                const scaleId = info.event.id.replace('m_', '');
+                if (props.scale_type === 'domingo' || props.scale_type === 'feriado') {
+                    showEscalaDetalhes(scaleId);
+                } else {
+                    editEscala(scaleId);
+                }
             } else {
                 showToast("Evento: " + info.event.title, "info");
             }

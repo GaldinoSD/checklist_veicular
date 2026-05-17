@@ -3008,6 +3008,7 @@ def api_escalas(id=None):
             "color": m_color,
             "extendedProps": {
                 "type": "manual",
+                "scale_type": s.type,
                 "obs": s.obs
             }
         })
