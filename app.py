@@ -1296,36 +1296,73 @@ def api_frota_stats():
     now = agora()
     start_7d = now - timedelta(days=7)
     start_month = now.replace(day=1, hour=0, minute=0, second=0)
+    start_30d = now - timedelta(days=30)
 
-    # 1. Saúde da Frota (Percentual OK nos últimos 7 dias)
-    total_7d = Checklist.query.filter(Checklist.date >= start_7d).count()
-    ok_7d = Checklist.query.filter(Checklist.date >= start_7d, Checklist.status == "OK").count()
+    # Coleta filtro de período personalizado da URL se houver (Formato: AAAA-MM-DD - AAAA-MM-DD)
+    periodo = request.args.get("periodo", "").strip()
+    if periodo and " - " in periodo:
+        try:
+            start_str, end_str = periodo.split(" - ")
+            start_dt = datetime.strptime(start_str.strip(), "%Y-%m-%d")
+            end_dt = datetime.strptime(end_str.strip(), "%Y-%m-%d").replace(hour=23, minute=59, second=59)
+            start_7d = start_dt
+            start_month = start_dt
+            start_30d = start_dt
+            now = end_dt
+        except Exception:
+            pass
+
+    # 1. Saúde da Frota (Percentual OK nos checklists do período)
+    total_7d = Checklist.query.filter(Checklist.date >= start_7d, Checklist.date <= now).count()
+    ok_7d = Checklist.query.filter(Checklist.date >= start_7d, Checklist.date <= now, Checklist.status == "OK").count()
     fleet_health = int((ok_7d / total_7d * 100)) if total_7d > 0 else 100
 
-    # 2. Custo de Manutenção (Mês)
-    total_cost = db.session.query(db.func.sum(AvariaOS.valor_gasto)).filter(AvariaOS.data_abertura >= start_month).scalar() or 0
+    # 2. Custo de Manutenção (Período)
+    total_cost = db.session.query(db.func.sum(AvariaOS.valor_gasto)).filter(
+        AvariaOS.data_abertura >= start_month, 
+        AvariaOS.data_abertura <= now
+    ).scalar() or 0
 
-    # 3. Checklists Hoje e O.S Abertas
-    checklists_today = Checklist.query.filter(Checklist.date >= now.replace(hour=0, minute=0, second=0)).count()
+    # 3. Checklists do Período e O.S Abertas
+    checklists_today = Checklist.query.filter(Checklist.date >= start_7d, Checklist.date <= now).count()
     open_os = AvariaOS.query.filter_by(status="aberta").count()
 
-    # 4. Histórico de KM (Últimos 7 dias)
+    # 4. Histórico de KM Rodados Reais Diários (Entrada km - Saída km correspondente)
     km_labels = []
     km_values = []
-    for i in range(6, -1, -1):
+    
+    delta_days = (now - start_7d).days
+    max_days = min(delta_days, 15) if delta_days > 0 else 7
+    
+    for i in range(max_days, -1, -1):
         day = (now - timedelta(days=i)).date()
-        km_day = db.session.query(db.func.sum(VehicleMov.km)).filter(db.func.date(VehicleMov.data_hora) == day).scalar() or 0
+        
+        # Faz join de Entrada com Saída correspondente do dia para calcular KM percorrido real
+        from sqlalchemy.orm import aliased
+        SaidaAlias = aliased(VehicleMov)
+        km_day = db.session.query(
+            db.func.sum(VehicleMov.km - SaidaAlias.km)
+        ).join(
+            SaidaAlias, VehicleMov.saida_id == SaidaAlias.id
+        ).filter(
+            VehicleMov.tipo == "entrada",
+            db.func.date(VehicleMov.data_hora) == day
+        ).scalar() or 0
+        
         km_labels.append(day.strftime("%d/%m"))
         km_values.append(int(km_day))
 
-    # 5. Distribuição de Status (30d)
-    start_30d = now - timedelta(days=30)
+    # 5. Distribuição de Status do Período
     status_dist = {}
     for st in ["OK", "Atenção", "Crítico"]:
-        count = Checklist.query.filter(Checklist.date >= start_30d, Checklist.status == st).count()
+        count = Checklist.query.filter(
+            Checklist.date >= start_30d, 
+            Checklist.date <= now, 
+            Checklist.status == st
+        ).count()
         status_dist[st] = count
 
-    # 6. Alertas de Revisão (Top 3 críticos)
+    # 6. Alertas de Revisão (Top 3 críticos baseados no odômetro atual)
     rev_alerts = []
     veiculos = Vehicle.query.all()
     for v in veiculos:
@@ -1364,59 +1401,114 @@ def api_gestao_stats():
     now = agora()
     start_month = now.replace(day=1, hour=0, minute=0, second=0)
 
-    # 1. LMS Completion (Média de progresso de todos os usuários)
-    # Aqui assumimos que temos uma tabela de progresso ou calculamos por badges
-    total_trainings = Training.query.count()
-    if total_trainings > 0:
-        completions = TrainingCompletion.query.count()
-        total_users = User.query.filter(User.role == 'tech').count()
-        lms_completion = int((completions / (total_trainings * total_users) * 100)) if total_users > 0 else 0
-    else:
-        lms_completion = 0
+    # Coleta filtro de período da URL se houver
+    periodo = request.args.get("periodo", "").strip()
+    if periodo and " - " in periodo:
+        try:
+            start_str, end_str = periodo.split(" - ")
+            start_dt = datetime.strptime(start_str.strip(), "%Y-%m-%d")
+            end_dt = datetime.strptime(end_str.strip(), "%Y-%m-%d").replace(hour=23, minute=59, second=59)
+            start_month = start_dt
+            now = end_dt
+        except Exception:
+            pass
 
-    # 2. Auditorias (Checklists feitos por supervisores no mês)
+    # 1. LMS Completion (Porcentagem de atribuições concluídas com aprovação no LMS)
+    total_assigns = TrainingAssignment.query.count()
+    approved_assigns = TrainingAssignment.query.filter_by(status="aprovado").count()
+    lms_completion = int((approved_assigns / total_assigns * 100)) if total_assigns > 0 else 0
+
+    # 2. Auditorias (Checklists feitos por supervisores no período)
     audits = Checklist.query.join(User, Checklist.technician == User.username).filter(
         User.role == "supervisor",
-        Checklist.date >= start_month
+        Checklist.date >= start_month,
+        Checklist.date <= now
     ).count()
 
     # 3. RFO e Tarefas
     rfo_active = RFO.query.filter_by(status="ABERTO").count()
     tasks_pending = Task.query.filter(Task.status != "CONCLUÍDO").count()
 
-    # 4. Atividades (Volume de Checklists nos últimos 7 dias)
+    # 4. Atividades (Volume de Checklists no período)
     act_labels = []
     act_values = []
-    for i in range(6, -1, -1):
+    
+    delta_days = (now - start_month).days
+    max_days = min(delta_days, 15) if delta_days > 0 else 7
+    
+    for i in range(max_days, -1, -1):
         day = (now - timedelta(days=i)).date()
         count = Checklist.query.filter(db.func.date(Checklist.date) == day).count()
         act_labels.append(day.strftime("%d/%m"))
         act_values.append(count)
 
-    # 5. RFO por Tipo
-    rfo_types = db.session.query(RFO.tipo, db.func.count(RFO.id)).group_by(RFO.tipo).all()
-    rfo_dist = {t[0]: t[1] for t in rfo_types}
+    # 5. RFO por Tipo / Categoria
+    rfo_types = db.session.query(RFO.problem_type, db.func.count(RFO.id)).group_by(RFO.problem_type).all()
+    rfo_dist = {t[0] if t[0] else "Outros": t[1] for t in rfo_types}
 
-    # 6. Ranking (Top 5 por conclusões)
-    ranking = []
+    # 6. Ranking real de Técnicos (Baseado no somatório dos scores de treinamentos LMS aprovados)
     top_users = db.session.query(
-        User.username, db.func.count(TrainingCompletion.id).label('total')
-    ).join(TrainingCompletion, User.id == TrainingCompletion.user_id).group_by(User.id).order_by(db.text('total DESC')).limit(10).all()
+        User.username,
+        db.func.sum(TrainingAssignment.best_score).label('total_score')
+    ).join(
+        TrainingAssignment, User.id == TrainingAssignment.user_id
+    ).filter(
+        TrainingAssignment.status == "aprovado"
+    ).group_by(
+        User.id
+    ).order_by(
+        db.text('total_score DESC')
+    ).limit(5).all()
     
+    ranking = []
     for u in top_users:
-        ranking.append({"name": u[0], "points": u[1] * 100}) # 100 pts por curso
+        ranking.append({
+            "name": u[0],
+            "points": int(u[1]) if u[1] else 0
+        })
+
+    # 7. Alertas de Geradores (Nível de combustível <= 30%)
+    generator_alerts = []
+    low_fuel_generators = Generator.query.all()
+    for g in low_fuel_generators:
+        if g.capacity_total and g.capacity_total > 0 and g.current_qty is not None:
+            perc = int((g.current_qty / g.capacity_total * 100))
+            if perc <= 30:
+                generator_alerts.append({
+                    "name": g.name,
+                    "perc": perc
+                })
+
+    # 8. Tarefas Críticas Pendentes (Prioridade Alta)
+    critical_tasks = []
+    crit_task_objs = Task.query.filter(
+        Task.status != "CONCLUÍDO",
+        Task.priority == "ALTA"
+    ).order_by(Task.deadline.asc()).limit(5).all()
+    
+    for t in crit_task_objs:
+        critical_tasks.append({
+            "title": t.title,
+            "responsible": t.responsible.username if t.responsible else "Não atribuído",
+            "priority": t.priority
+        })
+
+    # 9. Saúde Real da Frota no período
+    total_fleet = Checklist.query.filter(Checklist.date >= start_month, Checklist.date <= now).count()
+    ok_fleet = Checklist.query.filter(Checklist.date >= start_month, Checklist.date <= now, Checklist.status == "OK").count()
+    real_fleet_health = int((ok_fleet / total_fleet * 100)) if total_fleet > 0 else 100
 
     return json.dumps({
         "lms_completion": lms_completion,
         "total_audits_month": audits,
-        "fleet_health": 100, # Seria similar ao de frota
+        "fleet_health": real_fleet_health,
         "rfo_active": rfo_active,
         "tasks_pending": tasks_pending,
         "atividades_history": {"labels": act_labels, "values": act_values},
         "rfo_by_type": rfo_dist,
         "ranking": ranking,
-        "generator_alerts": [], # Implementar se houver modelo de geradores
-        "critical_tasks": []
+        "generator_alerts": generator_alerts,
+        "critical_tasks": critical_tasks
     })
 
 # ----------------- USUÁRIOS (admin) -----------------

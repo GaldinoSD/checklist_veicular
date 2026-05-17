@@ -338,7 +338,9 @@
 
     async function loadFrotaDashboard() {
         try {
-            const res = await fetch('/api/frota/dashboard_stats');
+            const urlParams = new URLSearchParams(window.location.search);
+            const periodo = urlParams.get('periodo') || '';
+            const res = await fetch(`/api/frota/dashboard_stats?periodo=${encodeURIComponent(periodo)}`);
             const data = await res.json();
 
             document.getElementById('stat-frota-health').textContent = data.fleet_health + '%';
@@ -431,7 +433,9 @@
 
     async function loadGestaoDashboard() {
         try {
-            const res = await fetch('/api/gestao/dashboard_stats');
+            const urlParams = new URLSearchParams(window.location.search);
+            const periodo = urlParams.get('periodo') || '';
+            const res = await fetch(`/api/gestao/dashboard_stats?periodo=${encodeURIComponent(periodo)}`);
             const data = await res.json();
 
             document.getElementById('stat-lms-completion').textContent = (data.lms_completion || 0) + '%';
