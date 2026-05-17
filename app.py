@@ -176,6 +176,23 @@ def urlize_custom_filter(s):
         
     return Markup(url_pattern.sub(replace, s))
 
+@app.template_filter('time_until')
+def time_until_filter(dt):
+    if not dt:
+        return ""
+    diff = dt - agora()
+    seconds = diff.total_seconds()
+    if seconds <= 0:
+        return "Expirado"
+    days = int(seconds // 86400)
+    if days > 0:
+        return f"Expira em {days}d"
+    hours = int((seconds % 86400) // 3600)
+    if hours > 0:
+        return f"Expira em {hours}h"
+    minutes = int((seconds % 3600) // 60)
+    return f"Expira em {minutes}min"
+
 
 # ----------------- MODELOS -----------------
 class User(UserMixin, db.Model):
@@ -375,8 +392,20 @@ class Announcement(db.Model):
     content = db.Column(db.Text, nullable=False)
     target_type = db.Column(db.String(50))  # internal, external, company, all
     target_id = db.Column(db.Integer)        # ID da empresa se target_type == company
+    target_role = db.Column(db.String(50), nullable=True) # admin, supervisor, tech, manutencao
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="CASCADE"), nullable=True)
+    user = db.relationship("User", foreign_keys=[user_id], backref="targeted_announcements")
+    expires_at = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=agora)
     created_by = db.Column(db.Integer, db.ForeignKey("user.id"))
+
+    @property
+    def message(self):
+        return self.content
+
+    @message.setter
+    def message(self, value):
+        self.content = value
 
 class AnnouncementRead(db.Model):
     __tablename__ = "announcement_read"
@@ -384,6 +413,13 @@ class AnnouncementRead(db.Model):
     announcement_id = db.Column(db.Integer, db.ForeignKey("announcement.id"))
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
     read_at = db.Column(db.DateTime, default=agora)
+
+class Manual(db.Model):
+    __tablename__ = "manual"
+    id = db.Column(db.Integer, primary_key=True)
+    role_group = db.Column(db.String(50), unique=True, nullable=False)  # 'admin_supervisor', 'manutencao', 'tech'
+    content = db.Column(db.Text, nullable=False)
+    updated_at = db.Column(db.DateTime, default=agora, onupdate=agora)
 
 # ===============================
 # 🎓 LMS (TREINAMENTOS)
@@ -899,6 +935,10 @@ def ensure_min_schema():
         text('ALTER TABLE system_config ADD COLUMN IF NOT EXISTS ignition_alert BOOLEAN DEFAULT TRUE'),
         text('ALTER TABLE system_config ADD COLUMN IF NOT EXISTS update_frequency INTEGER DEFAULT 30'),
         text('ALTER TABLE system_config ADD COLUMN IF NOT EXISTS simulator_active BOOLEAN DEFAULT FALSE'),
+        # campos em announcement
+        text('ALTER TABLE announcement ADD COLUMN IF NOT EXISTS target_role VARCHAR(50)'),
+        text('ALTER TABLE announcement ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES "user"(id) ON DELETE CASCADE'),
+        text('ALTER TABLE announcement ADD COLUMN IF NOT EXISTS expires_at TIMESTAMP'),
         text('''
             CREATE TABLE IF NOT EXISTS gps_geofence (
                 id SERIAL PRIMARY KEY,
@@ -6483,47 +6523,181 @@ def vistorias_nova():
 
 
 # ----------------- ROTAS: COMUNICAÇÕES (AVISOS) -----------------
-@app.route("/avisos")
+@app.route("/avisos", methods=["GET", "POST"])
 @login_required
 def avisos():
-    notifications = Announcement.query.order_by(Announcement.created_at.desc()).all()
-    # Adicionando manuais para evitar UndefinedError no template
-    manuais = {
-        'admin_supervisor': '',
-        'tecnico_manutencao': ''
-    }
-    return render_template("avisos.html", notifications=notifications, manuais=manuais)
-
-@app.route("/avisos/novo", methods=["POST"])
-@supervisor_allowed
-def avisos_novo():
-    title = request.form.get("title")
-    message = request.form.get("message")
-    category = request.form.get("category", "Geral")
-    
-    if title and message:
-        a = Announcement(
-            title=title,
-            message=message,
-            category=category,
-            created_by=current_user.id
-        )
-        db.session.add(a)
-        db.session.commit()
-        flash("Comunicado enviado com sucesso!", "success")
-    else:
-        flash("Título e mensagem são obrigatórios.", "error")
+    if request.method == "POST":
+        if not (current_user.is_admin or current_user.is_supervisor or current_user.has_permission("comunicados")):
+            flash("Permissão negada.", "error")
+            return redirect(url_for("avisos"))
+            
+        acao = request.form.get("acao")
         
-    return redirect(url_for("avisos"))
+        if acao == "novo_aviso":
+            title = request.form.get("title", "").strip()
+            message = request.form.get("message", "").strip()
+            target = request.form.get("target", "all").strip()
+            days_valid = request.form.get("days_valid", "").strip()
+            
+            if not title or not message:
+                flash("Título e mensagem são obrigatórios.", "error")
+                return redirect(url_for("avisos"))
+                
+            target_role = None
+            user_id = None
+            if target.startswith("role:"):
+                target_role = target.split(":")[1]
+            elif target.startswith("user:"):
+                user_id = int(target.split(":")[1])
+            else:
+                target_role = "all"
+                
+            expires_at = None
+            if days_valid.isdigit():
+                expires_at = agora() + timedelta(days=int(days_valid))
+                
+            a = Announcement(
+                title=title,
+                content=message,
+                target_role=target_role,
+                user_id=user_id,
+                expires_at=expires_at,
+                created_by=current_user.id
+            )
+            db.session.add(a)
+            db.session.commit()
+            
+            registrar_log(f"Novo comunicado transmitido: {title} (para {target})")
+            flash("Comunicado enviado com sucesso!", "success")
+            
+        elif acao == "excluir_aviso":
+            aid = request.form.get("id")
+            if aid and aid.isdigit():
+                a = Announcement.query.get(int(aid))
+                if a:
+                    db.session.delete(a)
+                    db.session.commit()
+                    registrar_log(f"Comunicado excluído: {a.title}")
+                    flash("Comunicado excluído.", "success")
+                    
+        elif acao == "salvar_informacoes":
+            role_group = request.form.get("role_group", "").strip()
+            content = request.form.get("content", "").strip()
+            
+            if role_group in {"admin_supervisor", "manutencao", "tech"}:
+                m = Manual.query.filter_by(role_group=role_group).first()
+                if not m:
+                    m = Manual(role_group=role_group, content=content)
+                    db.session.add(m)
+                else:
+                    m.content = content
+                db.session.commit()
+                registrar_log(f"Manual atualizado para: {role_group}")
+                flash("Manual de operação atualizado com sucesso!", "success")
+                
+        elif acao == "toggle_rule":
+            slug = request.form.get("slug", "").strip()
+            rule = SystemRule.query.filter_by(slug=slug).first()
+            if rule:
+                rule.is_enabled = not rule.is_enabled
+                db.session.commit()
+                state = "ativada" if rule.is_enabled else "desativada"
+                registrar_log(f"Regra de automação {slug} {state}")
+                flash(f"Regra {rule.name} {state}!", "success")
+                
+        return redirect(url_for("avisos"))
 
-@app.route("/avisos/excluir/<int:aid>", methods=["POST"])
-@supervisor_allowed
-def avisos_excluir(aid):
-    a = Announcement.query.get_or_404(aid)
-    db.session.delete(a)
-    db.session.commit()
-    flash("Comunicado excluído.", "success")
-    return redirect(url_for("avisos"))
+    # GET
+    notifications = Announcement.query.order_by(Announcement.created_at.desc()).all()
+    
+    # Busca todos os manuais
+    manuais_records = Manual.query.all()
+    manuais = {m.role_group: m.content for m in manuais_records}
+    # Garante chaves para evitar UndefinedError
+    for k in {"admin_supervisor", "manutencao", "tech"}:
+        if k not in manuais:
+            manuais[k] = ""
+            
+    usuarios = User.query.filter(User.username != "admin").order_by(User.username.asc()).all()
+    regras = SystemRule.query.order_by(SystemRule.id.asc()).all()
+    
+    return render_template(
+        "avisos.html", 
+        notificacoes=notifications, 
+        manuais=manuais, 
+        usuarios=usuarios, 
+        regras=regras
+    )
+
+@app.route("/api/comunicados/recent")
+@login_required
+def api_comunicados_recent():
+    now_dt = agora()
+    # Filtra avisos não expirados
+    query = Announcement.query.filter(
+        db.or_(Announcement.expires_at.is_(None), Announcement.expires_at > now_dt)
+    )
+    
+    # Administradores e Supervisores vêem tudo ou o que é destinado a eles
+    if current_user.is_admin or current_user.is_supervisor:
+        avisos_list = query.order_by(Announcement.created_at.desc()).limit(10).all()
+    else:
+        avisos_list = query.filter(
+            db.or_(
+                Announcement.target_role.is_(None),
+                Announcement.target_role == "all",
+                Announcement.target_role == current_user.role,
+                Announcement.user_id == current_user.id
+            )
+        ).order_by(Announcement.created_at.desc()).limit(10).all()
+        
+    read_ids = {r.announcement_id for r in AnnouncementRead.query.filter_by(user_id=current_user.id).all()}
+    
+    unread_count = 0
+    results = []
+    for a in avisos_list:
+        is_read = a.id in read_ids
+        if not is_read:
+            unread_count += 1
+            
+        results.append({
+            "id": a.id,
+            "title": a.title,
+            "message": a.message or a.content,
+            "created_at": br_datetime(a.created_at),
+            "is_read": is_read,
+            "sender": User.query.get(a.created_by).username if a.created_by else "Sistema"
+        })
+        
+    return jsonify({
+        "unread_count": unread_count,
+        "notifications": results
+    })
+
+@app.route("/api/comunicados/<int:aid>/read", methods=["POST"])
+@login_required
+def api_comunicados_read(aid):
+    read = AnnouncementRead.query.filter_by(announcement_id=aid, user_id=current_user.id).first()
+    if not read:
+        read = AnnouncementRead(announcement_id=aid, user_id=current_user.id)
+        db.session.add(read)
+        db.session.commit()
+    return jsonify({"status": "ok"})
+
+@app.route("/api/manuais/help")
+@login_required
+def api_manuais_help():
+    role = current_user.role or "tech"
+    if role in {"admin", "supervisor"}:
+        group = "admin_supervisor"
+    elif role == "manutencao":
+        group = "manutencao"
+    else:
+        group = "tech"
+        
+    m = Manual.query.filter_by(role_group=group).first()
+    content = m.content if m else "Nenhum manual cadastrado para este perfil de acesso."
+    return jsonify({"content": content})
 
 
 @app.route("/rfo")
