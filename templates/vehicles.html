@@ -13,14 +13,23 @@
   }
 
   /* backdrop premium (light/dark) */
-  dialog::backdrop{
-    background: rgba(0,0,0,.55);
-    backdrop-filter: blur(3px);
+  dialog::backdrop {
+    background: rgba(15, 23, 42, 0.45);
+    backdrop-filter: blur(8px);
   }
 
-  /* ✅ caixa do dialog no light fica melhor com texto escuro */
-  dialog{
+  /* dialog styling & transition */
+  dialog {
     color: inherit;
+    border: none;
+    outline: none;
+  }
+  dialog[open] {
+    animation: zoomIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  }
+  @keyframes zoomIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
   }
 </style>
 
@@ -338,127 +347,124 @@
       MODAL: CADASTRAR/EDITAR INFORMAÇÕES
 ================================ -->
 <dialog id="infoEdit{{ v.id }}"
-        class="rounded-2xl bg-white/90 dark:bg-gray-900 border border-slate-900/10 dark:border-gray-700 p-6 shadow-2xl w-[600px]">
-
-  <div class="flex items-start justify-between gap-3">
-    <div>
-      <h2 class="text-xl font-bold text-slate-900 dark:text-white">Cadastro de informações — {{ v.plate }}</h2>
-      <p class="text-xs text-slate-500 dark:text-gray-400 mt-1">Ótimo para manter padrão de óleo, filtros e dados preventivos.</p>
+        class="rounded-[2rem] bg-white dark:bg-slate-900 border border-slate-900/10 dark:border-white/10 p-7 shadow-2xl w-[860px] max-w-[95vw] overflow-hidden">
+  
+  <div class="flex items-center justify-between gap-4 mb-6">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center text-green-600">
+        <i class="fa-solid fa-file-medical text-lg"></i>
+      </div>
+      <div>
+        <h2 class="text-xl font-black text-slate-800 dark:text-white tracking-tight">Cadastro de Informações</h2>
+        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Veículo: <span class="text-green-500 font-mono font-bold">{{ v.plate }}</span></p>
+      </div>
     </div>
-
-    <button type="button"
-            onclick="document.getElementById('infoEdit{{ v.id }}').close()"
-            class="px-3 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-800
-                   dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-gray-200 rounded-lg">
-      Fechar
+    <button type="button" onclick="document.getElementById('infoEdit{{ v.id }}').close()"
+            class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400 flex items-center justify-center transition-all">
+      <i class="fa-solid fa-xmark text-sm"></i>
     </button>
   </div>
 
-  <div class="border-t border-slate-900/10 dark:border-white/10 my-4"></div>
+  <form method="post" action="{{ url_for('vehicle_info_save', vid=v.id) }}" class="space-y-6">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+      
+      <!-- Coluna 1: Lubrificação -->
+      <div class="space-y-4">
+        <h3 class="text-xs font-black text-blue-500 uppercase tracking-wider border-b border-slate-900/5 dark:border-white/5 pb-2">
+          Lubrificação
+        </h3>
+        
+        <div>
+          <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block ml-1">Óleo (Tipo)</label>
+          <input name="oil_type" value="{{ info.oil_type if info else '' }}" placeholder="Ex: 5W30"
+                 class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-xs font-medium text-slate-800 dark:text-white outline-none focus:ring-4 focus:ring-blue-500/10 transition-all">
+        </div>
 
-  <form method="post" action="{{ url_for('vehicle_info_save', vid=v.id) }}" class="space-y-4">
+        <div>
+          <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block ml-1">Óleo (Marca)</label>
+          <input name="oil_brand" value="{{ info.oil_brand if info else '' }}" placeholder="Ex: Mobil, Castrol..."
+                 class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-xs font-medium text-slate-800 dark:text-white outline-none focus:ring-4 focus:ring-blue-500/10 transition-all">
+        </div>
 
-    <div class="grid grid-cols-2 gap-3">
-      <div>
-        <label class="text-sm text-slate-700 dark:text-gray-300">Óleo (tipo)</label>
-        <input name="oil_type" value="{{ info.oil_type if info else '' }}"
-               placeholder="Ex: 5W30"
-               class="w-full bg-white dark:bg-gray-800 border border-slate-900/10 dark:border-gray-700 rounded-lg px-3 py-2
-                      text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-gray-500
-                      focus:outline-none focus:ring-2 focus:ring-blue-500/40">
+        <div>
+          <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block ml-1">Capacidade (L)</label>
+          <input type="number" step="0.1" name="oil_capacity_l"
+                 value="{{ info.oil_capacity_l if info and info.oil_capacity_l is not none else '' }}" placeholder="Ex: 3.5"
+                 class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-xs font-medium text-slate-800 dark:text-white outline-none focus:ring-4 focus:ring-blue-500/10 transition-all">
+        </div>
       </div>
 
-      <div>
-        <label class="text-sm text-slate-700 dark:text-gray-300">Óleo (marca)</label>
-        <input name="oil_brand" value="{{ info.oil_brand if info else '' }}"
-               placeholder="Ex: Mobil, Castrol..."
-               class="w-full bg-white dark:bg-gray-800 border border-slate-900/10 dark:border-gray-700 rounded-lg px-3 py-2
-                      text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-gray-500
-                      focus:outline-none focus:ring-2 focus:ring-blue-500/40">
+      <!-- Coluna 2: Filtros -->
+      <div class="space-y-4">
+        <h3 class="text-xs font-black text-blue-500 uppercase tracking-wider border-b border-slate-900/5 dark:border-white/5 pb-2">
+          Filtros Preventivos
+        </h3>
+
+        <div>
+          <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block ml-1">Filtro de Óleo</label>
+          <input name="filter_oil" value="{{ info.filter_oil if info else '' }}" placeholder="Ex: PSL74 ou Código"
+                 class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-xs font-medium text-slate-800 dark:text-white outline-none focus:ring-4 focus:ring-blue-500/10 transition-all">
+        </div>
+
+        <div>
+          <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block ml-1">Filtro de Ar</label>
+          <input name="filter_air" value="{{ info.filter_air if info else '' }}" placeholder="Ex: FAP9012 ou Código"
+                 class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-xs font-medium text-slate-800 dark:text-white outline-none focus:ring-4 focus:ring-blue-500/10 transition-all">
+        </div>
+
+        <div>
+          <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block ml-1">Filtro de Combustível</label>
+          <input name="filter_fuel" value="{{ info.filter_fuel if info else '' }}" placeholder="Ex: GI04/7 ou Código"
+                 class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-xs font-medium text-slate-800 dark:text-white outline-none focus:ring-4 focus:ring-blue-500/10 transition-all">
+        </div>
       </div>
+
+      <!-- Coluna 3: Outros Sistemas & Observações -->
+      <div class="space-y-4">
+        <h3 class="text-xs font-black text-blue-500 uppercase tracking-wider border-b border-slate-900/5 dark:border-white/5 pb-2">
+          Outros & Observações
+        </h3>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block ml-1">Pressão Pneus</label>
+            <input name="tire_pressure" value="{{ info.tire_pressure if info else '' }}" placeholder="Ex: 32psi"
+                   class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-xs font-medium text-slate-800 dark:text-white outline-none focus:ring-4 focus:ring-blue-500/10 transition-all">
+          </div>
+          <div>
+            <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block ml-1">Freio (Fluido)</label>
+            <input name="brake_fluid" value="{{ info.brake_fluid if info else '' }}" placeholder="Ex: DOT 4"
+                   class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-xs font-medium text-slate-800 dark:text-white outline-none focus:ring-4 focus:ring-blue-500/10 transition-all">
+          </div>
+        </div>
+
+        <div>
+          <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block ml-1">Arrefecimento</label>
+          <input name="coolant_type" value="{{ info.coolant_type if info else '' }}" placeholder="Ex: Aditivo Rosa"
+                 class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-xs font-medium text-slate-800 dark:text-white outline-none focus:ring-4 focus:ring-blue-500/10 transition-all">
+        </div>
+
+        <div>
+          <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block ml-1">Observações</label>
+          <textarea name="notes" rows="2" placeholder="Ex: Manutenção preventiva recomendada..."
+                    class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2 text-xs font-medium text-slate-800 dark:text-white outline-none focus:ring-4 focus:ring-blue-500/10 transition-all resize-none h-[42px]">{{ info.notes if info and info.notes else '' }}</textarea>
+        </div>
+      </div>
+
     </div>
 
-    <div class="grid grid-cols-2 gap-3">
-      <div>
-        <label class="text-sm text-slate-700 dark:text-gray-300">Capacidade (L)</label>
-        <input type="number" step="0.1" name="oil_capacity_l"
-               value="{{ info.oil_capacity_l if info and info.oil_capacity_l is not none else '' }}"
-               placeholder="Ex: 3.5"
-               class="w-full bg-white dark:bg-gray-800 border border-slate-900/10 dark:border-gray-700 rounded-lg px-3 py-2
-                      text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-gray-500
-                      focus:outline-none focus:ring-2 focus:ring-blue-500/40">
-      </div>
-
-      <div>
-        <label class="text-sm text-slate-700 dark:text-gray-300">Pressão pneus</label>
-        <input name="tire_pressure" value="{{ info.tire_pressure if info else '' }}"
-               placeholder="Ex: 32psi / 30psi"
-               class="w-full bg-white dark:bg-gray-800 border border-slate-900/10 dark:border-gray-700 rounded-lg px-3 py-2
-                      text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-gray-500
-                      focus:outline-none focus:ring-2 focus:ring-blue-500/40">
-      </div>
-    </div>
-
-    <div class="grid grid-cols-3 gap-3">
-      <div>
-        <label class="text-sm text-slate-700 dark:text-gray-300">Filtro de óleo</label>
-        <input name="filter_oil" value="{{ info.filter_oil if info else '' }}"
-               class="w-full bg-white dark:bg-gray-800 border border-slate-900/10 dark:border-gray-700 rounded-lg px-3 py-2
-                      text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/40">
-      </div>
-
-      <div>
-        <label class="text-sm text-slate-700 dark:text-gray-300">Filtro de ar</label>
-        <input name="filter_air" value="{{ info.filter_air if info else '' }}"
-               class="w-full bg-white dark:bg-gray-800 border border-slate-900/10 dark:border-gray-700 rounded-lg px-3 py-2
-                      text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/40">
-      </div>
-
-      <div>
-        <label class="text-sm text-slate-700 dark:text-gray-300">Filtro combustível</label>
-        <input name="filter_fuel" value="{{ info.filter_fuel if info else '' }}"
-               class="w-full bg-white dark:bg-gray-800 border border-slate-900/10 dark:border-gray-700 rounded-lg px-3 py-2
-                      text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/40">
-      </div>
-    </div>
-
-    <div class="grid grid-cols-2 gap-3">
-      <div>
-        <label class="text-sm text-slate-700 dark:text-gray-300">Fluído de arrefecimento</label>
-        <input name="coolant_type" value="{{ info.coolant_type if info else '' }}"
-               class="w-full bg-white dark:bg-gray-800 border border-slate-900/10 dark:border-gray-700 rounded-lg px-3 py-2
-                      text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/40">
-      </div>
-
-      <div>
-        <label class="text-sm text-slate-700 dark:text-gray-300">Fluído de freio</label>
-        <input name="brake_fluid" value="{{ info.brake_fluid if info else '' }}"
-               class="w-full bg-white dark:bg-gray-800 border border-slate-900/10 dark:border-gray-700 rounded-lg px-3 py-2
-                      text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/40">
-      </div>
-    </div>
-
-    <div>
-      <label class="text-sm text-slate-700 dark:text-gray-300">Observações</label>
-      <textarea name="notes" rows="3"
-                class="w-full bg-white dark:bg-gray-800 border border-slate-900/10 dark:border-gray-700 rounded-lg px-3 py-2
-                       text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-gray-500
-                       focus:outline-none focus:ring-2 focus:ring-blue-500/40"
-                placeholder="Ex: troca de óleo a cada 8.000km...">{{ info.notes if info and info.notes else '' }}</textarea>
-    </div>
-
-    <div class="flex justify-end gap-3 pt-3">
+    <!-- Ações Inferiores -->
+    <div class="flex justify-end gap-3 pt-4 border-t border-slate-900/5 dark:border-white/5">
       <button type="button"
               onclick="
                 document.getElementById('infoEdit{{ v.id }}').close();
                 document.getElementById('info{{ v.id }}').showModal();
               "
-              class="px-4 py-2 bg-slate-700 hover:bg-slate-600 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-lg text-white">
+              class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 rounded-xl text-slate-700 dark:text-slate-300 font-black text-[10px] uppercase tracking-widest transition-all">
         Voltar
       </button>
-
-      <button class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg text-white font-semibold">
-        Salvar informações
+      <button class="px-6 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-green-500/20 transition-all active:scale-95">
+        Salvar Informações
       </button>
     </div>
 
@@ -469,112 +475,133 @@
       MODAL DE EDIÇÃO DO VEÍCULO (ORIGINAL)
 ================================ -->
 <dialog id="edit{{ v.id }}"
-        class="rounded-2xl bg-white/90 dark:bg-gray-900 border border-slate-900/10 dark:border-gray-700 p-6 shadow-2xl w-[430px]">
-
-  <h2 class="text-xl font-bold mb-4 text-slate-900 dark:text-white">
-    Editar veículo — {{ v.plate }}
-  </h2>
-
-  <form method="post" action="{{ url_for('vehicle_edit', vid=v.id) }}" class="space-y-4">
-
-    <div>
-      <label class="text-sm text-slate-700 dark:text-gray-300">Marca</label>
-      <input name="brand" value="{{ v.brand }}"
-             class="w-full bg-white dark:bg-gray-800 border border-slate-900/10 dark:border-gray-700 rounded-lg px-3 py-2
-                    text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/40">
-    </div>
-
-    <div>
-      <label class="text-sm text-slate-700 dark:text-gray-300">Modelo</label>
-      <input name="model" value="{{ v.model }}"
-             class="w-full bg-white dark:bg-gray-800 border border-slate-900/10 dark:border-gray-700 rounded-lg px-3 py-2
-                    text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/40">
-    </div>
-
-    <div class="grid grid-cols-2 gap-3">
+        class="rounded-[2rem] bg-white dark:bg-slate-900 border border-slate-900/10 dark:border-white/10 p-7 shadow-2xl w-[740px] max-w-[95vw] overflow-hidden">
+  
+  <div class="flex items-center justify-between gap-4 mb-6">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-600">
+        <i class="fa-solid fa-pen-to-square text-lg"></i>
+      </div>
       <div>
-        <label class="text-sm text-slate-700 dark:text-gray-300">Ano</label>
-        <input type="number" name="year" value="{{ v.year }}"
-               class="w-full bg-white dark:bg-gray-800 border border-slate-900/10 dark:border-gray-700 rounded-lg px-3 py-2
-                      text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/40">
-      </div>
-
-      <div>
-        <label class="text-sm text-slate-700 dark:text-gray-300">KM</label>
-        <input type="number" name="km" value="{{ v.km }}"
-               class="w-full bg-white dark:bg-gray-800 border border-slate-900/10 dark:border-gray-700 rounded-lg px-3 py-2
-                      text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/40">
+        <h2 class="text-xl font-black text-slate-800 dark:text-white tracking-tight">Editar Veículo</h2>
+        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Veículo: <span class="text-blue-500 font-mono font-bold">{{ v.plate }}</span></p>
       </div>
     </div>
+    <button type="button" onclick="document.getElementById('edit{{ v.id }}').close()"
+            class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400 flex items-center justify-center transition-all">
+      <i class="fa-solid fa-xmark text-sm"></i>
+    </button>
+  </div>
 
-    <div>
-      <label class="text-sm text-slate-700 dark:text-gray-300">Tipo</label>
-      <select name="type"
-              class="w-full bg-white dark:bg-gray-800 border border-slate-900/10 dark:border-gray-700 rounded-lg px-3 py-2
-                     text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/40">
-        <option value="carro" {% if tipo=='carro' %}selected{% endif %}>Carro</option>
-        <option value="moto" {% if tipo=='moto' %}selected{% endif %}>Moto</option>
-        <option value="caminhao" {% if tipo=='caminhao' %}selected{% endif %}>Caminhão</option>
-        <option value="van" {% if tipo=='van' %}selected{% endif %}>Van</option>
-      </select>
-    </div>
+  <form method="post" action="{{ url_for('vehicle_edit', vid=v.id) }}" class="space-y-6">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      
+      <!-- Coluna 1: Dados do Veículo -->
+      <div class="space-y-4">
+        <h3 class="text-xs font-black text-blue-500 uppercase tracking-wider border-b border-slate-900/5 dark:border-white/5 pb-2">
+          Identificação Básica
+        </h3>
+        
+        <div>
+          <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block ml-1">Marca</label>
+          <input name="brand" value="{{ v.brand or '' }}" placeholder="Ex: Chevrolet, Fiat"
+                 class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-xs font-medium text-slate-800 dark:text-white outline-none focus:ring-4 focus:ring-blue-500/10 transition-all">
+        </div>
 
-    <div>
-      <label class="text-sm text-slate-700 dark:text-gray-300">Status</label>
-      <select name="status"
-              class="w-full bg-white dark:bg-gray-800 border border-slate-900/10 dark:border-gray-700 rounded-lg px-3 py-2
-                     text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/40">
-        <option value="ATIVO" {% if status=='ATIVO' %}selected{% endif %}>ATIVO</option>
-        <option value="MANUTENCAO" {% if status in ['MANUTENCAO','MANUTENÇÃO'] %}selected{% endif %}>MANUTENÇÃO</option>
-        <option value="INATIVO" {% if status=='INATIVO' %}selected{% endif %}>INATIVO</option>
-      </select>
-    </div>
+        <div>
+          <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block ml-1">Modelo</label>
+          <input name="model" value="{{ v.model or '' }}" placeholder="Ex: Onix 1.0, Uno"
+                 class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-xs font-medium text-slate-800 dark:text-white outline-none focus:ring-4 focus:ring-blue-500/10 transition-all">
+        </div>
 
-    <div>
-      <label class="text-sm text-slate-700 dark:text-gray-300">Motorista Vinculado (Opcional)</label>
-      <select name="driver_id"
-              class="w-full bg-white dark:bg-gray-800 border border-slate-900/10 dark:border-gray-700 rounded-lg px-3 py-2
-                     text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/40">
-        <option value="">Nenhum Motorista</option>
-        {% for c in colaboradores %}
-        <option value="{{ c.id }}" {% if v.driver_id == c.id %}selected{% endif %}>{{ c.username }} ({{ c.role or 'Colaborador' }})</option>
-        {% endfor %}
-      </select>
-    </div>
-
-    <div>
-      <label class="text-sm text-slate-700 dark:text-gray-300">Ícone no Mapa</label>
-      <select name="map_icon"
-              class="w-full bg-white dark:bg-gray-800 border border-slate-900/10 dark:border-gray-700 rounded-lg px-3 py-2
-                     text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/40">
-        <option value="fa-location-arrow" {% if v.map_icon == 'fa-location-arrow' %}selected{% endif %}>Seta de Navegação</option>
-        <option value="fa-car" {% if v.map_icon == 'fa-car' %}selected{% endif %}>Carro</option>
-        <option value="fa-truck" {% if v.map_icon == 'fa-truck' %}selected{% endif %}>Caminhão</option>
-        <option value="fa-motorcycle" {% if v.map_icon == 'fa-motorcycle' %}selected{% endif %}>Moto</option>
-        <option value="fa-bus" {% if v.map_icon == 'fa-bus' %}selected{% endif %}>Ônibus</option>
-        <option value="fa-van-shuttle" {% if v.map_icon == 'fa-van-shuttle' %}selected{% endif %}>Van / Utilitário</option>
-        <option value="fa-tractor" {% if v.map_icon == 'fa-tractor' %}selected{% endif %}>Trator</option>
-      </select>
-    </div>
-
-    <div>
-      <label class="text-sm text-slate-700 dark:text-gray-300">Cor do Marcador no Mapa</label>
-      <div class="flex items-center gap-3">
-        <input type="color" name="map_color" value="{{ v.map_color or '#10b981' }}"
-               class="w-12 h-10 border-0 bg-transparent rounded cursor-pointer">
-        <span class="text-xs text-slate-500 dark:text-gray-400">Identificação visual exclusiva</span>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block ml-1">Ano</label>
+            <input type="number" name="year" value="{{ v.year or '' }}" placeholder="Ex: 2023"
+                   class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-xs font-medium text-slate-800 dark:text-white outline-none focus:ring-4 focus:ring-blue-500/10 transition-all">
+          </div>
+          <div>
+            <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block ml-1">KM</label>
+            <input type="number" name="km" value="{{ v.km or 0 }}"
+                   class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-xs font-medium text-slate-800 dark:text-white outline-none focus:ring-4 focus:ring-blue-500/10 transition-all">
+          </div>
+        </div>
       </div>
+
+      <!-- Coluna 2: Configuração Operacional e Mapa -->
+      <div class="space-y-4">
+        <h3 class="text-xs font-black text-blue-500 uppercase tracking-wider border-b border-slate-900/5 dark:border-white/5 pb-2">
+          Parâmetros & Mapa
+        </h3>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block ml-1">Tipo</label>
+            <select name="type"
+                    class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-800 dark:text-white outline-none focus:ring-4 focus:ring-blue-500/10 transition-all cursor-pointer">
+              <option value="carro" {% if tipo == 'carro' %}selected{% endif %} class="dark:bg-slate-850 dark:text-white">Carro</option>
+              <option value="moto" {% if tipo == 'moto' %}selected{% endif %} class="dark:bg-slate-850 dark:text-white">Moto</option>
+              <option value="caminhao" {% if tipo == 'caminhao' %}selected{% endif %} class="dark:bg-slate-850 dark:text-white">Caminhão</option>
+              <option value="van" {% if tipo == 'van' %}selected{% endif %} class="dark:bg-slate-850 dark:text-white">Van / Utilitário</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block ml-1">Status</label>
+            <select name="status"
+                    class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-800 dark:text-white outline-none focus:ring-4 focus:ring-blue-500/10 transition-all cursor-pointer">
+              <option value="ATIVO" {% if status == 'ATIVO' %}selected{% endif %} class="dark:bg-slate-850 dark:text-white">ATIVO</option>
+              <option value="MANUTENCAO" {% if status in ['MANUTENCAO','MANUTENÇÃO'] %}selected{% endif %} class="dark:bg-slate-850 dark:text-white">MANUTENÇÃO</option>
+              <option value="INATIVO" {% if status == 'INATIVO' %}selected{% endif %} class="dark:bg-slate-850 dark:text-white">INATIVO</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block ml-1">Motorista Responsável</label>
+          <select name="driver_id"
+                  class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-xs font-medium text-slate-800 dark:text-white outline-none focus:ring-4 focus:ring-blue-500/10 transition-all cursor-pointer">
+            <option value="" class="dark:bg-slate-850 dark:text-white">Nenhum Motorista</option>
+            {% for c in colaboradores %}
+            <option value="{{ c.id }}" {% if v.driver_id == c.id %}selected{% endif %} class="dark:bg-slate-850 dark:text-white">{{ c.username }} ({{ c.role or 'Colaborador' }})</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block ml-1">Marcador no Mapa</label>
+            <select name="map_icon"
+                    class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-800 dark:text-white outline-none focus:ring-4 focus:ring-blue-500/10 transition-all cursor-pointer">
+              <option value="fa-location-arrow" {% if v.map_icon == 'fa-location-arrow' %}selected{% endif %} class="dark:bg-slate-850 dark:text-white">Seta Direcional</option>
+              <option value="fa-car" {% if v.map_icon == 'fa-car' %}selected{% endif %} class="dark:bg-slate-850 dark:text-white">Carro</option>
+              <option value="fa-truck" {% if v.map_icon == 'fa-truck' %}selected{% endif %} class="dark:bg-slate-850 dark:text-white">Caminhão</option>
+              <option value="fa-motorcycle" {% if v.map_icon == 'fa-motorcycle' %}selected{% endif %} class="dark:bg-slate-850 dark:text-white">Moto</option>
+              <option value="fa-bus" {% if v.map_icon == 'fa-bus' %}selected{% endif %} class="dark:bg-slate-850 dark:text-white">Ônibus</option>
+              <option value="fa-van-shuttle" {% if v.map_icon == 'fa-van-shuttle' %}selected{% endif %} class="dark:bg-slate-850 dark:text-white">Van / Utilitário</option>
+              <option value="fa-tractor" {% if v.map_icon == 'fa-tractor' %}selected{% endif %} class="dark:bg-slate-850 dark:text-white">Trator</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block ml-1">Cor do Marcador</label>
+            <div class="flex items-center gap-3 bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl px-3 py-1.5 h-[38px]">
+              <input type="color" name="map_color" value="{{ v.map_color or '#10b981' }}"
+                     class="w-7 h-6 border-0 bg-transparent rounded cursor-pointer transition-transform active:scale-90">
+              <span class="text-[10px] font-black text-slate-400 uppercase tracking-wider">Selecione</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </div>
 
-    <div class="flex justify-end gap-3 pt-3">
-      <button type="button"
-              onclick="document.getElementById('edit{{ v.id }}').close()"
-              class="px-4 py-2 bg-slate-700 hover:bg-slate-600 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-lg text-white">
+    <!-- Ações Inferiores -->
+    <div class="flex justify-end gap-3 pt-4 border-t border-slate-900/5 dark:border-white/5">
+      <button type="button" onclick="document.getElementById('edit{{ v.id }}').close()"
+              class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 rounded-xl text-slate-700 dark:text-slate-300 font-black text-[10px] uppercase tracking-widest transition-all">
         Cancelar
       </button>
-
-      <button class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-white font-semibold">
-        Salvar
+      <button class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-blue-500/20 transition-all active:scale-95">
+        Salvar Alterações
       </button>
     </div>
 
@@ -608,115 +635,140 @@
       MODAL NOVO VEÍCULO
 ================================ -->
 <dialog id="modalNovoVeiculo"
-        class="rounded-2xl bg-white/90 dark:bg-gray-900 border border-slate-900/10 dark:border-gray-700 p-6 shadow-2xl w-[420px]">
-
-  <h2 class="text-xl font-bold text-slate-900 dark:text-white mb-4">Cadastrar novo veículo</h2>
-
-  <form method="post" action="{{ url_for('vehicle_new') }}" class="space-y-4">
-
-    <div>
-      <label class="text-sm text-slate-700 dark:text-gray-300">Placa</label>
-      <input name="plate" required
-             class="w-full bg-white dark:bg-gray-800 border border-slate-900/10 dark:border-gray-700 rounded-lg px-3 py-2
-                    text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/40">
-    </div>
-
-    <div>
-      <label class="text-sm text-slate-700 dark:text-gray-300">Marca</label>
-      <input name="brand"
-             class="w-full bg-white dark:bg-gray-800 border border-slate-900/10 dark:border-gray-700 rounded-lg px-3 py-2
-                    text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/40">
-    </div>
-
-    <div>
-      <label class="text-sm text-slate-700 dark:text-gray-300">Modelo</label>
-      <input name="model"
-             class="w-full bg-white dark:bg-gray-800 border border-slate-900/10 dark:border-gray-700 rounded-lg px-3 py-2
-                    text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/40">
-    </div>
-
-    <div>
-      <label class="text-sm text-slate-700 dark:text-gray-300">Ano</label>
-      <input type="number" name="year"
-             class="w-full bg-white dark:bg-gray-800 border border-slate-900/10 dark:border-gray-700 rounded-lg px-3 py-2
-                    text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/40">
-    </div>
-
-    <div>
-      <label class="text-sm text-slate-700 dark:text-gray-300">KM inicial</label>
-      <input type="number" name="km" value="0"
-             class="w-full bg-white dark:bg-gray-800 border border-slate-900/10 dark:border-gray-700 rounded-lg px-3 py-2
-                    text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/40">
-    </div>
-
-    <div>
-      <label class="text-sm text-slate-700 dark:text-gray-300">Tipo</label>
-      <select name="type"
-              class="w-full bg-white dark:bg-gray-800 border border-slate-900/10 dark:border-gray-700 rounded-lg px-3 py-2
-                     text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/40">
-        <option value="carro">Carro</option>
-        <option value="moto">Moto</option>
-        <option value="caminhao">Caminhão</option>
-        <option value="van">Van</option>
-      </select>
-    </div>
-
-    <div>
-      <label class="text-sm text-slate-700 dark:text-gray-300">Status</label>
-      <select name="status"
-              class="w-full bg-white dark:bg-gray-800 border border-slate-900/10 dark:border-gray-700 rounded-lg px-3 py-2
-                     text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/40">
-        <option value="ATIVO">ATIVO</option>
-        <option value="MANUTENCAO">MANUTENÇÃO</option>
-        <option value="INATIVO">INATIVO</option>
-      </select>
-    </div>
-
-    <div>
-      <label class="text-sm text-slate-700 dark:text-gray-300">Motorista Vinculado (Opcional)</label>
-      <select name="driver_id"
-              class="w-full bg-white dark:bg-gray-800 border border-slate-900/10 dark:border-gray-700 rounded-lg px-3 py-2
-                     text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/40">
-        <option value="">Nenhum Motorista</option>
-        {% for c in colaboradores %}
-        <option value="{{ c.id }}">{{ c.username }} ({{ c.role or 'Colaborador' }})</option>
-        {% endfor %}
-      </select>
-    </div>
-
-    <div>
-      <label class="text-sm text-slate-700 dark:text-gray-300">Ícone no Mapa</label>
-      <select name="map_icon"
-              class="w-full bg-white dark:bg-gray-800 border border-slate-900/10 dark:border-gray-700 rounded-lg px-3 py-2
-                     text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500/40">
-        <option value="fa-location-arrow">Seta de Navegação</option>
-        <option value="fa-car">Carro</option>
-        <option value="fa-truck">Caminhão</option>
-        <option value="fa-motorcycle">Moto</option>
-        <option value="fa-bus">Ônibus</option>
-        <option value="fa-van-shuttle">Van / Utilitário</option>
-        <option value="fa-tractor">Trator</option>
-      </select>
-    </div>
-
-    <div>
-      <label class="text-sm text-slate-700 dark:text-gray-300">Cor do Marcador no Mapa</label>
-      <div class="flex items-center gap-3">
-        <input type="color" name="map_color" value="#10b981"
-               class="w-12 h-10 border-0 bg-transparent rounded cursor-pointer">
-        <span class="text-xs text-slate-500 dark:text-gray-400">Identificação visual exclusiva</span>
+        class="rounded-[2rem] bg-white dark:bg-slate-900 border border-slate-900/10 dark:border-white/10 p-7 shadow-2xl w-[740px] max-w-[95vw] overflow-hidden">
+  
+  <div class="flex items-center justify-between gap-4 mb-6">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-600">
+        <i class="fa-solid fa-circle-plus text-lg"></i>
+      </div>
+      <div>
+        <h2 class="text-xl font-black text-slate-800 dark:text-white tracking-tight">Cadastrar Novo Veículo</h2>
+        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Adicione um novo ativo à frota operacional</p>
       </div>
     </div>
+    <button type="button" onclick="document.getElementById('modalNovoVeiculo').close()"
+            class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400 flex items-center justify-center transition-all">
+      <i class="fa-solid fa-xmark text-sm"></i>
+    </button>
+  </div>
 
-    <div class="flex justify-end gap-3 pt-3">
-      <button type="button"
-              onclick="document.getElementById('modalNovoVeiculo').close()"
-              class="px-4 py-2 bg-slate-700 hover:bg-slate-600 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-lg text-white">
+  <form method="post" action="{{ url_for('vehicle_new') }}" class="space-y-6">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      
+      <!-- Coluna 1: Dados do Veículo -->
+      <div class="space-y-4">
+        <h3 class="text-xs font-black text-blue-500 uppercase tracking-wider border-b border-slate-900/5 dark:border-white/5 pb-2">
+          Identificação Básica
+        </h3>
+        
+        <div class="grid grid-cols-3 gap-3">
+          <div class="col-span-1">
+            <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block ml-1">Placa</label>
+            <input name="plate" required placeholder="AAA0A00" oninput="this.value = this.value.toUpperCase()"
+                   class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-800 dark:text-white outline-none focus:ring-4 focus:ring-blue-500/10 transition-all font-mono">
+          </div>
+          <div class="col-span-2">
+            <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block ml-1">Marca</label>
+            <input name="brand" placeholder="Ex: Chevrolet, Fiat"
+                   class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-xs font-medium text-slate-800 dark:text-white outline-none focus:ring-4 focus:ring-blue-500/10 transition-all">
+          </div>
+        </div>
+
+        <div>
+          <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block ml-1">Modelo</label>
+          <input name="model" placeholder="Ex: Onix 1.0, Uno"
+                 class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-xs font-medium text-slate-800 dark:text-white outline-none focus:ring-4 focus:ring-blue-500/10 transition-all">
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block ml-1">Ano</label>
+            <input type="number" name="year" placeholder="Ex: 2023"
+                   class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-xs font-medium text-slate-800 dark:text-white outline-none focus:ring-4 focus:ring-blue-500/10 transition-all">
+          </div>
+          <div>
+            <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block ml-1">KM Inicial</label>
+            <input type="number" name="km" value="0"
+                   class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-xs font-medium text-slate-800 dark:text-white outline-none focus:ring-4 focus:ring-blue-500/10 transition-all">
+          </div>
+        </div>
+      </div>
+
+      <!-- Coluna 2: Configuração Operacional e Mapa -->
+      <div class="space-y-4">
+        <h3 class="text-xs font-black text-blue-500 uppercase tracking-wider border-b border-slate-900/5 dark:border-white/5 pb-2">
+          Parâmetros & Mapa
+        </h3>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block ml-1">Tipo</label>
+            <select name="type"
+                    class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-800 dark:text-white outline-none focus:ring-4 focus:ring-blue-500/10 transition-all cursor-pointer">
+              <option value="carro" class="dark:bg-slate-850 dark:text-white">Carro</option>
+              <option value="moto" class="dark:bg-slate-850 dark:text-white">Moto</option>
+              <option value="caminhao" class="dark:bg-slate-850 dark:text-white">Caminhão</option>
+              <option value="van" class="dark:bg-slate-850 dark:text-white">Van / Utilitário</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block ml-1">Status</label>
+            <select name="status"
+                    class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-800 dark:text-white outline-none focus:ring-4 focus:ring-blue-500/10 transition-all cursor-pointer">
+              <option value="ATIVO" class="dark:bg-slate-850 dark:text-white">ATIVO</option>
+              <option value="MANUTENCAO" class="dark:bg-slate-850 dark:text-white">MANUTENÇÃO</option>
+              <option value="INATIVO" class="dark:bg-slate-850 dark:text-white">INATIVO</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block ml-1">Motorista Responsável</label>
+          <select name="driver_id"
+                  class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-xs font-medium text-slate-800 dark:text-white outline-none focus:ring-4 focus:ring-blue-500/10 transition-all cursor-pointer">
+            <option value="" class="dark:bg-slate-850 dark:text-white">Nenhum Motorista</option>
+            {% for c in colaboradores %}
+            <option value="{{ c.id }}" class="dark:bg-slate-850 dark:text-white">{{ c.username }} ({{ c.role or 'Colaborador' }})</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block ml-1">Marcador no Mapa</label>
+            <select name="map_icon"
+                    class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-800 dark:text-white outline-none focus:ring-4 focus:ring-blue-500/10 transition-all cursor-pointer">
+              <option value="fa-location-arrow" class="dark:bg-slate-850 dark:text-white">Seta Direcional</option>
+              <option value="fa-car" class="dark:bg-slate-850 dark:text-white">Carro</option>
+              <option value="fa-truck" class="dark:bg-slate-850 dark:text-white">Caminhão</option>
+              <option value="fa-motorcycle" class="dark:bg-slate-850 dark:text-white">Moto</option>
+              <option value="fa-bus" class="dark:bg-slate-850 dark:text-white">Ônibus</option>
+              <option value="fa-van-shuttle" class="dark:bg-slate-850 dark:text-white">Van / Utilitário</option>
+              <option value="fa-tractor" class="dark:bg-slate-850 dark:text-white">Trator</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block ml-1">Cor do Marcador</label>
+            <div class="flex items-center gap-3 bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl px-3 py-1.5 h-[38px]">
+              <input type="color" name="map_color" value="#10b981"
+                     class="w-7 h-6 border-0 bg-transparent rounded cursor-pointer transition-transform active:scale-90">
+              <span class="text-[10px] font-black text-slate-400 uppercase tracking-wider">Selecione</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Ações Inferiores -->
+    <div class="flex justify-end gap-3 pt-4 border-t border-slate-900/5 dark:border-white/5">
+      <button type="button" onclick="document.getElementById('modalNovoVeiculo').close()"
+              class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 rounded-xl text-slate-700 dark:text-slate-300 font-black text-[10px] uppercase tracking-widest transition-all">
         Cancelar
       </button>
-
-      <button class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg text-white font-semibold">
-        Cadastrar
+      <button class="px-6 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-emerald-500/20 transition-all active:scale-95">
+        Salvar Registro
       </button>
     </div>
 

@@ -1693,40 +1693,31 @@ def controle_veiculos():
         registros=registros
     )
 
+@app.route("/controle-veiculos/deletar/<int:mov_id>", methods=["POST"])
+@supervisor_allowed
+def deletar_movimento(mov_id):
+    mov = VehicleMov.query.get_or_404(mov_id)
+    plate = mov.vehicle.plate if mov.vehicle else "Desconhecido"
+    tipo_mov = mov.tipo
 
+    try:
+        # Se for uma saída, precisamos deletar também a chegada associada a ela (se houver)
+        if tipo_mov == "saida":
+            chegada = VehicleMov.query.filter_by(tipo="entrada", saida_id=mov.id).first()
+            if chegada:
+                db.session.delete(chegada)
+                registrar_log(f"Controle Veículos: CHEGADA DELETADA VINCULADA ({plate}) id={chegada.id}")
+        
+        db.session.delete(mov)
+        db.session.commit()
+        registrar_log(f"Controle Veículos: REGISTRO DELETADO ({plate}) tipo={tipo_mov} id={mov.id}")
+        flash("✅ Registro excluído com sucesso!", "success")
+    except Exception as e:
+        db.session.rollback()
+        registrar_log(f"Controle Veículos: ERRO AO EXCLUIR id={mov_id}: {str(e)}")
+        flash("❌ Erro ao excluir registro.", "error")
 
-    # ==========================
-    # GET: carregar tela com dados reais
-    # ==========================
-    vehicles = Vehicle.query.order_by(Vehicle.plate.asc()).all()
-
-    registros = (
-        VehicleMov.query
-        .order_by(VehicleMov.data_hora.desc())
-        .limit(200)
-        .all()
-    )
-
-    # marca quais SAÍDAS ainda não têm chegada
-    saida_ids = [r.id for r in registros if r.tipo == "saida"]
-    entradas = set(
-        x.saida_id for x in VehicleMov.query.filter(
-            VehicleMov.tipo == "entrada",
-            VehicleMov.saida_id.in_(saida_ids)
-        ).all()
-    )
-
-    for r in registros:
-        r.pode_registrar_chegada = (r.tipo == "saida" and r.id not in entradas)
-
-    return render_template(
-        "controle_veiculos.html",
-        page_title="Controle de Entrada e Saída",
-        vehicles=vehicles,
-        registros=registros
-    )
-
-
+    return redirect(url_for("controle_veiculos"))
 
 from datetime import datetime
 from flask import request, redirect, url_for, render_template, flash
@@ -1771,19 +1762,40 @@ def avarias_registro():
 
             return redirect(url_for("avarias_registro"))
 
-    # GET — listar avarias
+    # GET — listar avarias e calcular estatísticas
     ordens = AvariaOS.query.order_by(AvariaOS.id.desc()).all()
     veiculos = Vehicle.query.all()
 
-    # ✅ não precisa mais disso, já que removeu o select do responsável no modal
-    # colaboradores = User.query.all()
+    total_avarias = len(ordens)
+    abertas = sum(1 for o in ordens if o.status == "aberta")
+    resolvidas = sum(1 for o in ordens if o.status == "finalizada")
+    total_gasto = sum(o.valor_gasto or 0.0 for o in ordens)
 
     return render_template(
         "avarias_registro.html",
         ordens=ordens,
-        veiculos=veiculos
-        # colaboradores=colaboradores
+        veiculos=veiculos,
+        total_avarias=total_avarias,
+        abertas=abertas,
+        resolvidas=resolvidas,
+        total_gasto=total_gasto
     )
+
+@app.route("/avarias/excluir/<int:avaria_id>", methods=["POST"])
+@supervisor_allowed
+def avarias_excluir(avaria_id):
+    av = AvariaOS.query.get_or_404(avaria_id)
+    plate = av.vehicle.plate if av.vehicle else "Desconhecido"
+    try:
+        db.session.delete(av)
+        db.session.commit()
+        registrar_log(f"Avarias/O.S.: REGISTRO DELETADO ({plate}) id={avaria_id} (por {current_user.username})")
+        flash("✅ Registro de Avaria/O.S. excluído com sucesso!", "success")
+    except Exception as e:
+        db.session.rollback()
+        registrar_log(f"Avarias/O.S.: ERRO AO EXCLUIR id={avaria_id}: {str(e)}")
+        flash("❌ Erro ao excluir registro de Avaria/O.S.", "error")
+    return redirect(url_for("avarias_registro"))
 
 
 # ----------------- TELA DA MANUTENÇÃO (SOMENTE MANUTENÇÃO) -----------------
@@ -1900,10 +1912,298 @@ def reports():
 @app.route("/relatorios/gerar", methods=["POST"])
 @supervisor_allowed
 def reports_generate():
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.units import mm
+    from reportlab.lib import colors
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from datetime import datetime, time
+    from pathlib import Path
+
     veiculo_id = request.form.get("veiculo_id")
     periodo = request.form.get("periodo")
-    # Lógica de geração de PDF consolidado...
-    flash(f"Solicitação de relatório para veículo {veiculo_id} e período {periodo} recebida.", "info")
+
+    if not veiculo_id or not periodo:
+        flash("Veículo e período são obrigatórios.", "error")
+        return redirect(url_for("reports"))
+
+    v = Vehicle.query.get(int(veiculo_id))
+    if not v:
+        flash("Veículo não encontrado.", "error")
+        return redirect(url_for("reports"))
+
+    try:
+        start_str, end_str = periodo.split(" - ")
+        start_date = datetime.strptime(start_str.strip(), "%Y-%m-%d")
+        end_date = datetime.combine(datetime.strptime(end_str.strip(), "%Y-%m-%d"), time(23, 59, 59))
+    except Exception:
+        flash("Formato de período inválido.", "error")
+        return redirect(url_for("reports"))
+
+    # Consultar dados no período
+    checklists = Checklist.query.filter(
+        Checklist.vehicle_id == v.id,
+        Checklist.date >= start_date,
+        Checklist.date <= end_date
+    ).order_by(Checklist.date.desc()).all()
+
+    vistorias = Vistoria.query.filter(
+        Vistoria.vehicle_id == v.id,
+        Vistoria.created_at >= start_date,
+        Vistoria.created_at <= end_date
+    ).order_by(Vistoria.created_at.desc()).all()
+
+    # Movimentações
+    movimentos_saidas = VehicleMov.query.filter(
+        VehicleMov.vehicle_id == v.id,
+        VehicleMov.tipo == "saida",
+        VehicleMov.data_hora >= start_date,
+        VehicleMov.data_hora <= end_date
+    ).order_by(VehicleMov.data_hora.desc()).all()
+
+    saida_ids = [m.id for m in movimentos_saidas]
+    movimentos_entradas = []
+    if saida_ids:
+        movimentos_entradas = VehicleMov.query.filter(
+            VehicleMov.tipo == "entrada",
+            VehicleMov.saida_id.in_(saida_ids)
+        ).all()
+    entradas_por_saida = {e.saida_id: e for e in movimentos_entradas}
+
+    # Gerar PDF consolidado
+    REPORTS_DIR = Path("/var/www/checklist_veicular/static/reports")
+    REPORTS_DIR.mkdir(parents=True, exist_ok=True)
+
+    plate_safe = v.plate.replace("-", "").strip().upper()
+    dt_hoje = agora().strftime("%Y%m%d_%H%M%S")
+    filename = f"consolidado_{plate_safe}_{start_str.replace('-', '')}_a_{end_str.replace('-', '')}_{dt_hoje}.pdf"
+    out_path = REPORTS_DIR / filename
+
+    # Estilos de texto
+    styles = getSampleStyleSheet()
+    
+    # Adiciona estilos únicos apenas se não existirem
+    try:
+        styles.add(ParagraphStyle(
+            name="ReportTitle",
+            parent=styles["Heading1"],
+            fontSize=18,
+            leading=22,
+            textColor=colors.HexColor("#1F3C78"),
+            alignment=1, # Centralizado
+            spaceAfter=15
+        ))
+    except Exception:
+        pass
+
+    try:
+        styles.add(ParagraphStyle(
+            name="SectionHeader",
+            parent=styles["Heading2"],
+            fontSize=12,
+            leading=16,
+            textColor=colors.HexColor("#1F3C78"),
+            spaceBefore=12,
+            spaceAfter=6,
+            keepWithNext=True
+        ))
+    except Exception:
+        pass
+
+    try:
+        styles.add(ParagraphStyle(
+            name="TableText",
+            parent=styles["Normal"],
+            fontSize=8,
+            leading=10,
+            textColor=colors.HexColor("#333333")
+        ))
+    except Exception:
+        pass
+
+    try:
+        styles.add(ParagraphStyle(
+            name="TableHeaderText",
+            parent=styles["Normal"],
+            fontSize=8,
+            leading=10,
+            fontName="Helvetica-Bold",
+            textColor=colors.white
+        ))
+    except Exception:
+        pass
+
+    # Construção do documento
+    doc = SimpleDocTemplate(
+        str(out_path),
+        pagesize=A4,
+        rightMargin=15 * mm,
+        leftMargin=15 * mm,
+        topMargin=20 * mm,
+        bottomMargin=20 * mm
+    )
+
+    elements = []
+
+    # Cabeçalho / Título do Relatório
+    elements.append(Paragraph("<b>RELATÓRIO CONSOLIDADO DE FROTA</b>", styles["ReportTitle"]))
+    elements.append(Spacer(1, 5))
+
+    # Informações do Veículo & Período
+    meta_info = [
+        ["Veículo / Modelo", f"{v.brand or ''} {v.model or ''} ({v.year or 'N/A'})"],
+        ["Placa", v.plate],
+        ["KM Atual", f"{v.km or 0} KM"],
+        ["Período", f"{start_date.strftime('%d/%m/%Y')} até {end_date.strftime('%d/%m/%Y')}"],
+        ["Emissão", agora().strftime("%d/%m/%Y %H:%M:%S")]
+    ]
+    meta_table = Table(meta_info, colWidths=[50 * mm, 130 * mm])
+    meta_table.setStyle(TableStyle([
+        ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#CCCCCC")),
+        ("BACKGROUND", (0, 0), (0, -1), colors.HexColor("#F4F4F4")),
+        ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
+        ("FONTSIZE", (0, 0), (-1, -1), 9),
+        ("PADDING", (0, 0), (-1, -1), 4),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+    ]))
+    elements.append(meta_table)
+    elements.append(Spacer(1, 15))
+
+    # --- SEÇÃO 1: CHECKLISTS OPERACIONAIS ---
+    elements.append(Paragraph("<b>1. Checklists Operacionais no Período</b>", styles["SectionHeader"]))
+    if checklists:
+        chk_data = [[
+            Paragraph("<b>Data</b>", styles["TableHeaderText"]),
+            Paragraph("<b>Técnico</b>", styles["TableHeaderText"]),
+            Paragraph("<b>KM</b>", styles["TableHeaderText"]),
+            Paragraph("<b>Status</b>", styles["TableHeaderText"]),
+            Paragraph("<b>Observações</b>", styles["TableHeaderText"])
+        ]]
+        for c in checklists:
+            obs_text = c.notes or "-"
+            chk_data.append([
+                Paragraph(c.date.strftime("%d/%m/%Y %H:%M"), styles["TableText"]),
+                Paragraph(c.technician or "-", styles["TableText"]),
+                Paragraph(f"{c.km} KM", styles["TableText"]),
+                Paragraph(c.status or "OK", styles["TableText"]),
+                Paragraph(obs_text, styles["TableText"])
+            ])
+        chk_table = Table(chk_data, colWidths=[30 * mm, 35 * mm, 20 * mm, 20 * mm, 75 * mm])
+        chk_table.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1F3C78")),
+            ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#DDDDDD")),
+            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#F9F9F9")]),
+            ("PADDING", (0, 0), (-1, -1), 4),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ]))
+        elements.append(chk_table)
+    else:
+        elements.append(Paragraph("Nenhum checklist operacional registrado no período.", styles["TableText"]))
+    elements.append(Spacer(1, 15))
+
+    # --- SEÇÃO 2: VISTORIAS DE LATARIA/VISUAIS ---
+    elements.append(Paragraph("<b>2. Vistorias Visuais / Lataria no Período</b>", styles["SectionHeader"]))
+    if vistorias:
+        vist_data = [[
+            Paragraph("<b>Data</b>", styles["TableHeaderText"]),
+            Paragraph("<b>Usuário</b>", styles["TableHeaderText"]),
+            Paragraph("<b>Turno</b>", styles["TableHeaderText"]),
+            Paragraph("<b>Status Geral</b>", styles["TableHeaderText"]),
+            Paragraph("<b>Avarias Detectadas / Obs</b>", styles["TableHeaderText"])
+        ]]
+        for vis in vistorias:
+            avarias = []
+            if vis.para_choque_dianteiro == "avaria": avarias.append("P.-choque diant.")
+            if vis.para_choque_traseiro == "avaria": avarias.append("P.-choque tras.")
+            if vis.lateral_esquerda == "avaria": avarias.append("Lat. esq.")
+            if vis.lateral_direita == "avaria": avarias.append("Lat. dir.")
+            if vis.capo == "avaria": avarias.append("Capô")
+            if vis.teto == "avaria": avarias.append("Teto")
+            if vis.porta_malas == "avaria": avarias.append("Porta-malas")
+            if vis.retrovisores == "avaria": avarias.append("Retrovisores")
+            if vis.farois_lanternas == "avaria": avarias.append("Faróis/lant.")
+            if vis.vidros_parabrisa == "avaria": avarias.append("Vidros/para-brisa")
+            if vis.pneus == "avaria": avarias.append("Pneus")
+            if vis.calotas == "avaria": avarias.append("Calotas")
+
+            status_text = "Com avarias" if vis.status_geral == "avarias" else "OK"
+            avarias_desc = ", ".join(avarias) if avarias else "-"
+            if vis.observacoes:
+                avarias_desc += f" (Obs: {vis.observacoes})"
+
+            user_str = vis.created_by_user.username if vis.created_by_user else "-"
+            
+            vist_data.append([
+                Paragraph(vis.created_at.strftime("%d/%m/%Y %H:%M"), styles["TableText"]),
+                Paragraph(user_str, styles["TableText"]),
+                Paragraph(vis.turno.upper(), styles["TableText"]),
+                Paragraph(status_text, styles["TableText"]),
+                Paragraph(avarias_desc, styles["TableText"])
+            ])
+        vist_table = Table(vist_data, colWidths=[30 * mm, 30 * mm, 20 * mm, 25 * mm, 75 * mm])
+        vist_table.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1F3C78")),
+            ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#DDDDDD")),
+            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#F9F9F9")]),
+            ("PADDING", (0, 0), (-1, -1), 4),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ]))
+        elements.append(vist_table)
+    else:
+        elements.append(Paragraph("Nenhuma vistoria visual registrada no período.", styles["TableText"]))
+    elements.append(Spacer(1, 15))
+
+    # --- SEÇÃO 3: FLUXO DE ENTRADA E SAÍDA ---
+    elements.append(Paragraph("<b>3. Movimentações de Entrada e Saída (Controle E/S)</b>", styles["SectionHeader"]))
+    if movimentos_saidas:
+        mov_data = [[
+            Paragraph("<b>Saída</b>", styles["TableHeaderText"]),
+            Paragraph("<b>Chegada</b>", styles["TableHeaderText"]),
+            Paragraph("<b>KM Saída</b>", styles["TableHeaderText"]),
+            Paragraph("<b>KM Chegada</b>", styles["TableHeaderText"]),
+            Paragraph("<b>Responsável</b>", styles["TableHeaderText"]),
+            Paragraph("<b>Obs.</b>", styles["TableHeaderText"])
+        ]]
+        for s in movimentos_saidas:
+            c = entradas_por_saida.get(s.id)
+            obs_mov = s.obs or "-"
+            if c and c.obs:
+                obs_mov += f" | Chegada: {c.obs}"
+                
+            mov_data.append([
+                Paragraph(s.data_hora.strftime("%d/%m/%Y %H:%M"), styles["TableText"]),
+                Paragraph(c.data_hora.strftime("%d/%m/%Y %H:%M") if c else "-", styles["TableText"]),
+                Paragraph(f"{s.km} KM", styles["TableText"]),
+                Paragraph(f"{c.km} KM" if c else "-", styles["TableText"]),
+                Paragraph(s.responsavel, styles["TableText"]),
+                Paragraph(obs_mov, styles["TableText"])
+            ])
+        mov_table = Table(mov_data, colWidths=[28 * mm, 28 * mm, 20 * mm, 22 * mm, 28 * mm, 54 * mm])
+        mov_table.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1F3C78")),
+            ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#DDDDDD")),
+            ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#F9F9F9")]),
+            ("PADDING", (0, 0), (-1, -1), 4),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ]))
+        elements.append(mov_table)
+    else:
+        elements.append(Paragraph("Nenhuma movimentação de entrada/saída registrada no período.", styles["TableText"]))
+
+    # Rodapé / Assinatura
+    elements.append(Spacer(1, 20))
+    elements.append(Paragraph("----------------------------------------------------------------------------------------------------------------------------------", styles["TableText"]))
+    elements.append(Spacer(1, 5))
+    elements.append(Paragraph("<font color='#666666'>Relatório emitido pela plataforma de Checklist Veicular. Todos os dados são auditados e protegidos.</font>", styles["TableText"]))
+
+    try:
+        doc.build(elements)
+        registrar_log(f"Relatório Consolidado de Frota gerado: {filename} (Veículo: {v.plate})")
+        flash("✅ Relatório consolidado gerado com sucesso!", "success")
+    except Exception as e:
+        registrar_log(f"Erro ao gerar Relatório Consolidado: {str(e)}")
+        flash("❌ Erro ao compilar o arquivo PDF do relatório.", "error")
+
     return redirect(url_for("reports"))
 
 @app.route("/relatorios/download/<nome>")
@@ -2824,7 +3124,7 @@ def vistorias_nova():
         else:
             flash(f"Vistoria registrada. Fotos salvas: {saved}", "success")
 
-        return redirect(url_for("vistorias_detail", vistoria_id=v.id))
+        return redirect(url_for("vistorias_list", open_id=v.id))
 
     return render_template("vistorias_nova.html", veiculos=veiculos)
 
@@ -2894,6 +3194,45 @@ def vistorias_detail(vistoria_id):
     for f in v.fotos:
         if f.item_key:
             fotos_por_item[f.item_key].append(f)
+
+    if request.args.get("format") == "json":
+        ITENS_INFO = [
+            ('para_choque_dianteiro', 'Para-choque dianteiro'),
+            ('para_choque_traseiro', 'Para-choque traseiro'),
+            ('lateral_esquerda', 'Lateral esquerda'),
+            ('lateral_direita', 'Lateral direita'),
+            ('capo', 'Capô'),
+            ('teto', 'Teto'),
+            ('porta_malas', 'Porta-malas'),
+            ('retrovisores', 'Retrovisores'),
+            ('farois_lanternas', 'Faróis/Lanternas'),
+            ('vidros_parabrisa', 'Vidros/Para-brisa'),
+            ('pneus', 'Pneus'),
+            ('calotas', 'Calotas')
+        ]
+        
+        serialized_items = []
+        for key, label in ITENS_INFO:
+            serialized_items.append({
+                "key": key,
+                "label": label,
+                "status": getattr(v, key, "ok"),
+                "obs": getattr(v, f"obs_{key}", None) or "",
+                "fotos": [f.filename for f in fotos_por_item[key]]
+            })
+            
+        return jsonify({
+            "id": v.id,
+            "created_at": v.created_at.strftime('%d/%m/%Y %H:%M'),
+            "plate": v.vehicle.plate if v.vehicle else "-",
+            "km": v.km,
+            "turno": v.turno,
+            "local": v.local or "",
+            "status_geral": v.status_geral,
+            "observacoes": v.observacoes or "",
+            "items": serialized_items,
+            "fotos_gerais": [f.filename for f in v.fotos]
+        })
 
     return render_template(
         "vistorias_detail.html",

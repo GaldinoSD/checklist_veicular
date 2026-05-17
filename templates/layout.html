@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{{ page_title or 'Sistema' }}</title>
 
-    <link rel="icon" type="image/x-icon" href="{{ url_for('static', filename='favicon.ico') }}">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico', v='1') }}" type="image/x-icon">
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico', v='1') }}" type="image/x-icon">
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -782,6 +783,52 @@
           sync();
         });
       })();
+
+      // ✅ WEATHER LOGIC (Seropédica)
+      async function updateWeather() {
+        try {
+          const res = await fetch('https://api.open-meteo.com/v1/forecast?latitude=-22.7486&longitude=-43.7081&current_weather=true');
+          const data = await res.json();
+          if (data && data.current_weather) {
+            const temp = Math.round(data.current_weather.temperature);
+            const code = data.current_weather.weathercode;
+            
+            const tempEl = document.getElementById('weather-temp');
+            const tempMobileEl = document.getElementById('weather-temp-mobile');
+            if (tempEl) tempEl.textContent = temp + '°C';
+            if (tempMobileEl) tempMobileEl.textContent = temp + '°C';
+            
+            const iconEl = document.getElementById('weather-icon');
+            const boxEl = document.getElementById('weather-icon-box');
+            
+            if (iconEl && boxEl) {
+              // Mapeamento simples de weathercode (WMO)
+              if (code === 0) {
+                iconEl.className = 'fa-solid fa-sun text-sm';
+                boxEl.className = 'w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-500';
+              } else if (code <= 3) {
+                iconEl.className = 'fa-solid fa-cloud-sun text-sm';
+                boxEl.className = 'w-8 h-8 rounded-lg bg-blue-400/10 flex items-center justify-center text-blue-400';
+              } else if (code <= 48) {
+                iconEl.className = 'fa-solid fa-cloud text-sm';
+                boxEl.className = 'w-8 h-8 rounded-lg bg-slate-400/10 flex items-center justify-center text-slate-400';
+              } else if (code <= 67) {
+                iconEl.className = 'fa-solid fa-cloud-showers-heavy text-sm';
+                boxEl.className = 'w-8 h-8 rounded-lg bg-indigo-400/10 flex items-center justify-center text-indigo-400';
+              } else {
+                iconEl.className = 'fa-solid fa-cloud-bolt text-sm';
+                boxEl.className = 'w-8 h-8 rounded-lg bg-red-400/10 flex items-center justify-center text-red-400';
+              }
+            }
+          }
+        } catch (e) {
+          console.error("Erro ao carregar o clima de Seropédica:", e);
+        }
+      }
+
+      // Ciclo de vida do clima
+      updateWeather();
+      setInterval(updateWeather, 900000); // Atualiza a cada 15 minutos
     </script>
 
     <!-- ✅ NOTIFICATION DRAWER -->
