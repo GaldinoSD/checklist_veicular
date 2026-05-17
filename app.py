@@ -204,11 +204,28 @@ class User(UserMixin, db.Model):
     def has_permission(self, perm):
         if self.is_admin:
             return True
+            
+        # O supervisor e o admin sempre têm permissão "frota"
+        if perm == "frota" and self.role == "supervisor":
+            return True
+
         if not self.permissions:
             return False
         try:
             p = json.loads(self.permissions)
-            return p.get(perm, False)
+            # Tenta com o nome exato (ex: 'perm_dashboard' ou 'dashboard')
+            if p.get(perm, False):
+                return True
+            # Tenta com o prefixo 'perm_' se não foi passado com ele
+            if not perm.startswith("perm_"):
+                if p.get(f"perm_{perm}", False):
+                    return True
+            else:
+                # Tenta sem o prefixo 'perm_' se foi passado com ele
+                raw_perm = perm[5:]
+                if p.get(raw_perm, False):
+                    return True
+            return False
         except:
             return False
 
