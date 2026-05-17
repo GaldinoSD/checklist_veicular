@@ -783,58 +783,58 @@
             <h3 class="text-lg font-bold text-slate-800 dark:text-white">Escala Manual</h3>
             <button onclick="closeModal('modal-escala')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
         </div>
-        <form id="form-escala" class="p-6 space-y-4">
+        <form id="form-escala" class="p-4 space-y-3">
             <input type="hidden" name="id">
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-2 gap-3">
                 <div>
-                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Tipo</label>
-                    <select name="type" class="w-full bg-slate-50 dark:bg-gray-800 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2 text-sm">
+                    <label class="block text-[10px] font-bold text-slate-500 dark:text-gray-400 uppercase mb-1">Tipo</label>
+                    <select name="type" class="w-full bg-slate-50 dark:bg-gray-800 border border-slate-900/10 dark:border-white/10 rounded-xl px-3 py-1.5 text-xs">
                         <option value="sabado">Sábado</option>
                         <option value="domingo">Domingo</option>
                         <option value="feriado">Feriado</option>
                     </select>
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Data</label>
-                    <input type="date" name="date" required class="w-full bg-slate-50 dark:bg-gray-800 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2 text-sm">
+                    <label class="block text-[10px] font-bold text-slate-500 dark:text-gray-400 uppercase mb-1">Data</label>
+                    <input type="date" name="date" required class="w-full bg-slate-50 dark:bg-gray-800 border border-slate-900/10 dark:border-white/10 rounded-xl px-3 py-1.5 text-xs">
                 </div>
             </div>
             <div>
-                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Equipe(s) Responsável(is)</label>
-                <div id="escala-teams-display" class="w-full bg-slate-100 dark:bg-gray-800/50 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-600 dark:text-gray-400 min-h-[42px] flex flex-wrap gap-2">
+                <label class="block text-[10px] font-bold text-slate-500 dark:text-gray-400 uppercase mb-0.5">Equipe(s) Responsável(is)</label>
+                <div id="escala-teams-display" class="w-full bg-slate-100 dark:bg-gray-800/50 border border-slate-900/10 dark:border-white/10 rounded-xl px-3 py-1.5 text-xs text-slate-600 dark:text-gray-400 min-h-[32px] flex flex-wrap gap-1.5 items-center">
                     Nenhuma equipe selecionada
                 </div>
                 <input type="hidden" name="team_ids" id="escala-team-ids">
             </div>
             <div>
-                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Técnicos Escalados</label>
-                <div class="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto p-2 border border-slate-900/10 dark:border-white/10 rounded-xl bg-slate-50 dark:bg-gray-800" id="escala-users-list">
+                <label class="block text-[10px] font-bold text-slate-500 dark:text-gray-400 uppercase mb-1">Técnicos Escalados</label>
+                <div class="grid grid-cols-2 gap-1 max-h-20 overflow-y-auto p-1.5 border border-slate-900/10 dark:border-white/10 rounded-xl bg-slate-50 dark:bg-gray-800" id="escala-users-list">
                     {% for t in tecnicos %}
-                        <label class="flex items-center gap-2 p-2 hover:bg-white dark:hover:bg-white/5 rounded-lg cursor-pointer transition-colors">
+                        <label class="flex items-center gap-1.5 p-1 hover:bg-white dark:hover:bg-white/5 rounded-lg cursor-pointer transition-colors">
                             <input type="checkbox" name="user_ids" value="{{ t.id }}" data-username="{{ t.username }}" class="rounded border-slate-300 text-purple-600 focus:ring-purple-500" onchange="updateEscalaTeams()">
-                            <span class="text-xs text-slate-700 dark:text-gray-300">{{ t.username }}</span>
+                            <span class="text-[11px] text-slate-700 dark:text-gray-300">{{ t.username }}</span>
                         </label>
                     {% endfor %}
                 </div>
             </div>
             <div>
-                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Observações</label>
-                <textarea name="obs" rows="2" class="w-full bg-slate-50 dark:bg-gray-800 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm"></textarea>
+                <label class="block text-[10px] font-bold text-slate-500 dark:text-gray-400 uppercase mb-1">Observações</label>
+                <input type="text" name="obs" placeholder="Observações opcionais..." class="w-full bg-slate-50 dark:bg-gray-800 border border-slate-900/10 dark:border-white/10 rounded-xl px-3 py-1.5 text-xs">
             </div>
             
             <!-- Preenchimento Rápido de Feriados -->
-            <div class="border-t border-slate-900/10 dark:border-white/10 pt-3">
-                <label class="block text-[10px] font-bold text-slate-500 dark:text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+            <div class="border-t border-slate-900/10 dark:border-white/10 pt-2.5">
+                <label class="block text-[9px] font-bold text-slate-500 dark:text-gray-400 uppercase tracking-wider mb-1.5 flex items-center gap-1">
                     <i class="fa-solid fa-wand-magic-sparkles text-purple-500 animate-pulse"></i>
                     <span>Preenchimento Rápido: Feriados Próximos</span>
                 </label>
-                <div class="flex flex-wrap gap-1.5 p-1 bg-slate-50 dark:bg-gray-800/40 rounded-xl border border-slate-900/5 dark:border-white/5" id="escala-helper-feriados">
-                    <span class="text-[9px] text-slate-400 font-semibold p-1">Carregando feriados...</span>
+                <div class="flex gap-2 overflow-x-auto pb-1.5 scrollbar-thin" id="escala-helper-feriados">
+                    <span class="text-[9px] text-slate-400 font-semibold p-0.5">Carregando feriados...</span>
                 </div>
             </div>
 
-            <div class="pt-2">
-                <button type="submit" class="w-full py-3 bg-purple-600 text-white rounded-xl font-bold shadow-lg shadow-purple-500/30">Salvar Escala</button>
+            <div class="pt-1.5">
+                <button type="submit" class="w-full py-2 bg-purple-600 text-white rounded-xl text-xs font-bold shadow-lg shadow-purple-500/30">Salvar Escala</button>
             </div>
         </form>
     </div>
@@ -2750,7 +2750,7 @@ async function loadHelperFeriados() {
             if(data.length > 0) {
                 container.innerHTML = data.map(f => `
                     <button type="button" onclick="quickFillEscalaHoliday('${f.date}', '${f.name}')" 
-                        class="px-2.5 py-1 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 hover:border-rose-500/30 text-rose-600 dark:text-rose-400 rounded-lg text-[10px] font-bold transition-all flex flex-col items-start gap-0.5">
+                        class="px-2.5 py-1 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 hover:border-rose-500/30 text-rose-600 dark:text-rose-400 rounded-lg text-[10px] font-bold transition-all flex flex-col items-start gap-0.5 whitespace-nowrap flex-shrink-0">
                         <span class="font-extrabold flex items-center gap-1">
                             <i class="fa-solid fa-gift text-[9px]"></i> ${f.display_date} - ${f.name}
                         </span>
