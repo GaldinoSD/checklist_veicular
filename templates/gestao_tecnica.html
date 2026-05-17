@@ -717,42 +717,58 @@
             <h3 class="text-lg font-bold text-slate-800 dark:text-white">Configurar Equipe</h3>
             <button onclick="closeModal('modal-equipe')" class="text-slate-400 hover:text-slate-600 dark:hover:text-white"><i class="fa-solid fa-xmark"></i></button>
         </div>
-        <form id="form-equipe" class="p-6 space-y-4">
+        <form id="form-equipe" class="p-5 space-y-3.5">
             <input type="hidden" name="id">
-            <div>
-                <label class="block text-xs font-bold text-slate-500 dark:text-gray-400 uppercase mb-1">Nome da Equipe</label>
-                <input type="text" name="name" required class="w-full bg-slate-50 dark:bg-gray-800 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500/40 outline-none">
+            
+            <!-- Grid de Nome e Cor -->
+            <div class="grid grid-cols-3 gap-3">
+                <div class="col-span-2">
+                    <label class="block text-[10px] font-bold text-slate-500 dark:text-gray-400 uppercase tracking-wider mb-1">Nome da Equipe</label>
+                    <input type="text" name="name" required class="w-full bg-slate-50 dark:bg-gray-800 border border-slate-900/10 dark:border-white/10 rounded-xl px-3.5 py-2 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500/40 outline-none">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-bold text-slate-500 dark:text-gray-400 uppercase tracking-wider mb-1">Cor</label>
+                    <div class="flex items-center gap-2 mt-0.5">
+                        <input type="color" name="color" class="w-10 h-8 bg-transparent border-none cursor-pointer rounded-lg overflow-hidden">
+                        <span class="text-xs text-slate-400 font-semibold">Escolher</span>
+                    </div>
+                </div>
             </div>
+
+            <!-- Líder da Equipe -->
             <div>
-                <label class="block text-xs font-bold text-slate-500 dark:text-gray-400 uppercase mb-1">Cor da Equipe</label>
-                <input type="color" name="color" class="w-full h-10 bg-transparent border-none cursor-pointer">
-            </div>
-            <div>
-                <label class="block text-xs font-bold text-slate-500 dark:text-gray-400 uppercase mb-1">Líder da Equipe</label>
-                <select name="leader_id" class="w-full bg-slate-50 dark:bg-gray-800 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500/40 outline-none">
+                <label class="block text-[10px] font-bold text-slate-500 dark:text-gray-400 uppercase tracking-wider mb-1">Líder da Equipe</label>
+                <select name="leader_id" class="w-full bg-slate-50 dark:bg-gray-800 border border-slate-900/10 dark:border-white/10 rounded-xl px-3.5 py-2 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500/40 outline-none">
                     <option value="">Nenhum (Sem Líder)</option>
                     {% for t in tecnicos %}
                     <option value="{{ t.id }}">{{ t.username }}</option>
                     {% endfor %}
                 </select>
             </div>
+
+            <!-- Técnicos Vinculados -->
             <div>
-                <label class="block text-xs font-bold text-slate-500 dark:text-gray-400 uppercase mb-1">Técnicos Vinculados</label>
-                <div class="max-h-40 overflow-y-auto space-y-2 p-2 bg-slate-50 dark:bg-gray-800 rounded-xl border border-slate-900/10 dark:border-white/10">
-                    {% for t in tecnicos %}
-                    <label class="flex items-center gap-3 p-2 hover:bg-slate-200/50 dark:hover:bg-white/5 rounded-lg cursor-pointer transition-colors">
-                        <input type="checkbox" name="members" value="{{ t.id }}" class="w-4 h-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500">
-                        <span class="text-sm text-slate-700 dark:text-gray-300">{{ t.username }}</span>
-                    </label>
-                    {% endfor %}
+                <label class="block text-[10px] font-bold text-slate-500 dark:text-gray-400 uppercase tracking-wider mb-1">Técnicos Vinculados</label>
+                <div class="max-h-28 overflow-y-auto p-2 bg-slate-50 dark:bg-gray-800 rounded-xl border border-slate-900/10 dark:border-white/10">
+                    <div class="grid grid-cols-2 gap-1.5">
+                        {% for t in tecnicos %}
+                        <label class="flex items-center gap-2.5 p-1.5 hover:bg-slate-200/50 dark:hover:bg-white/5 rounded-lg cursor-pointer transition-colors">
+                            <input type="checkbox" name="members" value="{{ t.id }}" class="w-3.5 h-3.5 rounded border-gray-300 text-purple-600 focus:ring-purple-500">
+                            <span class="text-xs text-slate-700 dark:text-gray-300 font-medium">{{ t.username }}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
                 </div>
             </div>
+
+            <!-- Observações -->
             <div>
-                <label class="block text-xs font-bold text-slate-500 dark:text-gray-400 uppercase mb-1">Observações</label>
-                <textarea name="obs" rows="3" class="w-full bg-slate-50 dark:bg-gray-800 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500/40 outline-none"></textarea>
+                <label class="block text-[10px] font-bold text-slate-500 dark:text-gray-400 uppercase tracking-wider mb-1">Observações</label>
+                <textarea name="obs" rows="2" class="w-full bg-slate-50 dark:bg-gray-800 border border-slate-900/10 dark:border-white/10 rounded-xl px-3.5 py-2 text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500/40 outline-none"></textarea>
             </div>
-            <div class="pt-4">
-                <button type="submit" class="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold shadow-lg shadow-purple-500/30 transition-all active:scale-95">
+
+            <div class="pt-2">
+                <button type="submit" class="w-full py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-sm font-bold shadow-lg shadow-purple-500/30 transition-all active:scale-95">
                     Salvar Equipe
                 </button>
             </div>
