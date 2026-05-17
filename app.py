@@ -3124,6 +3124,23 @@ def api_escalas(id=None):
                 }
             })
             
+    # 5. Carrega Anotações Agendadas no Calendário (Note model)
+    notes = Note.query.filter(Note.event_date != None).all()
+    for n in notes:
+        events.append({
+            "id": f"a_{n.id}",
+            "title": f"📝 NOTA: {n.title or 'Sem Título'}",
+            "start": n.event_date.isoformat(),
+            "allDay": True,
+            "color": "#14B8A6",  # Lindo Teal premium
+            "extendedProps": {
+                "type": "anotacao",
+                "title": n.title,
+                "category": n.category,
+                "description": n.description
+            }
+        })
+            
     return jsonify(events)
 
 @app.route("/api/gestao/proximos_feriados", methods=["GET"])
@@ -3286,6 +3303,8 @@ def api_anotacoes(id=None):
         event_date_str = data.get("event_date")
         if event_date_str:
             n.event_date = datetime.strptime(event_date_str, "%Y-%m-%d").date()
+        else:
+            n.event_date = None
             
         db.session.commit()
         return jsonify({"status": "ok", "id": n.id})

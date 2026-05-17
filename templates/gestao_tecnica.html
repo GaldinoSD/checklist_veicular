@@ -956,6 +956,47 @@
     </div>
 </div>
 
+<!-- Modal: Detalhes da Anotação (Visualização) -->
+<div id="modal-anotacao-detalhes" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden items-center justify-center z-[60] p-4">
+    <div class="bg-white dark:bg-gray-900 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden border border-slate-900/10 dark:border-white/10 flex flex-col max-h-[85vh]">
+        <div class="px-6 py-4 border-b border-slate-900/10 dark:border-white/10 flex justify-between items-center bg-slate-50 dark:bg-gray-800/50">
+            <h3 class="text-md font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                <i class="fa-solid fa-note-sticky text-teal-500"></i>
+                <span>Detalhes da Anotação</span>
+            </h3>
+            <button onclick="closeModal('modal-anotacao-detalhes')" class="text-slate-400 hover:text-slate-600 transition-colors">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div class="p-6 space-y-4 overflow-y-auto text-sm flex-1">
+            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 dark:border-white/5 pb-3">
+                <div class="flex flex-col gap-1">
+                    <span id="detalhe-anotacao-categoria" class="px-2.5 py-0.5 bg-teal-50 dark:bg-teal-950/20 text-teal-600 dark:text-teal-400 rounded-md text-[9px] font-black uppercase tracking-wider w-fit"></span>
+                    <h4 id="detalhe-anotacao-titulo" class="font-extrabold text-base text-slate-800 dark:text-white leading-tight"></h4>
+                </div>
+            </div>
+
+            <!-- Date -->
+            <div class="flex items-center gap-2 text-xs text-slate-600 dark:text-gray-300 bg-slate-50 dark:bg-gray-800/20 p-3 rounded-xl border border-slate-900/5 dark:border-white/5">
+                <i class="fa-solid fa-calendar-day text-teal-500 text-sm"></i>
+                <div>
+                    <span class="text-[9px] font-bold text-slate-400 block uppercase">Agendado Para</span>
+                    <span id="detalhe-anotacao-data" class="font-semibold text-slate-700 dark:text-gray-200"></span>
+                </div>
+            </div>
+
+            <!-- Description -->
+            <div class="space-y-1.5 bg-slate-50 dark:bg-gray-800/40 p-4 rounded-xl border border-slate-900/5 dark:border-white/5">
+                <span class="text-[9px] font-bold text-slate-400 block uppercase tracking-wider">Descrição / Conteúdo</span>
+                <p id="detalhe-anotacao-descricao" class="text-slate-600 dark:text-gray-300 text-xs leading-relaxed whitespace-pre-wrap"></p>
+            </div>
+        </div>
+        <div class="px-6 py-3 bg-slate-50 dark:bg-gray-800/30 border-t border-slate-900/10 dark:border-white/10 flex justify-end">
+            <button onclick="closeModal('modal-anotacao-detalhes')" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 dark:bg-gray-800 dark:hover:bg-gray-700 text-slate-700 dark:text-gray-300 rounded-xl text-xs font-bold transition-all active:scale-95">Fechar</button>
+        </div>
+    </div>
+</div>
+
 <!-- Modal: Reunião -->
 <div id="modal-reuniao" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden items-center justify-center z-[60] p-4">
     <div class="bg-white dark:bg-gray-900 w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden max-h-[95vh] flex flex-col">
@@ -3203,6 +3244,29 @@ async function showReuniaoDetalhes(id) {
     openModal('modal-reuniao-detalhes');
 }
 
+async function showAnotacaoDetalhes(id) {
+    const res = await fetch(`/api/gestao/anotacoes?t=${Date.now()}`);
+    if(!res.ok) return alert("Erro ao carregar dados da anotação.");
+    const items = await res.json();
+    const item = items.find(x => parseInt(x.id) === parseInt(id));
+    if(!item) return alert("Anotação não encontrada.");
+
+    document.getElementById('detalhe-anotacao-titulo').textContent = item.title || 'Sem Título';
+    document.getElementById('detalhe-anotacao-categoria').textContent = item.category || 'Geral';
+    
+    let dateFormatted = 'N/A';
+    if (item.event_date) {
+        const dateParts = item.event_date.split('-');
+        if (dateParts.length === 3) {
+            dateFormatted = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`;
+        }
+    }
+    document.getElementById('detalhe-anotacao-data').textContent = dateFormatted;
+    document.getElementById('detalhe-anotacao-descricao').textContent = item.description || '';
+
+    openModal('modal-anotacao-detalhes');
+}
+
 // --- ENVIO GENÉRICO PARA JSON ---
 async function handleJsonSubmit(formId, apiPath, tabToReload) {
     document.getElementById(formId).onsubmit = async (e) => {
@@ -3351,6 +3415,9 @@ function initCalendar() {
             } else if(info.event.id && info.event.id.startsWith('r_')) {
                 const meetingId = info.event.id.replace('r_', '');
                 showReuniaoDetalhes(parseInt(meetingId));
+            } else if(info.event.id && info.event.id.startsWith('a_')) {
+                const noteId = info.event.id.replace('a_', '');
+                showAnotacaoDetalhes(parseInt(noteId));
             } else {
                 showToast("Evento: " + info.event.title, "info");
             }
