@@ -596,7 +596,15 @@
                 </button>
             </div>
             
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="list-solicitacoes">
+            <!-- Status Filtering Header -->
+            <div class="flex flex-wrap items-center gap-2 mb-6 bg-slate-100/50 dark:bg-white/5 p-1.5 rounded-2xl w-fit border border-slate-900/5 dark:border-white/5">
+                <button onclick="filterSolicitacoes('TODAS')" id="filter-sol-TODAS" class="px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-300 bg-indigo-600 text-white shadow-md shadow-indigo-500/10">Todas</button>
+                <button onclick="filterSolicitacoes('PENDENTE')" id="filter-sol-PENDENTE" class="px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-300 text-slate-600 dark:text-gray-300 hover:bg-slate-200/50 dark:hover:bg-white/5">Pendentes</button>
+                <button onclick="filterSolicitacoes('Aprovada')" id="filter-sol-Aprovada" class="px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-300 text-slate-600 dark:text-gray-300 hover:bg-slate-200/50 dark:hover:bg-white/5">Aprovadas</button>
+                <button onclick="filterSolicitacoes('Recusada')" id="filter-sol-Recusada" class="px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-300 text-slate-600 dark:text-gray-300 hover:bg-slate-200/50 dark:hover:bg-white/5">Recusadas</button>
+            </div>
+            
+            <div class="space-y-4" id="list-solicitacoes">
                 <!-- Injetado via JS -->
             </div>
         </div>
@@ -1679,6 +1687,7 @@ let currentAnotacoes = [];
 let currentAnotacaoTab = 'Geral';
 let currentRFOs = [];
 let currentGenerators = [];
+let solicitacoesList = [];
 let globalUsers = [];
 let selectedTechsEncerramento = [];
 const user_role = "{{ current_user.role }}";
@@ -2710,51 +2719,171 @@ async function loadItems(slug) {
             </div>`;
         }).join('');
     } else if(slug === 'solicitacoes') {
-        container.innerHTML = data.map(i => {
-            let statusColor = 'text-slate-400 bg-slate-100';
-            if(i.status === 'Aprovada') statusColor = 'text-emerald-600 bg-emerald-100';
-            else if(i.status === 'Recusada') statusColor = 'text-red-600 bg-red-100';
-            else if(i.status === 'Pendente') statusColor = 'text-amber-600 bg-amber-100 animate-pulse';
+        solicitacoesList = data;
+        renderSolicitacoes(data);
+    } else {
+        container.innerHTML = `<p class="text-slate-400 text-sm italic">Dados carregados: ${data.length} itens.</p>`;
+    }
+}
 
-            return `
-                <div class="bg-white/70 dark:bg-white/5 p-6 rounded-3xl border border-slate-900/10 dark:border-white/10 shadow-sm hover:shadow-xl transition-all relative overflow-hidden group animate-premium">
-                    <div class="flex justify-between items-start mb-4">
-                        <span class="px-3 py-1 ${statusColor} rounded-full text-[10px] font-bold uppercase tracking-wider">${i.status}</span>
-                        <div class="flex gap-2">
-                            <button onclick="deleteSolicitacao(${i.id})" class="text-slate-400 hover:text-red-600 transition-colors"><i class="fa-solid fa-trash"></i></button>
-                        </div>
+function renderSolicitacoes(items) {
+    const container = document.getElementById('list-solicitacoes');
+    if (!container) return;
+    
+    if (!items || items.length === 0) {
+        container.innerHTML = `
+            <div class="p-8 text-center bg-slate-50 dark:bg-white/5 rounded-3xl border border-dashed border-slate-900/10 dark:border-white/10">
+                <i class="fa-solid fa-folder-open text-slate-400 text-3xl mb-3"></i>
+                <p class="text-sm text-slate-500 dark:text-gray-400 font-bold">Nenhuma solicitação encontrada.</p>
+            </div>
+        `;
+        return;
+    }
+    
+    container.innerHTML = items.map(i => {
+        let statusBadge = '';
+        if(i.status === 'Aprovada') {
+            statusBadge = '<span class="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 shrink-0 border border-emerald-200/20"><i class="fa-solid fa-circle-check mr-1"></i>Aprovada</span>';
+        } else if(i.status === 'Recusada') {
+            statusBadge = '<span class="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-red-100 dark:bg-red-900/30 text-red-600 shrink-0 border border-red-200/20"><i class="fa-solid fa-circle-xmark mr-1"></i>Recusada</span>';
+        } else {
+            statusBadge = '<span class="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-amber-100 dark:bg-amber-900/30 text-amber-600 shrink-0 border border-amber-200/20"><i class="fa-solid fa-clock mr-1 animate-pulse"></i>Pendente</span>';
+        }
+
+        // Beautiful capsule config for each type
+        let iIcon = 'fa-circle-info';
+        let iBg = 'bg-slate-50 dark:bg-slate-900/50 text-slate-500';
+        
+        if (i.type === 'Troca de Plantão') {
+            iIcon = 'fa-calendar-days';
+            iBg = 'bg-blue-50 dark:bg-blue-950/20 text-blue-600';
+        } else if (i.type === 'Folga / Compensação') {
+            iIcon = 'fa-umbrella-beach';
+            iBg = 'bg-teal-50 dark:bg-teal-950/20 text-teal-600';
+        } else if (i.type === 'Feriado (Escala)') {
+            iIcon = 'fa-business-time';
+            iBg = 'bg-purple-50 dark:bg-purple-950/20 text-purple-600';
+        } else if (i.type === 'Material / EPI') {
+            iIcon = 'fa-helmet-safety';
+            iBg = 'bg-amber-50 dark:bg-amber-950/20 text-amber-600';
+        } else if (i.type === 'Adiantamento') {
+            iIcon = 'fa-hand-holding-dollar';
+            iBg = 'bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600';
+        } else if (i.type === 'Afastamento / Médico') {
+            iIcon = 'fa-truck-medical';
+            iBg = 'bg-rose-50 dark:bg-rose-950/20 text-rose-600';
+        }
+
+        const dateStr = i.date ? new Date(i.date).toLocaleDateString() : '-';
+        const timeStr = i.date ? new Date(i.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '';
+
+        return `
+        <div class="bg-white dark:bg-gray-900 rounded-2xl border border-slate-900/10 dark:border-white/10 p-4 shadow-sm hover:shadow-md hover:border-indigo-500/20 dark:hover:border-indigo-500/20 transition-all duration-300 flex flex-col group relative overflow-hidden animate-premium">
+            <!-- Row layout -->
+            <div class="flex flex-wrap md:flex-nowrap items-center justify-between gap-4">
+                
+                <!-- Left: Category Icon + Request Type & Meta -->
+                <div class="flex items-center gap-3.5 min-w-[240px] flex-1">
+                    <div class="w-11 h-11 rounded-2xl flex items-center justify-center text-base shadow-inner shrink-0 group-hover:scale-105 transition-transform duration-300 ${iBg}">
+                        <i class="fa-solid ${iIcon}"></i>
                     </div>
-                    
-                    <h4 class="text-lg font-bold text-slate-800 dark:text-white mb-1">${i.type}</h4>
-                    <p class="text-[10px] text-slate-400 font-bold uppercase mb-4 tracking-widest"><i class="fa-solid fa-user-circle"></i> Solicitação por: ${i.user}</p>
-                    
-                    <div class="p-3 bg-slate-50 dark:bg-white/5 rounded-xl border border-slate-900/5 dark:border-white/5 mb-4">
-                        <p class="text-[10px] font-bold text-slate-400 uppercase mb-1">Descrição</p>
-                        <p class="text-xs text-slate-600 dark:text-gray-300 leading-relaxed">${i.description}</p>
-                    </div>
-
-                    ${i.management_response ? `
-                        <div class="p-3 bg-indigo-50/50 dark:bg-indigo-900/10 rounded-xl border border-indigo-200 dark:border-indigo-900/30 mb-4">
-                            <p class="text-[10px] font-bold text-indigo-500 uppercase mb-1">Resposta da Gestão</p>
-                            <p class="text-xs text-indigo-700 dark:text-indigo-300 italic">"${i.management_response}"</p>
+                    <div class="min-w-0">
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="px-2 py-0.5 bg-slate-100 dark:bg-white/5 rounded-md text-[9px] font-black uppercase tracking-wider shrink-0 text-slate-500 dark:text-gray-400">${i.type}</span>
+                            <span class="text-[10px] text-slate-400 font-bold shrink-0">${dateStr} às ${timeStr}</span>
                         </div>
-                    ` : ''}
+                        <h4 class="font-extrabold text-slate-800 dark:text-white text-sm truncate leading-tight">${i.description || 'Sem descrição'}</h4>
+                        <p class="text-[9px] text-slate-400 font-black uppercase tracking-widest mt-1"><i class="fa-solid fa-user-circle mr-1"></i> Solicitante: ${i.user_name || 'N/A'}</p>
+                    </div>
+                </div>
 
-                    <div class="flex items-center justify-between pt-4 border-t border-slate-900/5 dark:border-white/5">
-                        <span class="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">${new Date(i.date).toLocaleDateString()} ${new Date(i.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                <!-- Center: Observations snippet or details -->
+                <div class="flex-1 min-w-[180px] hidden sm:block">
+                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Observações Adicionais</span>
+                    <p class="text-xs text-slate-500 dark:text-gray-400 truncate font-medium">${i.obs || 'Nenhuma observação extra.'}</p>
+                </div>
+
+                <!-- Right: Status Pill & Actions -->
+                <div class="flex items-center gap-2.5 shrink-0 ml-auto md:ml-0">
+                    ${statusBadge}
+                    
+                    <div class="flex items-center gap-1.5 border-l border-slate-900/5 dark:border-white/5 pl-2.5">
+                        ${(i.status === 'PENDENTE' && (user_role === 'admin' || user_role === 'supervisor')) ? `
+                            <button onclick="respondSolicitacao(${i.id}, 'Aprovada')" class="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[10px] font-black uppercase tracking-wider transition-all active:scale-95 shadow-md shadow-emerald-500/10">Aprovar</button>
+                            <button onclick="respondSolicitacao(${i.id}, 'Recusada')" class="px-2.5 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-[10px] font-black uppercase tracking-wider transition-all active:scale-95 shadow-md shadow-red-500/10">Recusar</button>
+                        ` : ''}
                         
-                        <div class="flex gap-1">
-                            ${(i.status === 'Pendente' && (user_role === 'admin' || user_role === 'supervisor')) ? `
-                                <button onclick="respondSolicitacao(${i.id}, 'Aprovada')" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[10px] font-bold transition-all">Aprovar</button>
-                                <button onclick="respondSolicitacao(${i.id}, 'Recusada')" class="px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-[10px] font-bold transition-all">Recusar</button>
-                            ` : ''}
+                        <button onclick="deleteSolicitacao(${i.id})" class="w-8.5 h-8.5 flex items-center justify-center border border-red-100 text-red-400 hover:bg-red-50 rounded-xl transition-all" title="Excluir">
+                            <i class="fa-solid fa-trash text-[10px]"></i>
+                        </button>
+                        
+                        <button onclick="const details = this.closest('.group').querySelector('.solicitacao-expanded-row'); details.classList.toggle('hidden'); this.querySelector('i').classList.toggle('rotate-180')" class="w-8.5 h-8.5 flex items-center justify-center bg-slate-50 dark:bg-gray-800 text-slate-500 rounded-xl hover:bg-slate-100 dark:hover:bg-white/5 transition-all" title="Ver Detalhes">
+                            <i class="fa-solid fa-chevron-down text-[10px] transition-transform duration-300"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Collapsible Drawer Detail -->
+            <div class="solicitacao-expanded-row hidden border-t border-slate-900/5 dark:border-white/5 bg-slate-50/50 dark:bg-white/5 p-4 mt-3 space-y-3 rounded-xl">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="bg-white dark:bg-gray-800/40 p-3 rounded-xl border border-slate-900/5 dark:border-white/5">
+                        <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Descrição Detalhada / Justificativa</span>
+                        <blockquote class="text-xs text-slate-700 dark:text-gray-200 border-l-2 border-indigo-500 pl-3 py-1 font-medium bg-slate-50/50 dark:bg-white/5 rounded-r-lg italic">
+                            "${i.description || 'Nenhuma descrição fornecida.'}"
+                        </blockquote>
+                        
+                        <div class="mt-3">
+                            <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Observações Adicionais</span>
+                            <p class="text-xs text-slate-600 dark:text-gray-300 leading-relaxed bg-slate-50/30 dark:bg-white/5 p-2 rounded-lg">${i.obs || 'Nenhuma observação informada.'}</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-white dark:bg-gray-800/40 p-3 rounded-xl border border-slate-900/5 dark:border-white/5 flex flex-col justify-between">
+                        <div>
+                            <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-2">Histórico de Decisão da Coordenação</span>
+                            ${i.management_response ? `
+                                <div class="p-3 bg-indigo-50/30 dark:bg-indigo-950/20 border border-indigo-200/50 dark:border-indigo-900/30 rounded-xl">
+                                    <p class="text-[10px] font-black text-indigo-500 uppercase tracking-wider mb-1"><i class="fa-solid fa-user-tie mr-1"></i>Parecer da Gestão</p>
+                                    <p class="text-xs text-slate-700 dark:text-gray-200 italic font-medium">"${i.management_response}"</p>
+                                </div>
+                            ` : `
+                                <div class="p-3 bg-slate-50/50 dark:bg-white/5 rounded-xl border border-dashed border-slate-200 dark:border-white/5 text-center">
+                                    <i class="fa-solid fa-clock-rotate-left text-slate-400 text-lg mb-1 block"></i>
+                                    <p class="text-[10px] text-slate-400 font-bold">Esta solicitação ainda está sob análise.</p>
+                                </div>
+                            `}
+                        </div>
+                        
+                        <div class="text-[9px] text-slate-400 font-bold uppercase tracking-wider border-t border-slate-900/5 dark:border-white/5 pt-2 mt-3 flex justify-between items-center">
+                            <span>Status Atual: <strong class="${i.status === 'PENDENTE' ? 'text-amber-500' : i.status === 'Aprovada' ? 'text-emerald-500' : 'text-red-500'}">${i.status}</strong></span>
+                            <span>Criado em: ${new Date(i.date).toLocaleString()}</span>
                         </div>
                     </div>
                 </div>
-            `;
-        }).join('');
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function filterSolicitacoes(status) {
+    currentSolicitacaoFilter = status;
+    ['TODAS', 'PENDENTE', 'Aprovada', 'Recusada'].forEach(s => {
+        const btn = document.getElementById(`filter-sol-${s}`);
+        if (btn) {
+            if (s === status) {
+                btn.className = "px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-300 bg-indigo-600 text-white shadow-md shadow-indigo-500/10";
+            } else {
+                btn.className = "px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all duration-300 text-slate-600 dark:text-gray-300 hover:bg-slate-200/50 dark:hover:bg-white/5";
+            }
+        }
+    });
+    
+    if (status === 'TODAS') {
+        renderSolicitacoes(solicitacoesList);
     } else {
-        container.innerHTML = `<p class="text-slate-400 text-sm italic">Dados carregados: ${data.length} itens.</p>`;
+        const filtered = solicitacoesList.filter(i => i.status === status);
+        renderSolicitacoes(filtered);
     }
 }
 

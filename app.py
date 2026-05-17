@@ -2715,7 +2715,7 @@ def api_solicitacoes(id=None):
         s = Solicitacao.query.get_or_404(id)
         db.session.delete(s)
         db.session.commit()
-        return jsonify({"status": "ok"})
+        return jsonify({"status": "ok", "success": True})
 
     if id and request.path.endswith("/respond"):
         if not current_user.is_supervisor and not current_user.is_admin:
@@ -2723,9 +2723,18 @@ def api_solicitacoes(id=None):
         data = request.json or {}
         s = Solicitacao.query.get_or_404(id)
         s.status = data.get("status", "APROVADA")
-        s.management_response = data.get("management_response")
+        
+        response_text = data.get("management_response") or data.get("response")
+        from datetime import datetime
+        now_str = datetime.now().strftime("%d/%m/%Y %H:%M")
+        
+        if response_text:
+            s.management_response = f"{response_text} (Por: {current_user.username} em {now_str})"
+        else:
+            s.management_response = f"Sem justificativa adicional (Por: {current_user.username} em {now_str})"
+            
         db.session.commit()
-        return jsonify({"status": "ok"})
+        return jsonify({"status": "ok", "success": True})
 
     if request.method == "POST":
         data = request.json or {}
@@ -2736,7 +2745,7 @@ def api_solicitacoes(id=None):
         s.obs = data.get("obs")
         s.status = "PENDENTE"
         db.session.commit()
-        return jsonify({"status": "ok", "id": s.id})
+        return jsonify({"status": "ok", "success": True, "id": s.id})
 
     items = Solicitacao.query.order_by(Solicitacao.date.desc()).all()
     res = []
