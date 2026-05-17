@@ -2993,12 +2993,19 @@ def api_escalas(id=None):
             except Exception:
                 tech_names = "Técnicos"
                 
+        # Define cores premium específicas para cada tipo de escala manual
+        m_color = "#10B981"  # Padrão: Emerald para Sábado
+        if s.type == "domingo":
+            m_color = "#6366F1"  # Indigo para Domingo
+        elif s.type == "feriado":
+            m_color = "#F59E0B"  # Amber/Orange para Feriado
+            
         events.append({
             "id": f"m_{s.id}",
             "title": f"{s.type.upper()}: {tech_names or 'Plantonistas'}",
             "start": s.date.isoformat(),
             "allDay": True,
-            "color": "#10B981", # Emerald para manual
+            "color": m_color,
             "extendedProps": {
                 "type": "manual",
                 "obs": s.obs

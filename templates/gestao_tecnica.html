@@ -1832,10 +1832,13 @@ async function loadItems(slug) {
         const resE = await fetch(`/api/gestao/escalas?view=list&t=${Date.now()}`);
         const scales = await resE.json();
         container.innerHTML = scales.map(s => {
-            let names = 'Sem equipe';
+            let names = 'Escala por Técnico';
             if(s.team_ids) {
                 const ids = s.team_ids.split(',').map(x => parseInt(x));
-                names = globalEquipes.filter(e => ids.includes(e.id)).map(e => e.name).join(' + ');
+                const matchedTeams = globalEquipes.filter(e => ids.includes(e.id)).map(e => e.name);
+                if(matchedTeams.length > 0) {
+                    names = matchedTeams.join(' + ');
+                }
             }
             return `
             <div class="flex items-center justify-between p-4 bg-white/70 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl group transition-all hover:border-purple-500/30">
@@ -1845,7 +1848,7 @@ async function loadItems(slug) {
                     </div>
                     <div>
                         <div class="text-sm font-bold text-slate-800 dark:text-white">${new Date(s.date + 'T00:00:00').toLocaleDateString()} - ${s.type.toUpperCase()}</div>
-                        <div class="text-[10px] text-slate-500 font-bold">${names}</div>
+                        <div class="text-[10px] text-purple-600 dark:text-purple-400 font-bold">${names}</div>
                         <div class="text-[9px] text-slate-400 italic">${s.technician_names || 'Nenhum técnico'}</div>
                     </div>
                 </div>
@@ -2789,6 +2792,9 @@ async function handleJsonSubmit(formId, apiPath, tabToReload) {
         }
         if(formId === 'form-reuniao') {
             data.technician_ids = Array.from(e.target.querySelectorAll('input[name="technician_ids"]:checked')).map(i => i.value);
+        }
+        if(formId === 'form-escala') {
+            data.technician_ids = Array.from(e.target.querySelectorAll('input[name="user_ids"]:checked')).map(i => i.value);
         }
 
         const method = data.id ? 'PUT' : 'POST';
