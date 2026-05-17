@@ -64,5 +64,23 @@ class TestUserHasPermission(unittest.TestCase):
         self.assertTrue(supervisor.has_permission("dashboard"))
         self.assertTrue(supervisor.has_permission("perm_dashboard"))
 
+    def test_implicit_role_defaults_with_empty_permissions(self):
+        # Tech role with empty/no permissions
+        tech_empty = User(username="tech_empty", role="tech", permissions="{}")
+        self.assertTrue(tech_empty.has_permission("checklist_mobile"))
+        self.assertTrue(tech_empty.has_permission("treinamentos_mobile"))
+        self.assertFalse(tech_empty.has_permission("manutencao_os"))
+
+        # Manutencao role with empty/no permissions
+        man_empty = User(username="man_empty", role="manutencao", permissions="{}")
+        self.assertTrue(man_empty.has_permission("manutencao_os"))
+        self.assertTrue(man_empty.has_permission("perm_manutencao_os"))
+        self.assertFalse(man_empty.has_permission("checklist_mobile"))
+
+        # Supervisor role with empty/no permissions
+        supervisor_empty = User(username="supervisor_empty", role="supervisor", permissions="{}")
+        self.assertTrue(supervisor_empty.has_permission("frota"))
+        self.assertFalse(supervisor_empty.has_permission("manutencao_os"))
+
 if __name__ == "__main__":
     unittest.main()

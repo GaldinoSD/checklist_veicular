@@ -205,8 +205,15 @@ class User(UserMixin, db.Model):
         if self.is_admin:
             return True
             
-        # O supervisor e o admin sempre têm permissão "frota"
-        if perm == "frota" and self.role == "supervisor":
+        # Normalização do nome da permissão para simplificar checagem de role-based defaults
+        raw_perm = perm[5:] if perm.startswith("perm_") else perm
+
+        # Role-based defaults (garante que as abas básicas apareçam por perfil mesmo se permissions estiver vazio)
+        if self.role == "manutencao" and raw_perm == "manutencao_os":
+            return True
+        if self.role == "tech" and raw_perm in ("checklist_mobile", "treinamentos_mobile"):
+            return True
+        if self.role == "supervisor" and raw_perm == "frota":
             return True
 
         if not self.permissions:
@@ -222,7 +229,6 @@ class User(UserMixin, db.Model):
                     return True
             else:
                 # Tenta sem o prefixo 'perm_' se foi passado com ele
-                raw_perm = perm[5:]
                 if p.get(raw_perm, False):
                     return True
             return False
