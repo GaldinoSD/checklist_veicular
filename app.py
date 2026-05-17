@@ -4460,18 +4460,571 @@ def supervisao_pdf(id):
         as_attachment=False,
         download_name=f"supervisao_campo_{id}.pdf"
     )
+@app.route("/api/gestao/relatorios/gerar", methods=["GET"])
+@supervisor_allowed
+def gestao_relatorios_gerar():
+    import io
+    import json
+    from flask import request, send_file, current_app
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.units import mm
+    from reportlab.lib import colors
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak, KeepTogether
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from datetime import datetime, date
 
+    report_type = request.args.get("type", "lms")
+    start_date_str = request.args.get("start_date")
+    end_date_str = request.args.get("end_date")
+    user_id_str = request.args.get("user_id")
 
+    if not start_date_str or not end_date_str:
+        return "Datas inicial e final são obrigatórias.", 400
 
-    p = RELATORIOS_DIR / nome
-    if p.exists():
-        p.unlink()
-        registrar_log(f"Relatório excluído: {nome}")
-        flash("Relatório excluído!", "success")
+    try:
+        start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
+        end_date = datetime.strptime(end_date_str, "%Y-%m-%d").date()
+    except ValueError:
+        return "Formato de data inválido. Use AAAA-MM-DD.", 400
+
+    user_id = int(user_id_str) if user_id_str else None
+    
+    # Fetch data based on report_type
+    records = []
+    title = ""
+    col_widths = []
+    headers = []
+    rows = []
+    summary_metrics = {}
+
+    start_datetime = datetime.combine(start_date, datetime.min.time())
+    end_datetime = datetime.combine(end_date, datetime.max.time())
+
+    if report_type == "lms":
+        title = "Relatório Consolidado de Treinamentos (LMS)"
+        query = TrainingAttempt.query.filter(
+            TrainingAttempt.completed_at >= start_datetime,
+            TrainingAttempt.completed_at <= end_datetime
+        )
+        if user_id:
+            query = query.filter(TrainingAttempt.user_id == user_id)
+        attempts = query.order_by(TrainingAttempt.completed_at.desc()).all()
+        
+        headers = ["Data", "Treinamento / Curso", "Colaborador", "Pontuação", "Resultado"]
+        col_widths = [30*mm, 55*mm, 45*mm, 25*mm, 25*mm]
+        
+        passed_count = 0
+        for att in attempts:
+            t_title = att.training.title if att.training else "N/A"
+            u_name = att.user.username if att.user else "N/A"
+            res = "Aprovado" if att.passed else "Reprovado"
+            if att.passed:
+                passed_count += 1
+            
+            rows.append([
+                att.completed_at.strftime("%d/%m/%Y %H:%M"),
+                t_title,
+                u_name,
+                f"{att.score or 0.0}%",
+                res
+            ])
+            
+        summary_metrics = {
+            "Total de Tentativas": len(attempts),
+            "Aprovados": passed_count,
+            "Reprovados": len(attempts) - passed_count,
+            "Taxa de Sucesso": f"{(passed_count / len(attempts) * 100):.1f}%" if attempts else "0.0%"
+        }
+
+    elif report_type == "supervisao":
+        title = "Relatório Consolidado de Supervisões Técnicas"
+        query = SupervisaoTecnica.query.filter(
+            SupervisaoTecnica.date >= start_date,
+            SupervisaoTecnica.date <= end_date
+        )
+        if user_id:
+            query = query.filter(SupervisaoTecnica.supervisor_id == user_id)
+        sups = query.order_by(SupervisaoTecnica.date.desc()).all()
+        
+        headers = ["Data/Hora", "Supervisor", "Colaboradores Supervisionados", "Ações/Plano", "Irregularidades"]
+        col_widths = [25*mm, 35*mm, 50*mm, 40*mm, 30*mm]
+        
+        for s in sups:
+            supervisor_name = s.supervisor.username if s.supervisor else "N/A"
+            techs = "N/A"
+            if s.techs_data:
+                try:
+                    if isinstance(s.techs_data, list):
+                        techs = ", ".join([f"{t.get('name', '')} ({t.get('status', '')})" for t in s.techs_data])
+                    else:
+                        techs = str(s.techs_data)
+                except Exception:
+                    techs = str(s.techs_data)
+            
+            rows.append([
+                f"{s.date.strftime('%d/%m/%Y')} {s.time or ''}",
+                supervisor_name,
+                techs,
+                s.action or "Nenhuma",
+                s.irregularities or "Nenhuma"
+            ])
+            
+        summary_metrics = {
+            "Total de Supervisões": len(sups),
+            "Período Analisado": f"{start_date.strftime('%d/%m/%Y')} a {end_date.strftime('%d/%m/%Y')}"
+        }
+
+    elif report_type == "rfo":
+        title = "Relatório Consolidado de Ocorrências (RFO)"
+        query = RFO.query.filter(
+            RFO.date >= start_date,
+            RFO.date <= end_date
+        )
+        if user_id:
+            u = User.query.get(user_id)
+            if u:
+                query = query.filter((RFO.tech_responsible == u.username) | (RFO.technicians_json.contains(str(user_id))))
+        rfos = query.order_by(RFO.date.desc()).all()
+        
+        headers = ["Número/Data", "Título/Tipo", "Causa Raiz", "Impacto", "Responsável"]
+        col_widths = [25*mm, 55*mm, 40*mm, 30*mm, 30*mm]
+        
+        for r in rfos:
+            rows.append([
+                f"{r.number or 'N/A'}\n{r.date.strftime('%d/%m/%Y')}",
+                f"{r.title or 'Sem Título'}\n({r.problem_type or 'N/A'})",
+                r.root_cause or "N/A",
+                r.impact or "N/A",
+                r.tech_responsible or "N/A"
+            ])
+            
+        summary_metrics = {
+            "Total de RFOs": len(rfos),
+            "Filtro Técnico": User.query.get(user_id).username if user_id else "Todos"
+        }
+
+    elif report_type == "atividades":
+        title = "Relatório de Vistorias e Atividades em Campo"
+        query = Activity.query.filter(
+            Activity.date >= start_date,
+            Activity.date <= end_date
+        )
+        if user_id:
+            query = query.filter(Activity.user_id == user_id)
+        acts = query.order_by(Activity.date.desc()).all()
+        
+        headers = ["Data/Hora", "Responsável", "Tipo / Cliente", "Localização", "Status"]
+        col_widths = [30*mm, 35*mm, 45*mm, 50*mm, 20*mm]
+        
+        for a in acts:
+            u_name = a.user.username if a.user else (a.tech_responsible or "N/A")
+            rows.append([
+                f"{a.date.strftime('%d/%m/%Y')} {a.time or ''}",
+                u_name,
+                f"{a.type or 'N/A'}\nCli: {a.client_name or 'N/A'}",
+                a.location or "N/A",
+                a.status or "ABERTO"
+            ])
+            
+        summary_metrics = {
+            "Total de Atividades": len(acts),
+            "Concluídas": sum(1 for a in acts if a.status == "CONCLUIDO"),
+            "Em Andamento": sum(1 for a in acts if a.status == "EM_ANDAMENTO"),
+            "Abertas": sum(1 for a in acts if a.status in ["ABERTO", "PENDENTE"])
+        }
+
+    elif report_type == "rota":
+        title = "Acompanhamento de Rota Exata (Consolidado)"
+        query = RotaExata.query.filter(
+            RotaExata.date >= start_date,
+            RotaExata.date <= end_date
+        )
+        if user_id:
+            query = query.filter(RotaExata.supervisor_id == user_id)
+        rotas = query.order_by(RotaExata.date.desc()).all()
+        
+        headers = ["Data", "Supervisor", "Ponto de Auditoria", "Técnicos Auditados", "Status"]
+        col_widths = [25*mm, 35*mm, 45*mm, 55*mm, 20*mm]
+        
+        for r in rotas:
+            sup_name = r.supervisor.username if r.supervisor else "N/A"
+            techs = "N/A"
+            if r.techs_data:
+                try:
+                    if isinstance(r.techs_data, list):
+                        techs = ", ".join([f"{t.get('name', '')}" for t in r.techs_data])
+                    else:
+                        techs = str(r.techs_data)
+                except Exception:
+                    techs = str(r.techs_data)
+            
+            rows.append([
+                r.date.strftime("%d/%m/%Y") if r.date else "N/A",
+                sup_name,
+                r.location or "N/A",
+                techs,
+                r.status or "PENDENTE"
+            ])
+            
+        summary_metrics = {
+            "Total de Rotas Auditadas": len(rotas),
+            "Filtro Supervisor": User.query.get(user_id).username if user_id else "Todos"
+        }
+
+    elif report_type == "reunioes":
+        title = "Relatório de Atas de Reunião"
+        query = Meeting.query.filter(
+            Meeting.date >= start_date,
+            Meeting.date <= end_date
+        )
+        meetings = query.order_by(Meeting.date.desc()).all()
+        
+        headers = ["Data/Hora", "Título / Assunto", "Local", "Responsável", "Status"]
+        col_widths = [25*mm, 60*mm, 35*mm, 35*mm, 25*mm]
+        
+        for m in meetings:
+            rows.append([
+                f"{m.date.strftime('%d/%m/%Y')} {m.time or ''}",
+                f"{m.title}\nAssunto: {m.subject or 'N/A'}",
+                m.location or "N/A",
+                m.responsible or "N/A",
+                m.status or "AGENDADA"
+            ])
+            
+        summary_metrics = {
+            "Total de Reuniões": len(meetings)
+        }
+
+    elif report_type == "escalas":
+        title = "Relatório de Escalas de Plantão"
+        query = Scale.query.filter(
+            Scale.date >= start_date,
+            Scale.date <= end_date
+        )
+        scales = query.order_by(Scale.date.desc()).all()
+        
+        headers = ["Data", "Tipo de Escala", "Equipe(s) / ID", "Plantonista(s)", "Observações"]
+        col_widths = [25*mm, 35*mm, 45*mm, 45*mm, 30*mm]
+        
+        for s in scales:
+            techs = "N/A"
+            if s.technician_ids:
+                try:
+                    ids = [int(x.strip()) for x in s.technician_ids.split(",") if x.strip().isdigit()]
+                    if ids:
+                        techs = ", ".join([u.username for u in User.query.filter(User.id.in_(ids))])
+                except Exception:
+                    techs = s.technician_ids
+            
+            teams = "N/A"
+            if s.team_ids:
+                try:
+                    ids = [int(x.strip()) for x in s.team_ids.split(",") if x.strip().isdigit()]
+                    if ids:
+                        teams = ", ".join([t.name for t in Team.query.filter(Team.id.in_(ids))])
+                except Exception:
+                    teams = s.team_ids
+            
+            rows.append([
+                s.date.strftime("%d/%m/%Y") if s.date else "N/A",
+                s.type or "Plantão",
+                teams,
+                techs,
+                s.obs or ""
+            ])
+            
+        summary_metrics = {
+            "Total de Escalas": len(scales)
+        }
+
+    elif report_type == "geradores":
+        title = "Relatório do Status de Geradores e Combustível"
+        query = Generator.query
+        if user_id:
+            query = query.filter(Generator.responsible_id == user_id)
+        gens = query.all()
+        
+        headers = ["Gerador", "Localização", "Capacidade", "Nível Atual", "Último Abastecimento"]
+        col_widths = [45*mm, 45*mm, 30*mm, 30*mm, 30*mm]
+        
+        for g in gens:
+            refill = g.last_refill_date.strftime("%d/%m/%Y") if g.last_refill_date else "N/A"
+            rows.append([
+                g.name,
+                g.location or "N/A",
+                f"{g.capacity_total or 0.0} L",
+                f"{g.current_qty or 0.0} L",
+                refill
+            ])
+            
+        summary_metrics = {
+            "Total de Geradores": len(gens),
+            "Combustível Total": f"{sum(g.current_qty or 0.0 for g in gens):.1f} L / {sum(g.capacity_total or 0.0 for g in gens):.1f} L"
+        }
+
+    elif report_type == "encerramento":
+        title = "Relatório Consolidado de Encerramentos Diários"
+        query = Encerramento.query.filter(
+            Encerramento.date >= start_date,
+            Encerramento.date <= end_date
+        )
+        encs = query.order_by(Encerramento.date.desc()).all()
+        
+        headers = ["Data", "Pátio", "Horário de Fechamento", "Técnicos Presentes", "Observações"]
+        col_widths = [25*mm, 35*mm, 40*mm, 50*mm, 30*mm]
+        
+        for e in encs:
+            p_name = e.patio.name if e.patio else "N/A"
+            techs = "N/A"
+            if e.technicians_json:
+                try:
+                    ids = json.loads(e.technicians_json)
+                    if isinstance(ids, list):
+                        techs = ", ".join([u.username for u in User.query.filter(User.id.in_([int(x) for x in ids]))])
+                except Exception:
+                    techs = str(e.technicians_json)
+                    
+            rows.append([
+                e.date.strftime("%d/%m/%Y") if e.date else "N/A",
+                p_name,
+                e.closing_time or "N/A",
+                techs,
+                e.obs or "Nenhum"
+            ])
+            
+        summary_metrics = {
+            "Total de Encerramentos": len(encs)
+        }
+
+    elif report_type == "anotacoes":
+        title = "Relatório de Anotações Técnicas"
+        query = Note.query.filter(
+            Note.event_date >= start_date,
+            Note.event_date <= end_date
+        )
+        if user_id:
+            query = query.filter(Note.user_id == user_id)
+        notes = query.order_by(Note.event_date.desc()).all()
+        
+        headers = ["Data Evento", "Título", "Categoria / Prioridade", "Criador", "Descrição"]
+        col_widths = [25*mm, 45*mm, 40*mm, 30*mm, 40*mm]
+        
+        for n in notes:
+            u_name = n.user.username if n.user else "N/A"
+            rows.append([
+                n.event_date.strftime("%d/%m/%Y") if n.event_date else "N/A",
+                n.title,
+                f"{n.category or 'N/A'}\n({n.priority or 'MEDIA'})",
+                u_name,
+                n.description or ""
+            ])
+            
+        summary_metrics = {
+            "Total de Anotações": len(notes)
+        }
+
+    elif report_type == "tarefas":
+        title = "Relatório Consolidado de Planos de Ação (Tarefas)"
+        query = Task.query.filter(
+            Task.deadline >= start_date,
+            Task.deadline <= end_date
+        )
+        if user_id:
+            query = query.filter(Task.responsible_id == user_id)
+        tasks = query.order_by(Task.deadline.desc()).all()
+        
+        headers = ["Prazo", "Título / Descrição", "Responsável", "Prioridade", "Status"]
+        col_widths = [25*mm, 70*mm, 35*mm, 25*mm, 25*mm]
+        
+        for t in tasks:
+            resp = t.responsible.username if t.responsible else "N/A"
+            rows.append([
+                t.deadline.strftime("%d/%m/%Y") if t.deadline else "N/A",
+                f"{t.title}\n{t.description or ''}",
+                resp,
+                t.priority or "MEDIA",
+                t.status or "PENDENTE"
+            ])
+            
+        summary_metrics = {
+            "Total de Tarefas": len(tasks),
+            "Concluídas": sum(1 for t in tasks if t.status == "CONCLUIDO"),
+            "Em Andamento": sum(1 for t in tasks if t.status == "EM_ANDAMENTO"),
+            "Pendentes": sum(1 for t in tasks if t.status in ["PENDENTE", "ABERTO"])
+        }
+
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        rightMargin=12*mm, leftMargin=12*mm,
+        topMargin=15*mm, bottomMargin=15*mm
+    )
+
+    styles = getSampleStyleSheet()
+    
+    # Custom styles
+    title_style = ParagraphStyle(
+        name="ConsolidatedTitle",
+        parent=styles["Heading1"],
+        fontName="Helvetica-Bold",
+        fontSize=15,
+        textColor=colors.HexColor("#0F172A"),
+        spaceAfter=15,
+        alignment=0
+    )
+    
+    label_style = ParagraphStyle(
+        name="ConsolidatedLabel",
+        parent=styles["Normal"],
+        fontName="Helvetica-Bold",
+        fontSize=8.5,
+        textColor=colors.HexColor("#475569")
+    )
+    
+    value_style = ParagraphStyle(
+        name="ConsolidatedValue",
+        parent=styles["Normal"],
+        fontName="Helvetica",
+        fontSize=8.5,
+        textColor=colors.HexColor("#1E293B")
+    )
+
+    cell_style = ParagraphStyle(
+        name="TableCell",
+        parent=styles["Normal"],
+        fontName="Helvetica",
+        fontSize=8,
+        leading=10,
+        textColor=colors.HexColor("#334155")
+    )
+
+    header_cell_style = ParagraphStyle(
+        name="TableHeaderCell",
+        parent=styles["Normal"],
+        fontName="Helvetica-Bold",
+        fontSize=8.5,
+        leading=10.5,
+        textColor=colors.white
+    )
+
+    story = []
+
+    # 1. Header Title
+    story.append(Paragraph(title, title_style))
+    story.append(Spacer(1, 4*mm))
+
+    # 2. General metadata and metrics grid
+    meta_table_data = []
+    # Row 1: Period and total records
+    meta_table_data.append([
+        Paragraph("<b>Período:</b>", label_style),
+        Paragraph(f"{start_date.strftime('%d/%m/%Y')} até {end_date.strftime('%d/%m/%Y')}", value_style),
+        Paragraph("<b>Emissão:</b>", label_style),
+        Paragraph(datetime.now().strftime("%d/%m/%Y %H:%M"), value_style)
+    ])
+    
+    # Row 2: dynamic metrics
+    metric_keys = list(summary_metrics.keys())
+    for idx in range(0, len(metric_keys), 2):
+        k1 = metric_keys[idx]
+        v1 = summary_metrics[k1]
+        row = [
+            Paragraph(f"<b>{k1}:</b>", label_style),
+            Paragraph(str(v1), value_style)
+        ]
+        if idx + 1 < len(metric_keys):
+            k2 = metric_keys[idx+1]
+            v2 = summary_metrics[k2]
+            row.extend([
+                Paragraph(f"<b>{k2}:</b>", label_style),
+                Paragraph(str(v2), value_style)
+            ])
+        else:
+            row.extend(["", ""])
+        meta_table_data.append(row)
+
+    meta_table = Table(meta_table_data, colWidths=[35*mm, 58*mm, 35*mm, 58*mm])
+    meta_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor("#F8FAFC")),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ('TOPPADDING', (0, 0), (-1, -1), 4),
+        ('LINEBELOW', (0, 0), (-1, -1), 0.5, colors.HexColor("#E2E8F0")),
+        ('BOX', (0, 0), (-1, -1), 1, colors.HexColor("#E2E8F0")),
+    ]))
+    story.append(meta_table)
+    story.append(Spacer(1, 8*mm))
+
+    # 3. Main Data Table
+    story.append(Paragraph("<b>Registros no Período</b>", styles["Heading2"]))
+    story.append(Spacer(1, 3*mm))
+
+    if not rows:
+        story.append(Spacer(1, 10*mm))
+        story.append(Paragraph("Nenhum registro encontrado para os filtros selecionados.", styles["Normal"]))
     else:
-        flash("Arquivo não encontrado.", "error")
+        formatted_table_data = []
+        # Header row
+        formatted_table_data.append([Paragraph(h, header_cell_style) for h in headers])
+        
+        # Data rows
+        for r in rows:
+            formatted_row = []
+            for item in r:
+                val = str(item or "").replace("\n", "<br/>")
+                formatted_row.append(Paragraph(val, cell_style))
+            formatted_table_data.append(formatted_row)
 
-    return redirect(url_for("reports"))
+        data_table = Table(formatted_table_data, colWidths=col_widths, repeatRows=1)
+        
+        t_style = [
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#4F46E5")),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+            ('TOPPADDING', (0, 0), (-1, -1), 5),
+            ('LEFTPADDING', (0, 0), (-1, -1), 5),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 5),
+            ('LINEBELOW', (0, 0), (-1, -1), 0.5, colors.HexColor("#F1F5F9")),
+            ('LINEBELOW', (0, 0), (-1, 0), 1.5, colors.HexColor("#312E81")),
+        ]
+        
+        for row_idx in range(1, len(formatted_table_data)):
+            if row_idx % 2 == 0:
+                t_style.append(('BACKGROUND', (0, row_idx), (-1, row_idx), colors.HexColor("#F8FAFC")))
+                
+        data_table.setStyle(TableStyle(t_style))
+        story.append(data_table)
+
+    story.append(Spacer(1, 15*mm))
+
+    # Signature validation
+    story.append(KeepTogether([
+        Spacer(1, 8*mm),
+        Table([
+            ["", ""],
+            ["_________________________________________", "_________________________________________"],
+            ["Gestão Operacional / Coordenação", "Validação Digital do Sistema (Auditado)"],
+        ], colWidths=[93*mm, 93*mm], style=TableStyle([
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('FONTNAME', (0, 2), (-1, 2), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 2), (-1, 2), 8.5),
+            ('TEXTCOLOR', (0, 2), (-1, 2), colors.HexColor("#64748B")),
+        ]))
+    ]))
+
+    doc.build(story)
+    buffer.seek(0)
+    
+    return send_file(
+        buffer,
+        mimetype="application/pdf",
+        as_attachment=False,
+        download_name=f"relatorio_consolidado_{report_type}.pdf"
+    )
 
 
 @app.route("/relatorios/upload", methods=["POST"])
