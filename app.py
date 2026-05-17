@@ -1011,12 +1011,12 @@ def supervisor_allowed(view):
 
 
 def manutencao_only(view):
-    """Apenas usuários de manutenção acessam esta rota."""
+    """Permite acesso se for admin, perfil manutencao ou tiver a permissão manutencao_os."""
     @wraps(view)
     def wrapper(*args, **kwargs):
         if not current_user.is_authenticated:
             return redirect(url_for("login"))
-        if current_user.is_manutencao:
+        if current_user.is_admin or current_user.is_manutencao or current_user.has_permission("manutencao_os"):
             return view(*args, **kwargs)
         flash("Página exclusiva da equipe de manutenção.", "info")
         if current_user.is_admin or current_user.is_supervisor:
