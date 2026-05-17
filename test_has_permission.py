@@ -1,7 +1,7 @@
 import json
 import unittest
 from unittest.mock import MagicMock
-from app import User, app, db
+from app import User, app, db, get_default_perms
 
 class TestUserHasPermission(unittest.TestCase):
     def setUp(self):
@@ -81,6 +81,31 @@ class TestUserHasPermission(unittest.TestCase):
         supervisor_empty = User(username="supervisor_empty", role="supervisor", permissions="{}")
         self.assertTrue(supervisor_empty.has_permission("frota"))
         self.assertFalse(supervisor_empty.has_permission("manutencao_os"))
+
+    def test_get_default_perms(self):
+        # Admin gets everything
+        admin_perms = get_default_perms("admin")
+        self.assertTrue(admin_perms["perm_dashboard"])
+        self.assertTrue(admin_perms["perm_usuarios"])
+        self.assertTrue(admin_perms["perm_frota"])
+        self.assertTrue(admin_perms["perm_monitoramento_aparelhos"])
+
+        # Supervisor gets everything except perm_usuarios
+        supervisor_perms = get_default_perms("supervisor")
+        self.assertTrue(supervisor_perms["perm_dashboard"])
+        self.assertFalse(supervisor_perms["perm_usuarios"])
+        self.assertTrue(supervisor_perms["perm_frota"])
+
+        # Tech gets checklist and training mobile
+        tech_perms = get_default_perms("tech")
+        self.assertTrue(tech_perms["perm_checklist_mobile"])
+        self.assertTrue(tech_perms["perm_treinamentos_mobile"])
+        self.assertFalse(tech_perms["perm_manutencao_os"])
+
+        # Manutencao gets manutencao_os
+        man_perms = get_default_perms("manutencao")
+        self.assertTrue(man_perms["perm_manutencao_os"])
+        self.assertFalse(man_perms["perm_checklist_mobile"])
 
 if __name__ == "__main__":
     unittest.main()

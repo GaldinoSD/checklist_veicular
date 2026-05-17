@@ -1002,12 +1002,14 @@ def admin_required(view):
 
 
 def supervisor_allowed(view):
-    """Admin + Supervisor podem acessar; técnico e manutenção NÃO."""
+    """Admin + Supervisor podem acessar, ou qualquer perfil com permissão explícita para o endpoint."""
     @wraps(view)
     def wrapper(*args, **kwargs):
         if not current_user.is_authenticated:
             return redirect(url_for("login"))
-        if current_user.is_admin or current_user.is_supervisor:
+        # Checa se o usuário é admin/supervisor OU possui a permissão com o mesmo nome do endpoint
+        endpoint_perm = request.endpoint
+        if current_user.is_admin or current_user.is_supervisor or (endpoint_perm and current_user.has_permission(endpoint_perm)):
             return view(*args, **kwargs)
         flash("Acesso restrito a supervisor ou administrador.", "error")
         if current_user.is_manutencao:
@@ -1402,6 +1404,38 @@ def users_pwd(uid):
     return redirect(url_for("users"))
 
 
+def get_default_perms(role):
+    possible_perms = [
+        "perm_dashboard", "perm_logs", "perm_relatorios", "perm_avisos",
+        "perm_usuarios", "perm_veiculos", "perm_controle_veiculos",
+        "perm_checklist_mobile", "perm_treinamentos_mobile", "perm_vistorias_nova",
+        "perm_avarias", "perm_checklists_view", "perm_config_checklist",
+        "perm_manutencao_os", "perm_vistorias_list",
+        "perm_frota", "perm_monitoramento_aparelhos", "perm_monitoramento_historico", "perm_monitoramento_config",
+        "perm_gestao_equipes", "perm_gestao_calendario", "perm_gestao_escalas",
+        "perm_gestao_reunioes", "perm_gestao_anotacoes", "perm_gestao_atividades",
+        "perm_gestao_encerramento", "perm_gestao_rfo", "perm_gestao_tarefas",
+        "perm_gestao_geradores", "perm_gestao_rota_exata", "perm_gestao_supervisao",
+        "perm_gestao_treinamentos", "perm_gestao_solicitacoes", "perm_gestao_relatorios"
+    ]
+    perms = {}
+    if role == "tech":
+        perms = {"perm_checklist_mobile": True, "perm_treinamentos_mobile": True}
+    elif role == "manutencao":
+        perms = {"perm_manutencao_os": True}
+    elif role == "supervisor":
+        perms = {p: True for p in possible_perms if p != "perm_usuarios"}
+    elif role == "admin":
+        perms = {p: True for p in possible_perms}
+    
+    # Preenche o restante com False explicitamente para consistência
+    for p in possible_perms:
+        if p not in perms:
+            perms[p] = False
+            
+    return perms
+
+
 @app.route("/usuarios/novo", methods=["POST"])
 @admin_required
 def users_new():
@@ -1419,21 +1453,7 @@ def users_new():
         flash("Usuário já existe.", "error")
         return redirect(url_for("users"))
 
-    # Define permissões padrão por papel (Sincronizado com perm_...)
-    perms = {}
-    if role == "tech":
-        perms = {"perm_checklist_mobile": True, "perm_treinamentos_mobile": True}
-    elif role == "manutencao":
-        perms = {"perm_manutencao_os": True}
-    elif role == "supervisor":
-        perms = {"perm_dashboard": True, "perm_relatorios": True, "perm_checklists_view": True}
-    elif role == "admin":
-        # Admin ganha tudo por padrão
-        perms = {
-            "perm_dashboard": True, "perm_logs": True, "perm_relatorios": True, "perm_avisos": True,
-            "perm_usuarios": True, "perm_veiculos": True, "perm_controle_veiculos": True,
-            "perm_checklist_mobile": True, "perm_treinamentos_mobile": True, "perm_manutencao_os": True
-        }
+    perms = get_default_perms(role)
 
     u = User(username=username, role=role, email=email, phone=phone, permissions=json.dumps(perms))
     u.set_password(password)
@@ -1463,13 +1483,7 @@ def users_role(uid):
     u.phone = phone
 
     # Ao mudar o papel, resetamos para as permissões padrão daquele papel
-    perms = {}
-    if role == "tech":
-        perms = {"perm_checklist_mobile": True, "perm_treinamentos_mobile": True}
-    elif role == "manutencao":
-        perms = {"perm_manutencao_os": True}
-    elif role == "supervisor":
-        perms = {"perm_dashboard": True, "perm_relatorios": True, "perm_checklists_view": True}
+    perms = get_default_perms(role)
     
     u.permissions = json.dumps(perms)
     db.session.commit()
@@ -1491,6 +1505,7 @@ def users_permissions(uid):
         "perm_checklist_mobile", "perm_treinamentos_mobile", "perm_vistorias_nova",
         "perm_avarias", "perm_checklists_view", "perm_config_checklist",
         "perm_manutencao_os", "perm_vistorias_list",
+        "perm_frota", "perm_monitoramento_aparelhos", "perm_monitoramento_historico", "perm_monitoramento_config",
         "perm_gestao_equipes", "perm_gestao_calendario", "perm_gestao_escalas",
         "perm_gestao_reunioes", "perm_gestao_anotacoes", "perm_gestao_atividades",
         "perm_gestao_encerramento", "perm_gestao_rfo", "perm_gestao_tarefas",

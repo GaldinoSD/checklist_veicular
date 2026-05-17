@@ -249,7 +249,7 @@
             
             <form method="post" action="{{ url_for('users_permissions', uid=u.id) }}" class="flex-1 flex flex-col overflow-hidden">
                 <div class="flex-1 overflow-y-auto p-6 custom-scrollbar">
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                         <!-- Auditoria -->
                         <div class="p-5 bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl">
                             <h4 class="text-xs font-black text-slate-500 uppercase tracking-widest mb-4"><i class="fa-solid fa-chart-pie mr-1"></i> Visão Geral e Auditoria</h4>
@@ -283,6 +283,17 @@
                                 <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_config_checklist" value="on" {% if u.has_permission('config_checklist') %}checked{% endif %} class="rounded text-purple-600 focus:ring-purple-500"> <span class="text-sm text-slate-700 dark:text-gray-300 group-hover:text-purple-600">Configuração de Checklists</span></label>
                                 <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_manutencao_os" value="on" {% if u.has_permission('manutencao_os') %}checked{% endif %} class="rounded text-purple-600 focus:ring-purple-500"> <span class="text-sm font-bold text-orange-600 dark:text-orange-400 group-hover:text-purple-600">Manutenção / OS</span></label>
                                 <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_vistorias_list" value="on" {% if u.has_permission('vistorias_list') %}checked{% endif %} class="rounded text-purple-600 focus:ring-purple-500"> <span class="text-sm text-slate-700 dark:text-gray-300 group-hover:text-purple-600">Painel de Vistorias</span></label>
+                            </div>
+                        </div>
+
+                        <!-- Monitoramento GPS -->
+                        <div class="p-5 bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl">
+                            <h4 class="text-xs font-black text-slate-500 uppercase tracking-widest mb-4"><i class="fa-solid fa-satellite-dish mr-1"></i> Monitoramento GPS</h4>
+                            <div class="space-y-3">
+                                <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_frota" value="on" {% if u.has_permission('frota') %}checked{% endif %} class="rounded text-purple-600 focus:ring-purple-500"> <span class="text-sm text-slate-700 dark:text-gray-300 group-hover:text-purple-600">Mapa ao Vivo</span></label>
+                                <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_monitoramento_aparelhos" value="on" {% if u.has_permission('monitoramento_aparelhos') %}checked{% endif %} class="rounded text-purple-600 focus:ring-purple-500"> <span class="text-sm text-slate-700 dark:text-gray-300 group-hover:text-purple-600">Aparelhos GPS</span></label>
+                                <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_monitoramento_historico" value="on" {% if u.has_permission('monitoramento_historico') %}checked{% endif %} class="rounded text-purple-600 focus:ring-purple-500"> <span class="text-sm text-slate-700 dark:text-gray-300 group-hover:text-purple-600">Histórico de Rotas</span></label>
+                                <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_monitoramento_config" value="on" {% if u.has_permission('monitoramento_config') %}checked{% endif %} class="rounded text-purple-600 focus:ring-purple-500"> <span class="text-sm text-slate-700 dark:text-gray-300 group-hover:text-purple-600">Configurações GPS</span></label>
                             </div>
                         </div>
                     </div>

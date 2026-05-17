@@ -312,7 +312,7 @@
             {% endfor %}
             {% endif %}
 
-          {% if current_user.has_permission('frota') %}
+          {% if current_user.has_permission('frota') or current_user.has_permission('monitoramento_aparelhos') or current_user.has_permission('monitoramento_historico') or current_user.has_permission('monitoramento_config') %}
           <!-- ✅ MONITORAMENTO COLLAPSIBLE -->
           <div class="space-y-1 mb-2">
             <button onclick="toggleSubmenu('submenu-monitoramento', this)" 
@@ -330,30 +330,38 @@
             </button>
             
             <div id="submenu-monitoramento" class="submenu-container {% if request.path.startswith('/monitoramento') or request.endpoint == 'tracking' %}open{% endif %} ml-4 border-l border-slate-900/5 dark:border-white/5 pl-2 space-y-1 mt-1">
+                {% if current_user.has_permission('frota') %}
                 <a href="{{ url_for('tracking') }}" 
                    class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-[12px] font-bold transition-all
                           {% if request.endpoint == 'tracking' %}text-teal-500 bg-teal-500/5{% else %}text-slate-500 dark:text-gray-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-900/5 dark:hover:bg-white/5{% endif %}">
                   <i class="fa-solid fa-map-location-dot w-4 text-center opacity-70"></i>
                   Mapa ao Vivo
                 </a>
+                {% endif %}
+                {% if current_user.has_permission('monitoramento_aparelhos') %}
                 <a href="{{ url_for('monitoramento_aparelhos') }}" 
                    class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-[12px] font-bold transition-all
                           {% if request.endpoint == 'monitoramento_aparelhos' %}text-teal-500 bg-teal-500/5{% else %}text-slate-500 dark:text-gray-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-900/5 dark:hover:bg-white/5{% endif %}">
                   <i class="fa-solid fa-microchip w-4 text-center opacity-70"></i>
                   Aparelhos GPS
                 </a>
+                {% endif %}
+                {% if current_user.has_permission('monitoramento_historico') %}
                 <a href="{{ url_for('monitoramento_historico') }}" 
                    class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-[12px] font-bold transition-all
                           {% if request.endpoint == 'monitoramento_historico' %}text-teal-500 bg-teal-500/5{% else %}text-slate-500 dark:text-gray-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-900/5 dark:hover:bg-white/5{% endif %}">
                   <i class="fa-solid fa-clock-rotate-left w-4 text-center opacity-70"></i>
                   Histórico de Rotas
                 </a>
+                {% endif %}
+                {% if current_user.has_permission('monitoramento_config') %}
                 <a href="{{ url_for('monitoramento_config') }}" 
                    class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-[12px] font-bold transition-all
                           {% if request.endpoint == 'monitoramento_config' %}text-teal-500 bg-teal-500/5{% else %}text-slate-500 dark:text-gray-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-900/5 dark:hover:bg-white/5{% endif %}">
                   <i class="fa-solid fa-gears w-4 text-center opacity-70"></i>
                   Configurações
                 </a>
+                {% endif %}
             </div>
           </div>
           {% endif %}
