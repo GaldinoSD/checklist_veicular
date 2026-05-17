@@ -6977,7 +6977,39 @@ def api_gestao_treinamentos_lms_publish(id):
         if not c:
             return jsonify({"error": "Treinamento não encontrado"}), 404
             
-        c.is_published = not c.is_published
+        c.is_published = True
+        
+        # Lê os parâmetros do corpo da requisição JSON (assign_all e user_ids)
+        req_data = request.get_json() or {}
+        assign_all = req_data.get("assign_all", False)
+        user_ids = req_data.get("user_ids", [])
+        
+        if assign_all:
+            # Seleciona todos os colaboradores ativos com o papel de técnicos (tech)
+            target_users = User.query.filter_by(role="tech").all()
+            target_user_ids = {u.id for u in target_users}
+        else:
+            target_user_ids = {int(uid) for uid in user_ids}
+            
+        # 1. Remove atribuições existentes que não estão na nova seleção
+        TrainingAssignment.query.filter(
+            TrainingAssignment.course_id == c.id,
+            ~TrainingAssignment.user_id.in_(list(target_user_ids))
+        ).delete(synchronize_session=False)
+        
+        # 2. Cria novas atribuições para os técnicos selecionados que ainda não as possuem
+        existing_assigns = TrainingAssignment.query.filter_by(course_id=c.id).all()
+        existing_user_ids = {a.user_id for a in existing_assigns}
+        
+        for uid in target_user_ids:
+            if uid not in existing_user_ids:
+                new_assign = TrainingAssignment(
+                    course_id=c.id,
+                    user_id=uid,
+                    status="pendente"
+                )
+                db.session.add(new_assign)
+                
         db.session.commit()
         return jsonify({"status": "ok", "is_published": c.is_published})
     except Exception as e:
