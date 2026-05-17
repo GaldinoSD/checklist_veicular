@@ -6827,6 +6827,251 @@ def api_comunicados_read(aid):
         db.session.commit()
     return jsonify({"status": "ok"})
 
+@app.route("/api/system/audit")
+@login_required
+def api_system_audit():
+    # Garantir que a regra training_alert exista no banco
+    rule_training = SystemRule.query.filter_by(slug="training_alert").first()
+    if not rule_training:
+        try:
+            rule_training = SystemRule(
+                slug="training_alert",
+                name="Aviso de Treinamento LMS",
+                description="Gera alertas individuais de treinamentos LMS pendentes ou vencendo apenas para os técnicos destinados.",
+                is_enabled=True
+            )
+            db.session.add(rule_training)
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+
+    # Coleta quais regras de automação estão habilitadas no banco
+    enabled_rules = {r.slug for r in SystemRule.query.filter_by(is_enabled=True).all()}
+
+    from datetime import date, datetime, timedelta
+    now_dt = agora()
+    today_dt = now_dt.date()
+    target_date = today_dt + timedelta(days=4)
+
+    checklists_reminded = 0
+    os_overdue = 0
+    scales_notified = 0
+    trainings_notified = 0
+
+    # 1. Automação de Escala & Plantão (scale_alert) - 4 dias antes
+    if "scale_alert" in enabled_rules:
+        # Encontra escalas ativas marcadas para hoje + 4 dias
+        scales = Scale.query.filter(Scale.date == target_date, Scale.status == "ATIVO").all()
+        for esc in scales:
+            title = f"📅 Plantão Confirmado: {esc.type}"
+            content = f"Olá, você está escalado para o plantão de '{esc.type}' no dia {target_date.strftime('%d/%m/%Y')} (daqui a 4 dias). obs: {esc.obs or 'Sem observações'}"
+            
+            # Resolve destinatários
+            tech_ids = set()
+            
+            # Por Equipe (team_ids ou team_id) - Envia somente para integrantes da equipe
+            if esc.team_ids:
+                team_ids_list = [int(x.strip()) for x in esc.team_ids.split(",") if x.strip().isdigit()]
+                for tid in team_ids_list:
+                    team = Team.query.get(tid)
+                    if team:
+                        for member in team.members:
+                            if member.role == "tech":
+                                tech_ids.add(member.id)
+            elif esc.team_id:
+                team = Team.query.get(esc.team_id)
+                if team:
+                    for member in team.members:
+                        if member.role == "tech":
+                            tech_ids.add(member.id)
+
+            # Individual (technician_ids ou user_id) - Envia somente para a pessoa destinada
+            if esc.technician_ids:
+                user_ids_list = [int(x.strip()) for x in esc.technician_ids.split(",") if x.strip().isdigit()]
+                for uid in user_ids_list:
+                    tech_ids.add(uid)
+            elif esc.user_id:
+                tech_ids.add(esc.user_id)
+
+            # Dispara notificações para todos os destinatários resolvidos
+            for uid in tech_ids:
+                # Verifica duplicados para evitar spam
+                exists = Announcement.query.filter_by(title=title, user_id=uid).first()
+                if not exists:
+                    ann = Announcement(
+                        title=title,
+                        content=content,
+                        user_id=uid,
+                        expires_at=datetime.combine(target_date, datetime.max.time()),
+                        created_by=None
+                    )
+                    db.session.add(ann)
+                    scales_notified += 1
+
+    # 2. Automação de Feriados, Sábados e Domingos (late_checklist / auditoria geral) - 4 dias antes
+    if "late_checklist" in enabled_rules:
+        # Feriado Check (4 dias antes)
+        import holidays
+        years = [target_date.year]
+        h_dict = holidays.Brazil(subdiv="RJ", years=years)
+        
+        # Feriados Municipais de Seropédica
+        for y in years:
+            h_dict[date(y, 6, 13)] = "Santo Antônio (Padroeiro)"
+            # Corpus Christi
+            a = y % 19
+            b = y // 100
+            c = y % 100
+            d = b // 4
+            e = b % 4
+            f = (b + 8) // 25
+            g = (b - f + 1) // 3
+            h = (19 * a + b - d - g + 15) % 30
+            i = c // 4
+            k = c % 4
+            l = (32 + 2 * e + 2 * i - h - k) % 7
+            m = (a + 11 * h + 22 * l) // 451
+            month = (h + l - 7 * m + 114) // 31
+            day = ((h + l - 7 * m + 114) % 31) + 1
+            easter_date = date(y, month, day)
+            corpus_christi = easter_date + timedelta(days=60)
+            h_dict[corpus_christi] = "Corpus Christi"
+            # Emancipação
+            h_dict.pop(date(y, 10, 12), None)
+            h_dict[date(y, 10, 12)] = "N. Sra Aparecida / Emancipação"
+
+        if target_date in h_dict:
+            h_name = h_dict[target_date]
+            title = f"🎉 Feriado Próximo: {h_name}"
+            content = f"Prezados, informamos que no dia {target_date.strftime('%d/%m/%Y')} (daqui a 4 dias) será feriado: {h_name}. Programe-se!"
+            
+            # Verifica duplicado global (target_role == "all")
+            exists = Announcement.query.filter_by(title=title, target_role="all").first()
+            if not exists:
+                ann = Announcement(
+                    title=title,
+                    content=content,
+                    target_role="all",
+                    expires_at=datetime.combine(target_date, datetime.max.time()),
+                    created_by=None
+                )
+                db.session.add(ann)
+                checklists_reminded += 1
+
+        # Alerta de final de semana (sábado/domingo daqui a 4 dias)
+        if target_date.weekday() in {5, 6}:
+            day_name = "Sábado" if target_date.weekday() == 5 else "Domingo"
+            title = f"📢 Plantão de Fim de Semana ({day_name})"
+            content = f"Atenção equipe! O próximo {day_name} ({target_date.strftime('%d/%m/%Y')}) terá escala operacional. Verifique sua designação na aba Escalas do sistema."
+            
+            # Envia globalmente para os técnicos
+            exists = Announcement.query.filter_by(title=title, target_role="tech").first()
+            if not exists:
+                ann = Announcement(
+                    title=title,
+                    content=content,
+                    target_role="tech",
+                    expires_at=datetime.combine(target_date, datetime.max.time()),
+                    created_by=None
+                )
+                db.session.add(ann)
+                checklists_reminded += 1
+
+        # Lembrete de Checklist diário não preenchido por técnicos de plantão hoje
+        today_scales = Scale.query.filter(Scale.date == today_dt, Scale.status == "ATIVO").all()
+        for esc in today_scales:
+            tech_ids = set()
+            if esc.technician_ids:
+                user_ids_list = [int(x.strip()) for x in esc.technician_ids.split(",") if x.strip().isdigit()]
+                for uid in user_ids_list:
+                    tech_ids.add(uid)
+            elif esc.user_id:
+                tech_ids.add(esc.user_id)
+                
+            for uid in tech_ids:
+                u = User.query.get(uid)
+                if u:
+                    # Verifica se ele realizou algum checklist hoje
+                    checklist_done = Checklist.query.filter(
+                        Checklist.technician == u.username,
+                        db.func.date(Checklist.date) == today_dt
+                    ).first()
+                    if not checklist_done:
+                        title = f"🔔 Lembrete: Checklist Diário Pendente"
+                        content = f"Olá {u.username.capitalize()}, você está de plantão hoje e ainda não enviou o Checklist Veicular regulamentar. Por favor, realize a inspeção do seu veículo antes de iniciar a rota."
+                        
+                        exists = Announcement.query.filter_by(title=title, user_id=u.id).filter(
+                            db.func.date(Announcement.created_at) == today_dt
+                        ).first()
+                        if not exists:
+                            ann = Announcement(
+                                title=title,
+                                content=content,
+                                user_id=u.id,
+                                expires_at=datetime.combine(today_dt, datetime.max.time()),
+                                created_by=None
+                            )
+                            db.session.add(ann)
+                            checklists_reminded += 1
+
+    # 3. Automação de Treinamento LMS (training_alert) - apenas para os participantes destinados
+    if "training_alert" in enabled_rules:
+        # Treinamentos com status pendente ou em andamento
+        assignments = TrainingAssignment.query.filter(
+            TrainingAssignment.status.in_({"pendente", "em_andamento"})
+        ).all()
+        for assign in assignments:
+            course = assign.course
+            user = assign.user
+            if course and user:
+                title = f"🎓 Treinamento Pendente: {course.title}"
+                content = f"Olá {user.username.capitalize()}, lembramos que o treinamento '{course.title}' está associado ao seu perfil com status '{assign.status}'. Por favor, realize sua capacitação no portal LMS."
+                
+                # Evita spam
+                exists = Announcement.query.filter_by(title=title, user_id=user.id).first()
+                if not exists:
+                    ann = Announcement(
+                        title=title,
+                        content=content,
+                        user_id=user.id,
+                        expires_at=datetime.combine(course.deadline or (today_dt + timedelta(days=7)), datetime.max.time()),
+                        created_by=None
+                    )
+                    db.session.add(ann)
+                    trainings_notified += 1
+
+    # 4. Monitor de SLA & Alertas de OS (os_sla ou os_alert) - OS abertas > 7d
+    if "os_sla" in enabled_rules or "os_alert" in enabled_rules:
+        overdue_os_list = AvariaOS.query.filter(
+            AvariaOS.status == "aberta",
+            AvariaOS.data_abertura < (now_dt - timedelta(days=7))
+        ).all()
+        for os_obj in overdue_os_list:
+            resp = os_obj.responsavel
+            veh = os_obj.vehicle
+            if resp and veh:
+                title = f"⚠️ O.S. Atrasada: #{os_obj.id}"
+                content = f"Olá {resp.username.capitalize()}, a Ordem de Serviço #{os_obj.id} para o veículo {veh.plate} está pendente há mais de 7 dias (desde {os_obj.data_abertura.strftime('%d/%m/%Y')}). Por favor, forneça uma atualização de status."
+                
+                exists = Announcement.query.filter_by(title=title, user_id=resp.id).first()
+                if not exists:
+                    ann = Announcement(
+                        title=title,
+                        content=content,
+                        user_id=resp.id,
+                        created_by=None
+                    )
+                    db.session.add(ann)
+                    os_overdue += 1
+
+    db.session.commit()
+    return jsonify({
+        "checklists_reminded": checklists_reminded,
+        "os_overdue": os_overdue,
+        "scales_notified": scales_notified,
+        "trainings_notified": trainings_notified
+    })
+
 @app.route("/api/manuais/help")
 @login_required
 def api_manuais_help():
