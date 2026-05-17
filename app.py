@@ -2479,31 +2479,26 @@ def reports_generate():
         pagesize=A4,
         rightMargin=15 * mm,
         leftMargin=15 * mm,
-        topMargin=20 * mm,
-        bottomMargin=20 * mm
+        topMargin=45 * mm,
+        bottomMargin=40 * mm
     )
 
     elements = []
-
-    # Cabeçalho / Título do Relatório
-    elements.append(Paragraph("<b>RELATÓRIO CONSOLIDADO DE FROTA</b>", styles["ReportTitle"]))
-    elements.append(Spacer(1, 5))
 
     # Informações do Veículo & Período
     meta_info = [
         ["Veículo / Modelo", f"{v.brand or ''} {v.model or ''} ({v.year or 'N/A'})"],
         ["Placa", v.plate],
         ["KM Atual", f"{v.km or 0} KM"],
-        ["Período", f"{start_date.strftime('%d/%m/%Y')} até {end_date.strftime('%d/%m/%Y')}"],
-        ["Emissão", agora().strftime("%d/%m/%Y %H:%M:%S")]
+        ["Período", f"{start_date.strftime('%d/%m/%Y')} até {end_date.strftime('%d/%m/%Y')}"]
     ]
     meta_table = Table(meta_info, colWidths=[50 * mm, 130 * mm])
     meta_table.setStyle(TableStyle([
         ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#CCCCCC")),
-        ("BACKGROUND", (0, 0), (0, -1), colors.HexColor("#F4F4F4")),
+        ("BACKGROUND", (0, 0), (0, -1), colors.HexColor("#F8FAFC")),
         ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
         ("FONTSIZE", (0, 0), (-1, -1), 9),
-        ("PADDING", (0, 0), (-1, -1), 4),
+        ("PADDING", (0, 0), (-1, -1), 6),
         ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
     ]))
     elements.append(meta_table)
@@ -2631,13 +2626,69 @@ def reports_generate():
         elements.append(Paragraph("Nenhuma movimentação de entrada/saída registrada no período.", styles["TableText"]))
 
     # Rodapé / Assinatura
-    elements.append(Spacer(1, 20))
+    elements.append(Spacer(1, 10))
     elements.append(Paragraph("----------------------------------------------------------------------------------------------------------------------------------", styles["TableText"]))
     elements.append(Spacer(1, 5))
     elements.append(Paragraph("<font color='#666666'>Relatório emitido pela plataforma de Checklist Veicular. Todos os dados são auditados e protegidos.</font>", styles["TableText"]))
 
+    def draw_background(c, doc_obj):
+        width, height = A4
+        logo_path = "/var/www/checklist_veicular/logo.png"
+        RODAPE_LINHAS = [
+            "ADAPT LINK SERVIÇOS EM COMUNICAÇÃO MULTIMÍDIA EIRELI",
+            "CNPJ: 08.980.148/0001-41       Inscr. Est.: 78.342.480",
+            "Rua Waldir Pedro de Medeiros, 253 – São Miguel – Seropédica – RJ",
+            "CEP: 23.893-725",
+            "Tel.: (21) 3812-5900 / (21) 2682-7822",
+            "WWW.ADAPTLINK.COM.BR",
+        ]
+        
+        # 1. Cabeçalho / Logotipo
+        if os.path.exists(logo_path):
+            try:
+                from reportlab.lib.utils import ImageReader
+                logo = ImageReader(logo_path)
+                c.drawImage(logo, 20, height - 60, width=60, height=25, preserveAspectRatio=True, mask="auto")
+            except Exception as e:
+                print("⚠️ Erro ao carregar logo no header frota:", e)
+
+        # 2. Título Centralizado
+        c.setFont("Helvetica-Bold", 14)
+        c.setFillColor(colors.HexColor("#0F172A"))
+        c.drawCentredString(width / 2, height - 40, "RELATÓRIO CONSOLIDADO DE FROTA")
+        c.setFont("Helvetica", 11)
+        c.drawCentredString(width / 2, height - 55, "Registro Formal – AdaptLink")
+
+        # 3. Linha Azul Divisória Premium
+        c.setStrokeColor(colors.HexColor("#1F3C78"))
+        c.setLineWidth(2)
+        c.line(20, height - 65, width - 20, height - 65)
+
+        # 4. Metadados do topo: Emitido em / Número do Relatório
+        c.setFont("Helvetica", 8)
+        c.setFillColor(colors.HexColor("#475569"))
+        now_str = agora().strftime("%d/%m/%Y %H:%M")
+        c.drawString(25, height - 75, f"Emitido em: {now_str}")
+        c.drawRightString(width - 25, height - 75, f"Placa: {v.plate}")
+
+        # 5. Rodapé Institucional AdaptLink
+        c.setStrokeColor(colors.HexColor("#E2E8F0"))
+        c.setLineWidth(0.8)
+        c.line(25, 90, width - 25, 90)
+        
+        c.setFont("Helvetica", 7)
+        c.setFillColor(colors.HexColor("#475569"))
+        y_footer = 75
+        for linha in RODAPE_LINHAS:
+            c.drawCentredString(width / 2, y_footer, linha)
+            y_footer -= 9
+        
+        # Paginação
+        c.setFont("Helvetica-Oblique", 8)
+        c.drawRightString(width - 25, 30, f"Página {c.getPageNumber()}")
+
     try:
-        doc.build(elements)
+        doc.build(elements, onFirstPage=draw_background, onLaterPages=draw_background)
         registrar_log(f"Relatório Consolidado de Frota gerado: {filename} (Veículo: {v.plate})")
         flash("✅ Relatório consolidado gerado com sucesso!", "success")
     except Exception as e:
@@ -5186,21 +5237,10 @@ def gestao_relatorios_gerar():
         buffer,
         pagesize=A4,
         rightMargin=12*mm, leftMargin=12*mm,
-        topMargin=15*mm, bottomMargin=15*mm
+        topMargin=45*mm, bottomMargin=40*mm
     )
 
     styles = getSampleStyleSheet()
-    
-    # Custom styles
-    title_style = ParagraphStyle(
-        name="ConsolidatedTitle",
-        parent=styles["Heading1"],
-        fontName="Helvetica-Bold",
-        fontSize=15,
-        textColor=colors.HexColor("#0F172A"),
-        spaceAfter=15,
-        alignment=0
-    )
     
     label_style = ParagraphStyle(
         name="ConsolidatedLabel",
@@ -5237,10 +5277,6 @@ def gestao_relatorios_gerar():
     )
 
     story = []
-
-    # 1. Header Title
-    story.append(Paragraph(title, title_style))
-    story.append(Spacer(1, 4*mm))
 
     # 2. General metadata and metrics grid
     meta_table_data = []
@@ -5344,7 +5380,67 @@ def gestao_relatorios_gerar():
         ]))
     ]))
 
-    doc.build(story)
+    logo_path = "logo.png"
+    if not os.path.exists(logo_path):
+        logo_path = "/var/www/checklist_veicular/logo.png"
+
+    RODAPE_LINHAS = [
+        "ADAPT LINK SERVIÇOS EM COMUNICAÇÃO MULTIMÍDIA EIRELI",
+        "CNPJ: 08.980.148/0001-41       Inscr. Est.: 78.342.480",
+        "Rua Waldir Pedro de Medeiros, 253 – São Miguel – Seropédica – RJ",
+        "CEP: 23.893-725",
+        "Tel.: (21) 3812-5900 / (21) 2682-7822",
+        "WWW.ADAPTLINK.COM.BR",
+    ]
+
+    def draw_background(c, doc_obj):
+        width, height = A4
+        
+        # 1. Cabeçalho / Logotipo
+        if os.path.exists(logo_path):
+            try:
+                from reportlab.lib.utils import ImageReader
+                logo = ImageReader(logo_path)
+                c.drawImage(logo, 20, height - 60, width=60, height=25, preserveAspectRatio=True, mask="auto")
+            except Exception as e:
+                print("⚠️ Erro ao carregar logo no header consolidado:", e)
+
+        # 2. Título Centralizado
+        c.setFont("Helvetica-Bold", 14)
+        c.setFillColor(colors.HexColor("#0F172A"))
+        c.drawCentredString(width / 2, height - 40, title.upper())
+        c.setFont("Helvetica", 11)
+        c.drawCentredString(width / 2, height - 55, "Registro Formal – AdaptLink")
+
+        # 3. Linha Azul Divisória Premium
+        c.setStrokeColor(colors.HexColor("#1F3C78"))
+        c.setLineWidth(2)
+        c.line(20, height - 65, width - 20, height - 65)
+
+        # 4. Metadados do topo: Emitido em / Período
+        c.setFont("Helvetica", 8)
+        c.setFillColor(colors.HexColor("#475569"))
+        now_str = datetime.now().strftime("%d/%m/%Y %H:%M")
+        c.drawString(25, height - 75, f"Emitido em: {now_str}")
+        c.drawRightString(width - 25, height - 75, f"Período: {start_date.strftime('%d/%m/%Y')} a {end_date.strftime('%d/%m/%Y')}")
+
+        # 5. Rodapé Institucional AdaptLink
+        c.setStrokeColor(colors.HexColor("#E2E8F0"))
+        c.setLineWidth(0.8)
+        c.line(25, 90, width - 25, 90)
+        
+        c.setFont("Helvetica", 7)
+        c.setFillColor(colors.HexColor("#475569"))
+        y_footer = 75
+        for linha in RODAPE_LINHAS:
+            c.drawCentredString(width / 2, y_footer, linha)
+            y_footer -= 9
+        
+        # Paginação
+        c.setFont("Helvetica-Oblique", 8)
+        c.drawRightString(width - 25, 30, f"Página {c.getPageNumber()}")
+
+    doc.build(story, onFirstPage=draw_background, onLaterPages=draw_background)
     buffer.seek(0)
     
     return send_file(
