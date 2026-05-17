@@ -425,39 +425,199 @@ class Generator(db.Model):
     __tablename__ = "generator"
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False)
-    model = db.Column(db.String(100))
-    serial_number = db.Column(db.String(100))
     location = db.Column(db.String(200))
-    last_maintenance = db.Column(db.DateTime)
+    capacity_total = db.Column(db.Float)
+    current_qty = db.Column(db.Float)
+    fuel_type = db.Column(db.String(50))
+    last_refill_date = db.Column(db.Date)
+    responsible_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="SET NULL"), nullable=True)
+    responsible = db.relationship("User", backref="generators")
     status = db.Column(db.String(20), default="OPERACIONAL")
+    obs = db.Column(db.Text)
+    reserve_cans = db.Column(db.Integer)
+    reserve_liters = db.Column(db.Float)
 
 class RFO(db.Model):
     __tablename__ = "rfo"
     id = db.Column(db.Integer, primary_key=True)
+    number = db.Column(db.String(50))
     title = db.Column(db.String(200))
+    date = db.Column(db.Date)
+    start_time = db.Column(db.String(50))
+    end_time = db.Column(db.String(50))
+    city = db.Column(db.String(100))
+    neighborhood = db.Column(db.String(100))
+    lat = db.Column(db.String(50))
+    lon = db.Column(db.String(50))
     description = db.Column(db.Text)
-    generator_id = db.Column(db.Integer, db.ForeignKey("generator.id"))
-    technician_id = db.Column(db.Integer, db.ForeignKey("user.id"))
+    root_cause = db.Column(db.Text)
+    impact = db.Column(db.Text)
+    action = db.Column(db.Text)
+    team_id = db.Column(db.Integer, db.ForeignKey("team.id", ondelete="SET NULL"), nullable=True)
+    team = db.relationship("Team", backref="rfos")
+    technicians_json = db.Column(db.Text)
+    photos_json = db.Column(db.Text)
     status = db.Column(db.String(20), default="ABERTO")
-    priority = db.Column(db.String(20), default="MEDIA")
-    created_at = db.Column(db.DateTime, default=agora)
-    pdf_path = db.Column(db.String(255))
+    problem_type = db.Column(db.String(200))
+    tech_responsible = db.Column(db.String(200))
+
+class Solicitacao(db.Model):
+    __tablename__ = "solicitacao"
+    id = db.Column(db.Integer, primary_key=True)
+    type = db.Column(db.String(100))
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="SET NULL"), nullable=True)
+    user = db.relationship("User", backref="solicitacoes")
+    date = db.Column(db.DateTime, default=agora)
+    description = db.Column(db.Text)
+    status = db.Column(db.String(20), default="PENDENTE")
+    management_response = db.Column(db.Text)
+    obs = db.Column(db.Text)
+
+class SupervisaoTecnica(db.Model):
+    __tablename__ = "supervisao_tecnica"
+    id = db.Column(db.Integer, primary_key=True)
+    supervisor_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="SET NULL"), nullable=True)
+    supervisor = db.relationship("User", backref="supervisoes_tecnicas")
+    date = db.Column(db.Date)
+    time = db.Column(db.String(10))
+    checklist_json = db.Column(db.Text)
+    irregularities = db.Column(db.Text)
+    action = db.Column(db.Text)
+    obs = db.Column(db.Text)
+    photos_json = db.Column(db.Text)
+    date_created = db.Column(db.DateTime, default=agora)
+    techs_data = db.Column(db.JSON)
+
+class RotaExata(db.Model):
+    __tablename__ = "rota_exata"
+    id = db.Column(db.Integer, primary_key=True)
+    supervisor_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="SET NULL"), nullable=True)
+    supervisor = db.relationship("User", backref="rotas_exatas")
+    date = db.Column(db.Date)
+    time = db.Column(db.String(10))
+    location = db.Column(db.String(200))
+    obs = db.Column(db.Text)
+    status = db.Column(db.String(20), default="PENDENTE")
+    photos_json = db.Column(db.Text)
+    date_created = db.Column(db.DateTime, default=agora)
+    techs_data = db.Column(db.JSON)
+
+# Tabela Associativa N:N para Equipes e Técnicos
+team_members = db.Table(
+    "team_members",
+    db.Column("team_id", db.Integer, db.ForeignKey("team.id", ondelete="CASCADE"), primary_key=True),
+    db.Column("user_id", db.Integer, db.ForeignKey("user.id", ondelete="CASCADE"), primary_key=True)
+)
 
 class Team(db.Model):
     __tablename__ = "team"
     id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100))
-    leader_id = db.Column(db.Integer, db.ForeignKey("user.id"))
+    name = db.Column(db.String(100), nullable=False)
+    color = db.Column(db.String(20))
+    obs = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=agora)
+    rotation_order = db.Column(db.Integer, default=0)
+    
+    # Relação many-to-many
+    members = db.relationship("User", secondary=team_members, backref=db.backref("teams", lazy="dynamic"))
 
 class Task(db.Model):
     __tablename__ = "task"
     id = db.Column(db.Integer, primary_key=True)
-    title = db.Column(db.String(200))
+    title = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text)
-    assigned_to = db.Column(db.Integer, db.ForeignKey("user.id"))
-    due_date = db.Column(db.DateTime)
+    responsible_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="SET NULL"), nullable=True)
+    responsible = db.relationship("User", backref="tasks")
+    priority = db.Column(db.String(20), default="MEDIA")
+    deadline = db.Column(db.Date)
     status = db.Column(db.String(20), default="PENDENTE")
-    contract_id = db.Column(db.Integer, db.ForeignKey("contract.id"), nullable=True)
+    obs = db.Column(db.Text)
+
+class Patio(db.Model):
+    __tablename__ = "patio"
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    location = db.Column(db.String(200))
+
+class Encerramento(db.Model):
+    __tablename__ = "encerramento"
+    id = db.Column(db.Integer, primary_key=True)
+    patio_id = db.Column(db.Integer, db.ForeignKey("patio.id", ondelete="SET NULL"), nullable=True)
+    patio = db.relationship("Patio", backref=db.backref("encerramentos", lazy=True))
+    date = db.Column(db.Date)
+    closing_time = db.Column(db.String(50))
+    technicians_json = db.Column(db.Text) # Lista de técnicos em JSON
+    obs = db.Column(db.Text)
+    patios_json = db.Column(db.Text)
+
+class Scale(db.Model):
+    __tablename__ = "scale"
+    id = db.Column(db.Integer, primary_key=True)
+    type = db.Column(db.String(50))
+    date = db.Column(db.Date)
+    team_id = db.Column(db.Integer, db.ForeignKey("team.id", ondelete="SET NULL"), nullable=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="SET NULL"), nullable=True)
+    obs = db.Column(db.Text)
+    status = db.Column(db.String(20), default="ATIVO")
+    technician_ids = db.Column(db.Text) # IDs de técnicos separados por vírgula
+    team_ids = db.Column(db.Text) # IDs de equipes separadas por vírgula
+
+class Meeting(db.Model):
+    __tablename__ = "meeting"
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(200), nullable=False)
+    subject = db.Column(db.String(200))
+    date = db.Column(db.Date)
+    time = db.Column(db.String(10))
+    location = db.Column(db.String(200))
+    participants = db.Column(db.Text) # IDs de técnicos separados por vírgula
+    obs = db.Column(db.Text)
+    status = db.Column(db.String(20), default="AGENDADA")
+    responsible = db.Column(db.String(200))
+    objective = db.Column(db.Text)
+    summary = db.Column(db.Text)
+    actions = db.Column(db.Text)
+
+class Note(db.Model):
+    __tablename__ = "note"
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(200), nullable=False)
+    category = db.Column(db.String(100))
+    description = db.Column(db.Text)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="CASCADE"))
+    user = db.relationship("User", backref="notes")
+    date = db.Column(db.DateTime, default=agora)
+    priority = db.Column(db.String(20), default="MEDIA")
+    event_date = db.Column(db.Date)
+
+class Activity(db.Model):
+    __tablename__ = "activity"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="SET NULL"), nullable=True)
+    user = db.relationship("User", backref="activities")
+    type = db.Column(db.String(100))
+    location = db.Column(db.String(200))
+    date = db.Column(db.Date)
+    time = db.Column(db.String(10))
+    description = db.Column(db.Text)
+    status = db.Column(db.String(20), default="ABERTO")
+    photos_json = db.Column(db.Text)
+    obs = db.Column(db.Text)
+    tech_responsible = db.Column(db.String(120))
+    client_name = db.Column(db.String(200))
+    client_code = db.Column(db.String(50))
+    quality_rating = db.Column(db.String(50))
+    client_feedback = db.Column(db.Text)
+    os_closure = db.Column(db.String(20))
+    conclusion = db.Column(db.Text)
+
+class SystemRule(db.Model):
+    __tablename__ = "system_rule"
+    id = db.Column(db.Integer, primary_key=True)
+    slug = db.Column(db.String(50), unique=True)
+    name = db.Column(db.String(100))
+    description = db.Column(db.String(255))
+    is_enabled = db.Column(db.Boolean, default=True)
 
 # ===============================
 # 🏢 CONTRATOS E CLIENTES
@@ -639,6 +799,11 @@ class SystemConfig(db.Model):
     __tablename__ = "system_config"
     id = db.Column(db.Integer, primary_key=True)
     mode = db.Column(db.String(20), default="start_only")
+    
+    # Configuração de Escala
+    scale_start_date = db.Column(db.Date)
+    scale_start_team_id = db.Column(db.Integer)
+    scale_rotation_order = db.Column(db.String(255))
     
     # Telemetria Parâmetros
     speed_limit = db.Column(db.Integer, default=80)
@@ -2236,78 +2401,1290 @@ def gestao_tecnica():
     return render_template("gestao_tecnica.html", tecnicos=tecnicos, tecnicos_js_data=tecnicos_js_data)
 
 
+# --- AUXILIARES E USUÁRIOS ---
+@app.route("/api/gestao/users", methods=["GET"])
+@login_required
+def api_gestao_users():
+    users = User.query.order_by(User.username.asc()).all()
+    return jsonify([{"id": u.id, "username": u.username} for u in users])
+
+# --- CONFIGURAÇÃO GLOBAL DE ESCALAS ---
+@app.route("/api/gestao/config", methods=["GET", "POST"])
+@supervisor_allowed
+def api_gestao_config():
+    config = SystemConfig.query.first()
+    if not config:
+        config = SystemConfig()
+        db.session.add(config)
+        db.session.commit()
+    
+    if request.method == "POST":
+        data = request.json or {}
+        scale_start_date_str = data.get("scale_start_date")
+        if scale_start_date_str:
+            config.scale_start_date = datetime.strptime(scale_start_date_str, "%Y-%m-%d").date()
+        config.scale_rotation_order = data.get("scale_rotation_order")
+        db.session.commit()
+        return jsonify({"status": "ok"})
+    
+    return jsonify({
+        "scale_start_date": str(config.scale_start_date) if config.scale_start_date else "",
+        "scale_rotation_order": config.scale_rotation_order or ""
+    })
+
 # --- GERADORES ---
 @app.route("/api/gestao/geradores", methods=["GET", "POST"])
+@app.route("/api/gestao/geradores/<int:id>", methods=["PUT", "DELETE"])
 @supervisor_allowed
-def api_geradores():
-    if request.method == "POST":
-        data = request.json
-        gid = data.get("id")
+def api_geradores(id=None):
+    if request.method == "DELETE" or (request.method == "POST" and id):
+        # Suporta delete por POST ou DELETE
+        target_id = id or request.json.get("id")
+        g = Generator.query.get_or_404(target_id)
+        db.session.delete(g)
+        db.session.commit()
+        return jsonify({"status": "ok"})
+
+    if request.method in ["POST", "PUT"]:
+        data = request.json or {}
+        gid = id or data.get("id")
         if gid:
             g = Generator.query.get(gid)
+            if not g:
+                return jsonify({"error": "Gerador não encontrado"}), 404
         else:
             g = Generator()
             db.session.add(g)
         
         g.name = data.get("name")
-        g.model = data.get("model")
-        g.serial_number = data.get("serial_number")
         g.location = data.get("location")
+        g.capacity_total = float(data.get("capacity_total")) if data.get("capacity_total") else None
+        g.current_qty = float(data.get("current_qty")) if data.get("current_qty") else None
+        g.fuel_type = data.get("fuel_type")
+        refill_date = data.get("last_refill_date")
+        if refill_date:
+            g.last_refill_date = datetime.strptime(refill_date, "%Y-%m-%d").date()
+        g.responsible_id = int(data.get("responsible_id")) if data.get("responsible_id") else None
         g.status = data.get("status", "OPERACIONAL")
+        g.obs = data.get("obs")
+        g.reserve_cans = int(data.get("reserve_cans")) if data.get("reserve_cans") else None
+        g.reserve_liters = float(data.get("reserve_liters")) if data.get("reserve_liters") else None
+        
         db.session.commit()
-        return json.dumps({"status": "ok", "id": g.id})
+        return jsonify({"status": "ok", "id": g.id})
 
     gs = Generator.query.all()
-    return json.dumps([{"id": g.id, "name": g.name, "location": g.location, "status": g.status} for g in gs])
+    res = []
+    for g in gs:
+        res.append({
+            "id": g.id,
+            "name": g.name,
+            "location": g.location,
+            "capacity_total": g.capacity_total,
+            "current_qty": g.current_qty,
+            "fuel_type": g.fuel_type,
+            "last_refill_date": str(g.last_refill_date) if g.last_refill_date else "",
+            "responsible_id": g.responsible_id,
+            "responsible_name": g.responsible.username if g.responsible else "N/A",
+            "status": g.status,
+            "obs": g.obs,
+            "reserve_cans": g.reserve_cans,
+            "reserve_liters": g.reserve_liters
+        })
+    return jsonify(res)
 
 # --- RFO (RELATÓRIOS DE OCORRÊNCIA) ---
 @app.route("/api/gestao/rfo", methods=["GET", "POST"])
+@app.route("/api/gestao/rfo/<int:id>", methods=["PUT", "DELETE"])
 @supervisor_allowed
-def api_rfo():
-    if request.method == "POST":
-        data = request.json
-        rid = data.get("id")
+def api_rfo(id=None):
+    if request.method == "DELETE" or (request.method == "POST" and id):
+        target_id = id or request.json.get("id")
+        r = RFO.query.get_or_404(target_id)
+        db.session.delete(r)
+        db.session.commit()
+        return jsonify({"status": "ok"})
+
+    if request.method in ["POST", "PUT"]:
+        # RFO pode enviar fotos, então suporta multipart form data e JSON
+        if request.is_json:
+            data = request.json
+        else:
+            data = request.form
+
+        rid = id or data.get("id")
         if rid:
             r = RFO.query.get(rid)
+            if not r:
+                return jsonify({"error": "RFO não encontrado"}), 404
         else:
-            r = RFO(technician_id=current_user.id)
+            r = RFO()
             db.session.add(r)
         
+        r.number = data.get("number")
         r.title = data.get("title")
         r.description = data.get("description")
-        r.generator_id = data.get("generator_id")
+        r.root_cause = data.get("root_cause")
+        r.impact = data.get("impact")
+        r.action = data.get("action")
+        r.city = data.get("city")
+        r.neighborhood = data.get("neighborhood")
+        r.lat = data.get("lat")
+        r.lon = data.get("lon")
         r.status = data.get("status", "ABERTO")
-        r.priority = data.get("priority", "MEDIA")
+        r.problem_type = data.get("problem_type")
+        r.tech_responsible = data.get("tech_responsible")
+        r.team_id = int(data.get("team_id")) if data.get("team_id") else None
+        
+        date_str = data.get("date")
+        if date_str:
+            r.date = datetime.strptime(date_str, "%Y-%m-%d").date()
+        r.start_time = data.get("start_time")
+        r.end_time = data.get("end_time")
+        
+        # Técnicos vinculados em JSON
+        tech_ids = request.form.getlist("technicians[]") or data.get("technicians", [])
+        if tech_ids:
+            r.technicians_json = json.dumps(tech_ids)
+        
+        # Upload de fotos
+        photos = request.files.getlist("photos") or request.files.getlist("photos[]")
+        filenames = json.loads(r.photos_json) if r.photos_json else []
+        for p in photos:
+            if p and allowed_file(p.filename):
+                ext = os.path.splitext(p.filename.lower())[1]
+                fn = f"rfo_{uuid.uuid4().hex}{ext}"
+                p.save(VISTORIAS_UPLOAD_DIR / fn)
+                filenames.append(fn)
+        if filenames:
+            r.photos_json = json.dumps(filenames)
+            
         db.session.commit()
-        return json.dumps({"status": "ok", "id": r.id})
+        return jsonify({"status": "ok", "id": r.id})
 
-    rfos = RFO.query.order_by(RFO.created_at.desc()).all()
-    return json.dumps([{
-        "id": r.id, "title": r.title, "status": r.status, 
-        "created_at": r.created_at.isoformat(), 
-        "tech": User.query.get(r.technician_id).username if r.technician_id else "N/A"
-    } for r in rfos])
+    rfos = RFO.query.order_by(RFO.date.desc().nullslast()).all()
+    res = []
+    for r in rfos:
+        res.append({
+            "id": r.id,
+            "number": r.number,
+            "title": r.title,
+            "date": str(r.date) if r.date else "",
+            "start_time": r.start_time,
+            "end_time": r.end_time,
+            "city": r.city,
+            "neighborhood": r.neighborhood,
+            "lat": r.lat,
+            "lon": r.lon,
+            "description": r.description,
+            "root_cause": r.root_cause,
+            "impact": r.impact,
+            "action": r.action,
+            "team_id": r.team_id,
+            "team_name": r.team.name if r.team else "N/A",
+            "technicians_json": r.technicians_json,
+            "photos_json": r.photos_json,
+            "status": r.status,
+            "problem_type": r.problem_type,
+            "tech_responsible": r.tech_responsible
+        })
+    return jsonify(res)
 
-# --- SUPERVISÃO DE CAMPO (REGISTRO ÚNICO / MÚLTIPLOS TÉCNICOS) ---
+# --- SUPERVISÃO DE CAMPO ---
 @app.route("/api/gestao/supervisao", methods=["GET", "POST"])
+@app.route("/api/gestao/supervisao/<int:id>", methods=["PUT", "DELETE"])
 @supervisor_allowed
-def api_supervisao():
-    if request.method == "POST":
-        from sqlalchemy.orm.attributes import flag_modified
-        data = request.json
-        # Lógica de salvamento unificado
-        # ... (simplificada para o restauro inicial)
-        return json.dumps({"status": "ok"})
-    
-    # Placeholder para listagem
-    return json.dumps([])
+def api_supervisao(id=None):
+    if request.method == "DELETE" or (request.method == "POST" and id):
+        target_id = id or request.json.get("id")
+        s = SupervisaoTecnica.query.get_or_404(target_id)
+        db.session.delete(s)
+        db.session.commit()
+        return jsonify({"status": "ok"})
 
-# --- SOLICITAÇÕES INTERNAS ---
+    if request.method in ["POST", "PUT"]:
+        data = request.json or {}
+        sid = id or data.get("id")
+        if sid:
+            s = SupervisaoTecnica.query.get(sid)
+            if not s:
+                return jsonify({"error": "Supervisão não encontrada"}), 404
+        else:
+            s = SupervisaoTecnica(supervisor_id=current_user.id)
+            db.session.add(s)
+
+        date_str = data.get("date")
+        if date_str:
+            s.date = datetime.strptime(date_str, "%Y-%m-%d").date()
+        s.time = data.get("time")
+        s.irregularities = data.get("irregularities")
+        s.action = data.get("action")
+        s.obs = data.get("obs")
+        s.checklist_json = json.dumps(data.get("checklist", {}))
+        s.techs_data = data.get("techs_data", [])
+
+        db.session.commit()
+        return jsonify({"status": "ok", "id": s.id})
+
+    items = SupervisaoTecnica.query.order_by(SupervisaoTecnica.date.desc()).all()
+    res = []
+    for i in items:
+        res.append({
+            "id": i.id,
+            "supervisor_id": i.supervisor_id,
+            "supervisor_name": i.supervisor.username if i.supervisor else "N/A",
+            "date": str(i.date) if i.date else "",
+            "time": i.time,
+            "irregularities": i.irregularities,
+            "action": i.action,
+            "obs": i.obs,
+            "checklist_json": i.checklist_json,
+            "techs_data": i.techs_data
+        })
+    return jsonify(res)
+
+# --- SOLICITAÇÕES OPERACIONAIS ---
 @app.route("/api/gestao/solicitacoes", methods=["GET", "POST"])
+@app.route("/api/gestao/solicitacoes/<int:id>", methods=["DELETE"])
+@app.route("/api/gestao/solicitacoes/<int:id>/respond", methods=["POST"])
 @login_required
-def api_solicitacoes():
-    # Endpoints de solicitações de troca de plantão, etc.
-    return json.dumps([])
+def api_solicitacoes(id=None):
+    if request.method == "DELETE":
+        s = Solicitacao.query.get_or_404(id)
+        db.session.delete(s)
+        db.session.commit()
+        return jsonify({"status": "ok"})
+
+    if id and request.path.endswith("/respond"):
+        if not current_user.is_supervisor and not current_user.is_admin:
+            return jsonify({"error": "Não autorizado"}), 403
+        data = request.json or {}
+        s = Solicitacao.query.get_or_404(id)
+        s.status = data.get("status", "APROVADA")
+        s.management_response = data.get("management_response")
+        db.session.commit()
+        return jsonify({"status": "ok"})
+
+    if request.method == "POST":
+        data = request.json or {}
+        s = Solicitacao(user_id=current_user.id)
+        db.session.add(s)
+        s.type = data.get("type", "TROCA_PLANTAO")
+        s.description = data.get("description")
+        s.obs = data.get("obs")
+        s.status = "PENDENTE"
+        db.session.commit()
+        return jsonify({"status": "ok", "id": s.id})
+
+    items = Solicitacao.query.order_by(Solicitacao.date.desc()).all()
+    res = []
+    for i in items:
+        res.append({
+            "id": i.id,
+            "type": i.type,
+            "user_id": i.user_id,
+            "user_name": i.user.username if i.user else "N/A",
+            "date": i.date.isoformat() if i.date else "",
+            "description": i.description,
+            "status": i.status,
+            "management_response": i.management_response,
+            "obs": i.obs
+        })
+    return jsonify(res)
+
+# --- EQUIPES ---
+@app.route("/api/gestao/equipes", methods=["GET", "POST"])
+@app.route("/api/gestao/equipes/<int:id>", methods=["PUT", "DELETE"])
+@supervisor_allowed
+def api_equipes(id=None):
+    if request.method == "DELETE" or (request.method == "POST" and id):
+        target_id = id or request.json.get("id")
+        t = Team.query.get_or_404(target_id)
+        db.session.delete(t)
+        db.session.commit()
+        return jsonify({"status": "ok"})
+
+    if request.method in ["POST", "PUT"]:
+        data = request.json or {}
+        tid = id or data.get("id")
+        if tid:
+            t = Team.query.get(tid)
+            if not t:
+                return jsonify({"error": "Equipe não encontrada"}), 404
+        else:
+            t = Team()
+            db.session.add(t)
+        
+        t.name = data.get("name")
+        t.color = data.get("color")
+        t.obs = data.get("obs")
+        t.rotation_order = int(data.get("rotation_order")) if data.get("rotation_order") else 0
+        
+        # Vincular técnicos N:N
+        member_ids = data.get("member_ids") or []
+        t.members = []
+        for mid in member_ids:
+            u = User.query.get(int(mid))
+            if u:
+                t.members.append(u)
+                
+        db.session.commit()
+        return jsonify({"status": "ok", "id": t.id})
+
+    teams = Team.query.order_by(Team.name.asc()).all()
+    res = []
+    for t in teams:
+        res.append({
+            "id": t.id,
+            "name": t.name,
+            "color": t.color,
+            "obs": t.obs,
+            "rotation_order": t.rotation_order,
+            "member_ids": [m.id for m in t.members],
+            "member_names": ", ".join([m.username for m in t.members])
+        })
+    return jsonify(res)
+
+# --- PÁTIOS ---
+@app.route("/api/gestao/patios", methods=["GET", "POST"])
+@app.route("/api/gestao/patios/<int:id>", methods=["PUT", "DELETE"])
+@supervisor_allowed
+def api_patios(id=None):
+    if request.method == "DELETE" or (request.method == "POST" and id):
+        target_id = id or request.json.get("id")
+        p = Patio.query.get_or_404(target_id)
+        db.session.delete(p)
+        db.session.commit()
+        return jsonify({"status": "ok"})
+
+    if request.method in ["POST", "PUT"]:
+        data = request.json or {}
+        pid = id or data.get("id")
+        if pid:
+            p = Patio.query.get(pid)
+            if not p:
+                return jsonify({"error": "Pátio não encontrado"}), 404
+        else:
+            p = Patio()
+            db.session.add(p)
+        
+        p.name = data.get("name")
+        p.location = data.get("location")
+        db.session.commit()
+        return jsonify({"status": "ok", "id": p.id})
+
+    items = Patio.query.order_by(Patio.name.asc()).all()
+    return jsonify([{"id": i.id, "name": i.name, "location": i.location} for i in items])
+
+# --- ENCERRAMENTO DE PÁTIO ---
+@app.route("/api/gestao/encerramento", methods=["GET", "POST"])
+@app.route("/api/gestao/encerramento/<int:id>", methods=["DELETE"])
+@supervisor_allowed
+def api_encerramento(id=None):
+    if request.method == "DELETE":
+        e = Encerramento.query.get_or_404(id)
+        db.session.delete(e)
+        db.session.commit()
+        return jsonify({"status": "ok"})
+
+    if request.method == "POST":
+        data = request.json or {}
+        eid = data.get("id")
+        if eid:
+            e = Encerramento.query.get(eid)
+            if not e:
+                return jsonify({"error": "Registro não encontrado"}), 404
+        else:
+            e = Encerramento()
+            db.session.add(e)
+            
+        e.patio_id = int(data.get("patio_id")) if data.get("patio_id") else None
+        date_str = data.get("date")
+        if date_str:
+            e.date = datetime.strptime(date_str, "%Y-%m-%d").date()
+        e.closing_time = data.get("closing_time")
+        
+        # Suporta tanto lista/dicionário quanto string para technicians_json e patios_json
+        techs = data.get("technicians_json")
+        if isinstance(techs, (list, dict)):
+            e.technicians_json = json.dumps(techs)
+        else:
+            e.technicians_json = techs
+
+        patios_js = data.get("patios_json")
+        if isinstance(patios_js, (list, dict)):
+            e.patios_json = json.dumps(patios_js)
+        else:
+            e.patios_json = patios_js
+
+        e.obs = data.get("obs")
+        db.session.commit()
+        return jsonify({"status": "ok", "id": e.id})
+
+    items = Encerramento.query.order_by(Encerramento.date.desc()).all()
+    res = []
+    for i in items:
+        res.append({
+            "id": i.id,
+            "patio_id": i.patio_id,
+            "patio_name": i.patio.name if i.patio else "N/A",
+            "date": str(i.date) if i.date else "",
+            "closing_time": i.closing_time,
+            "technicians_json": i.technicians_json,
+            "obs": i.obs,
+            "patios_json": i.patios_json
+        })
+    return jsonify(res)
+
+# --- TAREFAS ---
+@app.route("/api/gestao/tarefas", methods=["GET", "POST"])
+@app.route("/api/gestao/tarefas/<int:id>", methods=["PUT", "DELETE"])
+@supervisor_allowed
+def api_tarefas(id=None):
+    if request.method == "DELETE" or (request.method == "POST" and id):
+        target_id = id or request.json.get("id")
+        t = Task.query.get_or_404(target_id)
+        db.session.delete(t)
+        db.session.commit()
+        return jsonify({"status": "ok"})
+
+    if request.method in ["POST", "PUT"]:
+        data = request.json or {}
+        tid = id or data.get("id")
+        if tid:
+            t = Task.query.get(tid)
+            if not t:
+                return jsonify({"error": "Tarefa não encontrada"}), 404
+        else:
+            t = Task()
+            db.session.add(t)
+        
+        t.title = data.get("title")
+        t.description = data.get("description")
+        t.responsible_id = int(data.get("responsible_id")) if data.get("responsible_id") else None
+        t.priority = data.get("priority", "MEDIA")
+        
+        deadline_str = data.get("deadline")
+        if deadline_str:
+            t.deadline = datetime.strptime(deadline_str, "%Y-%m-%d").date()
+            
+        t.status = data.get("status", "PENDENTE")
+        t.obs = data.get("obs")
+        db.session.commit()
+        return jsonify({"status": "ok", "id": t.id})
+
+    items = Task.query.order_by(Task.deadline.asc().nullslast()).all()
+    res = []
+    for i in items:
+        res.append({
+            "id": i.id,
+            "title": i.title,
+            "description": i.description,
+            "responsible_id": i.responsible_id,
+            "responsible_name": i.responsible.username if i.responsible else "Sem responsável",
+            "priority": i.priority,
+            "deadline": str(i.deadline) if i.deadline else "",
+            "status": i.status,
+            "obs": i.obs
+        })
+    return jsonify(res)
+
+# --- ESCALAS DE PLANTÃO (MANUAIS E AUTOMÁTICAS) ---
+@app.route("/api/gestao/escalas", methods=["GET", "POST"])
+@app.route("/api/gestao/escalas/<int:id>", methods=["PUT", "DELETE"])
+@supervisor_allowed
+def api_escalas(id=None):
+    if request.method == "DELETE" or (request.method == "POST" and id):
+        target_id = id or request.json.get("id")
+        s = Scale.query.get_or_404(target_id)
+        db.session.delete(s)
+        db.session.commit()
+        return jsonify({"status": "ok"})
+
+    if request.method in ["POST", "PUT"]:
+        data = request.json or {}
+        sid = id or data.get("id")
+        if sid:
+            s = Scale.query.get(sid)
+            if not s:
+                return jsonify({"error": "Escala não encontrada"}), 404
+        else:
+            s = Scale()
+            db.session.add(s)
+            
+        s.type = data.get("type", "plantao")
+        date_str = data.get("date")
+        if date_str:
+            s.date = datetime.strptime(date_str, "%Y-%m-%d").date()
+        s.obs = data.get("obs")
+        s.status = data.get("status", "ATIVO")
+        
+        # Suporta serialização de técnicos e equipes de forma compatível
+        tech_ids = data.get("technician_ids")
+        if isinstance(tech_ids, list):
+            s.technician_ids = ",".join(map(str, tech_ids))
+        else:
+            s.technician_ids = tech_ids
+
+        team_ids = data.get("team_ids")
+        if isinstance(team_ids, list):
+            s.team_ids = ",".join(map(str, team_ids))
+        else:
+            s.team_ids = team_ids
+            
+        db.session.commit()
+        return jsonify({"status": "ok", "id": s.id})
+
+    # Tratamento de GET
+    view_list = request.args.get("view") == "list"
+    
+    if view_list:
+        items = Scale.query.order_by(Scale.date.desc()).all()
+        res = []
+        for s in items:
+            tech_names = ""
+            if s.technician_ids:
+                try:
+                    ids = [int(x) for x in s.technician_ids.split(",") if x.strip().isdigit()]
+                    tech_names = ", ".join([u.username for u in User.query.filter(User.id.in_(ids))])
+                except Exception:
+                    tech_names = s.technician_ids
+            res.append({
+                "id": s.id,
+                "type": s.type,
+                "date": str(s.date),
+                "obs": s.obs,
+                "status": s.status,
+                "technician_ids": s.technician_ids,
+                "technician_names": tech_names,
+                "team_ids": s.team_ids
+            })
+        return jsonify(res)
+
+    # FullCalendar request (has start and end date)
+    start_str = request.args.get("start")
+    end_str = request.args.get("end")
+    
+    events = []
+    
+    # 1. Carrega Escalas Manuais
+    query = Scale.query
+    if start_str and end_str:
+        start_date = datetime.fromisoformat(start_str.replace("Z", "")).date()
+        end_date = datetime.fromisoformat(end_str.replace("Z", "")).date()
+        query = query.filter(Scale.date >= start_date, Scale.date <= end_date)
+        
+    items = query.all()
+    manual_dates = set()
+    
+    for s in items:
+        manual_dates.add(s.date)
+        tech_names = ""
+        if s.technician_ids:
+            try:
+                ids = [int(x) for x in s.technician_ids.split(",") if x.strip().isdigit()]
+                tech_names = ", ".join([u.username for u in User.query.filter(User.id.in_(ids))])
+            except Exception:
+                tech_names = "Técnicos"
+                
+        events.append({
+            "id": f"m_{s.id}",
+            "title": f"{s.type.upper()}: {tech_names or 'Plantonistas'}",
+            "start": s.date.isoformat(),
+            "allDay": True,
+            "color": "#10B981", # Emerald para manual
+            "extendedProps": {
+                "type": "manual",
+                "obs": s.obs
+            }
+        })
+        
+    # 2. Carrega Escalas Automáticas (Rodízio de Sábados)
+    config = SystemConfig.query.first()
+    if config and config.scale_start_date and config.scale_rotation_order and start_str and end_str:
+        rotation_order = [int(x) for x in config.scale_rotation_order.split(",") if x.strip().isdigit()]
+        if rotation_order:
+            curr_date = start_date
+            while curr_date <= end_date:
+                # 6 é sábado no Python weekday()
+                if curr_date.weekday() == 5 and curr_date >= config.scale_start_date:
+                    if curr_date not in manual_dates:
+                        # Calcula semanas decorridas
+                        weeks = (curr_date - config.scale_start_date).days // 7
+                        team_idx = weeks % len(rotation_order)
+                        team_id = rotation_order[team_idx]
+                        
+                        team = Team.query.get(team_id)
+                        if team:
+                            events.append({
+                                "id": f"auto_{curr_date.isoformat()}",
+                                "title": f"Plantão: {team.name}",
+                                "start": curr_date.isoformat(),
+                                "allDay": True,
+                                "color": team.color or "#8B5CF6", # Premium Violet/custom
+                                "extendedProps": {
+                                    "type": "automatico",
+                                    "team_id": team.id
+                                }
+                            })
+                curr_date += timedelta(days=1)
+                
+    return jsonify(events)
+
+# --- REUNIÕES ---
+@app.route("/api/gestao/reunioes", methods=["GET", "POST"])
+@app.route("/api/gestao/reunioes/<int:id>", methods=["PUT", "DELETE"])
+@supervisor_allowed
+def api_reunioes(id=None):
+    if request.method == "DELETE" or (request.method == "POST" and id):
+        target_id = id or request.json.get("id")
+        m = Meeting.query.get_or_404(target_id)
+        db.session.delete(m)
+        db.session.commit()
+        return jsonify({"status": "ok"})
+
+    if request.method in ["POST", "PUT"]:
+        data = request.json or {}
+        mid = id or data.get("id")
+        if mid:
+            m = Meeting.query.get(mid)
+            if not m:
+                return jsonify({"error": "Reunião não encontrada"}), 404
+        else:
+            m = Meeting()
+            db.session.add(m)
+            
+        m.title = data.get("title")
+        m.subject = data.get("subject")
+        
+        date_str = data.get("date")
+        if date_str:
+            m.date = datetime.strptime(date_str, "%Y-%m-%d").date()
+        m.time = data.get("time")
+        m.location = data.get("location")
+        m.obs = data.get("obs")
+        m.status = data.get("status", "AGENDADA")
+        m.responsible = data.get("responsible")
+        m.objective = data.get("objective")
+        m.summary = data.get("summary")
+        m.actions = data.get("actions")
+        
+        participants = data.get("technician_ids")
+        if isinstance(participants, list):
+            m.participants = ",".join(map(str, participants))
+        else:
+            m.participants = participants
+            
+        db.session.commit()
+        return jsonify({"status": "ok", "id": m.id})
+
+    items = Meeting.query.order_by(Meeting.date.desc()).all()
+    res = []
+    for i in items:
+        names = ""
+        if i.participants:
+            try:
+                ids = [int(x) for x in i.participants.split(",") if x.strip().isdigit()]
+                names = ", ".join([u.username for u in User.query.filter(User.id.in_(ids))])
+            except Exception:
+                names = i.participants
+        res.append({
+            "id": i.id,
+            "title": i.title,
+            "subject": i.subject,
+            "date": str(i.date) if i.date else "",
+            "time": i.time,
+            "location": i.location,
+            "participants": i.participants,
+            "participant_names": names,
+            "obs": i.obs,
+            "status": i.status,
+            "responsible": i.responsible,
+            "objective": i.objective,
+            "summary": i.summary,
+            "actions": i.actions
+        })
+    return jsonify(res)
+
+# --- ANOTAÇÕES ---
+@app.route("/api/gestao/anotacoes", methods=["GET", "POST"])
+@app.route("/api/gestao/anotacoes/<int:id>", methods=["PUT", "DELETE"])
+@login_required
+def api_anotacoes(id=None):
+    if request.method == "DELETE" or (request.method == "POST" and id):
+        target_id = id or request.json.get("id")
+        n = Note.query.get_or_404(target_id)
+        db.session.delete(n)
+        db.session.commit()
+        return jsonify({"status": "ok"})
+
+    if request.method in ["POST", "PUT"]:
+        data = request.json or {}
+        nid = id or data.get("id")
+        if nid:
+            n = Note.query.get(nid)
+            if not n:
+                return jsonify({"error": "Anotação não encontrada"}), 404
+        else:
+            n = Note(user_id=current_user.id)
+            db.session.add(n)
+            
+        n.title = data.get("title")
+        n.category = data.get("category")
+        n.description = data.get("description")
+        n.priority = data.get("priority", "MEDIA")
+        
+        event_date_str = data.get("event_date")
+        if event_date_str:
+            n.event_date = datetime.strptime(event_date_str, "%Y-%m-%d").date()
+            
+        db.session.commit()
+        return jsonify({"status": "ok", "id": n.id})
+
+    items = Note.query.order_by(Note.date.desc()).all()
+    res = []
+    for i in items:
+        res.append({
+            "id": i.id,
+            "title": i.title,
+            "category": i.category,
+            "description": i.description,
+            "user_id": i.user_id,
+            "user_name": i.user.username if i.user else "N/A",
+            "date": i.date.isoformat() if i.date else "",
+            "priority": i.priority,
+            "event_date": str(i.event_date) if i.event_date else ""
+        })
+    return jsonify(res)
+
+# --- ATIVIDADES TÉCNICAS ---
+@app.route("/api/gestao/atividades", methods=["GET", "POST"])
+@app.route("/api/gestao/atividades/<int:id>", methods=["PUT", "DELETE"])
+@supervisor_allowed
+def api_atividades(id=None):
+    if request.method == "DELETE" or (request.method == "POST" and id):
+        target_id = id or request.json.get("id")
+        a = Activity.query.get_or_404(target_id)
+        db.session.delete(a)
+        db.session.commit()
+        return jsonify({"status": "ok"})
+
+    if request.method in ["POST", "PUT"]:
+        if request.is_json:
+            data = request.json
+        else:
+            data = request.form
+            
+        aid = id or data.get("id")
+        if aid:
+            a = Activity.query.get(aid)
+            if not a:
+                return jsonify({"error": "Atividade não encontrada"}), 404
+        else:
+            a = Activity(user_id=current_user.id)
+            db.session.add(a)
+            
+        a.type = data.get("type")
+        a.location = data.get("location")
+        
+        date_str = data.get("date")
+        if date_str:
+            a.date = datetime.strptime(date_str, "%Y-%m-%d").date()
+            
+        a.time = data.get("time")
+        a.description = data.get("description")
+        a.status = data.get("status", "ABERTO")
+        a.obs = data.get("obs")
+        a.tech_responsible = data.get("tech_responsible")
+        a.client_name = data.get("client_name")
+        a.client_code = data.get("client_code")
+        a.quality_rating = data.get("quality_rating")
+        a.client_feedback = data.get("client_feedback")
+        a.os_closure = data.get("os_closure")
+        a.conclusion = data.get("conclusion")
+        
+        # Upload de fotos
+        photos = request.files.getlist("photos") or request.files.getlist("photos[]")
+        filenames = json.loads(a.photos_json) if a.photos_json else []
+        for p in photos:
+            if p and allowed_file(p.filename):
+                ext = os.path.splitext(p.filename.lower())[1]
+                fn = f"act_{uuid.uuid4().hex}{ext}"
+                p.save(VISTORIAS_UPLOAD_DIR / fn)
+                filenames.append(fn)
+        if filenames:
+            a.photos_json = json.dumps(filenames)
+            
+        db.session.commit()
+        return jsonify({"status": "ok", "id": a.id})
+
+    items = Activity.query.order_by(Activity.date.desc().nullslast()).all()
+    res = []
+    for i in items:
+        res.append({
+            "id": i.id,
+            "user_id": i.user_id,
+            "user_name": i.user.username if i.user else "N/A",
+            "type": i.type,
+            "location": i.location,
+            "date": str(i.date) if i.date else "",
+            "time": i.time,
+            "description": i.description,
+            "status": i.status,
+            "photos_json": i.photos_json,
+            "obs": i.obs,
+            "tech_responsible": i.tech_responsible,
+            "client_name": i.client_name,
+            "client_code": i.client_code,
+            "quality_rating": i.quality_rating,
+            "client_feedback": i.client_feedback,
+            "os_closure": i.os_closure,
+            "conclusion": i.conclusion
+        })
+    return jsonify(res)
+
+# --- ROTA EXATA (AUDITORIA DE TRAJETOS) ---
+@app.route("/api/gestao/rota_exata", methods=["GET", "POST"])
+@app.route("/api/gestao/rota_exata/<int:id>", methods=["GET", "PUT", "DELETE"])
+@supervisor_allowed
+def api_rota_exata(id=None):
+    if request.method == "DELETE" or (request.method == "POST" and id and not request.path.endswith("/pdf")):
+        target_id = id or request.json.get("id")
+        r = RotaExata.query.get_or_404(target_id)
+        db.session.delete(r)
+        db.session.commit()
+        return jsonify({"status": "ok"})
+
+    if id and request.method == "GET":
+        r = RotaExata.query.get_or_404(id)
+        return jsonify({
+            "id": r.id,
+            "supervisor_id": r.supervisor_id,
+            "date": str(r.date) if r.date else "",
+            "time": r.time,
+            "location": r.location,
+            "obs": r.obs,
+            "status": r.status,
+            "photos_json": r.photos_json,
+            "techs_data": r.techs_data
+        })
+
+    if request.method in ["POST", "PUT"]:
+        if request.is_json:
+            data = request.json
+        else:
+            data = request.form
+
+        rid = id or data.get("id")
+        if rid:
+            r = RotaExata.query.get(rid)
+            if not r:
+                return jsonify({"error": "Rota Exata não encontrada"}), 404
+        else:
+            r = RotaExata(supervisor_id=current_user.id)
+            db.session.add(r)
+
+        date_str = data.get("date")
+        if date_str:
+            r.date = datetime.strptime(date_str, "%Y-%m-%d").date()
+        r.time = data.get("time")
+        r.location = data.get("location")
+        r.obs = data.get("obs")
+        r.status = data.get("status", "PENDENTE")
+        
+        # Suporta tanto objeto quanto string serializada para techs_data
+        techs = data.get("techs_data")
+        if isinstance(techs, (list, dict)):
+            r.techs_data = techs
+        elif isinstance(techs, str):
+            try:
+                r.techs_data = json.loads(techs)
+            except Exception:
+                r.techs_data = []
+
+        # Fotos upload
+        photos = request.files.getlist("photos") or request.files.getlist("photos[]")
+        filenames = json.loads(r.photos_json) if r.photos_json else []
+        for p in photos:
+            if p and allowed_file(p.filename):
+                ext = os.path.splitext(p.filename.lower())[1]
+                fn = f"re_{uuid.uuid4().hex}{ext}"
+                p.save(VISTORIAS_UPLOAD_DIR / fn)
+                filenames.append(fn)
+        if filenames:
+            r.photos_json = json.dumps(filenames)
+
+        db.session.commit()
+        return jsonify({"status": "ok", "id": r.id})
+
+    items = RotaExata.query.order_by(RotaExata.date.desc()).all()
+    res = []
+    for r in items:
+        res.append({
+            "id": r.id,
+            "supervisor_id": r.supervisor_id,
+            "supervisor_name": r.supervisor.username if r.supervisor else "N/A",
+            "date": str(r.date) if r.date else "",
+            "time": r.time,
+            "location": r.location,
+            "obs": r.obs,
+            "status": r.status,
+            "photos_json": r.photos_json,
+            "techs_data": r.techs_data
+        })
+    return jsonify(res)
+
+# --- STATUS TOGGLE GENÉRICO ---
+@app.route("/api/gestao/<string:slug>/<int:id>/status", methods=["POST"])
+@supervisor_allowed
+def api_status_toggle(slug, id):
+    data = request.json or {}
+    new_status = data.get("status")
+    if not new_status:
+        return jsonify({"error": "Status não fornecido"}), 400
+
+    if slug == "tarefas":
+        obj = Task.query.get_or_404(id)
+    elif slug == "reunioes":
+        obj = Meeting.query.get_or_404(id)
+    elif slug == "atividades":
+        obj = Activity.query.get_or_404(id)
+    elif slug == "rota_exata":
+        obj = RotaExata.query.get_or_404(id)
+    else:
+        return jsonify({"error": "Módulo inválido"}), 400
+
+    obj.status = new_status
+    db.session.commit()
+    return jsonify({"status": "ok"})
+
+# ==========================================
+# 🔥 GERADORES DE RELATÓRIO PDF PREMIUM 🔥
+# ==========================================
+
+def make_premium_pdf(buffer, title, metadata, content_table_data):
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib import colors
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        rightMargin=15*mm, leftMargin=15*mm,
+        topMargin=15*mm, bottomMargin=15*mm
+    )
+
+    styles = getSampleStyleSheet()
+    
+    # Custom styles
+    title_style = ParagraphStyle(
+        name="PremiumTitle",
+        parent=styles["Heading1"],
+        fontName="Helvetica-Bold",
+        fontSize=18,
+        textColor=colors.HexColor("#0F172A"),
+        spaceAfter=15
+    )
+    
+    label_style = ParagraphStyle(
+        name="PremiumLabel",
+        parent=styles["Normal"],
+        fontName="Helvetica-Bold",
+        fontSize=10,
+        textColor=colors.HexColor("#475569")
+    )
+    
+    value_style = ParagraphStyle(
+        name="PremiumValue",
+        parent=styles["Normal"],
+        fontName="Helvetica",
+        fontSize=10,
+        textColor=colors.HexColor("#1E293B")
+    )
+
+    story = []
+
+    # 1. Logo/Header Placeholder or Decorative Banner
+    story.append(Paragraph(title, title_style))
+    story.append(Spacer(1, 5*mm))
+
+    # 2. Metadata Grid
+    meta_table_data = []
+    keys = list(metadata.keys())
+    for i in range(0, len(keys), 2):
+        k1 = keys[i]
+        v1 = metadata[k1]
+        row = [
+            Paragraph(f"<b>{k1}:</b>", label_style),
+            Paragraph(str(v1), value_style)
+        ]
+        if i + 1 < len(keys):
+            k2 = keys[i+1]
+            v2 = metadata[k2]
+            row.extend([
+                Paragraph(f"<b>{k2}:</b>", label_style),
+                Paragraph(str(v2), value_style)
+            ])
+        else:
+            row.extend(["", ""])
+        meta_table_data.append(row)
+
+    meta_table = Table(meta_table_data, colWidths=[35*mm, 50*mm, 35*mm, 50*mm])
+    meta_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor("#F8FAFC")),
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+        ('TOPPADDING', (0, 0), (-1, -1), 6),
+        ('LINEBELOW', (0, 0), (-1, -1), 0.5, colors.HexColor("#E2E8F0")),
+    ]))
+    story.append(meta_table)
+    story.append(Spacer(1, 10*mm))
+
+    # 3. Main content
+    story.append(Paragraph("<b>Detalhamento do Registro</b>", styles["Heading2"]))
+    story.append(Spacer(1, 3*mm))
+
+    content_rows = []
+    for k, v in content_table_data:
+        content_rows.append([
+            Paragraph(f"<b>{k}</b>", label_style),
+            Paragraph(str(v), value_style)
+        ])
+
+    content_table = Table(content_rows, colWidths=[45*mm, 125*mm])
+    content_table.setStyle(TableStyle([
+        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('TOPPADDING', (0, 0), (-1, -1), 8),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+        ('LINEBELOW', (0, 0), (-1, -1), 0.5, colors.HexColor("#F1F5F9")),
+    ]))
+    story.append(content_table)
+
+    doc.build(story)
+
+@app.route("/api/gestao/encerramento/<int:id>/pdf", methods=["GET"])
+@supervisor_allowed
+def encerramento_pdf(id):
+    import io
+    from flask import send_file
+    
+    e = Encerramento.query.get_or_404(id)
+    buffer = io.BytesIO()
+
+    # Formatação de técnicos
+    techs_str = "Nenhum técnico"
+    if e.technicians_json:
+        try:
+            techs = json.loads(e.technicians_json)
+            if isinstance(techs, list):
+                # busca usernames
+                techs_str = ", ".join([u.username for u in User.query.filter(User.id.in_([int(x) for x in techs]))])
+        except Exception:
+            techs_str = str(e.technicians_json)
+
+    metadata = {
+        "Pátio": e.patio.name if e.patio else "N/A",
+        "Data": e.date.strftime("%d/%m/%Y") if e.date else "N/A",
+        "Horário de Fechamento": e.closing_time or "N/A",
+        "Técnicos Presentes": techs_str
+    }
+
+    patios_str = ""
+    if e.patios_json:
+        try:
+            pjs = json.loads(e.patios_json)
+            if isinstance(pjs, list):
+                patios_str = "\n".join([f"- {p.get('name')}: {p.get('status')}" for p in pjs])
+        except Exception:
+            patios_str = str(e.patios_json)
+
+    content = [
+        ("Status dos Veículos por Pátio", patios_str or "Sem observações detalhadas de pátio"),
+        ("Observações Gerais", e.obs or "Nenhuma observação informada.")
+    ]
+
+    make_premium_pdf(buffer, "Relatório de Encerramento de Pátio", metadata, content)
+    buffer.seek(0)
+    
+    return send_file(
+        buffer,
+        mimetype="application/pdf",
+        as_attachment=False,
+        download_name=f"encerramento_patio_{id}.pdf"
+    )
+
+@app.route("/api/gestao/atividades/<int:id>/pdf", methods=["GET"])
+@supervisor_allowed
+def atividade_pdf(id):
+    import io
+    from flask import send_file
+    
+    a = Activity.query.get_or_404(id)
+    buffer = io.BytesIO()
+
+    metadata = {
+        "Tipo de Atividade": a.type or "N/A",
+        "Localização": a.location or "N/A",
+        "Data": a.date.strftime("%d/%m/%Y") if a.date else "N/A",
+        "Horário": a.time or "N/A",
+        "Técnico Responsável": a.tech_responsible or "N/A"
+    }
+
+    content = [
+        ("Cliente", f"{a.client_name or 'N/A'} (Cód: {a.client_code or 'N/A'})"),
+        ("Status da O.S.", a.os_closure or "N/A"),
+        ("Descrição dos Serviços", a.description or "Sem descrição"),
+        ("Conclusão Técnica", a.conclusion or "N/A"),
+        ("Avaliação de Qualidade", a.quality_rating or "N/A"),
+        ("Feedback do Cliente", a.client_feedback or "Sem feedback"),
+        ("Observações", a.obs or "Sem observações")
+    ]
+
+    make_premium_pdf(buffer, "Relatório de Atividade Técnica", metadata, content)
+    buffer.seek(0)
+    
+    return send_file(
+        buffer,
+        mimetype="application/pdf",
+        as_attachment=False,
+        download_name=f"atividade_tecnica_{id}.pdf"
+    )
+
+@app.route("/api/gestao/reunioes/<int:id>/pdf", methods=["GET"])
+@supervisor_allowed
+def reuniao_pdf(id):
+    import io
+    from flask import send_file
+    
+    m = Meeting.query.get_or_404(id)
+    buffer = io.BytesIO()
+
+    parts_str = "Nenhum participante"
+    if m.participants:
+        try:
+            pids = [int(x) for x in m.participants.split(",") if x.strip().isdigit()]
+            parts_str = ", ".join([u.username for u in User.query.filter(User.id.in_(pids))])
+        except Exception:
+            parts_str = m.participants
+
+    metadata = {
+        "Assunto": m.subject or "N/A",
+        "Data": m.date.strftime("%d/%m/%Y") if m.date else "N/A",
+        "Horário": m.time or "N/A",
+        "Local/Link": m.location or "N/A",
+        "Responsável": m.responsible or "N/A"
+    }
+
+    content = [
+        ("Objetivo da Reunião", m.objective or "Sem objetivo cadastrado"),
+        ("Participantes", parts_str),
+        ("Resumo / Ata", m.summary or "Sem resumo cadastrado"),
+        ("Ações / Próximos Passos", m.actions or "Sem ações mapeadas"),
+        ("Observações Gerais", m.obs or "Sem observações")
+    ]
+
+    make_premium_pdf(buffer, f"Ata de Reunião: {m.title}", metadata, content)
+    buffer.seek(0)
+    
+    return send_file(
+        buffer,
+        mimetype="application/pdf",
+        as_attachment=False,
+        download_name=f"ata_reuniao_{id}.pdf"
+    )
+
+@app.route("/api/gestao/rfo/<int:id>/pdf", methods=["GET"])
+@supervisor_allowed
+def rfo_pdf(id):
+    import io
+    from flask import send_file
+    
+    r = RFO.query.get_or_404(id)
+    buffer = io.BytesIO()
+
+    techs_str = "Nenhum técnico"
+    if r.technicians_json:
+        try:
+            techs = json.loads(r.technicians_json)
+            if isinstance(techs, list):
+                techs_str = ", ".join([u.username for u in User.query.filter(User.id.in_([int(x) for x in techs]))])
+        except Exception:
+            techs_str = str(r.technicians_json)
+
+    metadata = {
+        "Número RFO": r.number or "N/A",
+        "Cidade / Bairro": f"{r.city or 'N/A'} / {r.neighborhood or 'N/A'}",
+        "Data": r.date.strftime("%d/%m/%Y") if r.date else "N/A",
+        "Horário": f"{r.start_time or 'N/A'} até {r.end_time or 'N/A'}",
+        "Técnico Responsável": r.tech_responsible or "N/A"
+    }
+
+    content = [
+        ("Tipo de Problema", r.problem_type or "N/A"),
+        ("Equipe Associada", r.team.name if r.team else "N/A"),
+        ("Técnicos de Campo", techs_str),
+        ("Descrição da Ocorrência", r.description or "Sem descrição"),
+        ("Causa Raiz", r.root_cause or "Não informada"),
+        ("Impacto Causado", r.impact or "Não informado"),
+        ("Ações Corretivas / Plano", r.action or "Não informado"),
+        ("Coordenadas GPS", f"{r.lat or 'N/A'}, {r.lon or 'N/A'}")
+    ]
+
+    make_premium_pdf(buffer, f"Relatório de Ocorrência (RFO): {r.title}", metadata, content)
+    buffer.seek(0)
+    
+    return send_file(
+        buffer,
+        mimetype="application/pdf",
+        as_attachment=False,
+        download_name=f"rfo_{r.number or id}.pdf"
+    )
+
+@app.route("/api/gestao/rota_exata/<int:id>/pdf", methods=["GET"])
+@supervisor_allowed
+def rota_exata_pdf(id):
+    import io
+    from flask import send_file
+    
+    r = RotaExata.query.get_or_404(id)
+    buffer = io.BytesIO()
+
+    metadata = {
+        "Supervisor": r.supervisor.username if r.supervisor else "N/A",
+        "Data de Auditoria": r.date.strftime("%d/%m/%Y") if r.date else "N/A",
+        "Horário": r.time or "N/A",
+        "Ponto de Checagem": r.location or "N/A",
+        "Status da Auditoria": r.status or "PENDENTE"
+    }
+
+    techs_str = ""
+    if r.techs_data:
+        try:
+            if isinstance(r.techs_data, list):
+                techs_str = "\n".join([f"- Técnico ID {t.get('tech_id')}: {t.get('status')} (Chegada: {t.get('arrival_time')}, Saída: {t.get('departure_time')})" for t in r.techs_data])
+            else:
+                techs_str = str(r.techs_data)
+        except Exception:
+            techs_str = str(r.techs_data)
+
+    content = [
+        ("Auditoria de Técnicos em Campo", techs_str or "Nenhuma auditoria de técnico registrada"),
+        ("Observações do Supervisor", r.obs or "Sem observações registradas")
+    ]
+
+    make_premium_pdf(buffer, "Relatório de Auditoria Rota Exata", metadata, content)
+    buffer.seek(0)
+    
+    return send_file(
+        buffer,
+        mimetype="application/pdf",
+        as_attachment=False,
+        download_name=f"auditoria_rota_exata_{id}.pdf"
+    )
+
 
 
     p = RELATORIOS_DIR / nome
@@ -4020,6 +5397,7 @@ def api_gps_current():
             "id": v.id,
             "plate": v.plate,
             "model": v.model,
+            "driver": driver_name if driver_name else "N/A",
             "technician": f"Motorista: {driver_name}" if driver_name else ("Equipamento: " + (v.gps_device.imei if v.gps_device else "Não vinculado")),
             "lat": last_log.lat if last_log else None,
             "lon": last_log.lon if last_log else None,
