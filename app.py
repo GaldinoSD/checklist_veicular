@@ -6784,13 +6784,20 @@ def api_comunicados_recent():
         db.or_(Announcement.expires_at.is_(None), Announcement.expires_at > now_dt)
     )
     
-    # Todos os colaboradores (incluindo admins e supervisores) devem ver apenas avisos destinados ao seu perfil, a todos, ou especificamente a si
+    # Todos os colaboradores devem ver apenas avisos destinados ao seu perfil, a todos, ou individualmente a si próprios
     avisos_list = query.filter(
         db.or_(
-            Announcement.target_role.is_(None),
-            Announcement.target_role == "all",
-            Announcement.target_role == current_user.role,
-            Announcement.user_id == current_user.id
+            # Caso 1: Mensagem direcionada individualmente a este usuário específico
+            Announcement.user_id == current_user.id,
+            # Caso 2: Mensagem para grupos/todos (apenas quando não é direcionada a outro usuário)
+            db.and_(
+                Announcement.user_id.is_(None),
+                db.or_(
+                    Announcement.target_role.is_(None),
+                    Announcement.target_role == "all",
+                    Announcement.target_role == current_user.role
+                )
+            )
         )
     ).order_by(Announcement.created_at.desc()).limit(10).all()
         
