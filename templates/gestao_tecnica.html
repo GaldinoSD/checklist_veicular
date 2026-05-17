@@ -821,7 +821,19 @@
                 <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Observações</label>
                 <textarea name="obs" rows="2" class="w-full bg-slate-50 dark:bg-gray-800 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm"></textarea>
             </div>
-            <div class="pt-4">
+            
+            <!-- Preenchimento Rápido de Feriados -->
+            <div class="border-t border-slate-900/10 dark:border-white/10 pt-3">
+                <label class="block text-[10px] font-bold text-slate-500 dark:text-gray-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                    <i class="fa-solid fa-wand-magic-sparkles text-purple-500 animate-pulse"></i>
+                    <span>Preenchimento Rápido: Feriados Próximos</span>
+                </label>
+                <div class="flex flex-wrap gap-1.5 p-1 bg-slate-50 dark:bg-gray-800/40 rounded-xl border border-slate-900/5 dark:border-white/5" id="escala-helper-feriados">
+                    <span class="text-[9px] text-slate-400 font-semibold p-1">Carregando feriados...</span>
+                </div>
+            </div>
+
+            <div class="pt-2">
                 <button type="submit" class="w-full py-3 bg-purple-600 text-white rounded-xl font-bold shadow-lg shadow-purple-500/30">Salvar Escala</button>
             </div>
         </form>
@@ -2728,12 +2740,59 @@ async function deleteReuniao(id) {
     if(res.ok) loadItems('reunioes');
 }
 
+async function loadHelperFeriados() {
+    const container = document.getElementById('escala-helper-feriados');
+    if(!container) return;
+    try {
+        const res = await fetch(`/api/gestao/proximos_feriados?t=${Date.now()}`);
+        if(res.ok) {
+            const data = await res.json();
+            if(data.length > 0) {
+                container.innerHTML = data.map(f => `
+                    <button type="button" onclick="quickFillEscalaHoliday('${f.date}', '${f.name}')" 
+                        class="px-2.5 py-1 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 hover:border-rose-500/30 text-rose-600 dark:text-rose-400 rounded-lg text-[10px] font-bold transition-all flex flex-col items-start gap-0.5">
+                        <span class="font-extrabold flex items-center gap-1">
+                            <i class="fa-solid fa-gift text-[9px]"></i> ${f.display_date} - ${f.name}
+                        </span>
+                        <span class="text-[8px] text-slate-400 font-semibold">${f.day_name}</span>
+                    </button>
+                `).join('');
+            } else {
+                container.innerHTML = `<span class="text-[10px] text-slate-400 p-1">Nenhum feriado próximo.</span>`;
+            }
+        } else {
+            container.innerHTML = `<span class="text-[10px] text-red-400 p-1">Erro ao carregar feriados.</span>`;
+        }
+    } catch(err) {
+        container.innerHTML = `<span class="text-[10px] text-red-400 p-1">Erro ao carregar feriados.</span>`;
+    }
+}
+
+function quickFillEscalaHoliday(dateStr, holidayName) {
+    const form = document.getElementById('form-escala');
+    if(!form) return;
+    form.querySelector('[name="date"]').value = dateStr;
+    form.querySelector('[name="type"]').value = 'feriado';
+    form.querySelector('[name="obs"]').value = `Plantão Especial - Feriado: ${holidayName}`;
+    
+    showToast(`Preenchido: ${holidayName} (${new Date(dateStr + 'T00:00:00').toLocaleDateString()})`, "success");
+    
+    ['[name="date"]', '[name="type"]', '[name="obs"]'].forEach(sel => {
+        const el = form.querySelector(sel);
+        if(el) {
+            el.classList.add('ring-2', 'ring-purple-500');
+            setTimeout(() => el.classList.remove('ring-2', 'ring-purple-500'), 1500);
+        }
+    });
+}
+
 function openModalEscala() {
     const form = document.getElementById('form-escala');
     form.reset();
     form.querySelector('[name="id"]').value = '';
     document.getElementById('escala-teams-display').innerHTML = 'Nenhuma equipe selecionada';
     document.getElementById('escala-team-ids').value = '';
+    loadHelperFeriados();
     openModal('modal-escala');
 }
 
@@ -2760,6 +2819,7 @@ async function editEscala(id) {
     });
     
     updateEscalaTeams();
+    loadHelperFeriados();
     openModal('modal-escala');
 }
 
