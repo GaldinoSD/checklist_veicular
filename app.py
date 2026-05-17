@@ -3584,7 +3584,7 @@ def api_rota_exata(id=None):
         r = RotaExata.query.get_or_404(target_id)
         db.session.delete(r)
         db.session.commit()
-        return jsonify({"status": "ok"})
+        return jsonify({"status": "ok", "success": True})
 
     if id and request.method == "GET":
         r = RotaExata.query.get_or_404(id)
@@ -3615,16 +3615,8 @@ def api_rota_exata(id=None):
             r = RotaExata(supervisor_id=current_user.id)
             db.session.add(r)
 
-        date_str = data.get("date")
-        if date_str:
-            r.date = datetime.strptime(date_str, "%Y-%m-%d").date()
-        r.time = data.get("time")
-        r.location = data.get("location")
-        r.obs = data.get("obs")
-        r.status = data.get("status", "PENDENTE")
-        
         # Suporta tanto objeto quanto string serializada para techs_data
-        techs = data.get("techs_data")
+        techs = data.get("techs_data") or data.get("techs")
         if isinstance(techs, (list, dict)):
             r.techs_data = techs
         elif isinstance(techs, str):
@@ -3632,6 +3624,23 @@ def api_rota_exata(id=None):
                 r.techs_data = json.loads(techs)
             except Exception:
                 r.techs_data = []
+
+        date_str = data.get("date")
+        if date_str:
+            r.date = datetime.strptime(date_str, "%Y-%m-%d").date()
+        else:
+            if isinstance(r.techs_data, list) and len(r.techs_data) > 0:
+                first_date = r.techs_data[0].get("supervision_date")
+                if first_date:
+                    try:
+                        r.date = datetime.strptime(first_date, "%Y-%m-%d").date()
+                    except Exception:
+                        pass
+
+        r.time = data.get("time") or (r.techs_data[0].get("yard_departure_time") if (isinstance(r.techs_data, list) and len(r.techs_data) > 0) else None)
+        r.location = data.get("location") or (r.techs_data[0].get("planned_route") if (isinstance(r.techs_data, list) and len(r.techs_data) > 0) else None)
+        r.obs = data.get("obs")
+        r.status = data.get("status", "PENDENTE")
 
         # Fotos upload
         photos = request.files.getlist("photos") or request.files.getlist("photos[]")
@@ -3646,7 +3655,7 @@ def api_rota_exata(id=None):
             r.photos_json = json.dumps(filenames)
 
         db.session.commit()
-        return jsonify({"status": "ok", "id": r.id})
+        return jsonify({"status": "ok", "success": True, "id": r.id})
 
     items = RotaExata.query.order_by(RotaExata.date.desc()).all()
     res = []
@@ -4320,11 +4329,38 @@ def rota_exata_pdf(id):
     if r.techs_data:
         try:
             if isinstance(r.techs_data, list):
-                techs_str = "\n".join([f"- Técnico ID {t.get('tech_id')}: {t.get('status')} (Chegada: {t.get('arrival_time')}, Saída: {t.get('departure_time')})" for t in r.techs_data])
+                lines = []
+                for i, t in enumerate(r.techs_data, 1):
+                    tech_name = t.get('tech_name') or f"Técnico ID {t.get('tech_id')}"
+                    lines.append(f"AUDITORIA {i}: {tech_name.upper()}")
+                    lines.append(f"  - Data de Supervisão: {t.get('supervision_date') or 'N/A'}")
+                    lines.append(f"  - Saída do Pátio: {t.get('yard_departure_time') or 'N/A'}")
+                    
+                    delay_reason = t.get('delay_reason')
+                    if delay_reason:
+                        lines.append(f"  - Atraso na Saída: Sim - Motivo: {delay_reason}")
+                    else:
+                        lines.append(f"  - Atraso na Saída: Não")
+                    
+                    route_deviation = t.get('route_deviation')
+                    identified_reason = t.get('identified_reason')
+                    if route_deviation or identified_reason:
+                        lines.append(f"  - Desvio de Rota: Sim - Local: {route_deviation or 'N/A'} (Motivo: {identified_reason or 'N/A'})")
+                    else:
+                        lines.append(f"  - Desvio de Rota: Não")
+                        
+                    lines.append(f"  - Horário de Almoço: {t.get('lunch_start') or 'N/A'} até {t.get('lunch_end') or 'N/A'}")
+                    lines.append(f"  - Rota Planejada: {t.get('planned_route') or 'N/A'}")
+                    
+                    obs = t.get('observations')
+                    if obs:
+                        lines.append(f"  - Observações: {obs}")
+                    lines.append("")
+                techs_str = "\n".join(lines)
             else:
                 techs_str = str(r.techs_data)
-        except Exception:
-            techs_str = str(r.techs_data)
+        except Exception as ex:
+            techs_str = f"Erro ao processar dados de técnicos: {str(ex)}"
 
     content = [
         ("Auditoria de Técnicos em Campo", techs_str or "Nenhuma auditoria de técnico registrada"),
