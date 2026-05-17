@@ -3347,61 +3347,94 @@ def api_atividades(id=None):
         is_list = isinstance(data, list)
         items = data if is_list else [data]
         
-        saved_ids = []
-        for item in items:
-            aid = id or item.get("id")
-            if aid:
-                a = Activity.query.get(aid)
-                if not a:
-                    continue
-            else:
-                a = Activity(user_id=current_user.id)
-                db.session.add(a)
-                
-            a.type = item.get("type")
-            a.location = item.get("location")
+        if not items:
+            return jsonify({"error": "Nenhum dado enviado"}), 400
             
-            date_str = item.get("date")
-            if date_str:
-                a.date = datetime.strptime(date_str, "%Y-%m-%d").date()
-            else:
-                # Se não fornecido, usa a data atual
-                a.date = agora().date()
-                
-            a.time = item.get("time")
-            a.description = item.get("description")
-            a.status = item.get("status", "ABERTO")
-            a.obs = item.get("obs")
-            a.tech_responsible = item.get("tech_responsible")
-            a.client_name = item.get("client_name")
-            a.client_code = item.get("client_code")
-            a.quality_rating = item.get("quality_rating")
-            a.client_feedback = item.get("client_feedback")
-            a.os_closure = item.get("os_closure")
-            a.conclusion = item.get("conclusion")
+        # Determina o ID do registro principal a ser salvo ou atualizado
+        aid = id or items[0].get("id")
+        if aid:
+            a = Activity.query.get(aid)
+            if not a:
+                return jsonify({"error": "Atividade não encontrada"}), 404
+        else:
+            a = Activity(user_id=current_user.id)
+            db.session.add(a)
             
-            # Upload de fotos (apenas se enviado como form-data tradicional, não lote JSON)
-            if not is_list:
-                photos = request.files.getlist("photos") or request.files.getlist("photos[]")
-                filenames = json.loads(a.photos_json) if a.photos_json else []
-                for p in photos:
-                    if p and allowed_file(p.filename):
-                        ext = os.path.splitext(p.filename.lower())[1]
-                        fn = f"act_{uuid.uuid4().hex}{ext}"
-                        p.save(VISTORIAS_UPLOAD_DIR / fn)
-                        filenames.append(fn)
-                if filenames:
-                    a.photos_json = json.dumps(filenames)
+        # Sempre salva a lista completa de blocos serializada como JSON em description
+        a.description = json.dumps(items)
+        
+        # Agrega e concatena dados dos blocos para preenchimento das colunas principais
+        unique_techs = list(dict.fromkeys([x.get("tech_responsible", "").strip() for x in items if x.get("tech_responsible")]))
+        a.tech_responsible = ", ".join(unique_techs) if unique_techs else items[0].get("tech_responsible")
+        
+        unique_clients = list(dict.fromkeys([x.get("client_name", "").strip() for x in items if x.get("client_name")]))
+        a.client_name = ", ".join(unique_clients) if unique_clients else items[0].get("client_name")
+        
+        unique_codes = list(dict.fromkeys([x.get("client_code", "").strip() for x in items if x.get("client_code")]))
+        a.client_code = ", ".join(unique_codes) if unique_codes else items[0].get("client_code")
+        
+        unique_types = list(dict.fromkeys([x.get("type", "").strip() for x in items if x.get("type")]))
+        a.type = ", ".join(unique_types) if unique_types else items[0].get("type")
+        
+        a.location = items[0].get("location")
+        a.time = items[0].get("time")
+        a.status = items[0].get("status", "ABERTO")
+        a.obs = items[0].get("obs")
+        
+        date_str = items[0].get("date")
+        if date_str:
+            a.date = datetime.strptime(date_str, "%Y-%m-%d").date()
+        else:
+            a.date = agora().date()
             
-            db.session.flush()
-            saved_ids.append(a.id)
+        a.quality_rating = items[0].get("quality_rating")
+        a.client_feedback = items[0].get("client_feedback")
+        a.os_closure = items[0].get("os_closure")
+        a.conclusion = items[0].get("conclusion")
+        
+        # Upload de fotos (apenas se enviado como form-data tradicional, não lote JSON)
+        if not is_list:
+            photos = request.files.getlist("photos") or request.files.getlist("photos[]")
+            filenames = json.loads(a.photos_json) if a.photos_json else []
+            for p in photos:
+                if p and allowed_file(p.filename):
+                    ext = os.path.splitext(p.filename.lower())[1]
+                    fn = f"act_{uuid.uuid4().hex}{ext}"
+                    p.save(VISTORIAS_UPLOAD_DIR / fn)
+                    filenames.append(fn)
+            if filenames:
+                a.photos_json = json.dumps(filenames)
             
         db.session.commit()
-        return jsonify({"status": "ok", "ids": saved_ids, "id": saved_ids[0] if saved_ids else None})
+        return jsonify({"status": "ok", "id": a.id})
 
     items = Activity.query.order_by(Activity.date.desc().nullslast()).all()
     res = []
     for i in items:
+        # Tenta decodificar o array de blocos caso description seja JSON
+        blocks = []
+        if i.description and i.description.startswith("[") and i.description.endswith("]"):
+            try:
+                blocks = json.loads(i.description)
+            except Exception:
+                pass
+        if not blocks:
+            # Fallback para registro legado de bloco único
+            blocks = [{
+                "type": i.type,
+                "location": i.location,
+                "date": str(i.date) if i.date else "",
+                "time": i.time,
+                "tech_responsible": i.tech_responsible,
+                "client_name": i.client_name,
+                "client_code": i.client_code,
+                "quality_rating": i.quality_rating,
+                "client_feedback": i.client_feedback,
+                "os_closure": i.os_closure,
+                "conclusion": i.conclusion,
+                "obs": i.obs
+            }]
+            
         res.append({
             "id": i.id,
             "user_id": i.user_id,
@@ -3423,7 +3456,8 @@ def api_atividades(id=None):
             "client_feedback": i.client_feedback,
             "feedback": i.client_feedback,  # Compatibilidade retroativa
             "os_closure": i.os_closure,
-            "conclusion": i.conclusion
+            "conclusion": i.conclusion,
+            "blocks": blocks  # Lista estruturada de blocos unificados
         })
     return jsonify(res)
 
@@ -3704,30 +3738,272 @@ def encerramento_pdf(id):
 @supervisor_allowed
 def atividade_pdf(id):
     import io
+    import json
     from flask import send_file
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib import colors
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import mm
     
     a = Activity.query.get_or_404(id)
     buffer = io.BytesIO()
+    
+    # Tenta decodificar o array de blocos
+    blocks = []
+    if a.description and a.description.startswith("[") and a.description.endswith("]"):
+        try:
+            blocks = json.loads(a.description)
+        except Exception:
+            pass
+            
+    if not blocks:
+        blocks = [{
+            "type": a.type,
+            "location": a.location,
+            "date": str(a.date) if a.date else "",
+            "time": a.time,
+            "tech_responsible": a.tech_responsible,
+            "client_name": a.client_name,
+            "client_code": a.client_code,
+            "quality_rating": a.quality_rating,
+            "client_feedback": a.client_feedback,
+            "os_closure": a.os_closure,
+            "conclusion": a.conclusion,
+            "obs": a.obs
+        }]
+        
+    if len(blocks) <= 1:
+        # Layout individual legado/simplificado
+        metadata = {
+            "Tipo de Atividade": a.type or "N/A",
+            "Localização": a.location or "N/A",
+            "Data": a.date.strftime("%d/%m/%Y") if a.date else "N/A",
+            "Horário": a.time or "N/A",
+            "Técnico Responsável": a.tech_responsible or "N/A"
+        }
 
-    metadata = {
-        "Tipo de Atividade": a.type or "N/A",
-        "Localização": a.location or "N/A",
-        "Data": a.date.strftime("%d/%m/%Y") if a.date else "N/A",
-        "Horário": a.time or "N/A",
-        "Técnico Responsável": a.tech_responsible or "N/A"
-    }
+        content = [
+            ("Cliente", f"{a.client_name or 'N/A'} (Cód: {a.client_code or 'N/A'})"),
+            ("Status da O.S.", a.os_closure or "N/A"),
+            ("Descrição dos Serviços", blocks[0].get("description") or a.conclusion or "Sem descrição"),
+            ("Conclusão Técnica", a.conclusion or "N/A"),
+            ("Avaliação de Qualidade", a.quality_rating or "N/A"),
+            ("Feedback do Cliente", a.client_feedback or "Sem feedback"),
+            ("Observações", a.obs or "Sem observações")
+        ]
 
-    content = [
-        ("Cliente", f"{a.client_name or 'N/A'} (Cód: {a.client_code or 'N/A'})"),
-        ("Status da O.S.", a.os_closure or "N/A"),
-        ("Descrição dos Serviços", a.description or "Sem descrição"),
-        ("Conclusão Técnica", a.conclusion or "N/A"),
-        ("Avaliação de Qualidade", a.quality_rating or "N/A"),
-        ("Feedback do Cliente", a.client_feedback or "Sem feedback"),
-        ("Observações", a.obs or "Sem observações")
-    ]
-
-    make_premium_pdf(buffer, "Relatório de Atividade Técnica", metadata, content)
+        make_premium_pdf(buffer, "Relatório de Atividade Técnica", metadata, content)
+    else:
+        # ==========================================
+        # 🔥 LAYOUT PREMIUM CONSOLIDADO MULTITÉCNICO 🔥
+        # ==========================================
+        doc = SimpleDocTemplate(
+            buffer,
+            pagesize=A4,
+            rightMargin=15*mm, leftMargin=15*mm,
+            topMargin=15*mm, bottomMargin=15*mm
+        )
+        
+        styles = getSampleStyleSheet()
+        
+        # Estilos Customizados
+        title_style = ParagraphStyle(
+            name="ConsTitle",
+            parent=styles["Heading1"],
+            fontName="Helvetica-Bold",
+            fontSize=16,
+            textColor=colors.HexColor("#0F172A"),
+            spaceAfter=5
+        )
+        
+        subtitle_style = ParagraphStyle(
+            name="ConsSub",
+            parent=styles["Normal"],
+            fontName="Helvetica-Bold",
+            fontSize=10,
+            textColor=colors.HexColor("#64748B"),
+            spaceAfter=15
+        )
+        
+        section_heading = ParagraphStyle(
+            name="ConsSec",
+            parent=styles["Heading2"],
+            fontName="Helvetica-Bold",
+            fontSize=12,
+            textColor=colors.HexColor("#1E293B"),
+            spaceBefore=10,
+            spaceAfter=8
+        )
+        
+        label_style = ParagraphStyle(
+            name="ConsLabel",
+            parent=styles["Normal"],
+            fontName="Helvetica-Bold",
+            fontSize=9,
+            textColor=colors.HexColor("#475569")
+        )
+        
+        value_style = ParagraphStyle(
+            name="ConsValue",
+            parent=styles["Normal"],
+            fontName="Helvetica",
+            fontSize=9,
+            textColor=colors.HexColor("#1E293B")
+        )
+        
+        th_style = ParagraphStyle(
+            name="ConsTH",
+            parent=styles["Normal"],
+            fontName="Helvetica-Bold",
+            fontSize=8,
+            textColor=colors.white
+        )
+        
+        td_style = ParagraphStyle(
+            name="ConsTD",
+            parent=styles["Normal"],
+            fontName="Helvetica",
+            fontSize=8,
+            textColor=colors.HexColor("#334155")
+        )
+        
+        story = []
+        
+        # 1. Cabeçalho e Título
+        story.append(Paragraph("Relatório Consolidado de Atividades Técnicas", title_style))
+        story.append(Paragraph(f"Registro Unificado de Vistorias em {a.date.strftime('%d/%m/%Y') if a.date else ''}", subtitle_style))
+        story.append(Spacer(1, 2*mm))
+        
+        # 2. Metadados Gerais do Registro
+        meta_data = [
+            [Paragraph("<b>Localização Geral:</b>", label_style), Paragraph(a.location or "N/A", value_style),
+             Paragraph("<b>Data de Registro:</b>", label_style), Paragraph(a.date.strftime("%d/%m/%Y") if a.date else "N/A", value_style)],
+            [Paragraph("<b>Total de Vistorias:</b>", label_style), Paragraph(f"{len(blocks)} atividades", value_style),
+             Paragraph("<b>Técnicos Escalados:</b>", label_style), Paragraph(a.tech_responsible or "N/A", value_style)]
+        ]
+        meta_table = Table(meta_data, colWidths=[35*mm, 50*mm, 35*mm, 50*mm])
+        meta_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor("#F8FAFC")),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            ('TOPPADDING', (0, 0), (-1, -1), 6),
+            ('LINEBELOW', (0, 0), (-1, -1), 0.5, colors.HexColor("#E2E8F0")),
+        ]))
+        story.append(meta_table)
+        story.append(Spacer(1, 8*mm))
+        
+        # 3. Tabela Resumo das Atividades
+        story.append(Paragraph("Resumo Operacional", section_heading))
+        
+        summary_rows = [[
+            Paragraph("TÉCNICO", th_style),
+            Paragraph("CLIENTE", th_style),
+            Paragraph("ATIVIDADE", th_style),
+            Paragraph("AVALIAÇÃO", th_style),
+            Paragraph("O.S. FECHADA", th_style)
+        ]]
+        
+        for idx, b in enumerate(blocks):
+            summary_rows.append([
+                Paragraph(b.get("tech_responsible") or "N/A", td_style),
+                Paragraph(f"{b.get('client_name') or 'N/A'} ({b.get('client_code') or 'N/A'})", td_style),
+                Paragraph(b.get("type") or "Vistoria", td_style),
+                Paragraph(b.get("quality_rating") or "N/A", td_style),
+                Paragraph(b.get("os_closure") or "N/A", td_style)
+            ])
+            
+        summary_table = Table(summary_rows, colWidths=[35*mm, 55*mm, 35*mm, 25*mm, 20*mm])
+        
+        # Estilização da tabela de resumo com visual premium slate
+        t_style = [
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#1E293B")),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('TOPPADDING', (0, 0), (-1, -1), 6),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+            ('LEFTPADDING', (0, 0), (-1, -1), 6),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#CBD5E1")),
+        ]
+        
+        # Cor de linha zebra
+        for r_idx in range(1, len(summary_rows)):
+            if r_idx % 2 == 0:
+                t_style.append(('BACKGROUND', (0, r_idx), (-1, r_idx), colors.HexColor("#F1F5F9")))
+                
+        summary_table.setStyle(TableStyle(t_style))
+        story.append(summary_table)
+        story.append(Spacer(1, 10*mm))
+        
+        # 4. Detalhamento Individual de cada Vistoria
+        story.append(Paragraph("Detalhamento Individual", section_heading))
+        
+        for idx, b in enumerate(blocks):
+            story.append(Spacer(1, 2*mm))
+            # Sub-barra de cabeçalho do técnico
+            header_data = [[
+                Paragraph(f"<b>Atividade #{idx+1} — Técnico: {b.get('tech_responsible') or 'N/A'}</b>", ParagraphStyle(
+                    name=f"HText_{idx}", parent=styles["Normal"], fontName="Helvetica-Bold", fontSize=10, textColor=colors.HexColor("#0F172A")
+                ))
+            ]]
+            header_table = Table(header_data, colWidths=[170*mm])
+            header_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor("#E2E8F0")),
+                ('TOPPADDING', (0, 0), (-1, -1), 5),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+                ('LEFTPADDING', (0, 0), (-1, -1), 8),
+                ('LINEBELOW', (0, 0), (-1, -1), 1, colors.HexColor("#94A3B8")),
+            ]))
+            story.append(header_table)
+            story.append(Spacer(1, 3*mm))
+            
+            # Grid de Detalhes
+            details = [
+                [Paragraph("<b>Cliente:</b>", label_style), Paragraph(f"{b.get('client_name') or 'N/A'} (Cód: {b.get('client_code') or 'N/A'})", value_style),
+                 Paragraph("<b>Horário/Tipo:</b>", label_style), Paragraph(f"{b.get('time') or 'N/D'} - {b.get('type') or 'Vistoria'}", value_style)],
+                [Paragraph("<b>Avaliação:</b>", label_style), Paragraph(b.get("quality_rating") or "N/A", value_style),
+                 Paragraph("<b>O.S. Fechada:</b>", label_style), Paragraph(b.get("os_closure") or "N/A", value_style)]
+            ]
+            
+            details_table = Table(details, colWidths=[30*mm, 55*mm, 30*mm, 55*mm])
+            details_table.setStyle(TableStyle([
+                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+                ('TOPPADDING', (0, 0), (-1, -1), 4),
+            ]))
+            story.append(details_table)
+            story.append(Spacer(1, 3*mm))
+            
+            # Feedback e Conclusão
+            text_blocks = []
+            if b.get("client_feedback"):
+                text_blocks.append([
+                    Paragraph("<b>Feedback do Cliente:</b>", label_style),
+                    Paragraph(b.get("client_feedback").replace("\n", "<br/>"), value_style)
+                ])
+            if b.get("conclusion"):
+                text_blocks.append([
+                    Paragraph("<b>Conclusão / Observações:</b>", label_style),
+                    Paragraph(b.get("conclusion").replace("\n", "<br/>"), value_style)
+                ])
+                
+            if text_blocks:
+                tb_table = Table(text_blocks, colWidths=[40*mm, 130*mm])
+                tb_table.setStyle(TableStyle([
+                    ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                    ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+                    ('TOPPADDING', (0, 0), (-1, -1), 5),
+                    ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor("#F8FAFC")),
+                    ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#F1F5F9")),
+                ]))
+                story.append(tb_table)
+                
+            story.append(Spacer(1, 5*mm))
+            
+        doc.build(story)
+        
     buffer.seek(0)
     
     return send_file(

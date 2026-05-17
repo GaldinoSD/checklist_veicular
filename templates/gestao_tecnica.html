@@ -2033,7 +2033,65 @@ async function loadItems(slug) {
             </div>`;
         }).join('');
     } else if(slug === 'atividades') {
-        container.innerHTML = data.map(i => `
+        container.innerHTML = data.map(i => {
+            const hasMultiple = i.blocks && i.blocks.length > 1;
+            
+            // Renderiza o drawer expansível de acordo
+            let drawerContent = '';
+            if (hasMultiple) {
+                drawerContent = `
+                    <div class="space-y-3">
+                        <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-900/5 dark:border-white/5 pb-1">Vistorias Integradas (${i.blocks.length} técnicos)</p>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse text-[11px]">
+                                <thead>
+                                    <tr class="border-b border-slate-900/10 dark:border-white/10 text-slate-400 font-bold uppercase tracking-wider">
+                                        <th class="py-2 pr-4">Técnico</th>
+                                        <th class="py-2 pr-4">Cliente</th>
+                                        <th class="py-2 pr-4">Atividade</th>
+                                        <th class="py-2 pr-4">Qualidade</th>
+                                        <th class="py-2 pr-4">O.S. Fechada</th>
+                                        <th class="py-2">Feedback & Observações</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${i.blocks.map(b => `
+                                        <tr class="border-b border-slate-900/5 dark:border-white/5 last:border-0 hover:bg-slate-50 dark:hover:bg-white/5 transition-colors">
+                                            <td class="py-2 pr-4 font-bold text-slate-700 dark:text-gray-300">${b.tech_responsible || 'N/A'}</td>
+                                            <td class="py-2 pr-4 text-slate-600 dark:text-gray-400">
+                                                <div class="font-semibold">${b.client_name || 'N/A'}</div>
+                                                <div class="text-[9px] text-slate-400">Cód: ${b.client_code || 'N/A'}</div>
+                                            </td>
+                                            <td class="py-2 pr-4"><span class="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded text-[9px] font-bold">${b.type || 'Vistoria'}</span></td>
+                                            <td class="py-2 pr-4"><span class="px-2 py-0.5 bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 rounded text-[9px] font-bold">${b.quality_rating || 'Excelente'}</span></td>
+                                            <td class="py-2 pr-4 font-semibold">${b.os_closure || 'N/A'}</td>
+                                            <td class="py-2 max-w-[250px] truncate" title="Feedback: ${b.client_feedback || 'Sem feedback'}\nObs: ${b.conclusion || 'Sem conclusão'}">
+                                                <div class="truncate text-slate-500"><i class="fa-solid fa-comment-dots text-purple-400"></i> ${b.client_feedback || 'Sem feedback'}</div>
+                                                <div class="truncate text-[9px] text-slate-400"><i class="fa-solid fa-check-double text-slate-400"></i> ${b.conclusion || 'Sem conclusão'}</div>
+                                            </td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+            } else {
+                drawerContent = `
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="bg-white dark:bg-gray-800/40 p-3 rounded-xl border border-slate-900/5 dark:border-white/5">
+                            <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Feedback do Cliente</span>
+                            <p class="text-xs text-slate-600 dark:text-gray-300 leading-relaxed">${i.client_feedback || i.feedback || 'Sem feedback registrado'}</p>
+                        </div>
+                        <div class="bg-white dark:bg-gray-800/40 p-3 rounded-xl border border-slate-900/5 dark:border-white/5">
+                            <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Conclusão / Observações Finais</span>
+                            <p class="text-xs text-slate-600 dark:text-gray-300 leading-relaxed">${i.conclusion || 'Nenhuma observação final'}</p>
+                        </div>
+                    </div>
+                `;
+            }
+
+            return `
             <div class="bg-white dark:bg-gray-900 rounded-xl border border-slate-900/10 dark:border-white/10 shadow-sm hover:shadow-md hover:border-purple-500/20 dark:hover:border-purple-500/20 transition-all duration-300 flex flex-col group relative overflow-hidden animate-premium">
                 <!-- Sleek horizontal row layout -->
                 <div class="flex flex-wrap md:flex-nowrap items-center justify-between p-3.5 gap-3">
@@ -2059,9 +2117,9 @@ async function loadItems(slug) {
                             <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Avaliação</span>
                             <span class="px-2 py-0.5 bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400 rounded-md text-[9px] font-black uppercase tracking-wider w-fit mt-0.5">${i.quality || 'Excelente'}</span>
                         </div>
-                        <div class="flex flex-col">
+                        <div class="flex flex-col max-w-[150px]">
                             <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Responsável</span>
-                            <span class="text-xs font-bold text-slate-700 dark:text-gray-300 mt-0.5">${i.tech || 'Não informado'}</span>
+                            <span class="text-xs font-bold text-slate-700 dark:text-gray-300 mt-0.5 truncate" title="${i.tech || 'Não informado'}">${i.tech || 'Não informado'}</span>
                         </div>
                     </div>
 
@@ -2084,19 +2142,10 @@ async function loadItems(slug) {
 
                 <!-- Expanded Drawer Content -->
                 <div class="atividade-expanded-row hidden border-t border-slate-900/5 dark:border-white/5 bg-slate-50/50 dark:bg-gray-900/30 p-4 animate-premium">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div class="bg-white dark:bg-gray-800/40 p-3 rounded-xl border border-slate-900/5 dark:border-white/5">
-                            <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Feedback do Cliente</span>
-                            <p class="text-xs text-slate-600 dark:text-gray-300 leading-relaxed">${i.client_feedback || i.feedback || 'Sem feedback registrado'}</p>
-                        </div>
-                        <div class="bg-white dark:bg-gray-800/40 p-3 rounded-xl border border-slate-900/5 dark:border-white/5">
-                            <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Conclusão / Observações Finais</span>
-                            <p class="text-xs text-slate-600 dark:text-gray-300 leading-relaxed">${i.conclusion || 'Nenhuma observação final'}</p>
-                        </div>
-                    </div>
+                    ${drawerContent}
                 </div>
-            </div>
-        `).join('');
+            </div>`;
+        }).join('');
     } else if(slug === 'reunioes') {
         container.innerHTML = data.map(i => {
             const isCompleted = i.status === 'Concluída';
@@ -3595,48 +3644,77 @@ function editAtividade(id) {
     if(!item) return;
     
     document.getElementById('vistoria-blocks').innerHTML = '';
-    addVistoriaBlock();
     
-    const block = document.getElementById('vistoria-blocks').children[0];
-    // Esconder lixo no modo edição de item único
-    block.querySelector('.btn-remove-block').classList.add('hidden');
+    const blocks = item.blocks && item.blocks.length > 0 ? item.blocks : [{
+        tech_responsible: item.tech_responsible || item.tech || '',
+        client_name: item.client_name || '',
+        client_code: item.client_code || '',
+        type: item.type || '',
+        time: item.time || '',
+        quality_rating: item.quality || 'Excelente',
+        os_closure: item.os_closure || 'Sim',
+        client_feedback: item.feedback || '',
+        conclusion: item.conclusion || ''
+    }];
     
-    block.querySelector('select[name="tech_responsible"]').value = item.tech_responsible || item.tech || '';
-    block.querySelector('input[name="client_name"]').value = item.client_name || '';
-    block.querySelector('input[name="client_code"]').value = item.client_code || '';
-    block.querySelector('input[name="type"]').value = item.type || '';
-    block.querySelector('input[name="time"]').value = item.time || '';
-    block.querySelector('select[name="quality_rating"]').value = item.quality || 'Excelente';
-    block.querySelector('select[name="os_closure"]').value = item.os_closure || 'Sim';
-    block.querySelector('textarea[name="client_feedback"]').value = item.feedback || '';
-    block.querySelector('textarea[name="conclusion"]').value = item.conclusion || '';
+    blocks.forEach((b, idx) => {
+        addVistoriaBlock();
+        const block = document.getElementById('vistoria-blocks').children[idx];
+        
+        block.querySelector('select[name="tech_responsible"]').value = b.tech_responsible || '';
+        block.querySelector('input[name="client_name"]').value = b.client_name || '';
+        block.querySelector('input[name="client_code"]').value = b.client_code || '';
+        block.querySelector('input[name="type"]').value = b.type || '';
+        block.querySelector('input[name="time"]').value = b.time || '';
+        block.querySelector('select[name="quality_rating"]').value = b.quality_rating || 'Excelente';
+        block.querySelector('select[name="os_closure"]').value = b.os_closure || 'Sim';
+        block.querySelector('textarea[name="client_feedback"]').value = b.client_feedback || '';
+        block.querySelector('textarea[name="conclusion"]').value = b.conclusion || '';
+        
+        // Se houver apenas 1 bloco, esconde o botão de remover
+        if (blocks.length === 1) {
+            block.querySelector('.btn-remove-block').classList.add('hidden');
+        }
+    });
     
     const submitBtn = document.getElementById('btn-save-vistoria');
     submitBtn.onclick = () => saveEditAtividade(id);
     submitBtn.innerHTML = '<i class="fa-solid fa-save"></i> Salvar Alteração';
     
-    document.querySelector('#modal-vistoria button[onclick="addVistoriaBlock()"]').classList.add('hidden');
+    // Permite adicionar mais blocos/técnicos na edição
+    document.querySelector('#modal-vistoria button[onclick="addVistoriaBlock()"]').classList.remove('hidden');
     openModal('modal-vistoria');
 }
 
 async function saveEditAtividade(id) {
-    const block = document.getElementById('vistoria-blocks').children[0];
-    const item = {};
-    block.querySelectorAll('input, select, textarea').forEach(el => {
-        item[el.name] = el.value;
-    });
+    const blocks = document.getElementById('vistoria-blocks').children;
+    if(blocks.length === 0) return alert("Adicione pelo menos uma vistoria.");
+    
+    const data = [];
+    for(let b of blocks) {
+        const item = {};
+        b.querySelectorAll('input, select, textarea').forEach(el => {
+            item[el.name] = el.value;
+        });
+        data.push(item);
+    }
     
     try {
         const res = await fetch(`/api/gestao/atividades/${id}`, {
             method: 'PUT',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(item)
+            body: JSON.stringify(data)
         });
         if(res.ok) {
             closeModal('modal-vistoria');
             loadItems('atividades');
+        } else {
+            alert("Erro ao salvar alterações da vistoria.");
         }
-    } catch(e) { console.error(e); }
+    } catch(e) { 
+        console.error(e); 
+        alert("Erro de conexão.");
+    }
 }
 
 async function deleteAtividade(id) {
