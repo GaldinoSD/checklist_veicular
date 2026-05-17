@@ -305,7 +305,7 @@
                     <i class="fa-solid fa-plus"></i> Registrar Supervisão
                 </button>
             </div>
-            <div id="list-supervisao" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <div id="list-supervisao" class="space-y-4">
                 <!-- Preenchido via JS -->
             </div>
         </div>
@@ -2611,41 +2611,104 @@ async function loadItems(slug) {
         }).join('');
     } else if(slug === 'supervisao') {
         supervisaoData = data;
-        container.innerHTML = data.map(i => `
-            <div class="card-premium p-6 group relative animate-premium">
-                <div class="flex justify-between items-start mb-4">
-                    <div class="flex flex-col">
-                        <span class="px-3 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 rounded-full text-[10px] font-bold uppercase w-fit mb-1">Supervisão Campo</span>
-                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">${(i.techs_data && i.techs_data[0]?.supervision_time) || ''}</span>
+        container.innerHTML = data.map(i => {
+            const dateStr = i.date ? new Date(i.date + 'T00:00:00').toLocaleDateString() : '-';
+            const techList = i.techs_data || [];
+            
+            return `
+            <div class="bg-white dark:bg-gray-900 rounded-2xl border border-slate-900/10 dark:border-white/10 p-4 shadow-sm hover:shadow-md hover:border-emerald-500/20 dark:hover:border-emerald-500/20 transition-all duration-300 flex flex-col group relative overflow-hidden animate-premium">
+                <!-- Sleek horizontal row layout -->
+                <div class="flex flex-wrap md:flex-nowrap items-center justify-between gap-4">
+                    
+                    <!-- Left: Icon + Main Info -->
+                    <div class="flex items-center gap-3.5 min-w-[240px] flex-1">
+                        <div class="w-11 h-11 rounded-2xl bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 flex items-center justify-center text-base shadow-inner shrink-0 group-hover:scale-105 transition-transform duration-300">
+                            <i class="fa-solid fa-users-viewfinder"></i>
+                        </div>
+                        <div class="min-w-0">
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 rounded-full text-[9px] font-black uppercase tracking-wider shrink-0">Supervisão Campo</span>
+                                <span class="text-[10px] text-slate-400 font-bold shrink-0">${dateStr}</span>
+                            </div>
+                            <h4 class="font-extrabold text-slate-800 dark:text-white text-sm truncate leading-tight">${techList.length} Técnico(s) Supervisionado(s)</h4>
+                            <p class="text-[9px] text-slate-400 font-black uppercase tracking-widest mt-1"><i class="fa-solid fa-user-shield text-emerald-400 mr-1"></i> Supervisor: ${i.supervisor_name || 'N/A'}</p>
+                        </div>
                     </div>
-                    <div class="flex gap-2">
-                        <button onclick="downloadSupervisaoPDF(${i.id})" class="text-slate-400 hover:text-emerald-600 p-1" title="Gerar PDF Único"><i class="fa-solid fa-file-pdf"></i></button>
-                        <button onclick="editSupervisao(${i.id})" class="text-blue-500 hover:text-blue-700 p-1"><i class="fa-solid fa-pen"></i></button>
-                        <button onclick="deleteSupervisao(${i.id})" class="text-red-500 hover:text-red-700 p-1"><i class="fa-solid fa-trash"></i></button>
+
+                    <!-- Center: Participant Badges -->
+                    <div class="flex-1 min-w-[200px]">
+                        <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1.5">Técnicos Supervisionados</span>
+                        <div class="flex flex-wrap gap-1">
+                            ${techList.map(t => `<span class="px-2.5 py-0.5 bg-slate-100 dark:bg-white/5 rounded-lg text-[10px] font-bold text-slate-600 dark:text-gray-300 border border-slate-200/20">${t.tech_name || 'N/A'}</span>`).join('')}
+                        </div>
+                    </div>
+
+                    <!-- Right: Action Buttons + Collapse Trigger -->
+                    <div class="flex items-center gap-2 shrink-0 ml-auto md:ml-0">
+                        <button onclick="downloadSupervisaoPDF(${i.id})" class="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 shadow-md shadow-emerald-500/10 transition-all active:scale-95" title="Baixar PDF">
+                            <i class="fa-solid fa-file-pdf"></i> PDF
+                        </button>
+                        <button onclick="editSupervisao(${i.id})" class="w-8.5 h-8.5 flex items-center justify-center border border-slate-200 dark:border-white/10 text-slate-500 hover:bg-slate-50 dark:hover:bg-white/5 rounded-xl transition-all" title="Editar">
+                            <i class="fa-solid fa-pen text-[10px]"></i>
+                        </button>
+                        <button onclick="deleteSupervisao(${i.id})" class="w-8.5 h-8.5 flex items-center justify-center border border-red-100 text-red-400 hover:bg-red-50 rounded-xl transition-all" title="Excluir">
+                            <i class="fa-solid fa-trash text-[10px]"></i>
+                        </button>
+                        <button onclick="const details = this.closest('.group').querySelector('.supervisao-expanded-row'); details.classList.toggle('hidden'); this.querySelector('i').classList.toggle('rotate-180')" class="w-8.5 h-8.5 flex items-center justify-center bg-slate-50 dark:bg-gray-800 text-slate-500 rounded-xl hover:bg-slate-100 dark:hover:bg-white/5 transition-all" title="Ver Detalhes">
+                            <i class="fa-solid fa-chevron-down text-[10px] transition-transform duration-300"></i>
+                        </button>
                     </div>
                 </div>
-                <h4 class="font-bold text-slate-800 dark:text-white mb-1">
-                    <i class="fa-solid fa-users-viewfinder text-emerald-500 mr-2"></i> ${(i.techs_data || []).length} Técnico(s)
-                </h4>
-                <div class="mb-4">
-                    <p class="text-[10px] text-slate-400 uppercase font-black tracking-widest mb-2">Participantes:</p>
-                    <div class="flex flex-wrap gap-1">
-                        ${(i.techs_data || []).map(t => `<span class="px-2 py-0.5 bg-slate-100 dark:bg-white/5 rounded text-[9px] font-bold text-slate-600 dark:text-gray-400">${t.tech_name || 'N/A'}</span>`).join('')}
+
+                <!-- Collapsible Drawer Detail -->
+                <div class="supervisao-expanded-row hidden border-t border-slate-900/5 dark:border-white/5 bg-slate-50/50 dark:bg-white/5 p-4 mt-3 space-y-3 rounded-xl">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="bg-white dark:bg-gray-800/40 p-3 rounded-xl border border-slate-900/5 dark:border-white/5">
+                            <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-2">Detalhes das Auditorias</span>
+                            <div class="space-y-3">
+                                ${techList.map((t, idx) => `
+                                    <div class="border-l-2 border-emerald-500 pl-3">
+                                        <h5 class="text-xs font-bold text-slate-700 dark:text-gray-200">${t.tech_name || 'Técnico'}</h5>
+                                        <p class="text-[10px] text-slate-500 mt-0.5">
+                                            <strong>Local:</strong> ${t.location || 'N/A'} | <strong>Horário:</strong> ${t.supervision_time || 'N/A'} <br>
+                                            <strong>Atividade:</strong> ${t.activity || 'N/A'} <br>
+                                            <strong>Ação / Conclusão:</strong> ${t.conclusion || 'N/A'}
+                                        </p>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+
+                        <div class="bg-white dark:bg-gray-800/40 p-3 rounded-xl border border-slate-900/5 dark:border-white/5 space-y-3">
+                            <div>
+                                <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-2">Segurança (EPI/EPC) & Risco</span>
+                                <div class="space-y-2">
+                                    ${techList.map(t => {
+                                        const epiStatus = t.epi === 'OK' ? `<span class="text-emerald-500 font-bold">EPI: OK</span>` : `<span class="text-red-500 font-bold">EPI: INCORRETO</span>`;
+                                        const epcStatus = t.epc === 'OK' ? `<span class="text-emerald-500 font-bold">EPC: OK</span>` : `<span class="text-red-500 font-bold">EPC: INCORRETO</span>`;
+                                        const ladder = t.ladder_position === 'OK' ? `<span class="text-emerald-500 font-bold">Escada: OK</span>` : `<span class="text-red-500 font-bold">Escada: INCORRETA</span>`;
+                                        const car = t.car_position === 'OK' ? `<span class="text-emerald-500 font-bold">Carro: OK</span>` : `<span class="text-red-500 font-bold">Carro: INCORRETO</span>`;
+                                        const uniform = t.uniform === 'OK' ? `<span class="text-emerald-500 font-bold">Uniforme: OK</span>` : `<span class="text-red-500 font-bold">Uniforme: INCORRETO</span>`;
+                                        const risk = t.risk_level === 'Alto' ? `<span class="px-1.5 py-0.5 bg-red-100 text-red-600 rounded text-[9px] font-black">Risco Alto</span>` : t.risk_level === 'Médio' ? `<span class="px-1.5 py-0.5 bg-amber-100 text-amber-600 rounded text-[9px] font-black">Risco Médio</span>` : `<span class="px-1.5 py-0.5 bg-emerald-100 text-emerald-600 rounded text-[9px] font-black">Risco Baixo</span>`;
+                                        
+                                        return `
+                                            <div class="text-[10px] text-slate-600 dark:text-gray-300 leading-normal border-b border-slate-100 dark:border-white/5 pb-1">
+                                                <strong>${t.tech_name || 'Técnico'}:</strong> ${epiStatus} | ${epcStatus} | ${ladder} | ${car} | ${uniform} | ${risk}
+                                            </div>
+                                        `;
+                                    }).join('')}
+                                </div>
+                            </div>
+                            
+                            <div class="pt-1">
+                                <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Observações do Supervisor</span>
+                                <p class="text-[10px] text-slate-600 dark:text-gray-300 leading-relaxed">${i.obs || 'Nenhuma observação geral registrada.'}</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div class="space-y-1 mb-3">
-                    <p class="text-[10px] text-slate-500 font-bold uppercase tracking-wider"><i class="fa-solid fa-user-shield mr-1 text-emerald-500"></i> Sup: ${i.supervisor || current_user.username}</p>
-                    <p class="text-[10px] text-slate-500"><i class="fa-solid fa-calendar-day mr-1"></i> Criado em: ${new Date(i.date_created).toLocaleString()}</p>
-                </div>
-                <div class="pt-2 border-t border-slate-900/5 dark:border-white/5">
-                    <p class="text-[9px] text-slate-400 font-bold uppercase tracking-widest mb-1">Atividades/Locais:</p>
-                    <div class="flex flex-col gap-1">
-                        ${(i.techs_data || []).slice(0, 2).map(t => `<p class="text-[10px] text-slate-500 truncate">• ${t.activity || 'N/A'} (${t.location || 'N/A'})</p>`).join('')}
-                        ${(i.techs_data || []).length > 2 ? `<p class="text-[9px] text-emerald-500 font-bold">+ ${(i.techs_data.length - 2)} outros...</p>` : ''}
-                    </div>
-                </div>
-            </div>
-        `).join('');
+            </div>`;
+        }).join('');
     } else if(slug === 'solicitacoes') {
         container.innerHTML = data.map(i => {
             let statusColor = 'text-slate-400 bg-slate-100';

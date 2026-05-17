@@ -2642,7 +2642,7 @@ def api_supervisao(id=None):
         s = SupervisaoTecnica.query.get_or_404(target_id)
         db.session.delete(s)
         db.session.commit()
-        return jsonify({"status": "ok"})
+        return jsonify({"status": "ok", "success": True})
 
     if request.method in ["POST", "PUT"]:
         data = request.json or {}
@@ -2655,18 +2655,38 @@ def api_supervisao(id=None):
             s = SupervisaoTecnica(supervisor_id=current_user.id)
             db.session.add(s)
 
+        # Suporta tanto objeto quanto string serializada para techs_data
+        techs = data.get("techs_data") or data.get("techs")
+        if isinstance(techs, (list, dict)):
+            s.techs_data = techs
+        elif isinstance(techs, str):
+            try:
+                s.techs_data = json.loads(techs)
+            except Exception:
+                s.techs_data = []
+
         date_str = data.get("date")
         if date_str:
             s.date = datetime.strptime(date_str, "%Y-%m-%d").date()
-        s.time = data.get("time")
-        s.irregularities = data.get("irregularities")
-        s.action = data.get("action")
+        else:
+            if isinstance(s.techs_data, list) and len(s.techs_data) > 0:
+                first_date = s.techs_data[0].get("supervision_date")
+                if first_date:
+                    try:
+                        s.date = datetime.strptime(first_date, "%Y-%m-%d").date()
+                    except Exception:
+                        pass
+            if not s.date:
+                s.date = datetime.utcnow().date()
+
+        s.time = data.get("time") or (s.techs_data[0].get("supervision_time") if (isinstance(s.techs_data, list) and len(s.techs_data) > 0) else None)
+        s.irregularities = data.get("irregularities") or (s.techs_data[0].get("activity") if (isinstance(s.techs_data, list) and len(s.techs_data) > 0) else None)
+        s.action = data.get("action") or (s.techs_data[0].get("conclusion") if (isinstance(s.techs_data, list) and len(s.techs_data) > 0) else None)
         s.obs = data.get("obs")
         s.checklist_json = json.dumps(data.get("checklist", {}))
-        s.techs_data = data.get("techs_data", [])
 
         db.session.commit()
-        return jsonify({"status": "ok", "id": s.id})
+        return jsonify({"status": "ok", "success": True, "id": s.id})
 
     items = SupervisaoTecnica.query.order_by(SupervisaoTecnica.date.desc()).all()
     res = []
@@ -4375,6 +4395,61 @@ def rota_exata_pdf(id):
         mimetype="application/pdf",
         as_attachment=False,
         download_name=f"auditoria_rota_exata_{id}.pdf"
+    )
+
+@app.route("/api/gestao/supervisao/<int:id>/pdf", methods=["GET"])
+@supervisor_allowed
+def supervisao_pdf(id):
+    import io
+    from flask import send_file
+    
+    s = SupervisaoTecnica.query.get_or_404(id)
+    buffer = io.BytesIO()
+
+    metadata = {
+        "Supervisor": s.supervisor.username if s.supervisor else "N/A",
+        "Data de Auditoria": s.date.strftime("%d/%m/%Y") if s.date else "N/A",
+        "Horário Geral": s.time or "N/A",
+    }
+
+    techs_str = ""
+    if s.techs_data:
+        try:
+            if isinstance(s.techs_data, list):
+                lines = []
+                for i, t in enumerate(s.techs_data, 1):
+                    tech_name = t.get('tech_name') or f"Técnico ID {t.get('tech_id')}"
+                    lines.append(f"SUPERVISÃO {i}: {tech_name.upper()}")
+                    lines.append(f"  - Local da Auditoria: {t.get('location') or 'N/A'}")
+                    lines.append(f"  - Horário: {t.get('supervision_time') or 'N/A'}")
+                    lines.append(f"  - Atividade Desenvolvida: {t.get('activity') or 'N/A'}")
+                    lines.append(f"  - Conclusão / Ação: {t.get('conclusion') or 'N/A'}")
+                    lines.append(f"  - Grau de Risco: {t.get('risk_level') or 'N/A'}")
+                    lines.append(f"  - Checklists de Segurança:")
+                    lines.append(f"    • EPI: {t.get('epi') or 'OK'}  |  EPC: {t.get('epc') or 'OK'}")
+                    lines.append(f"    • Posicionamento de Escada: {t.get('ladder_position') or 'OK'}")
+                    lines.append(f"    • Posicionamento do Carro: {t.get('car_position') or 'OK'}")
+                    lines.append(f"    • Uniforme e Identificação: {t.get('uniform') or 'OK'}")
+                    lines.append("")
+                techs_str = "\n".join(lines)
+            else:
+                techs_str = str(s.techs_data)
+        except Exception as ex:
+            techs_str = f"Erro ao processar dados de técnicos: {str(ex)}"
+
+    content = [
+        ("Auditoria de Técnicos em Campo", techs_str or "Nenhuma supervisão registrada"),
+        ("Observações do Supervisor", s.obs or "Sem observações gerais registradas")
+    ]
+
+    make_premium_pdf(buffer, "Relatório de Supervisão Técnica em Campo", metadata, content)
+    buffer.seek(0)
+    
+    return send_file(
+        buffer,
+        mimetype="application/pdf",
+        as_attachment=False,
+        download_name=f"supervisao_campo_{id}.pdf"
     )
 
 
