@@ -2741,7 +2741,8 @@ def api_equipes(id=None):
             "obs": t.obs,
             "rotation_order": t.rotation_order,
             "member_ids": [m.id for m in t.members],
-            "member_names": ", ".join([m.username for m in t.members])
+            "member_names": ", ".join([m.username for m in t.members]),
+            "members": [{"id": m.id, "username": m.username} for m in t.members]
         })
     return jsonify(res)
 
