@@ -6925,6 +6925,15 @@ def api_gestao_treinamentos_lms_get(id):
             "order": q.order
         } for q in c.questions]
         
+        # Carrega os colaboradores atribuídos para exibir progresso/ranking nos detalhes
+        assignments = [{
+            "id": a.id,
+            "status": a.status,
+            "best_score": a.best_score,
+            "completed_at": a.completed_at.strftime("%d/%m/%Y %H:%M") if a.completed_at else None,
+            "username": a.user.username if a.user else "Removido"
+        } for a in TrainingAssignment.query.filter_by(course_id=c.id).all()]
+
         return jsonify({
             "id": c.id,
             "title": c.title,
@@ -6939,7 +6948,8 @@ def api_gestao_treinamentos_lms_get(id):
             "badge_color": c.badge_color,
             "allow_retake": c.allow_retake,
             "modules": modules,
-            "questions": questions
+            "questions": questions,
+            "assignments": assignments
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
