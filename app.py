@@ -3035,6 +3035,57 @@ def api_escalas(id=None):
                             })
                 curr_date += timedelta(days=1)
                 
+    # 3. Carrega Feriados Nacionais, Estaduais (RJ) e Municipais (Seropédica)
+    if start_str and end_str:
+        from datetime import date
+        import holidays
+        
+        years = list(range(start_date.year, end_date.year + 1))
+        # Base: BR + RJ
+        h_dict = holidays.Brazil(subdiv="RJ", years=years)
+        
+        # Custom municipal holidays for Seropédica, RJ
+        for y in years:
+            # 1. Santo Antônio (June 13th)
+            h_dict[date(y, 6, 13)] = "Santo Antônio (Padroeiro de Seropédica)"
+            
+            # 2. Corpus Christi (60 dias após a Páscoa)
+            # Meeus/Jones/Butcher algoritmo para Páscoa
+            a = y % 19
+            b = y // 100
+            c = y % 100
+            d = b // 4
+            e = b % 4
+            f = (b + 8) // 25
+            g = (b - f + 1) // 3
+            h = (19 * a + b - d - g + 15) % 30
+            i = c // 4
+            k = c % 4
+            l = (32 + 2 * e + 2 * i - h - k) % 7
+            m = (a + 11 * h + 22 * l) // 451
+            month = (h + l - 7 * m + 114) // 31
+            day = ((h + l - 7 * m + 114) % 31) + 1
+            easter_date = date(y, month, day)
+            corpus_christi = easter_date + timedelta(days=60)
+            h_dict[corpus_christi] = "Corpus Christi (Seropédica/RJ)"
+            
+            # 3. Emancipação de Seropédica (12 de Outubro)
+            h_dict[date(y, 10, 12)] = "Nossa Senhora Aparecida / Emancipação de Seropédica"
+
+        for h_date, h_name in h_dict.items():
+            if start_date <= h_date <= end_date:
+                events.append({
+                    "id": f"feriado_{h_date.isoformat()}",
+                    "title": f"🎉 Feriado: {h_name}",
+                    "start": h_date.isoformat(),
+                    "allDay": True,
+                    "color": "#F43F5E", # Lindo Rose-Red para feriados
+                    "extendedProps": {
+                        "type": "feriado",
+                        "name": h_name
+                    }
+                })
+                
     return jsonify(events)
 
 # --- REUNIÕES ---
