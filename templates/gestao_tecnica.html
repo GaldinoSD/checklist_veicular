@@ -206,8 +206,8 @@
                     <i class="fa-solid fa-clipboard-check"></i> Registrar Vistoria
                 </button>
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="list-atividades">
-                <div class="col-span-full py-20 flex flex-col items-center justify-center text-slate-400">
+            <div class="flex flex-col gap-2.5" id="list-atividades">
+                <div class="py-20 flex flex-col items-center justify-center text-slate-400">
                     <i class="fa-solid fa-folder-open text-4xl mb-4 opacity-20"></i>
                     <p class="text-sm font-medium">Nenhuma atividade registrada ainda</p>
                 </div>
@@ -1604,6 +1604,11 @@
 
 <script>
 let currentTab = 'dashboard';
+const globalTecnicos = [
+    {% for t in tecnicos %}
+    { id: {{ t.id }}, username: "{{ t.username }}" },
+    {% endfor %}
+];
 let currentAtividades = [];
 let currentAnotacoes = [];
 let currentAnotacaoTab = 'Geral';
@@ -2029,44 +2034,65 @@ async function loadItems(slug) {
         }).join('');
     } else if(slug === 'atividades') {
         container.innerHTML = data.map(i => `
-            <div class="bg-white/70 dark:bg-white/5 p-6 rounded-3xl border border-slate-900/10 dark:border-white/10 shadow-sm hover:shadow-xl transition-all group overflow-hidden relative">
-                <div class="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-30 transition-opacity">
-                    <i class="fa-solid fa-clipboard-check text-4xl"></i>
-                </div>
-                <div class="flex justify-between items-start mb-4">
-                    <span class="px-3 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-600 rounded-full text-[10px] font-bold uppercase">${i.type}</span>
-                    <span class="text-[10px] text-slate-400 font-bold">${i.date ? new Date(i.date + 'T00:00:00').toLocaleDateString() : '-'} ${i.time || ''}</span>
-                </div>
-                <h4 class="font-bold text-slate-800 dark:text-white mb-1">${i.client_name || 'Sem nome'}</h4>
-                <p class="text-[10px] text-slate-500 font-bold mb-4 uppercase tracking-wider">CÓD: ${i.client_code || '-'}</p>
-                
-                <div class="space-y-3 mb-4">
-                    <div class="flex items-center gap-2">
-                        <div class="w-6 h-6 rounded-lg bg-blue-50 dark:bg-blue-900/20 flex items-center justify-center text-blue-500 text-[10px]">
-                            <i class="fa-solid fa-user-gear"></i>
+            <div class="bg-white dark:bg-gray-900 rounded-xl border border-slate-900/10 dark:border-white/10 shadow-sm hover:shadow-md hover:border-purple-500/20 dark:hover:border-purple-500/20 transition-all duration-300 flex flex-col group relative overflow-hidden animate-premium">
+                <!-- Sleek horizontal row layout -->
+                <div class="flex flex-wrap md:flex-nowrap items-center justify-between p-3.5 gap-3">
+                    
+                    <!-- Left: Icon + Main Info -->
+                    <div class="flex items-center gap-3 flex-1 min-w-[280px]">
+                        <div class="w-10 h-10 rounded-xl bg-purple-50 dark:bg-purple-900/20 text-purple-600 flex items-center justify-center text-sm shadow-inner shrink-0">
+                            <i class="fa-solid fa-clipboard-check"></i>
                         </div>
-                        <span class="text-xs text-slate-600 dark:text-gray-300 font-medium">${i.tech || 'Não informado'}</span>
+                        <div class="min-w-0">
+                            <div class="flex items-center gap-2 mb-0.5">
+                                <span class="px-2 py-0.5 bg-purple-100 dark:bg-purple-900/30 text-purple-600 rounded-full text-[9px] font-black uppercase tracking-wider shrink-0">${i.type || 'Vistoria'}</span>
+                                <span class="text-[10px] text-slate-400 font-bold shrink-0">${i.date ? new Date(i.date + 'T00:00:00').toLocaleDateString() : '-'} ${i.time || ''}</span>
+                            </div>
+                            <h4 class="font-extrabold text-slate-800 dark:text-white text-xs truncate leading-tight">${i.client_name || 'Sem nome'}</h4>
+                            <p class="text-[9px] text-slate-400 font-black uppercase tracking-widest leading-none mt-0.5">CÓD: ${i.client_code || '-'}</p>
+                        </div>
                     </div>
-                    <div class="flex items-center gap-2">
-                        <div class="w-6 h-6 rounded-lg bg-emerald-50 dark:bg-emerald-900/20 flex items-center justify-center text-emerald-500 text-[10px]">
-                            <i class="fa-solid fa-star"></i>
+
+                    <!-- Middle: Technical Quality -->
+                    <div class="flex items-center gap-4 shrink-0 px-4">
+                        <div class="flex flex-col">
+                            <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Avaliação</span>
+                            <span class="px-2 py-0.5 bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400 rounded-md text-[9px] font-black uppercase tracking-wider w-fit mt-0.5">${i.quality || 'Excelente'}</span>
                         </div>
-                        <span class="text-xs text-slate-600 dark:text-gray-300 font-medium">${i.quality || 'N/A'}</span>
+                        <div class="flex flex-col">
+                            <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Responsável</span>
+                            <span class="text-xs font-bold text-slate-700 dark:text-gray-300 mt-0.5">${i.tech || 'Não informado'}</span>
+                        </div>
+                    </div>
+
+                    <!-- Right: Actions -->
+                    <div class="flex items-center gap-2 shrink-0">
+                        <button onclick="downloadVistoriaPDF(${i.id})" class="px-3 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-600 rounded-lg text-[10px] font-bold flex items-center gap-1.5 transition-all">
+                            <i class="fa-solid fa-file-pdf"></i> PDF
+                        </button>
+                        <button onclick="editAtividade(${i.id})" class="w-8 h-8 flex items-center justify-center bg-blue-50 dark:bg-blue-900/30 text-blue-500 rounded-full hover:bg-blue-100" title="Editar">
+                            <i class="fa-solid fa-pen text-[10px]"></i>
+                        </button>
+                        <button onclick="deleteAtividade(${i.id})" class="w-8 h-8 flex items-center justify-center bg-red-50 dark:bg-red-900/30 text-red-500 rounded-full hover:bg-red-100" title="Excluir">
+                            <i class="fa-solid fa-trash text-[10px]"></i>
+                        </button>
+                        <button onclick="this.closest('.group').querySelector('.atividade-expanded-row').classList.toggle('hidden')" class="w-8 h-8 flex items-center justify-center bg-slate-50 dark:bg-gray-800 text-slate-500 rounded-full hover:bg-slate-100" title="Ver Detalhes">
+                            <i class="fa-solid fa-chevron-down text-[10px]"></i>
+                        </button>
                     </div>
                 </div>
 
-                <div class="p-3 bg-slate-50 dark:bg-white/5 rounded-xl border border-slate-900/5 dark:border-white/5">
-                    <p class="text-[10px] font-bold text-slate-400 uppercase mb-1">Conclusão</p>
-                    <p class="text-xs text-slate-500 dark:text-gray-400 line-clamp-2">${i.conclusion || 'Sem observações'}</p>
-                </div>
-
-                <div class="flex justify-between items-center mt-4 pt-4 border-t border-slate-900/5 dark:border-white/5">
-                    <button onclick="downloadVistoriaPDF(${i.id})" class="text-[10px] font-bold text-purple-600 hover:text-purple-700 flex items-center gap-1 transition-colors group/btn">
-                        <i class="fa-solid fa-file-pdf group-hover/btn:scale-110 transition-transform"></i> PDF
-                    </button>
-                    <div class="flex gap-2">
-                        <button onclick="editAtividade(${i.id})" class="text-blue-500 hover:text-blue-700 p-1" title="Editar"><i class="fa-solid fa-pen"></i></button>
-                        <button onclick="deleteAtividade(${i.id})" class="text-red-500 hover:text-red-700 p-1" title="Excluir"><i class="fa-solid fa-trash"></i></button>
+                <!-- Expanded Drawer Content -->
+                <div class="atividade-expanded-row hidden border-t border-slate-900/5 dark:border-white/5 bg-slate-50/50 dark:bg-gray-900/30 p-4 animate-premium">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="bg-white dark:bg-gray-800/40 p-3 rounded-xl border border-slate-900/5 dark:border-white/5">
+                            <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Feedback do Cliente</span>
+                            <p class="text-xs text-slate-600 dark:text-gray-300 leading-relaxed">${i.client_feedback || i.feedback || 'Sem feedback registrado'}</p>
+                        </div>
+                        <div class="bg-white dark:bg-gray-800/40 p-3 rounded-xl border border-slate-900/5 dark:border-white/5">
+                            <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Conclusão / Observações Finais</span>
+                            <p class="text-xs text-slate-600 dark:text-gray-300 leading-relaxed">${i.conclusion || 'Nenhuma observação final'}</p>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -3469,6 +3495,9 @@ function addVistoriaBlock() {
     const container = document.getElementById('vistoria-blocks');
     const block = document.createElement('div');
     block.className = 'bg-slate-50 dark:bg-white/5 p-6 rounded-2xl border border-slate-900/10 dark:border-white/10 relative animate-premium';
+    
+    const options = globalTecnicos.map(t => `<option value="${t.username}">${t.username}</option>`).join('');
+    
     block.innerHTML = `
         <button type="button" onclick="this.parentElement.remove()" class="btn-remove-block absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:bg-red-50 hover:text-red-500 transition-all">
             <i class="fa-solid fa-trash"></i>
@@ -3476,7 +3505,10 @@ function addVistoriaBlock() {
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
             <div>
                 <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Técnico Responsável</label>
-                <input type="text" name="tech_responsible" required class="w-full bg-white dark:bg-gray-900 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500/20 outline-none">
+                <select name="tech_responsible" required class="w-full bg-white dark:bg-gray-900 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2 text-sm text-slate-900 dark:text-white outline-none">
+                    <option value="" disabled selected>Selecione o técnico</option>
+                    ${options}
+                </select>
             </div>
             <div>
                 <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Cliente</label>
@@ -3569,7 +3601,7 @@ function editAtividade(id) {
     // Esconder lixo no modo edição de item único
     block.querySelector('.btn-remove-block').classList.add('hidden');
     
-    block.querySelector('input[name="tech_responsible"]').value = item.tech || '';
+    block.querySelector('select[name="tech_responsible"]').value = item.tech_responsible || item.tech || '';
     block.querySelector('input[name="client_name"]').value = item.client_name || '';
     block.querySelector('input[name="client_code"]').value = item.client_code || '';
     block.querySelector('input[name="type"]').value = item.type || '';

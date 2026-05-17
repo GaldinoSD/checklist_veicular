@@ -3343,48 +3343,61 @@ def api_atividades(id=None):
         else:
             data = request.form
             
-        aid = id or data.get("id")
-        if aid:
-            a = Activity.query.get(aid)
-            if not a:
-                return jsonify({"error": "Atividade não encontrada"}), 404
-        else:
-            a = Activity(user_id=current_user.id)
-            db.session.add(a)
-            
-        a.type = data.get("type")
-        a.location = data.get("location")
+        # Suporta salvamento em lote (lista de objetos) ou item individual
+        is_list = isinstance(data, list)
+        items = data if is_list else [data]
         
-        date_str = data.get("date")
-        if date_str:
-            a.date = datetime.strptime(date_str, "%Y-%m-%d").date()
+        saved_ids = []
+        for item in items:
+            aid = id or item.get("id")
+            if aid:
+                a = Activity.query.get(aid)
+                if not a:
+                    continue
+            else:
+                a = Activity(user_id=current_user.id)
+                db.session.add(a)
+                
+            a.type = item.get("type")
+            a.location = item.get("location")
             
-        a.time = data.get("time")
-        a.description = data.get("description")
-        a.status = data.get("status", "ABERTO")
-        a.obs = data.get("obs")
-        a.tech_responsible = data.get("tech_responsible")
-        a.client_name = data.get("client_name")
-        a.client_code = data.get("client_code")
-        a.quality_rating = data.get("quality_rating")
-        a.client_feedback = data.get("client_feedback")
-        a.os_closure = data.get("os_closure")
-        a.conclusion = data.get("conclusion")
-        
-        # Upload de fotos
-        photos = request.files.getlist("photos") or request.files.getlist("photos[]")
-        filenames = json.loads(a.photos_json) if a.photos_json else []
-        for p in photos:
-            if p and allowed_file(p.filename):
-                ext = os.path.splitext(p.filename.lower())[1]
-                fn = f"act_{uuid.uuid4().hex}{ext}"
-                p.save(VISTORIAS_UPLOAD_DIR / fn)
-                filenames.append(fn)
-        if filenames:
-            a.photos_json = json.dumps(filenames)
+            date_str = item.get("date")
+            if date_str:
+                a.date = datetime.strptime(date_str, "%Y-%m-%d").date()
+            else:
+                # Se não fornecido, usa a data atual
+                a.date = agora().date()
+                
+            a.time = item.get("time")
+            a.description = item.get("description")
+            a.status = item.get("status", "ABERTO")
+            a.obs = item.get("obs")
+            a.tech_responsible = item.get("tech_responsible")
+            a.client_name = item.get("client_name")
+            a.client_code = item.get("client_code")
+            a.quality_rating = item.get("quality_rating")
+            a.client_feedback = item.get("client_feedback")
+            a.os_closure = item.get("os_closure")
+            a.conclusion = item.get("conclusion")
+            
+            # Upload de fotos (apenas se enviado como form-data tradicional, não lote JSON)
+            if not is_list:
+                photos = request.files.getlist("photos") or request.files.getlist("photos[]")
+                filenames = json.loads(a.photos_json) if a.photos_json else []
+                for p in photos:
+                    if p and allowed_file(p.filename):
+                        ext = os.path.splitext(p.filename.lower())[1]
+                        fn = f"act_{uuid.uuid4().hex}{ext}"
+                        p.save(VISTORIAS_UPLOAD_DIR / fn)
+                        filenames.append(fn)
+                if filenames:
+                    a.photos_json = json.dumps(filenames)
+            
+            db.session.flush()
+            saved_ids.append(a.id)
             
         db.session.commit()
-        return jsonify({"status": "ok", "id": a.id})
+        return jsonify({"status": "ok", "ids": saved_ids, "id": saved_ids[0] if saved_ids else None})
 
     items = Activity.query.order_by(Activity.date.desc().nullslast()).all()
     res = []
@@ -3402,10 +3415,13 @@ def api_atividades(id=None):
             "photos_json": i.photos_json,
             "obs": i.obs,
             "tech_responsible": i.tech_responsible,
+            "tech": i.tech_responsible,  # Compatibilidade retroativa
             "client_name": i.client_name,
             "client_code": i.client_code,
             "quality_rating": i.quality_rating,
+            "quality": i.quality_rating,  # Compatibilidade retroativa
             "client_feedback": i.client_feedback,
+            "feedback": i.client_feedback,  # Compatibilidade retroativa
             "os_closure": i.os_closure,
             "conclusion": i.conclusion
         })
