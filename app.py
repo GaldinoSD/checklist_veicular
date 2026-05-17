@@ -986,18 +986,34 @@ def registrar_log(acao):
 
 # ----------------- HELPERS DE PERMISSÃO -----------------
 def admin_required(view):
+    """Garante que apenas admins ou colaboradores com permissão específica para o endpoint possam acessar."""
     @wraps(view)
     def wrapper(*args, **kwargs):
         if not current_user.is_authenticated:
             return redirect(url_for("login"))
-        if not current_user.is_admin:
-            flash("Acesso restrito ao administrador.", "error")
-            if current_user.is_supervisor:
-                return redirect(url_for("dashboard"))
-            if current_user.is_manutencao:
-                return redirect(url_for("manutencao_os"))
-            return redirect(url_for("checklist_mobile"))
-        return view(*args, **kwargs)
+        
+        # Mapeia endpoints para suas respectivas permissões
+        endpoint = request.endpoint
+        allowed = False
+        
+        if current_user.is_admin:
+            allowed = True
+        elif endpoint in {"users", "users_pwd", "users_new", "users_role", "users_permissions", "users_del"}:
+            allowed = current_user.has_permission("usuarios")
+        elif endpoint in {"config_checklist", "config_checklist_mode", "config_checklist_new", "config_checklist_edit", "config_checklist_del", "config_checklist_move", "checklists_import"}:
+            allowed = current_user.has_permission("config_checklist")
+        elif endpoint == "logs":
+            allowed = current_user.has_permission("logs")
+            
+        if allowed:
+            return view(*args, **kwargs)
+            
+        flash("Acesso restrito ao administrador.", "error")
+        if current_user.is_supervisor:
+            return redirect(url_for("dashboard"))
+        if current_user.is_manutencao:
+            return redirect(url_for("manutencao_os"))
+        return redirect(url_for("checklist_mobile"))
     return wrapper
 
 
@@ -1581,7 +1597,7 @@ def vehicles():
 @app.route("/veiculos/novo", methods=["POST"])
 @login_required
 def vehicle_new():
-    if not current_user.is_admin:
+    if not current_user.is_admin and not current_user.has_permission("veiculos") and not current_user.has_permission("controle_veiculos"):
         abort(403)
 
     plate = (request.form.get("plate") or "").upper().strip()
@@ -1639,7 +1655,7 @@ def vehicle_new():
 @app.route("/veiculos/<int:vid>/status", methods=["POST"])
 @login_required
 def vehicle_status(vid):
-    if not current_user.is_admin:
+    if not current_user.is_admin and not current_user.has_permission("veiculos") and not current_user.has_permission("controle_veiculos"):
         abort(403)
 
     v = Vehicle.query.get_or_404(vid)
@@ -1662,7 +1678,7 @@ def vehicle_status(vid):
 @app.route("/veiculos/<int:vid>/editar", methods=["POST"])
 @login_required
 def vehicle_edit(vid):
-    if not current_user.is_admin:
+    if not current_user.is_admin and not current_user.has_permission("veiculos") and not current_user.has_permission("controle_veiculos"):
         abort(403)
 
     v = Vehicle.query.get_or_404(vid)
@@ -1704,7 +1720,7 @@ def vehicle_edit(vid):
 @app.route("/veiculos/<int:vid>/excluir", methods=["POST"])
 @login_required
 def vehicle_delete(vid):
-    if not current_user.is_admin:
+    if not current_user.is_admin and not current_user.has_permission("veiculos") and not current_user.has_permission("controle_veiculos"):
         abort(403)
 
     v = Vehicle.query.get_or_404(vid)
@@ -1724,7 +1740,7 @@ def vehicle_delete(vid):
 @app.route("/veiculos/<int:vid>/info", methods=["POST"])
 @login_required
 def vehicle_info_save(vid):
-    if not current_user.is_admin:
+    if not current_user.is_admin and not current_user.has_permission("veiculos") and not current_user.has_permission("controle_veiculos"):
         abort(403)
 
     v = Vehicle.query.options(joinedload(Vehicle.info)).get_or_404(vid)
@@ -5661,7 +5677,7 @@ def gestao_relatorios_preview():
 @app.route("/relatorios/upload", methods=["POST"])
 @login_required
 def report_upload():
-    if not current_user.is_admin:
+    if not current_user.is_admin and not current_user.has_permission("relatorios"):
         abort(403)
 
     f = request.files.get("arquivo")
