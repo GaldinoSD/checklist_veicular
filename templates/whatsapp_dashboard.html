@@ -1,0 +1,666 @@
+{% extends 'layout.html' %}
+{% set page_title = "Whatsapp Evolution" %}
+{% block content %}
+
+<!-- =======================================================
+        HEADER PREMIUM
+======================================================= -->
+<div class="mb-8 animate-premium">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 glass-premium p-6 rounded-[2rem] shadow-xl overflow-hidden relative">
+        <div class="absolute -top-24 -right-24 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl"></div>
+        <div class="absolute -bottom-24 -left-24 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl"></div>
+
+        <div class="flex items-center gap-5 relative z-10">
+            <div class="w-12 h-12 rounded-[1.25rem] bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-2xl shadow-emerald-500/20">
+                <i class="fa-brands fa-whatsapp text-2xl"></i>
+            </div>
+            <div>
+                <nav class="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-0.5">
+                    <span>Sistema</span>
+                    <i class="fa-solid fa-chevron-right text-[8px] opacity-30"></i>
+                    <span class="text-emerald-500">Notificações Inteligentes</span>
+                </nav>
+                <h2 class="text-2xl font-black text-slate-800 dark:text-white tracking-tight">Whatsapp Evolution</h2>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-4 relative z-10">
+            <!-- Connection Status Badge -->
+            <div id="conn-badge" class="flex items-center gap-2.5 px-4 py-2 bg-slate-100 dark:bg-white/5 rounded-xl border border-slate-900/10 dark:border-white/5 transition-all">
+                <div class="relative flex h-2.5 w-2.5">
+                    <span id="conn-ping" class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75"></span>
+                    <span id="conn-dot" class="relative inline-flex rounded-full h-2.5 w-2.5"></span>
+                </div>
+                <span id="conn-text" class="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-gray-400">Verificando...</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- =======================================================
+        DYNAMIC SUB-NAVIGATION TABS
+======================================================= -->
+<div class="flex flex-wrap gap-2 mb-8 bg-slate-900/5 dark:bg-white/5 p-1.5 rounded-2xl max-w-fit">
+    <button onclick="switchTab('tab-chat', this)" class="tab-btn px-5 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 bg-emerald-600 text-white shadow-lg shadow-emerald-500/20">
+        <i class="fa-regular fa-comments"></i> Área de Conversa
+    </button>
+    <button onclick="switchTab('tab-config-api', this)" class="tab-btn px-5 py-2.5 rounded-xl text-xs font-bold transition-all text-slate-500 dark:text-gray-400 hover:bg-white/40 dark:hover:bg-white/5 flex items-center gap-2">
+        <i class="fa-solid fa-sliders"></i> Configurações API
+    </button>
+    <button onclick="switchTab('tab-templates', this)" class="tab-btn px-5 py-2.5 rounded-xl text-xs font-bold transition-all text-slate-500 dark:text-gray-400 hover:bg-white/40 dark:hover:bg-white/5 flex items-center gap-2">
+        <i class="fa-regular fa-envelope"></i> Mensagens Automáticas
+    </button>
+    <button onclick="switchTab('tab-gatilhos', this)" class="tab-btn px-5 py-2.5 rounded-xl text-xs font-bold transition-all text-slate-500 dark:text-gray-400 hover:bg-white/40 dark:hover:bg-white/5 flex items-center gap-2">
+        <i class="fa-solid fa-code-branch"></i> Gatilhos Ativos
+    </button>
+</div>
+
+<!-- =======================================================
+        TABS CONTAINER
+======================================================= -->
+<div id="tabs-container">
+
+    <!-- 🟢 TAB 1: AREA DE CONVERSA (CHAT) -->
+    <div id="tab-chat" class="tab-panel active-panel grid grid-cols-1 lg:grid-cols-12 gap-8 h-[600px] animate-premium">
+        <!-- Sidebar Contatos (4 colunas) -->
+        <div class="lg:col-span-4 bg-white/70 dark:bg-slate-900/50 backdrop-blur-xl border border-slate-900/10 dark:border-white/10 rounded-[2rem] p-5 shadow-xl flex flex-col h-full overflow-hidden">
+            <h3 class="text-sm font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                <i class="fa-regular fa-address-book"></i> Contatos Rápidos
+            </h3>
+            
+            <div class="relative mb-4">
+                <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                <input type="text" id="chatSearch" onkeyup="filterContacts()" placeholder="Buscar contato..." 
+                       class="w-full pl-10 pr-4 py-2 text-xs bg-slate-900/5 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/30 dark:text-white">
+            </div>
+
+            <!-- Lista de Contatos -->
+            <div class="flex-1 overflow-y-auto space-y-2 pr-1 custom-scrollbar" id="contactsList">
+                <!-- Contatos hardcoded simulados -->
+                <div onclick="selectContact(this, 'Supervisor Geral', '5521996994117')" class="contact-item p-3 flex items-center gap-3 rounded-2xl cursor-pointer bg-emerald-500/10 border border-emerald-500/20 active-contact">
+                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white font-bold text-sm shadow-md">SG</div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex justify-between items-baseline mb-0.5">
+                            <h4 class="text-xs font-bold text-slate-800 dark:text-white truncate">Supervisor Geral</h4>
+                            <span class="text-[9px] text-slate-400 font-medium">10:45</span>
+                        </div>
+                        <p class="text-[10px] text-slate-500 dark:text-gray-400 truncate">Vistoria realizada no veículo ABC-1234.</p>
+                    </div>
+                </div>
+
+                <div onclick="selectContact(this, 'Técnico João (Mecânica)', '5521988887777')" class="contact-item p-3 flex items-center gap-3 rounded-2xl cursor-pointer hover:bg-slate-900/5 dark:hover:bg-white/5 border border-transparent transition">
+                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white font-bold text-sm shadow-md">JM</div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex justify-between items-baseline mb-0.5">
+                            <h4 class="text-xs font-bold text-slate-800 dark:text-white truncate">Técnico João (Mecânica)</h4>
+                            <span class="text-[9px] text-slate-400 font-medium">Ontem</span>
+                        </div>
+                        <p class="text-[10px] text-slate-500 dark:text-gray-400 truncate">Checklist finalizado para veículo XYZ-9876.</p>
+                    </div>
+                </div>
+
+                <div onclick="selectContact(this, 'Oficina Central', '5521977776666')" class="contact-item p-3 flex items-center gap-3 rounded-2xl cursor-pointer hover:bg-slate-900/5 dark:hover:bg-white/5 border border-transparent transition">
+                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center text-white font-bold text-sm shadow-md">OC</div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex justify-between items-baseline mb-0.5">
+                            <h4 class="text-xs font-bold text-slate-800 dark:text-white truncate">Oficina Central</h4>
+                            <span class="text-[9px] text-slate-400 font-medium">15 Mai</span>
+                        </div>
+                        <p class="text-[10px] text-slate-500 dark:text-gray-400 truncate">O.S. #24 finalizada com sucesso.</p>
+                    </div>
+                </div>
+
+                <div onclick="selectContact(this, 'Motorista Ricardo', '5521966665555')" class="contact-item p-3 flex items-center gap-3 rounded-2xl cursor-pointer hover:bg-slate-900/5 dark:hover:bg-white/5 border border-transparent transition">
+                    <div class="w-10 h-10 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white font-bold text-sm shadow-md">MR</div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex justify-between items-baseline mb-0.5">
+                            <h4 class="text-xs font-bold text-slate-800 dark:text-white truncate">Motorista Ricardo</h4>
+                            <span class="text-[9px] text-slate-400 font-medium">12 Mai</span>
+                        </div>
+                        <p class="text-[10px] text-slate-500 dark:text-gray-400 truncate">Alerta de excesso de velocidade recebido.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chat Area (8 colunas) -->
+        <div class="lg:col-span-8 bg-white/70 dark:bg-slate-900/50 backdrop-blur-xl border border-slate-900/10 dark:border-white/10 rounded-[2rem] shadow-xl flex flex-col h-full overflow-hidden relative">
+            
+            <!-- Top Chat Info -->
+            <div class="p-4 border-b border-slate-900/10 dark:border-white/10 flex items-center gap-3.5 bg-slate-50/50 dark:bg-white/5">
+                <div class="w-10 h-10 rounded-full bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white font-bold text-sm" id="chat-avatar">SG</div>
+                <div>
+                    <h3 class="text-xs font-bold text-slate-800 dark:text-white" id="chat-title">Supervisor Geral</h3>
+                    <p class="text-[10px] font-mono text-slate-400 mt-0.5" id="chat-number">5521996994117</p>
+                </div>
+            </div>
+
+            <!-- Messages Stream -->
+            <div class="flex-1 overflow-y-auto p-6 space-y-4 bg-slate-50/20 dark:bg-slate-900/20 custom-scrollbar" id="chatStream">
+                <!-- Mensagens simuladas baseadas em cada contato -->
+                <div class="flex gap-2.5 max-w-[80%]">
+                    <div class="w-7 h-7 rounded-full bg-emerald-500 flex items-center justify-center text-white text-[10px] font-bold">SG</div>
+                    <div class="bg-white dark:bg-slate-800 p-3 rounded-2xl rounded-tl-none border border-slate-900/5 dark:border-white/5 text-xs text-slate-700 dark:text-gray-300 shadow-sm relative">
+                        Olá, estou testando o recebimento das notificações do checklist.
+                        <span class="text-[8px] text-slate-400 absolute right-2 bottom-1">10:42</span>
+                    </div>
+                </div>
+
+                <div class="flex gap-2.5 max-w-[80%] ml-auto justify-end">
+                    <div class="bg-emerald-600 text-white p-3 rounded-2xl rounded-tr-none text-xs shadow-sm relative">
+                        Excelente! O sistema está integrado com a Evolution API e enviando tudo automaticamente.
+                        <span class="text-[8px] text-emerald-200 absolute right-2 bottom-1">10:44</span>
+                    </div>
+                </div>
+
+                <div class="flex gap-2.5 max-w-[80%]">
+                    <div class="w-7 h-7 rounded-full bg-emerald-500 flex items-center justify-center text-white text-[10px] font-bold">SG</div>
+                    <div class="bg-white dark:bg-slate-800 p-3 rounded-2xl rounded-tl-none border border-slate-900/5 dark:border-white/5 text-xs text-slate-700 dark:text-gray-300 shadow-sm relative">
+                        Perfeito, recebi a última notificação de Vistoria com sucesso aqui!
+                        <span class="text-[8px] text-slate-400 absolute right-2 bottom-1">10:45</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Input Box -->
+            <form onsubmit="submitChatMessage(event)" class="p-4 border-t border-slate-900/10 dark:border-white/10 bg-slate-50/50 dark:bg-white/5 flex gap-3 items-center">
+                <input type="text" id="messageInput" required placeholder="Digite sua mensagem de texto..." 
+                       class="flex-1 px-5 py-3.5 text-xs bg-white dark:bg-slate-800 border border-slate-900/10 dark:border-white/10 rounded-2xl focus:outline-none focus:ring-4 focus:ring-emerald-500/20 dark:text-white">
+                <button type="submit" class="w-12 h-12 rounded-[1.25rem] bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center shadow-lg shadow-emerald-500/25 active:scale-95 transition-all">
+                    <i class="fa-solid fa-paper-plane text-sm"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 🟢 TAB 2: CONFIGURAÇÕES DA API -->
+    <div id="tab-config-api" class="tab-panel hidden max-w-3xl animate-premium">
+        <div class="bg-white/70 dark:bg-slate-900/50 backdrop-blur-xl border border-slate-900/10 dark:border-white/10 rounded-[2rem] p-8 shadow-xl">
+            <h3 class="text-lg font-black text-slate-900 dark:text-white mb-2">Configurações da Evolution API</h3>
+            <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6">Mapeamento de Credenciais Globais da Instância</p>
+
+            <form method="post" action="{{ url_for('whatsapp_config_save') }}" class="space-y-6">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">API URL</label>
+                        <input name="api_url" required value="{{ whatsapp_config.api_url or 'https://api.evolution.com' }}" placeholder="https://api.seudominio.com" 
+                               class="w-full bg-slate-900/5 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl px-5 py-3.5 text-sm dark:text-white outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Nome da Instância</label>
+                        <input name="instance_name" required value="{{ whatsapp_config.instance_name or 'checklist_instance' }}" placeholder="checklist_instance" 
+                               class="w-full bg-slate-900/5 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl px-5 py-3.5 text-sm dark:text-white outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Global API Key</label>
+                    <input name="apikey" type="password" value="{{ whatsapp_config.apikey or '' }}" placeholder="API Key gerada na Evolution" 
+                           class="w-full bg-slate-900/5 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl px-5 py-3.5 text-sm dark:text-white outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all">
+                </div>
+
+                <div>
+                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Destinatários Globais (Números separados por vírgula)</label>
+                    <textarea name="recipients" rows="2" placeholder="5521996994117, 5521988887777" 
+                              class="w-full bg-slate-900/5 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl px-5 py-3.5 text-sm dark:text-white outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all">{{ whatsapp_config.recipients or '' }}</textarea>
+                    <span class="text-[9px] text-slate-400 mt-1 block">Apenas números com DDD e código do país, sem espaços, hifens ou caracteres especiais.</span>
+                </div>
+
+                <div class="flex items-center justify-between p-4 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-900/5 dark:border-white/5">
+                    <div>
+                        <h4 class="text-xs font-bold text-slate-800 dark:text-white">Habilitar Disparos Automáticos</h4>
+                        <p class="text-[9px] text-slate-400 mt-0.5">Se desativado, nenhuma notificação em background será enviada.</p>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" name="is_enabled" {% if whatsapp_config.is_enabled %}checked{% endif %} class="sr-only peer">
+                        <div class="w-11 h-6 bg-slate-300 peer-focus:outline-none dark:bg-slate-700 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+                    </label>
+                </div>
+
+                <div class="flex items-center gap-3 pt-4 border-t border-slate-900/5 dark:border-white/5">
+                    <button type="submit" class="px-8 py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-xl shadow-emerald-500/20 active:scale-95 transition-all">Salvar Alterações</button>
+                    <button type="button" onclick="testConnection()" class="px-6 py-3.5 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-600 dark:text-gray-300 font-black text-xs uppercase tracking-widest rounded-2xl transition-all flex items-center gap-2">
+                        <i class="fa-solid fa-arrows-spin" id="test-conn-icon"></i> Testar Conexão
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 🟢 TAB 3: PERSONALIZAÇÃO DE MENSAGENS -->
+    <div id="tab-templates" class="tab-panel hidden max-w-4xl animate-premium">
+        <div class="bg-white/70 dark:bg-slate-900/50 backdrop-blur-xl border border-slate-900/10 dark:border-white/10 rounded-[2rem] p-8 shadow-xl">
+            <h3 class="text-lg font-black text-slate-900 dark:text-white mb-2">Mensagens Automáticas</h3>
+            <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6">Personalize os templates das notificações geradas pelo sistema</p>
+
+            <form method="post" action="{{ url_for('whatsapp_templates_save') }}" class="space-y-6">
+                <!-- Checklist Fail -->
+                <div class="p-5 bg-slate-50 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 rounded-2xl">
+                    <div class="flex justify-between items-baseline mb-2">
+                        <h4 class="text-xs font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-red-500"></span> Inconformidade em Checklist
+                        </h4>
+                        <span class="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Tags: {tecnico}, {veiculo}, {placa}</span>
+                    </div>
+                    <textarea name="msg_checklist_fail" rows="3" required class="w-full bg-white dark:bg-slate-800 border border-slate-900/10 dark:border-white/10 rounded-2xl px-5 py-3.5 text-xs dark:text-white outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all">{{ whatsapp_config.msg_checklist_fail }}</textarea>
+                </div>
+
+                <!-- OS Opened -->
+                <div class="p-5 bg-slate-50 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 rounded-2xl">
+                    <div class="flex justify-between items-baseline mb-2">
+                        <h4 class="text-xs font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-orange-500"></span> Nova Ordem de Serviço (Avaria)
+                        </h4>
+                        <span class="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Tags: {veiculo}, {placa}, {gravidade}, {descricao}</span>
+                    </div>
+                    <textarea name="msg_os_opened" rows="3" required class="w-full bg-white dark:bg-slate-800 border border-slate-900/10 dark:border-white/10 rounded-2xl px-5 py-3.5 text-xs dark:text-white outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all">{{ whatsapp_config.msg_os_opened }}</textarea>
+                </div>
+
+                <!-- OS Closed -->
+                <div class="p-5 bg-slate-50 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 rounded-2xl">
+                    <div class="flex justify-between items-baseline mb-2">
+                        <h4 class="text-xs font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-emerald-500"></span> Ordem de Serviço Finalizada
+                        </h4>
+                        <span class="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Tags: {id}, {veiculo}, {usuario}, {servico}</span>
+                    </div>
+                    <textarea name="msg_os_closed" rows="3" required class="w-full bg-white dark:bg-slate-800 border border-slate-900/10 dark:border-white/10 rounded-2xl px-5 py-3.5 text-xs dark:text-white outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all">{{ whatsapp_config.msg_os_closed }}</textarea>
+                </div>
+
+                <!-- New Vistoria -->
+                <div class="p-5 bg-slate-50 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 rounded-2xl">
+                    <div class="flex justify-between items-baseline mb-2">
+                        <h4 class="text-xs font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-blue-500"></span> Nova Vistoria Registrada
+                        </h4>
+                        <span class="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Tags: {veiculo}, {placa}, {status}</span>
+                    </div>
+                    <textarea name="msg_new_vistoria" rows="3" required class="w-full bg-white dark:bg-slate-800 border border-slate-900/10 dark:border-white/10 rounded-2xl px-5 py-3.5 text-xs dark:text-white outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all">{{ whatsapp_config.msg_new_vistoria }}</textarea>
+                </div>
+
+                <!-- Scale Alert -->
+                <div class="p-5 bg-slate-50 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 rounded-2xl">
+                    <div class="flex justify-between items-baseline mb-2">
+                        <h4 class="text-xs font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-indigo-500"></span> Automação: Plantão Operacional Confirmado
+                        </h4>
+                        <span class="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Tags: {usuario}, {escala}, {data}</span>
+                    </div>
+                    <textarea name="msg_scale_alert" rows="3" required class="w-full bg-white dark:bg-slate-800 border border-slate-900/10 dark:border-white/10 rounded-2xl px-5 py-3.5 text-xs dark:text-white outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all">{{ whatsapp_config.msg_scale_alert }}</textarea>
+                </div>
+
+                <!-- Late Checklist -->
+                <div class="p-5 bg-slate-50 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 rounded-2xl">
+                    <div class="flex justify-between items-baseline mb-2">
+                        <h4 class="text-xs font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-yellow-500"></span> Automação: Lembrete de Checklist Diário Pendente
+                        </h4>
+                        <span class="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Tags: {usuario}</span>
+                    </div>
+                    <textarea name="msg_late_checklist" rows="3" required class="w-full bg-white dark:bg-slate-800 border border-slate-900/10 dark:border-white/10 rounded-2xl px-5 py-3.5 text-xs dark:text-white outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all">{{ whatsapp_config.msg_late_checklist }}</textarea>
+                </div>
+
+                <!-- Training Alert -->
+                <div class="p-5 bg-slate-50 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 rounded-2xl">
+                    <div class="flex justify-between items-baseline mb-2">
+                        <h4 class="text-xs font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-teal-500"></span> Automação: Lembrete de Treinamento LMS
+                        </h4>
+                        <span class="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Tags: {usuario}, {curso}</span>
+                    </div>
+                    <textarea name="msg_training_alert" rows="3" required class="w-full bg-white dark:bg-slate-800 border border-slate-900/10 dark:border-white/10 rounded-2xl px-5 py-3.5 text-xs dark:text-white outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all">{{ whatsapp_config.msg_training_alert }}</textarea>
+                </div>
+
+                <!-- OS Overdue -->
+                <div class="p-5 bg-slate-50 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 rounded-2xl">
+                    <div class="flex justify-between items-baseline mb-2">
+                        <h4 class="text-xs font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-rose-500"></span> Automação: Alerta de O.S. Atrasada (+7d)
+                        </h4>
+                        <span class="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Tags: {usuario}, {id}</span>
+                    </div>
+                    <textarea name="msg_os_overdue" rows="3" required class="w-full bg-white dark:bg-slate-800 border border-slate-900/10 dark:border-white/10 rounded-2xl px-5 py-3.5 text-xs dark:text-white outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all">{{ whatsapp_config.msg_os_overdue }}</textarea>
+                </div>
+
+                <!-- Inactive Tech -->
+                <div class="p-5 bg-slate-50 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 rounded-2xl">
+                    <div class="flex justify-between items-baseline mb-2">
+                        <h4 class="text-xs font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-slate-500"></span> Automação: Lembrete de Inatividade (+7d)
+                        </h4>
+                        <span class="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Tags: {usuario}</span>
+                    </div>
+                    <textarea name="msg_inactive_tech" rows="3" required class="w-full bg-white dark:bg-slate-800 border border-slate-900/10 dark:border-white/10 rounded-2xl px-5 py-3.5 text-xs dark:text-white outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all">{{ whatsapp_config.msg_inactive_tech }}</textarea>
+                </div>
+
+                <div class="pt-4 border-t border-slate-900/5 dark:border-white/5">
+                    <button type="submit" class="px-8 py-3.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-xl shadow-emerald-500/20 active:scale-95 transition-all">Salvar Templates</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 🟢 TAB 4: GATILHOS ATIVOS -->
+    <div id="tab-gatilhos" class="tab-panel hidden max-w-4xl animate-premium">
+        <div class="bg-white/70 dark:bg-slate-900/50 backdrop-blur-xl border border-slate-900/10 dark:border-white/10 rounded-[2rem] p-8 shadow-xl">
+            <h3 class="text-lg font-black text-slate-900 dark:text-white mb-2">Diagrama Operacional de Gatilhos</h3>
+            <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-10">Como as ações no sistema se convertem em mensagens automáticas</p>
+
+            <!-- Fluxograma Visual CSS -->
+            <div class="relative flex flex-col md:flex-row items-center justify-between gap-8 mb-10 px-4">
+                
+                <!-- Gatilho 1: Evento -->
+                <div class="flex-1 w-full md:w-auto p-5 bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-900/10 rounded-2xl text-center text-white relative shadow-md">
+                    <div class="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center mx-auto mb-3 text-sm shadow">
+                        <i class="fa-solid fa-bolt"></i>
+                    </div>
+                    <h4 class="text-xs font-black uppercase tracking-wider mb-1">Ação Operacional</h4>
+                    <p class="text-[10px] text-slate-400">Técnico envia checklist falho ou supervisor abre nova O.S.</p>
+                </div>
+
+                <!-- Conector 1 -->
+                <div class="hidden md:flex items-center text-slate-400 text-lg">
+                    <i class="fa-solid fa-arrow-right"></i>
+                </div>
+                <div class="md:hidden text-slate-400 text-lg">
+                    <i class="fa-solid fa-arrow-down"></i>
+                </div>
+
+                <!-- Gatilho 2: Validação -->
+                <div class="flex-1 w-full md:w-auto p-5 bg-gradient-to-br from-indigo-50 to-indigo-100 dark:from-indigo-900/30 dark:to-indigo-800/10 border border-indigo-200/30 dark:border-indigo-800/20 rounded-2xl text-center relative shadow-sm">
+                    <div class="w-10 h-10 rounded-full bg-indigo-500 flex items-center justify-center mx-auto mb-3 text-sm text-white shadow">
+                        <i class="fa-solid fa-shield-check"></i>
+                    </div>
+                    <h4 class="text-xs font-black text-indigo-900 dark:text-indigo-400 uppercase tracking-wider mb-1">Validação Resiliente</h4>
+                    <p class="text-[10px] text-slate-500 dark:text-gray-400">Valida credenciais, formata o texto com as variáveis e repassa para background thread.</p>
+                </div>
+
+                <!-- Conector 2 -->
+                <div class="hidden md:flex items-center text-slate-400 text-lg">
+                    <i class="fa-solid fa-arrow-right"></i>
+                </div>
+                <div class="md:hidden text-slate-400 text-lg">
+                    <i class="fa-solid fa-arrow-down"></i>
+                </div>
+
+                <!-- Gatilho 3: Disparo -->
+                <div class="flex-1 w-full md:w-auto p-5 bg-gradient-to-br from-emerald-50 to-emerald-100 dark:from-emerald-900/30 dark:to-emerald-800/10 border border-emerald-200/30 dark:border-emerald-800/20 rounded-2xl text-center relative shadow-sm">
+                    <div class="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center mx-auto mb-3 text-sm text-white shadow">
+                        <i class="fa-brands fa-whatsapp"></i>
+                    </div>
+                    <h4 class="text-xs font-black text-emerald-900 dark:text-emerald-400 uppercase tracking-wider mb-1">Disparo Assíncrono</h4>
+                    <p class="text-[10px] text-slate-500 dark:text-gray-400">Mensagem entregue na Evolution API para envio imediato aos destinatários.</p>
+                </div>
+            </div>
+
+            <!-- Descrição detalhada dos gatilhos em Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="p-6 bg-slate-50 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 rounded-[1.5rem]">
+                    <div class="flex items-center gap-3.5 mb-3">
+                        <div class="w-9 h-9 rounded-xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-600"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                        <h4 class="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-white">Alerta de Inconformidade</h4>
+                    </div>
+                    <p class="text-[11px] text-slate-500 dark:text-gray-400 leading-relaxed">Disparado no momento em que um checklist técnico é finalizado e contém qualquer item respondido como "Não" (inconformidade). Alerta automaticamente a equipe de supervisão.</p>
+                </div>
+
+                <div class="p-6 bg-slate-50 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 rounded-[1.5rem]">
+                    <div class="flex items-center gap-3.5 mb-3">
+                        <div class="w-9 h-9 rounded-xl bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center text-orange-600"><i class="fa-solid fa-file-circle-plus"></i></div>
+                        <h4 class="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-white">Abertura de Ordem de Serviço</h4>
+                    </div>
+                    <p class="text-[11px] text-slate-500 dark:text-gray-400 leading-relaxed">Notifica os administradores e encarregados da manutenção assim que uma nova avaria ou defeito crítico é registrado no veículo, garantindo agilidade na resposta corretiva.</p>
+                </div>
+
+                <div class="p-6 bg-slate-50 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 rounded-[1.5rem]">
+                    <div class="flex items-center gap-3.5 mb-3">
+                        <div class="w-9 h-9 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600"><i class="fa-solid fa-file-circle-check"></i></div>
+                        <h4 class="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-white">Finalização de Manutenção (O.S.)</h4>
+                    </div>
+                    <p class="text-[11px] text-slate-500 dark:text-gray-400 leading-relaxed">Envia os detalhes dos gastos, peças trocadas e serviço executado aos administradores da frota imediatamente após o encerramento do ticket da Ordem de Serviço pela oficina.</p>
+                </div>
+
+                <div class="p-6 bg-slate-50 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 rounded-[1.5rem]">
+                    <div class="flex items-center gap-3.5 mb-3">
+                        <div class="w-9 h-9 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600"><i class="fa-solid fa-user-check"></i></div>
+                        <h4 class="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-white">Nova Vistoria de Veículo</h4>
+                    </div>
+                    <p class="text-[11px] text-slate-500 dark:text-gray-400 leading-relaxed">Disparado sempre que uma vistoria física detalhada do veículo é registrada por um supervisor, enviando o status geral consolidado das condições de conservação.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- =======================================================
+        CLIENT JAVASCRIPT & AJAX INTEGRATION
+======================================================= -->
+<script>
+    // Configurações do Chat Simulador
+    const chatHistories = {
+        '5521996994117': [
+            { sender: 'SG', class: '', text: 'Olá, estou testando o recebimento das notificações do checklist.', time: '10:42' },
+            { sender: 'ME', class: 'ml-auto justify-end bg-emerald-600 text-white p-3 rounded-2xl rounded-tr-none', text: 'Excelente! O sistema está integrado com a Evolution API e enviando tudo automaticamente.', time: '10:44' },
+            { sender: 'SG', class: '', text: 'Perfeito, recebi a última notificação de Vistoria com sucesso aqui!', time: '10:45' }
+        ],
+        '5521988887777': [
+            { sender: 'JM', class: '', text: 'Bom dia, acabei de realizar o checklist do veículo XYZ-9876 e encontrei inconformidade na calibragem dos pneus.', time: 'Ontem' },
+            { sender: 'ME', class: 'ml-auto justify-end bg-emerald-600 text-white p-3 rounded-2xl rounded-tr-none', text: 'Entendido, João. A O.S. já foi criada automaticamente no sistema.', time: 'Ontem' }
+        ],
+        '5521977776666': [
+            { sender: 'OC', class: '', text: 'Informamos que a O.S. #24 para substituição dos freios do veículo ABC-1234 foi finalizada.', time: '15 Mai' },
+            { sender: 'ME', class: 'ml-auto justify-end bg-emerald-600 text-white p-3 rounded-2xl rounded-tr-none', text: 'Ótimo, registramos a finalização dos custos. Obrigado pelo envio rápido!', time: '15 Mai' }
+        ],
+        '5521966665555': [
+            { sender: 'ME', class: 'ml-auto justify-end bg-emerald-600 text-white p-3 rounded-2xl rounded-tr-none', text: 'Atenção, Ricardo. Recebemos um alerta de velocidade (102 km/h) no veículo DFG-4321.', time: '12 Mai' },
+            { sender: 'MR', class: '', text: 'Desculpe, estava ultrapassando um caminhão na rodovia. Reduzindo agora.', time: '12 Mai' }
+        ]
+    };
+
+    let activeNumber = '5521996994117';
+    let activeName = 'Supervisor Geral';
+
+    function selectContact(element, name, number) {
+        // Atualiza a borda e foco na lista
+        document.querySelectorAll('.contact-item').forEach(el => {
+            el.classList.remove('bg-emerald-500/10', 'border-emerald-500/20', 'active-contact');
+            el.classList.add('hover:bg-slate-900/5', 'dark:hover:bg-white/5', 'border-transparent');
+        });
+        element.classList.add('bg-emerald-500/10', 'border-emerald-500/20', 'active-contact');
+        element.classList.remove('hover:bg-slate-900/5', 'dark:hover:bg-white/5', 'border-transparent');
+
+        activeName = name;
+        activeNumber = number;
+
+        // Atualiza cabeçalho do chat
+        document.getElementById('chat-title').innerText = name;
+        document.getElementById('chat-number').innerText = number;
+        document.getElementById('chat-avatar').innerText = name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+
+        // Renderiza histórico
+        renderChatStream();
+    }
+
+    function renderChatStream() {
+        const stream = document.getElementById('chatStream');
+        stream.innerHTML = '';
+        const history = chatHistories[activeNumber] || [];
+
+        history.forEach(msg => {
+            const isMe = msg.sender === 'ME';
+            const outerDiv = document.createElement('div');
+            outerDiv.className = isMe ? 'flex gap-2.5 max-w-[80%] ml-auto justify-end' : 'flex gap-2.5 max-w-[80%]';
+
+            if (!isMe) {
+                const avatar = document.createElement('div');
+                avatar.className = 'w-7 h-7 rounded-full bg-emerald-500 flex items-center justify-center text-white text-[10px] font-bold';
+                avatar.innerText = activeName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+                outerDiv.appendChild(avatar);
+            }
+
+            const msgDiv = document.createElement('div');
+            msgDiv.className = isMe 
+                ? 'bg-emerald-600 text-white p-3 rounded-2xl rounded-tr-none text-xs shadow-sm relative' 
+                : 'bg-white dark:bg-slate-800 p-3 rounded-2xl rounded-tl-none border border-slate-900/5 dark:border-white/5 text-xs text-slate-700 dark:text-gray-300 shadow-sm relative';
+            
+            msgDiv.innerHTML = `${msg.text} <span class="text-[8px] ${isMe ? 'text-emerald-200' : 'text-slate-400'} absolute right-2 bottom-1">${msg.time}</span>`;
+            outerDiv.appendChild(msgDiv);
+            stream.appendChild(outerDiv);
+        });
+
+        // Scroll to bottom
+        stream.scrollTop = stream.scrollHeight;
+    }
+
+    function submitChatMessage(event) {
+        event.preventDefault();
+        const input = document.getElementById('messageInput');
+        const text = input.value.trim();
+        if (!text) return;
+
+        // Adiciona localmente ao histórico imediatamente
+        const now = new Date();
+        const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+        
+        if (!chatHistories[activeNumber]) {
+            chatHistories[activeNumber] = [];
+        }
+        chatHistories[activeNumber].push({
+            sender: 'ME',
+            text: text,
+            time: timeStr
+        });
+
+        renderChatStream();
+        input.value = '';
+
+        // Dispara o envio real via Evolution API se configurada!
+        const formData = new FormData();
+        formData.append('number', activeNumber);
+        formData.append('message', text);
+
+        fetch('/api/whatsapp/chat/send', {
+            method: 'POST',
+            body: formData
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (!data.success) {
+                console.warn('Evolutuion API offline/desconfigurada. Enviado no modo simulador.');
+            }
+        })
+        .catch(err => {
+            console.warn('Erro de envio real, mantido no simulador:', err);
+        });
+    }
+
+    function filterContacts() {
+        const query = document.getElementById('chatSearch').value.toLowerCase();
+        document.querySelectorAll('.contact-item').forEach(item => {
+            const name = item.querySelector('h4').innerText.toLowerCase();
+            item.style.display = name.includes(query) ? '' : 'none';
+        });
+    }
+
+    // Gerenciador de Abas SPA
+    function switchTab(tabId, element) {
+        document.querySelectorAll('.tab-panel').forEach(panel => {
+            panel.classList.add('hidden');
+            panel.classList.remove('active-panel');
+        });
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.className = 'tab-btn px-5 py-2.5 rounded-xl text-xs font-bold transition-all text-slate-500 dark:text-gray-400 hover:bg-white/40 dark:hover:bg-white/5 flex items-center gap-2';
+        });
+
+        document.getElementById(tabId).classList.remove('hidden');
+        document.getElementById(tabId).classList.add('active-panel');
+        element.className = 'tab-btn px-5 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 bg-emerald-600 text-white shadow-lg shadow-emerald-500/20';
+
+        if (tabId === 'tab-chat') {
+            renderChatStream();
+        }
+    }
+
+    // Verificar Status de Conexão com Evolution API
+    function checkConnectionState() {
+        const badge = document.getElementById('conn-badge');
+        const ping = document.getElementById('conn-ping');
+        const dot = document.getElementById('conn-dot');
+        const text = document.getElementById('conn-text');
+
+        fetch('/api/whatsapp/status')
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'connected') {
+                badge.className = 'flex items-center gap-2.5 px-4 py-2 bg-emerald-500/10 rounded-xl border border-emerald-500/20 transition-all';
+                ping.className = 'animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75';
+                dot.className = 'relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500';
+                text.className = 'text-[10px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400';
+                text.innerText = 'Online';
+            } else {
+                badge.className = 'flex items-center gap-2.5 px-4 py-2 bg-red-500/10 rounded-xl border border-red-500/20 transition-all';
+                ping.className = '';
+                dot.className = 'relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500';
+                text.className = 'text-[10px] font-black uppercase tracking-wider text-red-600 dark:text-red-400';
+                text.innerText = 'Offline';
+            }
+        })
+        .catch(err => {
+            badge.className = 'flex items-center gap-2.5 px-4 py-2 bg-red-500/10 rounded-xl border border-red-500/20 transition-all';
+            ping.className = '';
+            dot.className = 'relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500';
+            text.className = 'text-[10px] font-black uppercase tracking-wider text-red-600 dark:text-red-400';
+            text.innerText = 'Erro Conexão';
+        });
+    }
+
+    function testConnection() {
+        const icon = document.getElementById('test-conn-icon');
+        icon.classList.add('animate-spin');
+
+        setTimeout(() => {
+            checkConnectionState();
+            setTimeout(() => {
+                icon.classList.remove('animate-spin');
+                alert('Conexão verificada! Veja o status atualizado no painel superior.');
+            }, 500);
+        }, 1000);
+    }
+
+    // Inicialização da página
+    document.addEventListener('DOMContentLoaded', () => {
+        renderChatStream();
+        checkConnectionState();
+        // Verifica status a cada 30 segundos
+        setInterval(checkConnectionState, 30000);
+    });
+</script>
+
+<style>
+    /* Transição suave de tabs */
+    .tab-panel {
+        transition: opacity 0.3s ease-in-out;
+    }
+    .active-panel {
+        display: grid !important;
+        animation: fadeIn 0.3s forwards;
+    }
+    #tab-config-api.active-panel, #tab-templates.active-panel, #tab-gatilhos.active-panel {
+        display: block !important;
+    }
+    .contact-item {
+        transition: all 0.2s ease-in-out;
+    }
+    .contact-item:hover {
+        transform: translateX(4px);
+    }
+    .active-contact {
+        transform: translateX(4px);
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+</style>
+
+{% endblock %}

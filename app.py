@@ -919,6 +919,34 @@ class SystemConfig(db.Model):
     login_primary_color = db.Column(db.String(50), default="#10b981")
 
 
+# --------------------------------------------------------
+# 🔥 CONFIGURAÇÃO WHATSAPP EVOLUTION API 🔥
+# --------------------------------------------------------
+class WhatsAppConfig(db.Model):
+    __tablename__ = "whatsapp_config"
+    id = db.Column(db.Integer, primary_key=True)
+    api_url = db.Column(db.String(255), default="https://api.evolution.com")
+    apikey = db.Column(db.String(255), default="")
+    instance_name = db.Column(db.String(100), default="checklist_instance")
+    is_enabled = db.Column(db.Boolean, default=False)
+    
+    # Templates das mensagens
+    msg_checklist_fail = db.Column(db.Text, default="*Aviso de Checklist:* O técnico {tecnico} realizou um checklist no veículo {veiculo} ({placa}) com avarias/inconformidades.")
+    msg_os_opened = db.Column(db.Text, default="*Nova O.S. Criada:* Uma nova Ordem de Serviço foi aberta para o veículo {veiculo} ({placa}) com gravidade {gravidade}. Descrição: {descricao}")
+    msg_os_closed = db.Column(db.Text, default="*O.S. Finalizada:* A Ordem de Serviço #{id} para o veículo {veiculo} foi finalizada por {usuario}. Serviço: {servico}")
+    msg_new_vistoria = db.Column(db.Text, default="*Nova Vistoria:* O supervisor registrou uma nova vistoria para o veículo {veiculo} ({placa}). Status geral: {status}")
+    
+    # Novos gatilhos integrados com Automações / Comunicados
+    msg_scale_alert = db.Column(db.Text, default="*Aviso de Plantão:* Olá {usuario}, você está escalado para o plantão de {escala} no dia {data}.")
+    msg_late_checklist = db.Column(db.Text, default="*Alerta de Checklist Pendente:* Olá {usuario}, você está de plantão hoje e ainda não preencheu o checklist do seu veículo.")
+    msg_training_alert = db.Column(db.Text, default="*Lembrete de Treinamento LMS:* Olá {usuario}, lembramos que você tem o treinamento \"{curso}\" pendente no portal.")
+    msg_os_overdue = db.Column(db.Text, default="*O.S. Atrasada:* Olá {usuario}, a Ordem de Serviço #{id} está pendente há mais de 7 dias.")
+    msg_inactive_tech = db.Column(db.Text, default="*Lembrete de Inatividade:* Olá {usuario}, identificamos que você não realiza checklists há mais de 7 dias.")
+    
+    # Destinatários (números separados por vírgula)
+    recipients = db.Column(db.Text, default="")
+
+
 @login_manager.user_loader
 def load_user(uid):
     return User.query.get(int(uid))
@@ -978,7 +1006,26 @@ def ensure_min_schema():
                 timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 is_dismissed BOOLEAN DEFAULT FALSE
             )
-        ''')
+        '''),
+        text('''
+            CREATE TABLE IF NOT EXISTS whatsapp_config (
+                id SERIAL PRIMARY KEY,
+                api_url VARCHAR(255) DEFAULT 'https://api.evolution.com',
+                apikey VARCHAR(255) DEFAULT '',
+                instance_name VARCHAR(100) DEFAULT 'checklist_instance',
+                is_enabled BOOLEAN DEFAULT FALSE,
+                msg_checklist_fail TEXT DEFAULT '*Aviso de Checklist:* O técnico {tecnico} realizou um checklist no veículo {veiculo} ({placa}) com avarias/inconformidades.',
+                msg_os_opened TEXT DEFAULT '*Nova O.S. Criada:* Uma nova Ordem de Serviço foi aberta para o veículo {veiculo} ({placa}) com gravidade {gravidade}. Descrição: {descricao}',
+                msg_os_closed TEXT DEFAULT '*O.S. Finalizada:* A Ordem de Serviço #{id} para o veículo {veiculo} foi finalizada por {usuario}. Serviço: {servico}',
+                msg_new_vistoria TEXT DEFAULT '*Nova Vistoria:* O supervisor registrou uma nova vistoria para o veículo {veiculo} ({placa}). Status geral: {status}',
+                recipients TEXT DEFAULT ''
+            )
+        '''),
+        text("ALTER TABLE whatsapp_config ADD COLUMN IF NOT EXISTS msg_scale_alert TEXT DEFAULT '*Aviso de Plantão:* Olá {usuario}, você está escalado para o plantão de {escala} no dia {data}.'"),
+        text("ALTER TABLE whatsapp_config ADD COLUMN IF NOT EXISTS msg_late_checklist TEXT DEFAULT '*Alerta de Checklist Pendente:* Olá {usuario}, você está de plantão hoje e ainda não preencheu o checklist do seu veículo.'"),
+        text("ALTER TABLE whatsapp_config ADD COLUMN IF NOT EXISTS msg_training_alert TEXT DEFAULT '*Lembrete de Treinamento LMS:* Olá {usuario}, lembramos que você tem o treinamento \"{curso}\" pendente no portal.'"),
+        text("ALTER TABLE whatsapp_config ADD COLUMN IF NOT EXISTS msg_os_overdue TEXT DEFAULT '*O.S. Atrasada:* Olá {usuario}, a Ordem de Serviço #{id} está pendente há mais de 7 dias.'"),
+        text("ALTER TABLE whatsapp_config ADD COLUMN IF NOT EXISTS msg_inactive_tech TEXT DEFAULT '*Lembrete de Inatividade:* Olá {usuario}, identificamos que você não realiza checklists há mais de 7 dias.'")
     ]
     for stmt in stmts:
         try:
@@ -1016,6 +1063,10 @@ def seed_defaults():
     if SystemConfig.query.count() == 0:
         db.session.add(SystemConfig(mode="start_only"))
 
+    # whatsapp config inicial
+    if WhatsAppConfig.query.count() == 0:
+        db.session.add(WhatsAppConfig())
+
     # itens de checklist padrão
     if ChecklistItem.query.count() == 0:
         for i, (txt, typ) in enumerate(DEFAULT_ITEMS, start=1):
@@ -1039,6 +1090,57 @@ def registrar_log(acao):
     except Exception as e:
         print("⚠️ Erro registrar_log:", e)
         db.session.rollback()
+
+
+# ----------------- ENVIAR WHATSAPP (EVOLUTION API) -----------------
+def send_whatsapp_message(text_message):
+    """
+    Dispara uma mensagem de texto assíncrona usando a Evolution API.
+    Totalmente isolado em uma thread em background para não travar a aplicação principal.
+    """
+    import threading
+    import requests
+
+    def worker():
+        try:
+            with app.app_context():
+                config = WhatsAppConfig.query.first()
+                if not config or not config.is_enabled:
+                    return
+                if not config.recipients:
+                    return
+                
+                headers = {
+                    "Content-Type": "application/json",
+                    "apikey": config.apikey
+                }
+                
+                # Divide destinatários por vírgula e limpa espaços
+                numbers = [n.strip() for n in config.recipients.split(",") if n.strip()]
+                for number in numbers:
+                    sanitized_number = "".join(filter(str.isdigit, number))
+                    if not sanitized_number:
+                        continue
+                    
+                    # Força DDI 55 se tiver até 11 dígitos
+                    if len(sanitized_number) <= 11 and not sanitized_number.startswith("55"):
+                        sanitized_number = "55" + sanitized_number
+                    
+                    payload = {
+                        "number": sanitized_number,
+                        "text": text_message
+                    }
+                    
+                    url = f"{config.api_url.rstrip('/')}/message/sendText/{config.instance_name}"
+                    try:
+                        res = requests.post(url, json=payload, headers=headers, timeout=10)
+                        print(f"Evolution API status for {sanitized_number}: {res.status_code}")
+                    except Exception as err:
+                        print(f"⚠️ Erro ao postar na Evolution API para {sanitized_number}: {err}")
+        except Exception as e:
+            print("⚠️ Erro ao processar worker de envio de WhatsApp:", e)
+
+    threading.Thread(target=worker, daemon=True).start()
 
 
 # ----------------- HELPERS DE PERMISSÃO -----------------
@@ -1731,7 +1833,8 @@ def users_permissions(uid):
         "perm_gestao_reunioes", "perm_gestao_anotacoes", "perm_gestao_atividades",
         "perm_gestao_encerramento", "perm_gestao_rfo", "perm_gestao_tarefas",
         "perm_gestao_geradores", "perm_gestao_rota_exata", "perm_gestao_supervisao",
-        "perm_gestao_treinamentos", "perm_gestao_solicitacoes", "perm_gestao_relatorios"
+        "perm_gestao_treinamentos", "perm_gestao_solicitacoes", "perm_gestao_relatorios",
+        "perm_whatsapp_evolution"
     ]
     
     perms_data = request.form.to_dict()
@@ -2204,6 +2307,25 @@ def avarias_registro():
             )
             db.session.add(nova)
             db.session.commit()
+            
+            # WhatsApp Nova OS
+            try:
+                w_config = WhatsAppConfig.query.first()
+                if w_config and w_config.is_enabled:
+                    v = Vehicle.query.get(nova.vehicle_id)
+                    veiculo_txt = f"{v.brand} {v.model}" if v else f"ID {nova.vehicle_id}"
+                    placa_txt = v.plate if v else ""
+                    tpl = w_config.msg_os_opened
+                    msg = tpl.format(
+                        veiculo=veiculo_txt,
+                        placa=placa_txt,
+                        gravidade=nova.gravidade or "Média",
+                        descricao=nova.descricao
+                    )
+                    send_whatsapp_message(msg)
+            except Exception as whatsapp_err:
+                print("⚠️ Erro ao disparar whatsapp para nova OS:", whatsapp_err)
+
             registrar_log(f"Avaria criada para veículo ID={nova.vehicle_id} (por {current_user.username})")
             return redirect(url_for("avarias_registro"))
 
@@ -2227,6 +2349,24 @@ def avarias_registro():
                     db.session.delete(ann)
                 
                 db.session.commit()
+
+                # Whatsapp OS finalizada
+                try:
+                    w_config = WhatsAppConfig.query.first()
+                    if w_config and w_config.is_enabled:
+                        v = os_finalizar.vehicle
+                        veiculo_txt = f"{v.brand} {v.model}" if v else f"ID {os_finalizar.vehicle_id}"
+                        tpl = w_config.msg_os_closed
+                        msg = tpl.format(
+                            id=os_finalizar.id,
+                            veiculo=veiculo_txt,
+                            usuario=current_user.username,
+                            servico=os_finalizar.servico_realizado or "Manutenção concluída"
+                        )
+                        send_whatsapp_message(msg)
+                except Exception as whatsapp_err:
+                    print("⚠️ Erro ao disparar whatsapp para OS finalizada:", whatsapp_err)
+
                 registrar_log(f"O.S finalizada (admin/supervisor): ID={os_finalizar.id} (por {current_user.username})")
 
             return redirect(url_for("avarias_registro"))
@@ -2294,6 +2434,24 @@ def manutencao_os():
                     db.session.delete(ann)
                 
                 db.session.commit()
+
+                # Whatsapp OS finalizada
+                try:
+                    w_config = WhatsAppConfig.query.first()
+                    if w_config and w_config.is_enabled:
+                        v = os_finalizar.vehicle
+                        veiculo_txt = f"{v.brand} {v.model}" if v else f"ID {os_finalizar.vehicle_id}"
+                        tpl = w_config.msg_os_closed
+                        msg = tpl.format(
+                            id=os_finalizar.id,
+                            veiculo=veiculo_txt,
+                            usuario=current_user.username,
+                            servico=os_finalizar.servico_realizado or "Manutenção concluída"
+                        )
+                        send_whatsapp_message(msg)
+                except Exception as whatsapp_err:
+                    print("⚠️ Erro ao disparar whatsapp para OS finalizada:", whatsapp_err)
+
                 registrar_log(f"O.S finalizada (manutenção): ID={os_finalizar.id} (por {current_user.username})")
 
             return redirect(url_for("manutencao_os"))
@@ -6768,6 +6926,32 @@ def checklist_mobile():
 
         db.session.commit()
 
+        # Verifica se o checklist tem inconformidades
+        has_fail = False
+        fail_items = []
+        for item_name, item_data in respostas.items():
+            if isinstance(item_data, dict) and item_data.get("resposta") == "Não":
+                has_fail = True
+                fail_items.append(item_name.split(" - ")[-1])
+        
+        if has_fail:
+            try:
+                w_config = WhatsAppConfig.query.first()
+                if w_config and w_config.is_enabled:
+                    tpl = w_config.msg_checklist_fail
+                    veiculo_txt = f"{v.brand} {v.model}" if v else f"ID {vehicle_id}"
+                    placa_txt = v.plate if v else ""
+                    
+                    msg = tpl.format(
+                        tecnico=tech,
+                        veiculo=veiculo_txt,
+                        placa=placa_txt
+                    )
+                    msg += f"\n*Itens com inconformidade:* {', '.join(fail_items)}"
+                    send_whatsapp_message(msg)
+            except Exception as whatsapp_err:
+                print("⚠️ Erro ao disparar whatsapp para checklist:", whatsapp_err)
+
         try:
             generate_checklist_pdf(checklist, raw)
         except Exception as e:
@@ -6868,6 +7052,151 @@ def logs():
         limit=limit,
         total_logs=total_logs
     )
+
+
+# ----------------- GESTÃO WHATSAPP EVOLUTION -----------------
+@app.route("/whatsapp")
+@login_required
+def whatsapp_dashboard():
+    if not (current_user.is_admin or current_user.has_permission("whatsapp_evolution")):
+        flash("Acesso restrito ao painel do WhatsApp.", "error")
+        return redirect(url_for("dashboard"))
+    
+    config = WhatsAppConfig.query.first()
+    return render_template("whatsapp_dashboard.html", whatsapp_config=config)
+
+
+@app.route("/api/whatsapp/config", methods=["POST"])
+@login_required
+def whatsapp_config_save():
+    if not (current_user.is_admin or current_user.has_permission("whatsapp_evolution")):
+        return jsonify({"success": False, "error": "Acesso negado"}), 403
+        
+    config = WhatsAppConfig.query.first()
+    if not config:
+        config = WhatsAppConfig()
+        db.session.add(config)
+        
+    config.api_url = request.form.get("api_url", "").strip()
+    config.apikey = request.form.get("apikey", "").strip()
+    config.instance_name = request.form.get("instance_name", "").strip()
+    config.recipients = request.form.get("recipients", "").strip()
+    config.is_enabled = request.form.get("is_enabled") == "on"
+    
+    db.session.commit()
+    registrar_log(f"Configuração do Whatsapp atualizada por {current_user.username}")
+    flash("✅ Configurações salvas com sucesso!", "success")
+    return redirect(url_for("whatsapp_dashboard"))
+
+
+@app.route("/api/whatsapp/templates", methods=["POST"])
+@login_required
+def whatsapp_templates_save():
+    if not (current_user.is_admin or current_user.has_permission("whatsapp_evolution")):
+        return jsonify({"success": False, "error": "Acesso negado"}), 403
+        
+    config = WhatsAppConfig.query.first()
+    if not config:
+        config = WhatsAppConfig()
+        db.session.add(config)
+        
+    config.msg_checklist_fail = request.form.get("msg_checklist_fail", "").strip()
+    config.msg_os_opened = request.form.get("msg_os_opened", "").strip()
+    config.msg_os_closed = request.form.get("msg_os_closed", "").strip()
+    config.msg_new_vistoria = request.form.get("msg_new_vistoria", "").strip()
+    
+    # Novos templates das automações / comunicados
+    config.msg_scale_alert = request.form.get("msg_scale_alert", "").strip()
+    config.msg_late_checklist = request.form.get("msg_late_checklist", "").strip()
+    config.msg_training_alert = request.form.get("msg_training_alert", "").strip()
+    config.msg_os_overdue = request.form.get("msg_os_overdue", "").strip()
+    config.msg_inactive_tech = request.form.get("msg_inactive_tech", "").strip()
+    
+    db.session.commit()
+    registrar_log(f"Templates do Whatsapp atualizados por {current_user.username}")
+    flash("✅ Templates salvos com sucesso!", "success")
+    return redirect(url_for("whatsapp_dashboard"))
+
+
+@app.route("/api/whatsapp/chat/send", methods=["POST"])
+@login_required
+def whatsapp_chat_send():
+    if not (current_user.is_admin or current_user.has_permission("whatsapp_evolution")):
+        return jsonify({"success": False, "error": "Acesso negado"}), 403
+        
+    number = request.form.get("number", "").strip()
+    message = request.form.get("message", "").strip()
+    
+    if not number or not message:
+        return jsonify({"success": False, "error": "Número e mensagem são obrigatórios"}), 400
+        
+    # Sanitiza o número
+    sanitized_number = "".join(filter(str.isdigit, number))
+    if len(sanitized_number) <= 11 and not sanitized_number.startswith("55"):
+        sanitized_number = "55" + sanitized_number
+        
+    config = WhatsAppConfig.query.first()
+    if not config or not config.apikey:
+        return jsonify({"success": False, "error": "Evolution API não está configurada"}), 400
+        
+    import requests
+    headers = {
+        "Content-Type": "application/json",
+        "apikey": config.apikey
+    }
+    payload = {
+        "number": sanitized_number,
+        "text": message
+    }
+    url = f"{config.api_url.rstrip('/')}/message/sendText/{config.instance_name}"
+    
+    try:
+        res = requests.post(url, json=payload, headers=headers, timeout=10)
+        if res.status_code in (200, 201):
+            return jsonify({"success": True, "data": res.json()})
+        else:
+            return jsonify({"success": False, "error": f"Erro Evolution API: Status {res.status_code}", "details": res.text}), 400
+    except Exception as err:
+        return jsonify({"success": False, "error": f"Erro de conexão com a API: {str(err)}"}), 500
+
+
+@app.route("/api/whatsapp/status", methods=["GET"])
+@login_required
+def whatsapp_connection_status():
+    if not (current_user.is_admin or current_user.has_permission("whatsapp_evolution")):
+        return jsonify({"success": False, "error": "Acesso negado"}), 403
+        
+    config = WhatsAppConfig.query.first()
+    if not config or not config.apikey or not config.api_url:
+        return jsonify({"status": "disconnected", "error": "Configurações incompletas"})
+        
+    import requests
+    headers = {
+        "apikey": config.apikey
+    }
+    url = f"{config.api_url.rstrip('/')}/instance/connectionState/{config.instance_name}"
+    
+    try:
+        res = requests.get(url, headers=headers, timeout=8)
+        if res.status_code == 200:
+            data = res.json()
+            state = "disconnected"
+            if isinstance(data, dict):
+                inst = data.get("instance", {})
+                if isinstance(inst, dict):
+                    state = inst.get("state", "disconnected")
+                else:
+                    state = data.get("state", "disconnected")
+            
+            if state in ("open", "CONNECTED", "connected"):
+                return jsonify({"status": "connected", "details": data})
+            else:
+                return jsonify({"status": "disconnected", "state": state, "details": data})
+        else:
+            return jsonify({"status": "disconnected", "error": f"Status {res.status_code}"})
+    except Exception as err:
+        return jsonify({"status": "disconnected", "error": str(err)})
+
 
 # ===========================
 # VISTORIAS (SUPERVISOR) - ROTAS CORRIGIDAS
@@ -7041,6 +7370,24 @@ def vistorias_nova():
 
         db.session.commit()
 
+        # WhatsApp Vistoria
+        try:
+            w_config = WhatsAppConfig.query.first()
+            if w_config and w_config.is_enabled:
+                veh = Vehicle.query.get(int(vehicle_id))
+                veiculo_txt = f"{veh.brand} {veh.model}" if veh else f"ID {vehicle_id}"
+                placa_txt = veh.plate if veh else ""
+                
+                tpl = w_config.msg_new_vistoria
+                msg = tpl.format(
+                    veiculo=veiculo_txt,
+                    placa=placa_txt,
+                    status=status_geral.upper()
+                )
+                send_whatsapp_message(msg)
+        except Exception as whatsapp_err:
+            print("⚠️ Erro ao disparar whatsapp para nova vistoria:", whatsapp_err)
+
         if rejected:
             flash(f"Vistoria registrada. Fotos salvas: {saved}. Rejeitadas: {rejected}", "success")
         else:
@@ -7074,12 +7421,19 @@ def avisos():
                 
             target_role = None
             user_id = None
+            recipient_users = []
+            
             if target.startswith("role:"):
                 target_role = target.split(":")[1]
+                recipient_users = User.query.filter_by(role=target_role).all()
             elif target.startswith("user:"):
                 user_id = int(target.split(":")[1])
+                single_u = User.query.get(user_id)
+                if single_u:
+                    recipient_users = [single_u]
             else:
                 target_role = "all"
+                recipient_users = User.query.all()
                 
             expires_at = None
             if days_valid.isdigit():
@@ -7097,7 +7451,28 @@ def avisos():
             db.session.commit()
             
             registrar_log(f"Novo comunicado transmitido: {title} (para {target})")
-            flash("Comunicado enviado com sucesso!", "success")
+            
+            # Disparo via WhatsApp se a opção estiver marcada
+            if request.form.get("send_whatsapp") == "on":
+                w_config = WhatsAppConfig.query.first()
+                if w_config and w_config.is_enabled:
+                    w_msg = f"*{title}*\n\n{message}"
+                    sent_count = 0
+                    for u in recipient_users:
+                        if u.phone:
+                            try:
+                                send_whatsapp_message(u.phone, w_msg)
+                                sent_count += 1
+                            except Exception:
+                                pass
+                    if sent_count > 0:
+                        flash(f"✅ Comunicado enviado! Disparado via WhatsApp para {sent_count} colaborador(es).", "success")
+                    else:
+                        flash("⚠️ Comunicado enviado! Porém nenhum destinatário possuía telefone cadastrado para o envio do WhatsApp.", "warning")
+                else:
+                    flash("Comunicado enviado! O disparo via WhatsApp não pôde ser realizado pois a API do WhatsApp está desativada.", "warning")
+            else:
+                flash("Comunicado enviado com sucesso!", "success")
             
         elif acao == "excluir_aviso":
             aid = request.form.get("id")
@@ -7315,6 +7690,21 @@ def api_system_audit():
                     )
                     db.session.add(ann)
                     scales_notified += 1
+                    
+                    # WhatsApp integration
+                    tech_user = User.query.get(uid)
+                    if tech_user and tech_user.phone:
+                        w_config = WhatsAppConfig.query.first()
+                        if w_config and w_config.is_enabled and w_config.msg_scale_alert:
+                            try:
+                                w_msg = w_config.msg_scale_alert.format(
+                                    usuario=tech_user.username.capitalize(),
+                                    escala=esc.type,
+                                    data=target_date.strftime('%d/%m/%Y')
+                                )
+                                send_whatsapp_message(tech_user.phone, w_msg)
+                            except Exception:
+                                pass
 
     # 2. Automação de Feriados, Sábados e Domingos (late_checklist / auditoria geral) - 4 dias antes
     if "late_checklist" in enabled_rules:
@@ -7421,6 +7811,18 @@ def api_system_audit():
                             )
                             db.session.add(ann)
                             checklists_reminded += 1
+                            
+                            # WhatsApp integration
+                            if u.phone:
+                                w_config = WhatsAppConfig.query.first()
+                                if w_config and w_config.is_enabled and w_config.msg_late_checklist:
+                                    try:
+                                        w_msg = w_config.msg_late_checklist.format(
+                                            usuario=u.username.capitalize()
+                                        )
+                                        send_whatsapp_message(u.phone, w_msg)
+                                    except Exception:
+                                        pass
 
     # 3. Automação de Treinamento LMS (training_alert) - apenas para os participantes destinados
     if "training_alert" in enabled_rules:
@@ -7447,6 +7849,19 @@ def api_system_audit():
                     )
                     db.session.add(ann)
                     trainings_notified += 1
+                    
+                    # WhatsApp integration
+                    if user.phone:
+                        w_config = WhatsAppConfig.query.first()
+                        if w_config and w_config.is_enabled and w_config.msg_training_alert:
+                            try:
+                                w_msg = w_config.msg_training_alert.format(
+                                    usuario=user.username.capitalize(),
+                                    curso=course.title
+                                )
+                                send_whatsapp_message(user.phone, w_msg)
+                            except Exception:
+                                pass
 
     # 4. Monitor de SLA & Alertas de OS (os_sla ou os_alert) - OS abertas > 7d
     if "os_sla" in enabled_rules or "os_alert" in enabled_rules:
@@ -7471,6 +7886,19 @@ def api_system_audit():
                     )
                     db.session.add(ann)
                     os_overdue += 1
+                    
+                    # WhatsApp integration
+                    if resp.phone:
+                        w_config = WhatsAppConfig.query.first()
+                        if w_config and w_config.is_enabled and w_config.msg_os_overdue:
+                            try:
+                                w_msg = w_config.msg_os_overdue.format(
+                                    usuario=resp.username.capitalize(),
+                                    id=os_obj.id
+                                )
+                                send_whatsapp_message(resp.phone, w_msg)
+                            except Exception:
+                                pass
 
         # Limpa automaticamente alertas de O.S. que não estão mais atrasadas ou que foram fechadas
         all_os_alerts = Announcement.query.filter(Announcement.title.like("⚠️ O.S. Atrasada: #%")).all()
@@ -7522,6 +7950,18 @@ def api_system_audit():
                     )
                     db.session.add(ann)
                     inactive_techs_notified += 1
+                    
+                    # WhatsApp integration
+                    if tech.phone:
+                        w_config = WhatsAppConfig.query.first()
+                        if w_config and w_config.is_enabled and w_config.msg_inactive_tech:
+                            try:
+                                w_msg = w_config.msg_inactive_tech.format(
+                                    usuario=tech.username.capitalize()
+                                )
+                                send_whatsapp_message(tech.phone, w_msg)
+                            except Exception:
+                                pass
 
     db.session.commit()
     return jsonify({

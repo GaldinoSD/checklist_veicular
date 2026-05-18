@@ -260,6 +260,13 @@
                         <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2 block ml-1">Mensagem</label>
                         <textarea name="message" required rows="3" placeholder="Escreva aqui o comunicado detalhado..." class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-[1.5rem] px-5 py-3 text-sm dark:text-white outline-none focus:ring-4 focus:ring-blue-500/10 transition-all resize-none"></textarea>
                     </div>
+
+                    <div class="md:col-span-2 flex items-center gap-3 p-4 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-900/5 dark:border-white/5 mt-2">
+                        <input type="checkbox" id="send_whatsapp" name="send_whatsapp" checked class="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 border-slate-300 cursor-pointer">
+                        <label for="send_whatsapp" class="text-xs font-bold text-slate-700 dark:text-slate-200 cursor-pointer select-none flex items-center gap-1.5">
+                            <i class="fa-brands fa-whatsapp text-emerald-500 text-sm"></i> Também disparar via WhatsApp (para os destinatários com telefone cadastrado)
+                        </label>
+                    </div>
                 </div>
 
                 <div class="flex flex-col gap-2 pt-2">
