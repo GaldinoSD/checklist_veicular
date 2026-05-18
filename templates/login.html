@@ -25,7 +25,7 @@
       position: fixed;
       inset: 0;
       z-index: 0;
-      background-image: url("{{ url_for('static', filename='img.png') }}");
+      background-image: url("{% if sys_config and sys_config.login_bg_desktop %}{{ url_for('static', filename='uploads/layout/' ~ sys_config.login_bg_desktop) }}{% else %}{{ url_for('static', filename='img.png') }}{% endif %}");
       background-size: 100% 100%;
       background-position: center;
       background-repeat: no-repeat;
@@ -37,7 +37,7 @@
     /* Ajustes para Mobile */
     @media (max-width: 768px) {
       .bg-container {
-        background-image: url("{{ url_for('static', filename='imgmbl.png') }}");
+        background-image: url("{% if sys_config and sys_config.login_bg_mobile %}{{ url_for('static', filename='uploads/layout/' ~ sys_config.login_bg_mobile) }}{% else %}{{ url_for('static', filename='imgmbl.png') }}{% endif %}");
         background-size: 100% 100%;
         filter: brightness(1.0) contrast(1.1);
       }
@@ -56,6 +56,37 @@
       z-index: 1;
       pointer-events: none;
     }
+
+    /* Sobrescrita de cor customizada */
+    :root {
+      --login-primary: {% if sys_config and sys_config.login_primary_color %}{{ sys_config.login_primary_color }}{% else %}#10b981{% endif %};
+    }
+    
+    /* Botão Customizado */
+    .custom-login-btn {
+      background-color: var(--login-primary) !important;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1), 0 20px 25px -5px color-mix(in srgb, var(--login-primary) 30%, transparent) !important;
+    }
+    .custom-login-btn:hover {
+      background-color: color-mix(in srgb, var(--login-primary) 85%, #000) !important;
+    }
+    
+    /* Acentos Customizados */
+    .custom-login-accent {
+      color: var(--login-primary) !important;
+    }
+    .custom-login-label {
+      color: color-mix(in srgb, var(--login-primary) 80%, #fff) !important;
+    }
+    .custom-login-focus:focus-within {
+      border-color: var(--login-primary) !important;
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--login-primary) 25%, transparent) !important;
+    }
+    
+    /* Banner Ajuste */
+    .preview-offset {
+      margin-top: 4.5rem !important;
+    }
   </style>
 </head>
 
@@ -63,20 +94,40 @@
              relative overflow-hidden 
              text-gray-100">
 
+  {% if is_preview %}
+  <!-- BANNER DE PRÉ-VISUALIZAÇÃO DE LAYOUT -->
+  <div class="fixed top-0 left-0 right-0 z-[999] bg-slate-900/95 backdrop-blur-md border-b border-white/10 px-6 py-3.5 flex items-center justify-between shadow-2xl">
+      <div class="flex items-center gap-3">
+          <span class="relative flex h-3 w-3">
+              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+              <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+          </span>
+          <div class="flex flex-col">
+              <span class="text-xs font-black uppercase tracking-widest text-slate-100">Modo de Pré-visualização do Layout</span>
+              <span class="text-[9px] text-slate-400 font-medium">Redimensione a aba para testar a responsividade em Mobile / Desktop!</span>
+          </div>
+      </div>
+      <div class="flex items-center gap-3">
+          <button onclick="window.close()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95">Fechar Aba</button>
+          <a href="{{ url_for('config_layout') }}" class="px-5 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 shadow-lg shadow-purple-500/20">Voltar para Ajustes</a>
+      </div>
+  </div>
+  {% endif %}
+
   <!-- DIV DE FUNDO COM FILTROS -->
   <div class="bg-container"></div>
   <div class="bg-overlay"></div>
 
   <!-- CARD GLASS -->
-  <form method="post"
+  <form method="post" {% if is_preview %}onsubmit="event.preventDefault(); alert('Modo Pré-visualização: a autenticação foi desativada temporariamente.'); return false;"{% endif %}
         class="login-card relative z-10 w-full max-w-sm backdrop-blur-md
                bg-black/60 
                border border-white/10 
-               rounded-2xl shadow-2xl p-8 md:p-10">
+               rounded-2xl shadow-2xl p-8 md:p-10 {% if is_preview %}preview-offset{% endif %}">
 
     <!-- LOGO -->
     <div class="w-full flex justify-center mb-4">
-      <img src="{{ url_for('static', filename='logo.png') }}" 
+      <img src="{% if sys_config and sys_config.login_logo %}{{ url_for('static', filename='uploads/layout/' ~ sys_config.login_logo) }}{% else %}{{ url_for('static', filename='logo.png') }}{% endif %}" 
            alt="Logo"
            class="logo-adjust opacity-95 drop-shadow-lg">
     </div>
@@ -86,22 +137,22 @@
                text-white/90 
                mb-6 tracking-wide">
       <i class="fa-solid fa-user-shield 
-                text-emerald-400 mr-2"></i>
+                custom-login-accent mr-2"></i>
       Acesso ao Sistema
     </h1>
 
     <!-- USUÁRIO -->
     <div class="mb-5">
-      <label class="text-xs font-medium text-emerald-200 uppercase tracking-wider">
+      <label class="text-xs font-medium custom-login-label uppercase tracking-wider">
         Usuário
       </label>
 
       <div class="flex items-center mt-1 
                   bg-white/5 
                   border border-white/10 
-                  backdrop-blur rounded-xl px-4 py-2.5 shadow-lg">
+                  backdrop-blur rounded-xl px-4 py-2.5 shadow-lg custom-login-focus">
         <i class="fa-solid fa-user 
-                  text-emerald-300 mr-3 text-sm"></i>
+                  custom-login-accent mr-3 text-sm"></i>
 
         <input name="username"
                class="bg-transparent w-full 
@@ -114,16 +165,16 @@
 
     <!-- SENHA -->
     <div class="mb-8">
-      <label class="text-xs font-medium text-emerald-200 uppercase tracking-wider">
+      <label class="text-xs font-medium custom-login-label uppercase tracking-wider">
         Senha
       </label>
 
       <div class="flex items-center mt-1 
                   bg-white/5 
                   border border-white/10 
-                  backdrop-blur rounded-xl px-4 py-2.5 shadow-lg">
+                  backdrop-blur rounded-xl px-4 py-2.5 shadow-lg custom-login-focus">
         <i class="fa-solid fa-lock 
-                  text-emerald-300 mr-3 text-sm"></i>
+                  custom-login-accent mr-3 text-sm"></i>
 
         <input type="password" name="password"
                class="bg-transparent w-full 
@@ -136,8 +187,7 @@
 
     <!-- BOTÃO -->
     <button class="w-full py-3 rounded-xl font-semibold text-base
-                   bg-emerald-600 hover:bg-emerald-700 text-white 
-                   shadow-xl shadow-emerald-600/20
+                   custom-login-btn text-white 
                    transition-all duration-300 transform 
                    hover:-translate-y-[1px] active:scale-95">
       Entrar

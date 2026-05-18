@@ -97,6 +97,8 @@ INBOX_DIR = BASE_DIR / "inbox"
 RELATORIOS_DIR = BASE_DIR / "relatorios"
 UPLOAD_DIR = BASE_DIR / "static" / "checklist_fotos"
 LOGO_PATH = BASE_DIR / "static" / "logo.png"
+LAYOUT_UPLOAD_DIR = BASE_DIR / "static" / "uploads" / "layout"
+LAYOUT_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 REV_INTERVAL = 10000
 REV_ALERT_MARGIN = 500
@@ -906,6 +908,15 @@ class SystemConfig(db.Model):
     ignition_alert = db.Column(db.Boolean, default=True)
     update_frequency = db.Column(db.Integer, default=30)
     simulator_active = db.Column(db.Boolean, default=False)
+    
+    # Customização de Layout
+    login_bg_desktop = db.Column(db.String(255))
+    login_bg_mobile = db.Column(db.String(255))
+    login_logo = db.Column(db.String(255))
+    sidebar_logo = db.Column(db.String(255))
+    pdf_logo = db.Column(db.String(255))
+    pdf_footer = db.Column(db.Text)
+    login_primary_color = db.Column(db.String(50), default="#10b981")
 
 
 @login_manager.user_loader
@@ -935,6 +946,12 @@ def ensure_min_schema():
         text('ALTER TABLE system_config ADD COLUMN IF NOT EXISTS ignition_alert BOOLEAN DEFAULT TRUE'),
         text('ALTER TABLE system_config ADD COLUMN IF NOT EXISTS update_frequency INTEGER DEFAULT 30'),
         text('ALTER TABLE system_config ADD COLUMN IF NOT EXISTS simulator_active BOOLEAN DEFAULT FALSE'),
+        text('ALTER TABLE system_config ADD COLUMN IF NOT EXISTS login_bg_desktop VARCHAR(255)'),
+        text('ALTER TABLE system_config ADD COLUMN IF NOT EXISTS login_bg_mobile VARCHAR(255)'),
+        text('ALTER TABLE system_config ADD COLUMN IF NOT EXISTS login_logo VARCHAR(255)'),
+        text('ALTER TABLE system_config ADD COLUMN IF NOT EXISTS sidebar_logo VARCHAR(255)'),
+        text('ALTER TABLE system_config ADD COLUMN IF NOT EXISTS pdf_logo VARCHAR(255)'),
+        text('ALTER TABLE system_config ADD COLUMN IF NOT EXISTS pdf_footer TEXT'),
         # campos em announcement
         text('ALTER TABLE announcement ADD COLUMN IF NOT EXISTS target_role VARCHAR(50)'),
         text('ALTER TABLE announcement ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES "user"(id) ON DELETE CASCADE'),
@@ -1044,6 +1061,8 @@ def admin_required(view):
             allowed = current_user.has_permission("config_checklist")
         elif endpoint == "logs":
             allowed = current_user.has_permission("logs")
+        elif endpoint in {"config_layout", "reset_layout_field", "test_layout_pdf", "preview_layout"}:
+            allowed = current_user.has_permission("config_layout")
             
         if allowed:
             return view(*args, **kwargs)
@@ -1092,11 +1111,13 @@ def manutencao_only(view):
 # Variáveis globais para o template
 @app.context_processor
 def inject_role_flags():
+    config = SystemConfig.query.first()
     return dict(
         ROLE_ADMIN=(current_user.is_authenticated and current_user.is_admin),
         ROLE_SUPERVISOR=(current_user.is_authenticated and current_user.is_supervisor),
         ROLE_TECH=(current_user.is_authenticated and current_user.is_tech),
         ROLE_MANUTENCAO=(current_user.is_authenticated and current_user.is_manutencao),
+        sys_config=config
     )
 
 
@@ -1609,7 +1630,7 @@ def get_default_perms(role):
         "perm_dashboard", "perm_logs", "perm_relatorios", "perm_avisos",
         "perm_usuarios", "perm_veiculos", "perm_controle_veiculos",
         "perm_checklist_mobile", "perm_treinamentos_mobile", "perm_vistorias_nova",
-        "perm_avarias", "perm_checklists_view", "perm_config_checklist",
+        "perm_avarias", "perm_checklists_view", "perm_config_checklist", "perm_config_layout",
         "perm_manutencao_os", "perm_vistorias_list",
         "perm_frota", "perm_monitoramento_aparelhos", "perm_monitoramento_historico", "perm_monitoramento_config",
         "perm_gestao_equipes", "perm_gestao_calendario", "perm_gestao_escalas",
@@ -1703,7 +1724,7 @@ def users_permissions(uid):
         "perm_dashboard", "perm_logs", "perm_relatorios", "perm_avisos",
         "perm_usuarios", "perm_veiculos", "perm_controle_veiculos",
         "perm_checklist_mobile", "perm_treinamentos_mobile", "perm_vistorias_nova",
-        "perm_avarias", "perm_checklists_view", "perm_config_checklist",
+        "perm_avarias", "perm_checklists_view", "perm_config_checklist", "perm_config_layout",
         "perm_manutencao_os", "perm_vistorias_list",
         "perm_frota", "perm_monitoramento_aparelhos", "perm_monitoramento_historico", "perm_monitoramento_config",
         "perm_gestao_equipes", "perm_gestao_calendario", "perm_gestao_escalas",
@@ -2633,8 +2654,25 @@ def reports_generate():
 
     def draw_background(c, doc_obj):
         width, height = A4
-        logo_path = "/var/www/checklist_veicular/logo.png"
-        RODAPE_LINHAS = [
+        
+        # Dynamic layout configuration from SystemConfig
+        config = SystemConfig.query.first()
+        
+        logo_path_custom = None
+        if config and config.pdf_logo:
+            custom_p = LAYOUT_UPLOAD_DIR / config.pdf_logo
+            if custom_p.exists():
+                logo_path_custom = str(custom_p)
+                
+        logo_path = logo_path_custom if logo_path_custom else "logo.png"
+        if not logo_path_custom and not os.path.exists(logo_path):
+            logo_path = "/var/www/checklist_veicular/logo.png"
+
+        custom_rodape_linhas = None
+        if config and config.pdf_footer:
+            custom_rodape_linhas = [linha.strip() for linha in config.pdf_footer.splitlines() if linha.strip()]
+            
+        pdf_rodape_linhas = custom_rodape_linhas if custom_rodape_linhas is not None else [
             "ADAPT LINK SERVIÇOS EM COMUNICAÇÃO MULTIMÍDIA EIRELI",
             "CNPJ: 08.980.148/0001-41       Inscr. Est.: 78.342.480",
             "Rua Waldir Pedro de Medeiros, 253 – São Miguel – Seropédica – RJ",
@@ -2644,11 +2682,12 @@ def reports_generate():
         ]
         
         # 1. Cabeçalho / Logotipo
-        if os.path.exists(logo_path):
+        if logo_path and os.path.exists(logo_path):
             try:
                 from reportlab.lib.utils import ImageReader
                 logo = ImageReader(logo_path)
-                c.drawImage(logo, 20, height - 60, width=60, height=25, preserveAspectRatio=True, mask="auto")
+                # Bounding box: max width 90pt (120px), max height 37.5pt (50px)
+                c.drawImage(logo, 20, height - 60, width=90, height=37.5, preserveAspectRatio=True, mask="auto")
             except Exception as e:
                 print("⚠️ Erro ao carregar logo no header frota:", e)
 
@@ -2679,7 +2718,7 @@ def reports_generate():
         c.setFont("Helvetica", 7)
         c.setFillColor(colors.HexColor("#475569"))
         y_footer = 75
-        for linha in RODAPE_LINHAS:
+        for linha in pdf_rodape_linhas:
             c.drawCentredString(width / 2, y_footer, linha)
             y_footer -= 9
         
@@ -4062,11 +4101,24 @@ def make_premium_pdf(buffer, title, metadata, content_table_data, image_paths=No
     from reportlab.lib.units import mm
     import os
 
-    logo_path = "logo.png"
-    if not os.path.exists(logo_path):
+    # Dynamic layout configuration from SystemConfig
+    config = SystemConfig.query.first()
+    
+    logo_path_custom = None
+    if config and config.pdf_logo:
+        custom_p = LAYOUT_UPLOAD_DIR / config.pdf_logo
+        if custom_p.exists():
+            logo_path_custom = str(custom_p)
+            
+    logo_path = logo_path_custom if logo_path_custom else "logo.png"
+    if not logo_path_custom and not os.path.exists(logo_path):
         logo_path = "/var/www/checklist_veicular/logo.png"
 
-    RODAPE_LINHAS = [
+    custom_rodape_linhas = None
+    if config and config.pdf_footer:
+        custom_rodape_linhas = [linha.strip() for linha in config.pdf_footer.splitlines() if linha.strip()]
+        
+    RODAPE_LINHAS = custom_rodape_linhas if custom_rodape_linhas is not None else [
         "ADAPT LINK SERVIÇOS EM COMUNICAÇÃO MULTIMÍDIA EIRELI",
         "CNPJ: 08.980.148/0001-41       Inscr. Est.: 78.342.480",
         "Rua Waldir Pedro de Medeiros, 253 – São Miguel – Seropédica – RJ",
@@ -4079,11 +4131,12 @@ def make_premium_pdf(buffer, title, metadata, content_table_data, image_paths=No
         width, height = A4
         
         # 1. Cabeçalho / Logotipo
-        if os.path.exists(logo_path):
+        if logo_path and os.path.exists(logo_path):
             try:
                 from reportlab.lib.utils import ImageReader
                 logo = ImageReader(logo_path)
-                c.drawImage(logo, 20, height - 60, width=60, height=25, preserveAspectRatio=True, mask="auto")
+                # Bounding box: max width 90pt (120px), max height 37.5pt (50px)
+                c.drawImage(logo, 20, height - 60, width=90, height=37.5, preserveAspectRatio=True, mask="auto")
             except Exception as e:
                 print("⚠️ Erro ao carregar logo no header:", e)
 
@@ -6210,6 +6263,154 @@ def config_checklist_move(iid):
     return redirect(url_for("config_checklist"))
 
 
+# ----------------- CONFIGURAÇÃO DE LAYOUT DO SISTEMA -----------------
+@app.route("/configuracoes/layout", methods=["GET", "POST"])
+@admin_required
+def config_layout():
+    config = SystemConfig.query.first()
+    if not config:
+        config = SystemConfig(mode="start_only")
+        db.session.add(config)
+        db.session.commit()
+
+    if request.method == "POST":
+        # Processar pdf_footer
+        config.pdf_footer = request.form.get("pdf_footer", "").strip() or None
+
+        # Processar login_primary_color
+        color = request.form.get("login_primary_color", "").strip()
+        if color:
+            if not color.startswith("#") or len(color) not in {4, 7}:
+                flash("Cor primária inválida. Use um formato hexadecimal (ex: #10b981).", "error")
+                return redirect(url_for("config_layout"))
+            config.login_primary_color = color
+
+        # Processar uploads
+        ALLOWED_LAYOUT_EXT = {".png", ".jpg", ".jpeg", ".webp", ".svg"}
+        fields = ["login_bg_desktop", "login_bg_mobile", "login_logo", "sidebar_logo", "pdf_logo"]
+
+        for field in fields:
+            file = request.files.get(field)
+            if file and file.filename != "":
+                ext = os.path.splitext(file.filename.lower())[1]
+                if ext not in ALLOWED_LAYOUT_EXT:
+                    flash(f"Extensão inválida para o campo {field}. Use PNG, JPG, JPEG, WEBP ou SVG.", "error")
+                    return redirect(url_for("config_layout"))
+
+                # Deleta o arquivo antigo se houver
+                old_val = getattr(config, field)
+                if old_val:
+                    try:
+                        old_p = LAYOUT_UPLOAD_DIR / old_val
+                        if old_p.exists():
+                            old_p.unlink()
+                    except Exception as e:
+                        print(f"⚠️ Erro deletando arquivo antigo {old_val}: {e}")
+
+                # Cria nome seguro e salva
+                fname = f"layout_{field}_{uuid.uuid4().hex[:8]}{ext}"
+                file.save(LAYOUT_UPLOAD_DIR / fname)
+                setattr(config, field, fname)
+
+        db.session.commit()
+        registrar_log("Configurações de layout atualizadas.")
+        flash("Configurações de layout salvas com sucesso!", "success")
+        return redirect(url_for("config_layout"))
+
+    return render_template("layout_config.html", config=config)
+
+
+@app.route("/configuracoes/layout/reset/<field>", methods=["POST"])
+@admin_required
+def reset_layout_field(field):
+    config = SystemConfig.query.first()
+    if not config:
+        flash("Nenhuma configuração encontrada.", "error")
+        return redirect(url_for("config_layout"))
+
+    allowed_fields = {"login_bg_desktop", "login_bg_mobile", "login_logo", "sidebar_logo", "pdf_logo", "pdf_footer", "login_primary_color"}
+    if field not in allowed_fields:
+        flash("Campo inválido.", "error")
+        return redirect(url_for("config_layout"))
+
+    if field == "login_primary_color":
+        if config.login_primary_color != "#10b981":
+            config.login_primary_color = "#10b981"
+            db.session.commit()
+            registrar_log("Configuração de layout restaurada para o padrão: login_primary_color")
+            flash("A configuração foi restaurada para o padrão com sucesso.", "success")
+        else:
+            flash("Esta configuração já está usando o padrão.", "info")
+        return redirect(url_for("config_layout"))
+
+    val = getattr(config, field)
+    if val or (field == "pdf_footer" and config.pdf_footer is not None):
+        # Se for um arquivo de imagem, exclui fisicamente
+        if field != "pdf_footer":
+            try:
+                p = LAYOUT_UPLOAD_DIR / val
+                if p.exists():
+                    p.unlink()
+            except Exception as e:
+                print(f"⚠️ Erro ao deletar arquivo de reset: {e}")
+        setattr(config, field, None)
+        db.session.commit()
+        registrar_log(f"Configuração de layout restaurada para o padrão: {field}")
+        flash("A configuração foi restaurada para o padrão com sucesso.", "success")
+    else:
+        flash("Esta configuração já está usando o padrão.", "info")
+
+    return redirect(url_for("config_layout"))
+
+
+@app.route("/configuracoes/layout/test-pdf")
+@admin_required
+def test_layout_pdf():
+    import io
+    from flask import send_file
+
+    config = SystemConfig.query.first()
+    buffer = io.BytesIO()
+
+    metadata = {
+        "ID": "TST-9999",
+        "Ambiente": "Homologação de Layout",
+        "Emitente": current_user.username,
+        "Data": agora().strftime("%d/%m/%Y %H:%M")
+    }
+
+    content_table_data = [
+        ["Imagem de Fundo Desktop", ("Customizado: " + config.login_bg_desktop) if (config and config.login_bg_desktop) else "Asset Padrão (img.png)"],
+        ["Imagem de Fundo Mobile", ("Customizado: " + config.login_bg_mobile) if (config and config.login_bg_mobile) else "Asset Padrão (imgmbl.png)"],
+        ["Logo da Tela de Login", ("Customizado: " + config.login_logo) if (config and config.login_logo) else "Asset Padrão (logo.png)"],
+        ["Logo do Sidebar (Menu)", ("Customizado: " + config.sidebar_logo) if (config and config.sidebar_logo) else "Asset Padrão (imgsidebar.png)"],
+        ["Logo dos PDFs", ("Customizado: " + config.pdf_logo) if (config and config.pdf_logo) else "Asset Padrão (logo.png)"],
+        ["Rodapé dos PDFs", ("Customizado: " + config.pdf_footer.replace('\n', ' | ')) if (config and config.pdf_footer) else "Não configurado - AdaptLink Padrão"]
+    ]
+
+    make_premium_pdf(
+        buffer=buffer,
+        title="RELATÓRIO DE HOMOLOGAÇÃO DE LAYOUT",
+        metadata=metadata,
+        content_table_data=content_table_data
+    )
+
+    buffer.seek(0)
+    return send_file(
+        buffer,
+        mimetype="application/pdf",
+        as_attachment=False,
+        download_name="homologacao_layout.pdf"
+    )
+
+
+@app.route("/configuracoes/layout/preview")
+@admin_required
+def preview_layout():
+    config = SystemConfig.query.first()
+    return render_template("login.html", sys_config=config, is_preview=True)
+
+
 # ----------------- GERADOR DE PDF -----------------
 def generate_checklist_pdf(checklist_obj: Checklist, raw: dict) -> str:
     from reportlab.lib.pagesizes import A4
@@ -6260,12 +6461,30 @@ def generate_checklist_pdf(checklist_obj: Checklist, raw: dict) -> str:
         "WWW.ADAPTLINK.COM.BR",
     ]
 
+    # Dynamic layout configuration from SystemConfig
+    config = SystemConfig.query.first()
+    
+    logo_path_custom = None
+    if config and config.pdf_logo:
+        custom_p = LAYOUT_UPLOAD_DIR / config.pdf_logo
+        if custom_p.exists():
+            logo_path_custom = str(custom_p)
+            
+    pdf_logo_path = logo_path_custom if logo_path_custom else (str(LOGO_PATH) if LOGO_PATH.exists() else None)
+
+    custom_rodape_linhas = None
+    if config and config.pdf_footer:
+        custom_rodape_linhas = [linha.strip() for linha in config.pdf_footer.splitlines() if linha.strip()]
+        
+    pdf_rodape_linhas = custom_rodape_linhas if custom_rodape_linhas is not None else RODAPE_LINHAS
+
     def header_footer_factory(titulo: str, subtitulo: str):
         def _on_page(c, doc):
             width, height = A4
-            if LOGO_PATH.exists():
+            if pdf_logo_path:
                 try:
-                    c.drawImage(LOGO_PATH, 15*mm, height-28*mm, 28*mm, 14*mm,
+                    # Bounding box: max 120px (31.75mm), max 50px (13.22mm)
+                    c.drawImage(pdf_logo_path, 15*mm, height-28*mm, 31.75*mm, 13.22*mm,
                                 preserveAspectRatio=True, mask="auto")
                 except Exception:
                     pass
@@ -6290,7 +6509,7 @@ def generate_checklist_pdf(checklist_obj: Checklist, raw: dict) -> str:
             c.setFont("Helvetica", 8)
             c.setFillColor(colors.HexColor("#6E6E6E"))
             y = 28*mm
-            for linha in RODAPE_LINHAS:
+            for linha in pdf_rodape_linhas:
                 c.drawCentredString(width/2, y, linha)
                 y -= 4*mm
             c.setFont("Helvetica-Oblique", 8)

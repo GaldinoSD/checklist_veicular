@@ -270,7 +270,7 @@
         
         <!-- TOP: LOGO -->
         <div class="py-2 px-3 flex items-center justify-center h-20 shrink-0">
-          <img src="{{ url_for('static', filename='imgsidebar.png') }}" class="h-16 w-auto max-w-[90%] object-contain drop-shadow-sm" alt="Logo">
+          <img src="{% if sys_config and sys_config.sidebar_logo %}{{ url_for('static', filename='uploads/layout/' ~ sys_config.sidebar_logo) }}{% else %}{{ url_for('static', filename='imgsidebar.png') }}{% endif %}" class="h-16 w-auto max-w-[90%] object-contain drop-shadow-sm" alt="Logo">
         </div>
 
         <!-- MIDDLE: MENU -->
@@ -526,6 +526,19 @@
                       {% endif %}">
               <i class="fa-solid fa-terminal w-5 text-center text-base {% if request.endpoint == 'logs' %}text-white dark:text-slate-900{% else %}text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200{% endif %} transition-colors"></i>
               <span class="text-[13px] font-bold tracking-tight">Logs Auditoria</span>
+            </a>
+            {% endif %}
+
+            {% if current_user.has_permission('config_layout') %}
+            <a href="{{ url_for('config_layout') }}" 
+               class="flex items-center gap-3.5 px-4 py-3 rounded-2xl transition-all duration-300 group
+                      {% if request.endpoint == 'config_layout' %}
+                        bg-slate-800 dark:bg-white text-white dark:text-slate-900 shadow-xl scale-[1.02]
+                      {% else %}
+                        text-slate-500 dark:text-gray-400 hover:bg-slate-900/5 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white
+                      {% endif %}">
+              <i class="fa-solid fa-palette w-5 text-center text-base {% if request.endpoint == 'config_layout' %}text-white dark:text-slate-900{% else %}text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200{% endif %} transition-colors"></i>
+              <span class="text-[13px] font-bold tracking-tight">Config. Layout</span>
             </a>
             {% endif %}
             {% endif %}
