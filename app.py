@@ -7221,6 +7221,21 @@ def api_system_audit():
         except Exception:
             db.session.rollback()
 
+    # Garantir que a regra inactive_tech_alert exista no banco
+    rule_inactive = SystemRule.query.filter_by(slug="inactive_tech_alert").first()
+    if not rule_inactive:
+        try:
+            rule_inactive = SystemRule(
+                slug="inactive_tech_alert",
+                name="Lembrete de Checklist Atrasado (+7 dias)",
+                description="Identifica automaticamente técnicos que não realizam checklists há mais de 7 dias e envia comunicado de lembrete a eles.",
+                is_enabled=True
+            )
+            db.session.add(rule_inactive)
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+
     # Coleta quais regras de automação estão habilitadas no banco
     enabled_rules = {r.slug for r in SystemRule.query.filter_by(is_enabled=True).all()}
 
@@ -7233,6 +7248,7 @@ def api_system_audit():
     os_overdue = 0
     scales_notified = 0
     trainings_notified = 0
+    inactive_techs_notified = 0
 
     # 1. Automação de Escala & Plantão (scale_alert) - 4 dias antes
     if "scale_alert" in enabled_rules:
@@ -7440,12 +7456,51 @@ def api_system_audit():
                     db.session.add(ann)
                     os_overdue += 1
 
+    # 5. Técnicos Inativos (+7 dias sem realizar checklist) (inactive_tech_alert)
+    if "inactive_tech_alert" in enabled_rules:
+        techs = User.query.filter_by(role="tech").all()
+        seven_days_ago = now_dt - timedelta(days=7)
+        for tech in techs:
+            last_checklist = Checklist.query.filter(
+                Checklist.technician == tech.username
+            ).order_by(Checklist.date.desc()).first()
+            
+            is_inactive = False
+            last_date_str = ""
+            if last_checklist:
+                if last_checklist.date < seven_days_ago:
+                    is_inactive = True
+                    last_date_str = last_checklist.date.strftime('%d/%m/%Y')
+            else:
+                is_inactive = True
+                last_date_str = "nunca"
+                
+            if is_inactive:
+                title = "⚠️ Lembrete: Checklist não realizado há +7 dias"
+                content = f"Olá {tech.username.capitalize()}, identificamos que você não realiza nenhuma vistoria ou checklist veicular há mais de 7 dias (último envio: {last_date_str}). Lembramos que a realização do checklist de vistoria é obrigatória para manter a conformidade operacional de sua rota."
+                
+                # Evita spam enviando no máximo uma vez a cada 7 dias
+                exists = Announcement.query.filter_by(title=title, user_id=tech.id).filter(
+                    Announcement.created_at >= seven_days_ago
+                ).first()
+                
+                if not exists:
+                    ann = Announcement(
+                        title=title,
+                        content=content,
+                        user_id=tech.id,
+                        created_by=None
+                    )
+                    db.session.add(ann)
+                    inactive_techs_notified += 1
+
     db.session.commit()
     return jsonify({
         "checklists_reminded": checklists_reminded,
         "os_overdue": os_overdue,
         "scales_notified": scales_notified,
-        "trainings_notified": trainings_notified
+        "trainings_notified": trainings_notified,
+        "inactive_techs_notified": inactive_techs_notified
     })
 
 @app.route("/api/manuais/help")
