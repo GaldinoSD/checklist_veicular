@@ -2218,6 +2218,14 @@ def avarias_registro():
                 os_finalizar.servico_realizado = request.form.get("servico")
                 os_finalizar.status = "finalizada"
                 os_finalizar.data_fechamento = datetime.utcnow()
+                
+                # Sume com o comunicado de O.S atrasada da Central de Notificações
+                ann_title = f"⚠️ O.S. Atrasada: #{os_finalizar.id}"
+                anns = Announcement.query.filter_by(title=ann_title).all()
+                for ann in anns:
+                    AnnouncementRead.query.filter_by(announcement_id=ann.id).delete()
+                    db.session.delete(ann)
+                
                 db.session.commit()
                 registrar_log(f"O.S finalizada (admin/supervisor): ID={os_finalizar.id} (por {current_user.username})")
 
@@ -2277,6 +2285,14 @@ def manutencao_os():
                 os_finalizar.servico_realizado = request.form.get("servico")
                 os_finalizar.status = "finalizada"
                 os_finalizar.data_fechamento = datetime.utcnow()
+                
+                # Sume com o comunicado de O.S atrasada da Central de Notificações
+                ann_title = f"⚠️ O.S. Atrasada: #{os_finalizar.id}"
+                anns = Announcement.query.filter_by(title=ann_title).all()
+                for ann in anns:
+                    AnnouncementRead.query.filter_by(announcement_id=ann.id).delete()
+                    db.session.delete(ann)
+                
                 db.session.commit()
                 registrar_log(f"O.S finalizada (manutenção): ID={os_finalizar.id} (por {current_user.username})")
 
@@ -7400,7 +7416,7 @@ def api_system_audit():
                                 title=title,
                                 content=content,
                                 user_id=u.id,
-                                expires_at=datetime.combine(today_dt, datetime.max.time()),
+                                expires_at=datetime.combine(today_dt + timedelta(days=7), datetime.max.time()),
                                 created_by=None
                             )
                             db.session.add(ann)
@@ -7456,6 +7472,18 @@ def api_system_audit():
                     db.session.add(ann)
                     os_overdue += 1
 
+        # Limpa automaticamente alertas de O.S. que não estão mais atrasadas ou que foram fechadas
+        all_os_alerts = Announcement.query.filter(Announcement.title.like("⚠️ O.S. Atrasada: #%")).all()
+        overdue_ids = {os_obj.id for os_obj in overdue_os_list}
+        for alert in all_os_alerts:
+            try:
+                alert_os_id = int(alert.title.split("#")[1])
+                if alert_os_id not in overdue_ids:
+                    AnnouncementRead.query.filter_by(announcement_id=alert.id).delete()
+                    db.session.delete(alert)
+            except Exception:
+                pass
+
     # 5. Técnicos Inativos (+7 dias sem realizar checklist) (inactive_tech_alert)
     if "inactive_tech_alert" in enabled_rules:
         techs = User.query.filter_by(role="tech").all()
@@ -7489,6 +7517,7 @@ def api_system_audit():
                         title=title,
                         content=content,
                         user_id=tech.id,
+                        expires_at=datetime.combine(today_dt + timedelta(days=7), datetime.max.time()),
                         created_by=None
                     )
                     db.session.add(ann)
