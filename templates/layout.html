@@ -474,7 +474,7 @@
             <span class="text-[13px] font-bold tracking-tight">Alterar Senha</span>
           </button>
 
-            {% if current_user.has_permission('usuarios') or current_user.has_permission('avisos') or current_user.has_permission('config_checklist') or current_user.has_permission('logs') or current_user.has_permission('whatsapp_evolution') or current_user.has_permission('config_layout') %}
+            {% if current_user.has_permission('usuarios') or current_user.has_permission('avisos') or current_user.has_permission('config_checklist') or current_user.has_permission('logs') or current_user.has_permission('config_layout') %}
             <div class="py-3 px-4 text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-gray-500 mt-6">Sistema</div>
             
             {% if current_user.has_permission('usuarios') %}
@@ -541,17 +541,37 @@
               <span class="text-[13px] font-bold tracking-tight">Config. Layout</span>
             </a>
             {% endif %}
+            {% endif %}
 
-            {% if current_user.has_permission('whatsapp_evolution') %}
-            <a href="{{ url_for('whatsapp_dashboard') }}" 
+            {% if current_user.has_permission('whatsapp_conversas') or current_user.has_permission('whatsapp_evolution') %}
+            <div class="py-3 px-4 text-[11px] font-black uppercase tracking-[0.2em] text-emerald-600 dark:text-emerald-500 mt-6 flex items-center gap-2">
+              <span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              Integração WhatsApp
+            </div>
+
+            {% if current_user.has_permission('whatsapp_conversas') %}
+            <a href="{{ url_for('whatsapp_conversas') }}" 
                class="flex items-center gap-3.5 px-4 py-3 rounded-2xl transition-all duration-300 group
-                      {% if request.endpoint == 'whatsapp_dashboard' %}
+                      {% if request.endpoint == 'whatsapp_conversas' %}
                         bg-emerald-600 text-white shadow-xl shadow-emerald-500/30 scale-[1.02]
                       {% else %}
                         text-slate-500 dark:text-gray-400 hover:bg-slate-900/5 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white
                       {% endif %}">
-              <i class="fa-brands fa-whatsapp w-5 text-center text-base {% if request.endpoint == 'whatsapp_dashboard' %}text-white{% else %}text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200{% endif %} transition-colors"></i>
-              <span class="text-[13px] font-bold tracking-tight">Whatsapp Evolution</span>
+              <i class="fa-regular fa-comments w-5 text-center text-base {% if request.endpoint == 'whatsapp_conversas' %}text-white{% else %}text-slate-400 group-hover:text-emerald-500 dark:group-hover:text-emerald-400{% endif %} transition-colors"></i>
+              <span class="text-[13px] font-bold tracking-tight">Conversas</span>
+            </a>
+            {% endif %}
+
+            {% if current_user.has_permission('whatsapp_evolution') %}
+            <a href="{{ url_for('whatsapp_config') }}" 
+               class="flex items-center gap-3.5 px-4 py-3 rounded-2xl transition-all duration-300 group
+                      {% if request.endpoint == 'whatsapp_config' %}
+                        bg-slate-800 dark:bg-white text-white dark:text-slate-900 shadow-xl scale-[1.02]
+                      {% else %}
+                        text-slate-500 dark:text-gray-400 hover:bg-slate-900/5 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white
+                      {% endif %}">
+              <i class="fa-solid fa-sliders w-5 text-center text-base {% if request.endpoint == 'whatsapp_config' %}text-white dark:text-slate-900{% else %}text-slate-400 group-hover:text-emerald-500 dark:group-hover:text-emerald-400{% endif %} transition-colors"></i>
+              <span class="text-[13px] font-bold tracking-tight">Configurações API</span>
             </a>
             {% endif %}
             {% endif %}

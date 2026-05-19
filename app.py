@@ -1093,13 +1093,24 @@ def registrar_log(acao):
 
 
 # ----------------- ENVIAR WHATSAPP (EVOLUTION API) -----------------
-def send_whatsapp_message(text_message):
+def send_whatsapp_message(to_number_or_msg, text_message=None):
     """
     Dispara uma mensagem de texto assíncrona usando a Evolution API.
     Totalmente isolado em uma thread em background para não travar a aplicação principal.
+    Aceita assinatura de um argumento (mensagem de texto para a lista de destinatários global)
+    ou dois argumentos (número de telefone de destino específico, mensagem de texto).
     """
     import threading
     import requests
+
+    if text_message is not None:
+        # Assinatura de dois argumentos: send_whatsapp_message(phone, msg)
+        target_number = to_number_or_msg
+        actual_msg = text_message
+    else:
+        # Assinatura de um argumento: send_whatsapp_message(msg)
+        target_number = None
+        actual_msg = to_number_or_msg
 
     def worker():
         try:
@@ -1107,16 +1118,21 @@ def send_whatsapp_message(text_message):
                 config = WhatsAppConfig.query.first()
                 if not config or not config.is_enabled:
                     return
-                if not config.recipients:
-                    return
                 
                 headers = {
                     "Content-Type": "application/json",
                     "apikey": config.apikey
                 }
                 
-                # Divide destinatários por vírgula e limpa espaços
-                numbers = [n.strip() for n in config.recipients.split(",") if n.strip()]
+                if target_number:
+                    # Usar o número de telefone de destino específico passado
+                    numbers = [target_number]
+                else:
+                    # Usar a lista de destinatários global configurada
+                    if not config.recipients:
+                        return
+                    numbers = [n.strip() for n in config.recipients.split(",") if n.strip()]
+                
                 for number in numbers:
                     sanitized_number = "".join(filter(str.isdigit, number))
                     if not sanitized_number:
@@ -1128,7 +1144,7 @@ def send_whatsapp_message(text_message):
                     
                     payload = {
                         "number": sanitized_number,
-                        "text": text_message
+                        "text": actual_msg
                     }
                     
                     url = f"{config.api_url.rstrip('/')}/message/sendText/{config.instance_name}"
@@ -1739,7 +1755,8 @@ def get_default_perms(role):
         "perm_gestao_reunioes", "perm_gestao_anotacoes", "perm_gestao_atividades",
         "perm_gestao_encerramento", "perm_gestao_rfo", "perm_gestao_tarefas",
         "perm_gestao_geradores", "perm_gestao_rota_exata", "perm_gestao_supervisao",
-        "perm_gestao_treinamentos", "perm_gestao_solicitacoes", "perm_gestao_relatorios"
+        "perm_gestao_treinamentos", "perm_gestao_solicitacoes", "perm_gestao_relatorios",
+        "perm_whatsapp_evolution", "perm_whatsapp_conversas"
     ]
     perms = {}
     if role == "tech":
@@ -1834,7 +1851,7 @@ def users_permissions(uid):
         "perm_gestao_encerramento", "perm_gestao_rfo", "perm_gestao_tarefas",
         "perm_gestao_geradores", "perm_gestao_rota_exata", "perm_gestao_supervisao",
         "perm_gestao_treinamentos", "perm_gestao_solicitacoes", "perm_gestao_relatorios",
-        "perm_whatsapp_evolution"
+        "perm_whatsapp_evolution", "perm_whatsapp_conversas"
     ]
     
     perms_data = request.form.to_dict()
@@ -7057,13 +7074,24 @@ def logs():
 # ----------------- GESTÃO WHATSAPP EVOLUTION -----------------
 @app.route("/whatsapp")
 @login_required
-def whatsapp_dashboard():
-    if not (current_user.is_admin or current_user.has_permission("whatsapp_evolution")):
-        flash("Acesso restrito ao painel do WhatsApp.", "error")
+def whatsapp_conversas():
+    if not (current_user.is_admin or current_user.has_permission("whatsapp_conversas")):
+        flash("Acesso restrito ao chat do WhatsApp.", "error")
         return redirect(url_for("dashboard"))
     
     config = WhatsAppConfig.query.first()
-    return render_template("whatsapp_dashboard.html", whatsapp_config=config)
+    return render_template("whatsapp_conversas.html", whatsapp_config=config)
+
+
+@app.route("/whatsapp/config")
+@login_required
+def whatsapp_config():
+    if not (current_user.is_admin or current_user.has_permission("whatsapp_evolution")):
+        flash("Acesso restrito às configurações do WhatsApp.", "error")
+        return redirect(url_for("dashboard"))
+    
+    config = WhatsAppConfig.query.first()
+    return render_template("whatsapp_config.html", whatsapp_config=config)
 
 
 @app.route("/api/whatsapp/config", methods=["POST"])
@@ -7086,7 +7114,7 @@ def whatsapp_config_save():
     db.session.commit()
     registrar_log(f"Configuração do Whatsapp atualizada por {current_user.username}")
     flash("✅ Configurações salvas com sucesso!", "success")
-    return redirect(url_for("whatsapp_dashboard"))
+    return redirect(url_for("whatsapp_config"))
 
 
 @app.route("/api/whatsapp/templates", methods=["POST"])
@@ -7115,20 +7143,24 @@ def whatsapp_templates_save():
     db.session.commit()
     registrar_log(f"Templates do Whatsapp atualizados por {current_user.username}")
     flash("✅ Templates salvos com sucesso!", "success")
-    return redirect(url_for("whatsapp_dashboard"))
+    return redirect(url_for("whatsapp_config"))
 
 
 @app.route("/api/whatsapp/chat/send", methods=["POST"])
 @login_required
 def whatsapp_chat_send():
-    if not (current_user.is_admin or current_user.has_permission("whatsapp_evolution")):
+    if not (current_user.is_admin or current_user.has_permission("whatsapp_conversas")):
         return jsonify({"success": False, "error": "Acesso negado"}), 403
         
     number = request.form.get("number", "").strip()
     message = request.form.get("message", "").strip()
+    file = request.files.get("file")
     
-    if not number or not message:
-        return jsonify({"success": False, "error": "Número e mensagem são obrigatórios"}), 400
+    if not number:
+        return jsonify({"success": False, "error": "Número de telefone é obrigatório"}), 400
+        
+    if not message and not file:
+        return jsonify({"success": False, "error": "Mensagem ou arquivo é obrigatório"}), 400
         
     # Sanitiza o número
     sanitized_number = "".join(filter(str.isdigit, number))
@@ -7140,24 +7172,48 @@ def whatsapp_chat_send():
         return jsonify({"success": False, "error": "Evolution API não está configurada"}), 400
         
     import requests
-    headers = {
-        "Content-Type": "application/json",
-        "apikey": config.apikey
-    }
-    payload = {
-        "number": sanitized_number,
-        "text": message
-    }
-    url = f"{config.api_url.rstrip('/')}/message/sendText/{config.instance_name}"
     
-    try:
-        res = requests.post(url, json=payload, headers=headers, timeout=10)
-        if res.status_code in (200, 201):
-            return jsonify({"success": True, "data": res.json()})
-        else:
-            return jsonify({"success": False, "error": f"Erro Evolution API: Status {res.status_code}", "details": res.text}), 400
-    except Exception as err:
-        return jsonify({"success": False, "error": f"Erro de conexão com a API: {str(err)}"}), 500
+    if file:
+        url = f"{config.api_url.rstrip('/')}/message/sendMedia/{config.instance_name}"
+        headers = {
+            "apikey": config.apikey
+        }
+        # Ler conteúdo do arquivo
+        file_data = file.read()
+        files = {
+            "file": (file.filename, file_data, file.content_type)
+        }
+        data = {
+            "number": sanitized_number,
+            "caption": message
+        }
+        try:
+            res = requests.post(url, data=data, files=files, headers=headers, timeout=30)
+            if res.status_code in (200, 201):
+                return jsonify({"success": True, "data": res.json()})
+            else:
+                return jsonify({"success": False, "error": f"Erro Evolution API: Status {res.status_code}", "details": res.text}), 400
+        except Exception as err:
+            return jsonify({"success": False, "error": f"Erro de conexão com a API: {str(err)}"}), 500
+    else:
+        headers = {
+            "Content-Type": "application/json",
+            "apikey": config.apikey
+        }
+        payload = {
+            "number": sanitized_number,
+            "text": message
+        }
+        url = f"{config.api_url.rstrip('/')}/message/sendText/{config.instance_name}"
+        
+        try:
+            res = requests.post(url, json=payload, headers=headers, timeout=10)
+            if res.status_code in (200, 201):
+                return jsonify({"success": True, "data": res.json()})
+            else:
+                return jsonify({"success": False, "error": f"Erro Evolution API: Status {res.status_code}", "details": res.text}), 400
+        except Exception as err:
+            return jsonify({"success": False, "error": f"Erro de conexão com a API: {str(err)}"}), 500
 
 
 @app.route("/api/whatsapp/status", methods=["GET"])
