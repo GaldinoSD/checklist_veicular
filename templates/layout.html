@@ -257,6 +257,52 @@
         gap: 0.5rem;
       }
       .btn-premium:active { transform: scale(0.95); }
+
+      /* ==========================================================================
+         HEADER MINIMALIST REDESIGN (Ajuste do Entorno do Header)
+         ========================================================================== */
+
+      /* 1. Reduzir o espaçamento de padding superior do main para aproximar o cabeçalho da topbar */
+      main:not(.p-0) {
+        padding-top: 1.25rem !important;
+      }
+
+      /* 2. Remover fundo, bordas, sombras e arredondamento dos contêineres de header nas páginas */
+      main > .animate-premium:first-of-type > .glass-premium,
+      main > div > .animate-premium:first-of-type > .glass-premium,
+      main > form > .glass-premium:first-of-type,
+      main > div > form > .glass-premium:first-of-type,
+      main > .animate-premium:first-of-type > form.glass-premium,
+      main > div > .animate-premium:first-of-type > form.glass-premium,
+      main > .animate-premium:first-child > .glass-premium,
+      main > div > .animate-premium:first-child > .glass-premium {
+        background: transparent !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+        border-radius: 0 !important;
+        overflow: visible !important;
+      }
+
+      /* 3. Otimizar margem inferior do cabeçalho reduzindo o espaçamento após ele de mb-8/mb-10 para mb-4 */
+      main > .animate-premium:first-of-type,
+      main > div > .animate-premium:first-of-type,
+      main > form:first-of-type,
+      main > div > form:first-of-type {
+        margin-bottom: 1.25rem !important;
+      }
+
+      /* 4. Ocultar todos os círculos desfocados de decoração absoluta contidos nos cabeçalhos modificados */
+      main > .animate-premium:first-of-type > .glass-premium .absolute,
+      main > div > .animate-premium:first-of-type > .glass-premium .absolute,
+      main > .animate-premium:first-of-type > form.glass-premium .absolute,
+      main > div > .animate-premium:first-of-type > form.glass-premium .absolute,
+      main > form > .glass-premium:first-of-type .absolute,
+      main > div > form > .glass-premium:first-of-type .absolute {
+        display: none !important;
+      }
     </style>
   </head>
 
