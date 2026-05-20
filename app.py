@@ -7080,7 +7080,12 @@ def whatsapp_conversas():
         return redirect(url_for("dashboard"))
     
     config = WhatsAppConfig.query.first()
-    return render_template("whatsapp_conversas.html", whatsapp_config=config)
+    from flask import make_response
+    response = make_response(render_template("whatsapp_conversas.html", whatsapp_config=config))
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, public, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
 
 
 @app.route("/whatsapp/config")
@@ -7163,9 +7168,12 @@ def whatsapp_chat_send():
         return jsonify({"success": False, "error": "Mensagem ou arquivo é obrigatório"}), 400
         
     # Sanitiza o número
-    sanitized_number = "".join(filter(str.isdigit, number))
-    if len(sanitized_number) <= 11 and not sanitized_number.startswith("55"):
-        sanitized_number = "55" + sanitized_number
+    if "@" in number:
+        sanitized_number = number
+    else:
+        sanitized_number = "".join(filter(str.isdigit, number))
+        if len(sanitized_number) <= 11 and not sanitized_number.startswith("55"):
+            sanitized_number = "55" + sanitized_number
         
     config = WhatsAppConfig.query.first()
     if not config or not config.apikey:
@@ -7252,6 +7260,85 @@ def whatsapp_connection_status():
             return jsonify({"status": "disconnected", "error": f"Status {res.status_code}"})
     except Exception as err:
         return jsonify({"status": "disconnected", "error": str(err)})
+
+
+@app.route("/api/whatsapp/chats", methods=["GET"])
+@login_required
+def whatsapp_api_chats():
+    if not (current_user.is_admin or current_user.has_permission("whatsapp_conversas")):
+        return jsonify({"success": False, "error": "Acesso negado"}), 403
+        
+    config = WhatsAppConfig.query.first()
+    if not config or not config.apikey or not config.api_url:
+        return jsonify({"success": False, "error": "WhatsApp não configurado"}), 400
+        
+    import requests
+    headers = {
+        "apikey": config.apikey,
+        "Content-Type": "application/json"
+    }
+    url = f"{config.api_url.rstrip('/')}/chat/findChats/{config.instance_name}"
+    
+    try:
+        res = requests.post(url, json={}, headers=headers, timeout=10)
+        if res.status_code == 200:
+            return jsonify({"success": True, "chats": res.json()})
+        else:
+            return jsonify({"success": False, "error": f"Erro Evolution API: status {res.status_code}", "details": res.text}), 400
+    except Exception as e:
+        return jsonify({"success": False, "error": f"Erro de conexão: {str(e)}"}), 500
+
+
+@app.route("/api/whatsapp/messages", methods=["GET"])
+@login_required
+def whatsapp_api_messages():
+    if not (current_user.is_admin or current_user.has_permission("whatsapp_conversas")):
+        return jsonify({"success": False, "error": "Acesso negado"}), 403
+        
+    number = request.args.get("number", "").strip()
+    if not number:
+        return jsonify({"success": False, "error": "Número de telefone é obrigatório"}), 400
+        
+    config = WhatsAppConfig.query.first()
+    if not config or not config.apikey or not config.api_url:
+        return jsonify({"success": False, "error": "WhatsApp não configurado"}), 400
+        
+    if "@" in number:
+        remote_jid = number
+    else:
+        sanitized_number = "".join(filter(str.isdigit, number))
+        if not sanitized_number:
+            return jsonify({"success": False, "error": "Número inválido"}), 400
+            
+        if len(sanitized_number) <= 11 and not sanitized_number.startswith("55"):
+            sanitized_number = "55" + sanitized_number
+            
+        remote_jid = f"{sanitized_number}@s.whatsapp.net"
+    
+    import requests
+    headers = {
+        "apikey": config.apikey,
+        "Content-Type": "application/json"
+    }
+    url = f"{config.api_url.rstrip('/')}/chat/findMessages/{config.instance_name}"
+    
+    payload = {
+        "where": {
+            "key": {
+                "remoteJid": remote_jid
+            }
+        },
+        "limit": 50
+    }
+    
+    try:
+        res = requests.post(url, json=payload, headers=headers, timeout=10)
+        if res.status_code == 200:
+            return jsonify({"success": True, "messages": res.json()})
+        else:
+            return jsonify({"success": False, "error": f"Erro Evolution API: status {res.status_code}", "details": res.text}), 400
+    except Exception as e:
+        return jsonify({"success": False, "error": f"Erro de conexão: {str(e)}"}), 500
 
 
 # ===========================
