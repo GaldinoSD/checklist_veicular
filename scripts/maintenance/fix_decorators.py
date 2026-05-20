@@ -1,6 +1,13 @@
 import re
+import sys
+import os
 
-with open('app.py', 'r') as f:
+# Adiciona o diretório raiz ao path do Python (para robustez)
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+
+app_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../app.py'))
+
+with open(app_path, 'r', encoding='utf-8') as f:
     content = f.read()
 
 # Substituir @admin_required e @supervisor_allowed de acordo com as rotas
@@ -38,6 +45,6 @@ def replacer(match):
 
 content = re.sub(r'(@app\.route[^\n]+)\n\s*(?:@admin_required|@supervisor_allowed)', replacer, content)
 
-with open('app.py', 'w') as f:
+with open(app_path, 'w', encoding='utf-8') as f:
     f.write(content)
 print("Decorators updated!")

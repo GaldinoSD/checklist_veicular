@@ -772,6 +772,7 @@ class AvariaOS(db.Model):
 
     data_abertura = db.Column(db.DateTime, default=datetime.utcnow)
     data_fechamento = db.Column(db.DateTime)
+    foto = db.Column(db.String(255))
 
 
 class Log(db.Model):
@@ -1025,7 +1026,8 @@ def ensure_min_schema():
         text("ALTER TABLE whatsapp_config ADD COLUMN IF NOT EXISTS msg_late_checklist TEXT DEFAULT '*Alerta de Checklist Pendente:* Olá {usuario}, você está de plantão hoje e ainda não preencheu o checklist do seu veículo.'"),
         text("ALTER TABLE whatsapp_config ADD COLUMN IF NOT EXISTS msg_training_alert TEXT DEFAULT '*Lembrete de Treinamento LMS:* Olá {usuario}, lembramos que você tem o treinamento \"{curso}\" pendente no portal.'"),
         text("ALTER TABLE whatsapp_config ADD COLUMN IF NOT EXISTS msg_os_overdue TEXT DEFAULT '*O.S. Atrasada:* Olá {usuario}, a Ordem de Serviço #{id} está pendente há mais de 7 dias.'"),
-        text("ALTER TABLE whatsapp_config ADD COLUMN IF NOT EXISTS msg_inactive_tech TEXT DEFAULT '*Lembrete de Inatividade:* Olá {usuario}, identificamos que você não realiza checklists há mais de 7 dias.'")
+        text("ALTER TABLE whatsapp_config ADD COLUMN IF NOT EXISTS msg_inactive_tech TEXT DEFAULT '*Lembrete de Inatividade:* Olá {usuario}, identificamos que você não realiza checklists há mais de 7 dias.'"),
+        text('ALTER TABLE avaria_os ADD COLUMN IF NOT EXISTS foto VARCHAR(255)')
     ]
     for stmt in stmts:
         try:
@@ -2313,6 +2315,14 @@ def avarias_registro():
 
         # CRIAR NOVA AVARIA
         if acao == "nova":
+            import uuid
+            foto_file = request.files.get("foto")
+            saved_filename = None
+            if foto_file and allowed_file(foto_file.filename):
+                ext = os.path.splitext(foto_file.filename.lower())[1]
+                saved_filename = f"avaria_{uuid.uuid4().hex}{ext}"
+                foto_file.save(AVARIAS_UPLOAD_DIR / saved_filename)
+
             nova = AvariaOS(
                 vehicle_id=request.form.get("veiculo_id"),
                 # ✅ NÃO VEM MAIS DO FORM - define automático
@@ -2320,7 +2330,8 @@ def avarias_registro():
                 gravidade=request.form.get("gravidade"),
                 descricao=request.form.get("descricao"),
                 km=request.form.get("km"),
-                status="aberta"
+                status="aberta",
+                foto=saved_filename
             )
             db.session.add(nova)
             db.session.commit()
@@ -2389,7 +2400,28 @@ def avarias_registro():
             return redirect(url_for("avarias_registro"))
 
     # GET — listar avarias e calcular estatísticas
-    ordens = AvariaOS.query.order_by(AvariaOS.id.desc()).all()
+    q = request.args.get("q", "").strip()
+    status_filter = request.args.get("status", "").strip()
+    gravidade_filter = request.args.get("gravidade", "").strip()
+
+    query = AvariaOS.query.join(Vehicle).outerjoin(User, AvariaOS.responsavel_id == User.id)
+
+    if q:
+        query = query.filter(
+            db.or_(
+                Vehicle.plate.ilike(f"%{q}%"),
+                Vehicle.model.ilike(f"%{q}%"),
+                Vehicle.brand.ilike(f"%{q}%"),
+                User.username.ilike(f"%{q}%"),
+                AvariaOS.descricao.ilike(f"%{q}%")
+            )
+        )
+    if status_filter:
+        query = query.filter(AvariaOS.status == status_filter)
+    if gravidade_filter:
+        query = query.filter(AvariaOS.gravidade == gravidade_filter)
+
+    ordens = query.order_by(AvariaOS.id.desc()).all()
     veiculos = Vehicle.query.all()
 
     total_avarias = len(ordens)
@@ -2422,6 +2454,56 @@ def avarias_excluir(avaria_id):
         registrar_log(f"Avarias/O.S.: ERRO AO EXCLUIR id={avaria_id}: {str(e)}")
         flash("❌ Erro ao excluir registro de Avaria/O.S.", "error")
     return redirect(url_for("avarias_registro"))
+
+
+@app.route("/avarias/<int:avaria_id>/pdf", methods=["GET"])
+@supervisor_allowed
+def avaria_pdf(avaria_id):
+    import io
+    from flask import send_file
+    
+    os_detail = AvariaOS.query.get_or_404(avaria_id)
+    buffer = io.BytesIO()
+
+    # Formatar data de abertura e fechamento
+    data_abertura_str = os_detail.data_abertura.strftime("%d/%m/%Y %H:%M") if os_detail.data_abertura else "N/A"
+    data_fechamento_str = os_detail.data_fechamento.strftime("%d/%m/%Y %H:%M") if os_detail.data_fechamento else "N/A"
+    
+    # Metadados
+    metadata = {
+        "ID O.S.": f"#{os_detail.id}",
+        "Veículo": f"{os_detail.vehicle.brand} {os_detail.vehicle.model} ({os_detail.vehicle.plate})" if os_detail.vehicle else "N/A",
+        "Gravidade": (os_detail.gravidade or "baixa").upper(),
+        "KM Registro": f"{os_detail.km or 0} KM",
+        "Responsável": os_detail.responsavel.username if os_detail.responsavel else "N/A",
+        "Status": os_detail.status.upper()
+    }
+
+    content = [
+        ("Descrição da Avaria", os_detail.descricao or "Sem descrição"),
+        ("Peças Trocadas", os_detail.pecas_trocadas or "Nenhuma peça trocada"),
+        ("Serviço Realizado", os_detail.servico_realizado or "Nenhum serviço registrado"),
+        ("Valor Gasto", f"R$ {os_detail.valor_gasto:.2f}" if os_detail.valor_gasto is not None else "R$ 0,00"),
+        ("Data de Abertura", data_abertura_str),
+        ("Data de Fechamento", data_fechamento_str)
+    ]
+
+    # Carregar imagem do dano
+    image_paths = []
+    if os_detail.foto:
+        p_path = AVARIAS_UPLOAD_DIR / os_detail.foto
+        if p_path.exists():
+            image_paths.append(p_path)
+
+    make_premium_pdf(buffer, f"Ordem de Serviço #{os_detail.id}", metadata, content, image_paths=image_paths)
+    buffer.seek(0)
+    
+    return send_file(
+        buffer,
+        mimetype="application/pdf",
+        as_attachment=False,
+        download_name=f"ordem_servico_{os_detail.id}.pdf"
+    )
 
 
 # ----------------- TELA DA MANUTENÇÃO (SOMENTE MANUTENÇÃO) -----------------
@@ -4463,11 +4545,16 @@ def make_premium_pdf(buffer, title, metadata, content_table_data, image_paths=No
         photo_elements = []
         for img_path in image_paths:
             try:
+                # Valida se a imagem não está corrompida e pode ser aberta
+                from PIL import Image as PILImage
+                with PILImage.open(img_path) as test_img:
+                    test_img.verify()
+                
                 img = RLImage(str(img_path), width=80*mm, height=60*mm)
                 img.hAlign = 'LEFT'
                 photo_elements.append(img)
             except Exception as ex:
-                print("⚠️ Erro ao renderizar foto no PDF:", ex)
+                print(f"⚠️ Erro ao renderizar foto no PDF ({img_path}):", ex)
         
         if photo_elements:
             table_data = []
@@ -6885,6 +6972,7 @@ def checklist_mobile():
 
         # monta respostas
         respostas = {}
+        has_just = False
         for idx, item in enumerate(items_qs, start=1):
             key = f"item{idx}"
             if item.type == "checkboxes":
@@ -6901,6 +6989,9 @@ def checklist_mobile():
             if item.type == "sim_nao_na" and item.require_justif_no and val == "Não" and not just:
                 flash(f'Item {idx:02d} "{item.text}" requer justificativa quando "Não".', "error")
                 return redirect(url_for("checklist_mobile"))
+
+            if just:
+                has_just = True
 
             respostas[f"{idx:02d} - {item.text}"] = {
                 "tipo": item.type,
@@ -6931,7 +7022,7 @@ def checklist_mobile():
             technician=tech,
             date=agora(),
             km=km,
-            status="OK",
+            status="Com Avaria" if has_just else "OK",
             notes="Checklist via web",
             raw_json=json.dumps(raw, ensure_ascii=False),
         )

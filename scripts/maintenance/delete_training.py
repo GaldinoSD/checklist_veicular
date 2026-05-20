@@ -7,6 +7,11 @@ Uso: python delete_training.py [COURSE_ID]
 Exemplo: python delete_training.py 1
 """
 import sys
+import os
+
+# Adiciona o diretório raiz ao path do Python
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+
 from app import app, db, TrainingCourse, TrainingAssignment, TrainingModule, TrainingQuestion, Notification
 
 def delete_course(course_id):

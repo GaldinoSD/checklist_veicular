@@ -1,8 +1,15 @@
-import psycopg2
+import sys
 import os
 from dotenv import load_dotenv
+import psycopg2
 
-load_dotenv()
+# Adiciona o diretório raiz ao path do Python
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+
+# Carrega o .env localizado na raiz do projeto
+dotenv_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../.env'))
+load_dotenv(dotenv_path)
+
 db_url = os.getenv("DATABASE_URL")
 
 def migrate():

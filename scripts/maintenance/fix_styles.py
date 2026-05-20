@@ -1,7 +1,12 @@
 import sys
+import os
 
-path = '/var/www/checklist_veicular/app.py'
-with open(path, 'r', encoding='utf-8') as f:
+# Adiciona o diretório raiz ao path do Python (para robustez)
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+
+app_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../app.py'))
+
+with open(app_path, 'r', encoding='utf-8') as f:
     content = f.read()
 
 # Substitui as definições de estilos problemáticas
@@ -26,7 +31,7 @@ content = content.replace('styles["Title"]', 'styles["ReportTitle"]')
 content = content.replace('styles["SubTitle"]', 'styles["ReportSubTitle"]')
 content = content.replace('styles["NormalText"]', 'styles["ReportNormal"]')
 
-with open(path, 'w', encoding='utf-8') as f:
+with open(app_path, 'w', encoding='utf-8') as f:
     f.write(content)
 
 print("Estilos corrigidos com sucesso.")

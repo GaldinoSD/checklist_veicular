@@ -1,4 +1,11 @@
+import sys
+import os
+
+# Adiciona o diretório raiz ao path do Python
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+
 from app import app, Log, Checklist
+
 with app.app_context():
     print("Últimos Logs:")
     logs = Log.query.order_by(Log.id.desc()).limit(10).all()

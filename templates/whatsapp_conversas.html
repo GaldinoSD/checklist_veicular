@@ -2,17 +2,15 @@
 {% set page_title = "WhatsApp Conversas" %}
 {% block content %}
 
-<!-- =======================================================
-        STYLE OVERRIDES FOR FIXED VIEWPORT (No Outer Scrollbar)
-======================================================= -->
+<!-- Style Overrides for Fixed Viewport & Chat Aesthetics -->
 <style>
-    /* Previne o scroll geral da janela e força altura estrita de 100vh */
+    /* Prevent general window scroll and force strict height of 100vh */
     html, body {
         overflow: hidden !important;
         height: 100vh !important;
     }
     
-    /* Configura o container de conteúdo principal para preencher o viewport e não rolar */
+    /* Set the main content container to fill viewport without overflow */
     #main-content {
         height: 100vh !important;
         overflow: hidden !important;
@@ -20,9 +18,9 @@
         flex-direction: column !important;
     }
     
-    /* Ajusta a área interna principal (<main>) para se tornar um flex-container de tamanho perfeito */
+    /* Set inner workspace main area */
     #main-content > main {
-        height: calc(100vh - 5rem) !important; /* 5rem é a altura h-20 do header */
+        height: calc(100vh - 5rem) !important; /* 5rem is header h-20 */
         padding: 1.5rem !important;
         display: flex !important;
         flex-direction: column !important;
@@ -30,177 +28,236 @@
         flex: 1 !important;
         min-height: 0 !important;
     }
+
+    /* Abstract Tech Blueprint Background for Chat Area */
+    .chat-wallpaper {
+        background-color: rgba(248, 250, 252, 0.3);
+        background-image: radial-gradient(rgba(16, 185, 129, 0.04) 1px, transparent 0), radial-gradient(rgba(16, 185, 129, 0.04) 1px, transparent 0);
+        background-size: 20px 20px;
+        background-position: 0 0, 10px 10px;
+    }
+    
+    .dark .chat-wallpaper {
+        background-color: rgba(9, 15, 25, 0.2);
+        background-image: radial-gradient(rgba(16, 185, 129, 0.02) 1px, transparent 0), radial-gradient(rgba(16, 185, 129, 0.02) 1px, transparent 0);
+    }
+
+    /* Smooth customized scrollbar */
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 5px;
+        height: 5px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: rgba(100, 116, 139, 0.2);
+        border-radius: 99px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: rgba(16, 185, 129, 0.4);
+    }
 </style>
 
 <!-- =======================================================
         HEADER PREMIUM (Conversas Only)
-======================================================= -->
+     ======================================================= -->
 <div class="mb-6 animate-premium shrink-0">
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 glass-premium p-5 rounded-[2rem] shadow-xl overflow-hidden relative">
-        <div class="absolute -top-24 -right-24 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl"></div>
-        <div class="absolute -bottom-24 -left-24 w-64 h-64 bg-teal-500/10 rounded-full blur-3xl"></div>
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900 border border-slate-805 rounded-xl p-5 shadow-xl overflow-hidden relative">
+        <div class="absolute inset-0 bg-[linear-gradient(to_right,#1e293b_1px,transparent_1px),linear-gradient(to_bottom,#1e293b_1px,transparent_1px)] bg-[size:24px_24px] opacity-10"></div>
+        <div class="absolute -top-24 -right-24 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
 
-        <div class="flex items-center gap-5 relative z-10">
-            <div class="w-12 h-12 rounded-[1.25rem] bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-2xl shadow-emerald-500/20">
-                <i class="fa-brands fa-whatsapp text-2xl animate-pulse"></i>
+        <div class="flex items-center gap-4 relative z-10">
+            <div class="w-12 h-12 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-lg shadow-emerald-500/20 border border-emerald-400/20">
+                <i class="fa-brands fa-whatsapp text-2xl"></i>
             </div>
             <div>
-                <nav class="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-0.5">
+                <nav class="flex items-center gap-2 text-[9px] font-extrabold text-slate-500 uppercase tracking-widest mb-0.5">
                     <span>Sistema</span>
-                    <i class="fa-solid fa-chevron-right text-[8px] opacity-30"></i>
-                    <span class="text-emerald-500">Comunicação e Chat</span>
+                    <i class="fa-solid fa-chevron-right text-[7px] opacity-45"></i>
+                    <span class="text-emerald-500">Central de Atendimento</span>
                 </nav>
-                <h2 class="text-2xl font-black text-slate-800 dark:text-white tracking-tight">Conversas WhatsApp</h2>
+                <h2 class="text-lg font-extrabold text-white tracking-tight">Conversas WhatsApp</h2>
             </div>
         </div>
 
         <div class="flex items-center gap-3 relative z-10">
-            <div class="flex items-center gap-2 px-4 py-2 bg-emerald-500/10 dark:bg-emerald-500/5 rounded-xl border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-bold shadow-sm">
-                <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping"></span>
-                <span>Painel de Atendimento</span>
+            <div class="flex items-center gap-2.5 px-3 py-1.5 bg-emerald-500/10 rounded-lg border border-emerald-500/20 text-emerald-400 text-xs font-bold shadow-sm">
+                <span class="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+                <span class="text-[10px] font-black uppercase tracking-wider">Atendimento Ativo</span>
             </div>
         </div>
     </div>
 </div>
 
 <!-- =======================================================
-        CHAT CONTAINER
-======================================================= -->
+        CHAT LAYOUT CONTAINER
+     ======================================================= -->
 <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1 min-h-0 animate-premium">
-    <!-- Sidebar Contatos (4 colunas) -->
-    <div class="lg:col-span-4 bg-white/70 dark:bg-slate-900/50 backdrop-blur-xl border border-slate-900/10 dark:border-white/10 rounded-[2rem] p-5 shadow-xl flex flex-col h-full overflow-hidden">
+    
+    <!-- 📇 SIDEBAR: CONTACTS LIST -->
+    <div class="lg:col-span-4 bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/80 rounded-xl p-4 shadow-xl flex flex-col h-full overflow-hidden">
+        
+        <!-- Sidebar Header -->
         <div class="flex items-center justify-between mb-4 shrink-0">
-            <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                <i class="fa-regular fa-address-book text-emerald-500 text-sm"></i> Lista de Contatos
+            <h3 class="text-[10px] font-extrabold text-slate-400 dark:text-slate-550 uppercase tracking-widest flex items-center gap-2">
+                <i class="fa-regular fa-comments text-emerald-500 text-sm"></i> Conversas Ativas
             </h3>
-            <span class="text-[10px] font-bold px-2 py-0.5 bg-emerald-100 dark:bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-full" id="contactsCount">WhatsApp</span>
+            <span class="text-[9px] font-extrabold px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 rounded-full" id="contactsCount">WhatsApp</span>
         </div>
         
+        <!-- Search Input Bar -->
         <div class="relative mb-4 shrink-0">
-            <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+            <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-600 text-xs"><i class="fas fa-search"></i></span>
             <input type="text" id="chatSearch" onkeyup="filterContacts()" placeholder="Buscar contato ou número..." 
-                   class="w-full pl-10 pr-4 py-3 text-xs bg-slate-900/5 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/30 dark:text-white transition-all">
+                   class="w-full pl-9 pr-4 py-2.5 text-xs bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 rounded-lg outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 dark:text-white transition-all">
         </div>
 
-        <!-- Lista de Contatos -->
+        <!-- Contacts Scroll Area -->
         <div class="flex-1 overflow-y-auto space-y-2 pr-1 custom-scrollbar" id="contactsList">
-            <div class="flex flex-col items-center justify-center p-8 text-slate-400 space-y-2 animate-pulse">
-                <i class="fa-solid fa-circle-notch text-2xl animate-spin text-emerald-500"></i>
-                <p class="text-[10px] font-bold uppercase tracking-wider">Buscando conversas do WhatsApp...</p>
+            <!-- Pulsing Skeleton Loader (Contacts list startup) -->
+            <div class="space-y-3 animate-pulse">
+                <div class="flex items-center gap-3.5 p-3.5 bg-slate-55/40 dark:bg-slate-850/20 rounded-xl border border-transparent">
+                    <div class="w-11 h-11 rounded-lg bg-slate-200 dark:bg-slate-800 shrink-0"></div>
+                    <div class="flex-1 space-y-2">
+                        <div class="h-3 bg-slate-200 dark:bg-slate-750 rounded w-1/3"></div>
+                        <div class="h-2.5 bg-slate-150 dark:bg-slate-800 rounded w-2/3"></div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3.5 p-3.5 bg-slate-55/40 dark:bg-slate-850/20 rounded-xl border border-transparent">
+                    <div class="w-11 h-11 rounded-lg bg-slate-200 dark:bg-slate-800 shrink-0"></div>
+                    <div class="flex-1 space-y-2">
+                        <div class="h-3 bg-slate-200 dark:bg-slate-750 rounded w-1/4"></div>
+                        <div class="h-2.5 bg-slate-150 dark:bg-slate-800 rounded w-3/4"></div>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3.5 p-3.5 bg-slate-55/40 dark:bg-slate-850/20 rounded-xl border border-transparent">
+                    <div class="w-11 h-11 rounded-lg bg-slate-200 dark:bg-slate-800 shrink-0"></div>
+                    <div class="flex-1 space-y-2">
+                        <div class="h-3 bg-slate-200 dark:bg-slate-750 rounded w-2/5"></div>
+                        <div class="h-2.5 bg-slate-150 dark:bg-slate-800 rounded w-1/2"></div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Chat Area (8 colunas) -->
-    <div class="lg:col-span-8 bg-white/70 dark:bg-slate-900/50 backdrop-blur-xl border border-slate-900/10 dark:border-white/10 rounded-[2rem] shadow-xl flex flex-col h-full overflow-hidden relative">
+    <!-- 💬 MAIN: ACTIVE CHAT SCREEN -->
+    <div class="lg:col-span-8 bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/80 rounded-xl shadow-xl flex flex-col h-full overflow-hidden relative">
         
-        <!-- Top Chat Info -->
-        <div class="p-5 border-b border-slate-900/10 dark:border-white/10 flex items-center justify-between bg-slate-50/50 dark:bg-white/5 shrink-0">
-            <div class="flex items-center gap-4">
-                <div class="w-12 h-12 rounded-xl bg-gradient-to-br from-slate-400 to-slate-500 flex items-center justify-center text-white font-black text-sm shadow-md" id="chat-avatar">-</div>
+        <!-- Chat Top Bar -->
+        <div class="px-5 py-3.5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/20 shrink-0">
+            <div class="flex items-center gap-3.5">
+                <div class="w-11 h-11 rounded-lg bg-slate-200 dark:bg-slate-850 flex items-center justify-center text-slate-400 dark:text-slate-600 font-extrabold text-sm shadow-sm" id="chat-avatar">-</div>
                 <div>
-                    <h3 class="text-xs font-black text-slate-800 dark:text-white" id="chat-title">Selecione uma conversa</h3>
+                    <h3 class="text-xs font-extrabold text-slate-800 dark:text-white" id="chat-title">Selecione uma conversa</h3>
                     <div class="flex items-center gap-1.5 mt-0.5">
-                        <span class="w-2 h-2 rounded-full bg-slate-400 inline-block" id="status-dot"></span>
-                        <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest" id="status-text">Aguardando</span>
-                        <span class="text-slate-300 dark:text-slate-700">|</span>
-                        <span class="text-[9px] font-mono text-slate-400 font-bold" id="chat-number">-</span>
+                        <span class="w-1.5 h-1.5 rounded-full bg-slate-450 inline-block" id="status-dot"></span>
+                        <span class="text-[9px] font-extrabold text-slate-450 dark:text-slate-500 uppercase tracking-widest" id="status-text">Aguardando</span>
+                        <span class="text-slate-300 dark:text-slate-700 font-light">|</span>
+                        <span class="text-[9px] font-mono text-slate-400 dark:text-slate-500 font-extrabold" id="chat-number">-</span>
                     </div>
                 </div>
             </div>
 
-            <!-- Ações Estéticas Premium -->
-            <div class="flex items-center gap-1.5">
-                <button class="w-9 h-9 rounded-xl hover:bg-slate-900/5 dark:hover:bg-white/5 flex items-center justify-center text-slate-400 hover:text-emerald-500 transition-colors" title="Limpar Conversa" onclick="clearActiveChat()">
-                    <i class="fa-solid fa-trash-can text-xs"></i>
+            <!-- Header Actions -->
+            <div class="flex items-center gap-1">
+                <button class="w-8 h-8 rounded-lg hover:bg-red-500/10 flex items-center justify-center text-slate-400 hover:text-red-500 active:scale-95 transition-all" title="Limpar Histórico Visual" onclick="clearActiveChat()">
+                    <i class="fa-solid fa-trash text-[11px]"></i>
                 </button>
-                <button class="w-9 h-9 rounded-xl hover:bg-slate-900/5 dark:hover:bg-white/5 flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors" title="Informações do Contato">
-                    <i class="fa-solid fa-circle-info text-xs"></i>
+                <button class="w-8 h-8 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-850 flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 active:scale-95 transition-all" title="Ver Informações">
+                    <i class="fa-solid fa-circle-info text-[11px]"></i>
                 </button>
             </div>
         </div>
 
-        <!-- Messages Stream -->
-        <div class="flex-1 overflow-y-auto p-6 space-y-4 bg-slate-50/20 dark:bg-slate-900/20 custom-scrollbar" id="chatStream">
+        <!-- Messages Stream Wallpaper Viewport -->
+        <div class="flex-1 overflow-y-auto p-6 space-y-4 chat-wallpaper custom-scrollbar" id="chatStream">
             <div class="flex flex-col items-center justify-center h-full text-slate-400 space-y-3">
-                <div class="w-16 h-16 rounded-[1.5rem] bg-slate-950/5 dark:bg-white/5 flex items-center justify-center text-slate-400 border border-slate-900/5 dark:border-white/5">
+                <div class="w-14 h-14 rounded-xl bg-slate-100 dark:bg-slate-900/60 flex items-center justify-center text-slate-400 border border-slate-200 dark:border-slate-800 shadow-sm">
                     <i class="fa-regular fa-comments text-2xl animate-pulse"></i>
                 </div>
-                <p class="text-xs font-bold uppercase tracking-wider">Aguardando seleção</p>
-                <p class="text-[10px] text-slate-400 max-w-[200px] text-center">Selecione uma conversa na lista lateral para visualizar a interação.</p>
+                <p class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Nenhuma Conversa Selecionada</p>
+                <p class="text-[10px] text-slate-400 max-w-[220px] text-center leading-relaxed">Clique em uma das conversas ativas na barra lateral para carregar a interação em tempo real.</p>
             </div>
         </div>
 
-        <!-- Input Box -->
-        <div class="relative shrink-0">
-            <!-- Popover do Seletor de Emojis -->
-            <div id="emojiPopover" class="hidden absolute bottom-20 left-4 w-72 max-w-[90vw] bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-900/10 dark:border-white/10 rounded-3xl p-4 shadow-2xl z-50 animate-premium">
-                <div class="flex items-center justify-between mb-3 border-b border-slate-900/10 dark:border-white/10 pb-2">
-                    <span class="text-[10px] font-black text-slate-400 uppercase tracking-wider">Selecione um Emoji</span>
-                    <div class="flex gap-2">
-                        <button type="button" onclick="setEmojiTab('smileys')" class="emoji-tab-btn text-[10px] px-2 py-1 rounded-lg bg-emerald-500/10 text-emerald-600 font-bold">😀</button>
-                        <button type="button" onclick="setEmojiTab('vehicles')" class="emoji-tab-btn text-[10px] px-2 py-1 rounded-lg hover:bg-slate-900/5 dark:hover:bg-white/5 text-slate-400">🚗</button>
-                        <button type="button" onclick="setEmojiTab('tools')" class="emoji-tab-btn text-[10px] px-2 py-1 rounded-lg hover:bg-slate-900/5 dark:hover:bg-white/5 text-slate-400">🔧</button>
+        <!-- Integrated Glass Command Input Interface -->
+        <div class="relative shrink-0 border-t border-slate-200 dark:border-slate-850 p-4 bg-slate-50/50 dark:bg-slate-900/20">
+            
+            <!-- Floating Emoji Popover -->
+            <div id="emojiPopover" class="hidden absolute bottom-20 left-4 w-72 max-w-[90vw] bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-2xl z-50 animate-premium">
+                <div class="flex items-center justify-between mb-3 border-b border-slate-200 dark:border-slate-800 pb-2">
+                    <span class="text-[9px] font-extrabold text-slate-400 uppercase tracking-widest">Emojis rápidos</span>
+                    <div class="flex gap-1.5">
+                        <button type="button" onclick="setEmojiTab('smileys')" class="emoji-tab-btn text-[9px] px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 font-bold">😀</button>
+                        <button type="button" onclick="setEmojiTab('vehicles')" class="emoji-tab-btn text-[9px] px-2 py-0.5 rounded text-slate-450 hover:bg-slate-100 dark:hover:bg-slate-800">🚗</button>
+                        <button type="button" onclick="setEmojiTab('tools')" class="emoji-tab-btn text-[9px] px-2 py-0.5 rounded text-slate-455 hover:bg-slate-100 dark:hover:bg-slate-800">🔧</button>
                     </div>
                 </div>
                 
-                <div id="emojiGrid" class="grid grid-cols-6 gap-2 max-h-48 overflow-y-auto pr-1 custom-scrollbar text-lg text-center">
-                    <!-- Emojis dynamically loaded -->
+                <div id="emojiGrid" class="grid grid-cols-6 gap-2.5 max-h-40 overflow-y-auto pr-1 custom-scrollbar text-lg text-center">
+                    <!-- Loaded programmatically -->
                 </div>
             </div>
 
-            <!-- Preview do Anexo de Arquivo -->
-            <div id="attachmentPreview" class="hidden px-6 py-3 border-t border-slate-900/10 dark:border-white/10 bg-slate-50/80 dark:bg-slate-950/80 backdrop-blur-md flex items-center justify-between gap-4 animate-premium">
+            <!-- Gorgeous File Attachment Preview Box -->
+            <div id="attachmentPreview" class="hidden absolute bottom-20 left-4 right-4 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3 shadow-xl z-40 flex items-center justify-between gap-4 animate-premium">
                 <div class="flex items-center gap-3 min-w-0">
-                    <div class="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-sm shrink-0 border border-emerald-500/20" id="attachmentIcon">
+                    <div class="w-9 h-9 rounded-lg bg-emerald-500/10 text-emerald-600 flex items-center justify-center text-sm shrink-0 border border-emerald-500/20" id="attachmentIcon">
                         <i class="fa-solid fa-file-invoice"></i>
                     </div>
                     <div class="min-w-0">
-                        <p class="text-xs font-black text-slate-800 dark:text-white truncate" id="attachmentName">documento.pdf</p>
-                        <p class="text-[9px] text-slate-400 font-bold" id="attachmentSize">120 KB</p>
+                        <p class="text-[11px] font-extrabold text-slate-800 dark:text-white truncate" id="attachmentName">documento.pdf</p>
+                        <p class="text-[9px] text-slate-400 font-extrabold" id="attachmentSize">0 KB</p>
                     </div>
                 </div>
-                <button type="button" onclick="clearAttachment()" class="w-8 h-8 rounded-lg hover:bg-red-500/10 text-slate-400 hover:text-red-500 flex items-center justify-center transition-all">
-                    <i class="fa-solid fa-xmark text-sm"></i>
+                <button type="button" onclick="clearAttachment()" class="w-7 h-7 rounded-lg hover:bg-red-500/15 text-slate-400 hover:text-red-500 flex items-center justify-center transition-all">
+                    <i class="fa-solid fa-xmark text-xs"></i>
                 </button>
             </div>
 
             <!-- Hidden File Input -->
             <input type="file" id="chatFileInput" class="hidden" onchange="handleFileSelected(event)">
 
-            <form onsubmit="submitChatMessage(event)" class="p-4 border-t border-slate-900/10 dark:border-white/10 bg-slate-50/50 dark:bg-white/5 flex gap-3.5 items-center">
-                <div class="flex items-center gap-1">
-                    <button type="button" id="emojiBtn" onclick="toggleEmojiPopover()" class="w-10 h-10 rounded-xl hover:bg-slate-900/5 dark:hover:bg-white/5 flex items-center justify-center text-slate-400 hover:text-emerald-500 transition-all" title="Inserir Emoji">
+            <!-- Command Form -->
+            <form onsubmit="submitChatMessage(event)" class="flex gap-2 items-center bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-1.5 shadow-sm focus-within:ring-2 focus-within:ring-emerald-500/25 focus-within:border-emerald-500 transition-all">
+                <!-- Action Buttons -->
+                <div class="flex items-center gap-0.5 pl-1">
+                    <button type="button" id="emojiBtn" onclick="toggleEmojiPopover()" class="w-9 h-9 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-900 flex items-center justify-center text-slate-400 hover:text-emerald-500 transition-all" title="Emojis">
                         <i class="fa-regular fa-face-smile text-base"></i>
                     </button>
-                    <button type="button" onclick="document.getElementById('chatFileInput').click()" class="w-10 h-10 rounded-xl hover:bg-slate-900/5 dark:hover:bg-white/5 flex items-center justify-center text-slate-400 hover:text-emerald-500 transition-all" title="Anexar Arquivo/Imagem">
+                    <button type="button" onclick="document.getElementById('chatFileInput').click()" class="w-9 h-9 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-900 flex items-center justify-center text-slate-400 hover:text-emerald-500 transition-all" title="Anexar Arquivo">
                         <i class="fa-solid fa-paperclip text-sm"></i>
                     </button>
                 </div>
                 
-                <input type="text" id="messageInput" required autocomplete="off" placeholder="Digite sua mensagem aqui..." 
-                       class="flex-1 px-5 py-3.5 text-xs bg-white dark:bg-slate-800 border border-slate-900/10 dark:border-white/10 rounded-2xl focus:outline-none focus:ring-4 focus:ring-emerald-500/20 dark:text-white transition-all shadow-sm">
+                <!-- Borderless input field -->
+                <input type="text" id="messageInput" required autocomplete="off" placeholder="Digite sua mensagem..." 
+                       class="flex-1 bg-transparent border-none outline-none text-xs dark:text-white px-2 py-2 placeholder-slate-400 dark:placeholder-slate-600">
                 
-                <button type="submit" class="w-12 h-12 rounded-[1.25rem] bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center shadow-lg shadow-emerald-500/25 active:scale-95 transition-all">
-                    <i class="fa-solid fa-paper-plane text-sm"></i>
+                <!-- Send Action Button -->
+                <button type="submit" class="w-9 h-9 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center shadow shadow-emerald-500/20 active:scale-95 transition-all shrink-0">
+                    <i class="fa-solid fa-paper-plane text-xs"></i>
                 </button>
             </form>
         </div>
+
     </div>
 </div>
 
 <!-- =======================================================
         CLIENT JAVASCRIPT & AJAX INTEGRATION
-======================================================= -->
+     ======================================================= -->
 <script>
-    let chatsList = []; // Lista de contatos reais da Evolution API
+    let chatsList = []; // Real contact chats fetched from Evolution
     let activeNumber = '';
     let activeName = '';
     let activeGradient = 'from-emerald-500 to-teal-600';
     let selectedFile = null;
-    let activeChatHistory = []; // Mensagens reais da conversa selecionada
+    let activeChatHistory = []; // Messages stream parsed
 
-    // Emojis catalogados
+    // Unified Emoji maps
     const emojiMap = {
         smileys: ['😀','😃','😄','😁','😆','😅','😂','🤣','😊','😇','🙂','🙃','😉','😌','😍','🥰','😘','😗','😙','😚','😋','😛','😝','😜','🤪','🤨','🧐','🤓','😎','🤩','🥳','😏','😒','😞','😔','😟','😕','🙁','☹️','😣','😖','😫','😩','🥺','😢','😭','😤','😠','😡','🤬','🤯','😳','🥵','🥶','😱','😨','😰','😥','😓','🤗','🤔','🤭','🤫','🤥','😶','😐','😑','😬','🙄','😯','😦','😧','😮','😲','🥱','😴','🤤','😪','😵','🤐','🥴','🤢','🤮','🤧','😷','🤒','🤕'],
         vehicles: ['🚗','🚕','🚙','🚌','🚎','🏎️','🚓','🚑','🚒','🚐','🛻','🚚','🚛','🚜','🛵','🏍️','🛺','🚲','🛴','🛹','🚏','⛽','🚨','🚥','🚦','🚧','⚓','⛵','🛥️','🚢','✈️','🚀','🛸'],
@@ -218,12 +275,12 @@
     function setEmojiTab(tabName) {
         document.querySelectorAll('.emoji-tab-btn').forEach((btn, idx) => {
             btn.classList.remove('bg-emerald-500/10', 'text-emerald-600', 'font-bold');
-            btn.classList.add('hover:bg-slate-900/5', 'dark:hover:bg-white/5', 'text-slate-400');
+            btn.classList.add('hover:bg-slate-100', 'dark:hover:bg-slate-800', 'text-slate-400');
             
             const btnName = ['smileys', 'vehicles', 'tools'][idx];
             if (btnName === tabName) {
                 btn.classList.add('bg-emerald-500/10', 'text-emerald-600', 'font-bold');
-                btn.classList.remove('hover:bg-slate-900/5', 'dark:hover:bg-white/5', 'text-slate-400');
+                btn.classList.remove('hover:bg-slate-100', 'dark:hover:bg-slate-800', 'text-slate-405');
             }
         });
 
@@ -233,7 +290,7 @@
         list.forEach(emoji => {
             const btn = document.createElement('button');
             btn.type = 'button';
-            btn.className = 'w-9 h-9 flex items-center justify-center rounded-xl hover:bg-slate-900/5 dark:hover:bg-white/5 hover:scale-110 active:scale-95 transition-all text-xl cursor-pointer';
+            btn.className = 'w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-50 dark:hover:bg-slate-900 hover:scale-110 active:scale-95 transition-all text-lg cursor-pointer';
             btn.innerText = emoji;
             btn.onclick = () => insertEmoji(emoji);
             grid.appendChild(btn);
@@ -251,7 +308,7 @@
         input.setSelectionRange(newPos, newPos);
     }
 
-    // Fechar seletor ao clicar fora
+    // Dismiss Emoji popover when clicking externally
     document.addEventListener('click', function(e) {
         const popover = document.getElementById('emojiPopover');
         const emojiBtn = document.getElementById('emojiBtn');
@@ -260,18 +317,15 @@
         }
     });
 
-    // Manipuladores de anexo de arquivo
+    // File Attach Handler
     function handleFileSelected(event) {
         const file = event.target.files[0];
         if (!file) return;
 
-        const maxSize = 20 * 1024 * 1024; // 20MB
-        if (file.size > maxSize) {
-            if (typeof showToast === 'function') {
-                showToast('O arquivo excede o limite máximo de 20MB.', 'error');
-            } else {
-                alert('O arquivo excede o limite máximo de 20MB.');
-            }
+        const max20MB = 20 * 1024 * 1024;
+        if (file.size > max20MB) {
+            if (typeof showToast === 'function') showToast('O arquivo excede o limite máximo de 20MB.', 'error');
+            else alert('O arquivo excede o limite máximo de 20MB.');
             event.target.value = '';
             return;
         }
@@ -280,7 +334,7 @@
 
         const ext = file.name.split('.').pop().toLowerCase();
         let iconHtml = '<i class="fa-solid fa-file-invoice"></i>';
-        let bgClass = 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20';
+        let bgClass = 'bg-emerald-500/10 text-emerald-650 dark:text-emerald-450 border-emerald-500/20';
 
         if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) {
             iconHtml = '<i class="fa-solid fa-image"></i>';
@@ -293,21 +347,19 @@
             bgClass = 'bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20';
         } else if (['doc', 'docx'].includes(ext)) {
             iconHtml = '<i class="fa-solid fa-file-word"></i>';
-            bgClass = 'bg-blue-600/10 text-blue-700 dark:text-blue-500 border-blue-600/20';
+            bgClass = 'bg-sky-600/10 text-sky-700 dark:text-sky-550 border-sky-600/20';
         }
 
         const iconContainer = document.getElementById('attachmentIcon');
-        iconContainer.className = `w-10 h-10 rounded-xl flex items-center justify-center text-sm shrink-0 border ${bgClass}`;
+        iconContainer.className = `w-9 h-9 rounded-lg flex items-center justify-center text-sm shrink-0 border ${bgClass}`;
         iconContainer.innerHTML = iconHtml;
 
         document.getElementById('attachmentName').innerText = file.name;
         
         let sizeStr = '';
-        if (file.size < 1024 * 1024) {
-            sizeStr = `${(file.size / 1024).toFixed(1)} KB`;
-        } else {
-            sizeStr = `${(file.size / (1024 * 1024)).toFixed(1)} MB`;
-        }
+        if (file.size < 1024 * 1024) sizeStr = `${(file.size / 1024).toFixed(1)} KB`;
+        else sizeStr = `${(file.size / (1024 * 1024)).toFixed(1)} MB`;
+        
         document.getElementById('attachmentSize').innerText = sizeStr;
 
         document.getElementById('attachmentPreview').classList.remove('hidden');
@@ -321,15 +373,9 @@
         document.getElementById('messageInput').setAttribute('required', 'true');
     }
 
-    // Busca e carrega a lista de chats reais no painel lateral
+    // Fetches live active contacts from Evolution API
     function loadChatsList() {
         const contactsList = document.getElementById('contactsList');
-        contactsList.innerHTML = `
-            <div class="flex flex-col items-center justify-center p-8 text-slate-400 space-y-2 animate-pulse">
-                <i class="fa-solid fa-circle-notch text-2xl animate-spin text-emerald-500"></i>
-                <p class="text-[10px] font-bold uppercase tracking-wider">Buscando conversas do WhatsApp...</p>
-            </div>
-        `;
 
         fetch('/api/whatsapp/chats')
         .then(res => res.json())
@@ -345,9 +391,9 @@
                 if (!Array.isArray(rawChats) || rawChats.length === 0) {
                     contactsList.innerHTML = `
                         <div class="flex flex-col items-center justify-center p-8 text-slate-400 text-center space-y-2">
-                            <i class="fa-regular fa-folder-open text-xl"></i>
+                            <i class="fa-regular fa-folder-open text-xl text-slate-350"></i>
                             <p class="text-[10px] font-bold uppercase tracking-wider">Nenhuma conversa ativa</p>
-                            <p class="text-[9px] text-slate-400">Inicie uma nova conversa pelo seu celular.</p>
+                            <p class="text-[9px] text-slate-400">Inicie conversas com contatos pelo seu aparelho.</p>
                         </div>
                     `;
                     return;
@@ -359,8 +405,8 @@
                 contactsList.innerHTML = `
                     <div class="flex flex-col items-center justify-center p-6 text-red-500 text-center space-y-2">
                         <i class="fa-solid fa-triangle-exclamation text-xl"></i>
-                        <p class="text-[10px] font-bold uppercase tracking-wider">Erro ao buscar conversas</p>
-                        <p class="text-[8px] text-slate-400 max-w-[150px]">${data.error || 'Verifique se a Evolution API está ativa e conectada.'}</p>
+                        <p class="text-[10px] font-bold uppercase tracking-wider">Falha na listagem</p>
+                        <p class="text-[8.5px] text-slate-400 max-w-[170px]">${data.error || 'Verifique o status do Evolution gateway.'}</p>
                     </div>
                 `;
             }
@@ -368,21 +414,21 @@
         .catch(err => {
             contactsList.innerHTML = `
                 <div class="flex flex-col items-center justify-center p-6 text-red-500 text-center space-y-2">
-                    <i class="fa-solid fa-triangle-exclamation text-xl"></i>
-                    <p class="text-[10px] font-bold uppercase tracking-wider">Erro de Conectividade</p>
+                    <i class="fa-solid fa-circle-xmark text-xl"></i>
+                    <p class="text-[10px] font-bold uppercase tracking-wider">Sem conexão local</p>
                 </div>
             `;
         });
     }
 
-    // Renderiza a barra lateral com base nos dados reais vindos da API
+    // Dynamic contact sidebar rendering with actual message timestamps
     function renderContactsSidebar() {
         const contactsList = document.getElementById('contactsList');
         contactsList.innerHTML = '';
 
         const gradients = [
             'from-emerald-500 to-teal-600',
-            'from-blue-500 to-cyan-600',
+            'from-cyan-500 to-blue-600',
             'from-teal-500 to-emerald-600',
             'from-amber-500 to-orange-600',
             'from-rose-500 to-orange-600',
@@ -397,87 +443,90 @@
             const initials = name.split(' ').map(n => n ? n[0] : '').join('').substring(0, 2).toUpperCase() || 'W';
             const gradientClass = gradients[index % gradients.length];
             
-            let lastMsg = 'Sem mensagens recentes';
+            // Format Last Message Timestamp
+            let timeStr = '';
+            const timestamp = chat.messageTimestamp || (chat.lastMessage && chat.lastMessage.messageTimestamp);
+            if (timestamp) {
+                const date = new Date(timestamp * 1000);
+                const today = new Date();
+                if (date.toDateString() === today.toDateString()) {
+                    timeStr = `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+                } else {
+                    timeStr = date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+                }
+            }
+
+            let lastMsg = 'Nenhuma conversa';
             const msgObj = chat.lastMessage || chat.message;
             if (msgObj) {
-                if (typeof msgObj === 'string') {
-                    lastMsg = msgObj;
-                } else {
+                if (typeof msgObj === 'string') lastMsg = msgObj;
+                else {
                     const innerMsg = msgObj.message || msgObj;
-                    if (typeof innerMsg === 'string') {
-                        lastMsg = innerMsg;
-                    } else if (innerMsg) {
-                        if (innerMsg.conversation) {
-                            lastMsg = innerMsg.conversation;
-                        } else if (innerMsg.extendedTextMessage && innerMsg.extendedTextMessage.text) {
-                            lastMsg = innerMsg.extendedTextMessage.text;
-                        } else if (innerMsg.imageMessage) {
-                            lastMsg = innerMsg.imageMessage.caption || '📷 Imagem';
-                        } else if (innerMsg.videoMessage) {
-                            lastMsg = innerMsg.videoMessage.caption || '🎥 Vídeo';
-                        } else if (innerMsg.documentMessage) {
-                            lastMsg = innerMsg.documentMessage.caption || innerMsg.documentMessage.fileName || '📁 Documento';
-                        } else if (innerMsg.audioMessage) {
-                            lastMsg = '🎵 Áudio';
-                        } else if (innerMsg.text) {
-                            lastMsg = innerMsg.text;
-                        }
+                    if (typeof innerMsg === 'string') lastMsg = innerMsg;
+                    else if (innerMsg) {
+                        if (innerMsg.conversation) lastMsg = innerMsg.conversation;
+                        else if (innerMsg.extendedTextMessage && innerMsg.extendedTextMessage.text) lastMsg = innerMsg.extendedTextMessage.text;
+                        else if (innerMsg.imageMessage) lastMsg = '📷 Imagem';
+                        else if (innerMsg.videoMessage) lastMsg = '🎥 Vídeo';
+                        else if (innerMsg.documentMessage) lastMsg = innerMsg.documentMessage.fileName || '📁 Documento';
+                        else if (innerMsg.audioMessage) lastMsg = '🎵 Áudio';
+                        else if (innerMsg.text) lastMsg = innerMsg.text;
                     }
                 }
             }
 
             const unreadBadge = chat.unreadCount > 0 
-                ? `<span class="text-[10px] font-bold px-2 py-0.5 bg-red-500 text-white rounded-full absolute -top-1 -right-1 animate-bounce">${chat.unreadCount}</span>` 
+                ? `<span class="text-[9px] font-extrabold px-1.5 py-0.5 bg-emerald-600 text-white rounded-full absolute -top-1 -right-1 shadow">${chat.unreadCount}</span>` 
                 : '';
 
             const isActive = activeNumber === number;
-            const cardBg = isActive ? 'bg-emerald-500/10 border-emerald-500/20 active-contact' : 'hover:bg-slate-900/5 dark:hover:bg-white/5 border-transparent';
+            const itemClasses = isActive 
+                ? 'bg-emerald-500/10 border-emerald-500/25 border-l-[3px] border-l-emerald-500 shadow-sm' 
+                : 'hover:bg-slate-50 dark:hover:bg-slate-900/60 border-transparent';
 
             const itemDiv = document.createElement('div');
-            itemDiv.className = `contact-item p-4 flex items-center gap-3.5 rounded-2xl cursor-pointer border transition-all ${cardBg}`;
+            itemDiv.className = `p-3.5 flex items-center gap-3.5 rounded-xl cursor-pointer border transition-all duration-200 ${itemClasses}`;
             
-            // Programmatic event listener to avoid HTML injection/quotes syntax errors
             itemDiv.addEventListener('click', () => {
                 selectContact(itemDiv, name, number, initials, gradientClass);
             });
             
             itemDiv.innerHTML = `
                 <div class="relative shrink-0">
-                    <div class="w-11 h-11 rounded-xl bg-gradient-to-br ${gradientClass} flex items-center justify-center text-white font-bold text-sm shadow-md">${initials}</div>
+                    <div class="w-10 h-10 rounded-lg bg-gradient-to-br ${gradientClass} flex items-center justify-center text-white font-black text-xs shadow-sm">${initials}</div>
                     <span class="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-500 border-2 border-white dark:border-slate-900 shadow-sm"></span>
                     ${unreadBadge}
                 </div>
                 <div class="flex-1 min-w-0">
                     <div class="flex justify-between items-baseline mb-0.5">
-                        <h4 class="text-xs font-black text-slate-800 dark:text-white truncate">${name}</h4>
-                        <span class="text-[9px] text-slate-400 font-bold">Ativo</span>
+                        <h4 class="text-xs font-black text-slate-800 dark:text-white truncate pr-2">${name}</h4>
+                        <span class="text-[9px] text-slate-400 dark:text-slate-500 font-bold shrink-0">${timeStr}</span>
                     </div>
-                    <p class="text-[10px] text-slate-500 dark:text-gray-400 truncate">${lastMsg}</p>
+                    <p class="text-[10px] text-slate-550 dark:text-slate-455 truncate leading-relaxed">${lastMsg}</p>
                 </div>
             `;
             contactsList.appendChild(itemDiv);
         });
 
-        // Se tivermos chats e nenhum estiver selecionado, seleciona o primeiro
+        // Autoselect first index at start
         if (chatsList.length > 0 && !activeNumber) {
             const firstCard = contactsList.children[0];
             const chat = chatsList[0];
             const rawJid = chat.remoteJid || chat.id || '';
-            const number = rawJid;
             const name = chat.pushName || chat.name || (rawJid && rawJid.split('@')[0]) || 'Contato';
             const initials = name.split(' ').map(n => n ? n[0] : '').join('').substring(0, 2).toUpperCase() || 'W';
-            selectContact(firstCard, name, number, initials, gradients[0]);
+            selectContact(firstCard, name, rawJid, initials, gradients[0]);
         }
     }
 
     function selectContact(element, name, number, initials, gradientClass) {
-        document.querySelectorAll('.contact-item').forEach(el => {
-            el.classList.remove('bg-emerald-500/10', 'border-emerald-500/20', 'active-contact');
-            el.classList.add('hover:bg-slate-900/5', 'dark:hover:bg-white/5', 'border-transparent');
+        document.querySelectorAll('#contactsList > div').forEach(el => {
+            if (el.classList.contains('p-3.5')) {
+                el.className = 'p-3.5 flex items-center gap-3.5 rounded-xl cursor-pointer border transition-all duration-200 hover:bg-slate-50 dark:hover:bg-slate-900/60 border-transparent';
+            }
         });
         if (element) {
-            element.classList.add('bg-emerald-500/10', 'border-emerald-500/20', 'active-contact');
-            element.classList.remove('hover:bg-slate-900/5', 'dark:hover:bg-white/5', 'border-transparent');
+            element.className = 'p-3.5 flex items-center gap-3.5 rounded-xl cursor-pointer border transition-all duration-200 bg-emerald-500/10 border-emerald-500/25 border-l-[3px] border-l-emerald-500 shadow-sm';
         }
 
         activeName = name;
@@ -488,24 +537,33 @@
         document.getElementById('chat-number').innerText = number.split('@')[0];
         
         const avatar = document.getElementById('chat-avatar');
-        avatar.className = `w-12 h-12 rounded-xl bg-gradient-to-br ${gradientClass} flex items-center justify-center text-white font-black text-sm shadow-md`;
+        avatar.className = `w-11 h-11 rounded-lg bg-gradient-to-br ${gradientClass} flex items-center justify-center text-white font-black text-sm shadow-md`;
         avatar.innerText = initials;
 
         const dot = document.getElementById('status-dot');
         const text = document.getElementById('status-text');
-        dot.className = 'w-2 h-2 rounded-full bg-emerald-500 inline-block';
-        text.innerText = 'Online';
+        dot.className = 'w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block';
+        text.innerText = 'Conectado';
 
         loadChatHistory(number);
     }
 
-    // Carrega o histórico de mensagens reais da Evolution API
+    // Fetches live chat stream with dynamic skeleton loaders
     function loadChatHistory(number) {
         const stream = document.getElementById('chatStream');
         stream.innerHTML = `
-            <div class="flex flex-col items-center justify-center h-full text-slate-400 space-y-3 animate-pulse">
-                <i class="fa-solid fa-arrows-spin text-3xl animate-spin text-emerald-500"></i>
-                <p class="text-xs font-bold uppercase tracking-wider">Carregando histórico real...</p>
+            <div class="space-y-5 animate-pulse">
+                <div class="flex gap-2.5 max-w-[65%]">
+                    <div class="w-7 h-7 rounded-full bg-slate-200 dark:bg-slate-800 shrink-0"></div>
+                    <div class="bg-slate-200/50 dark:bg-slate-850/40 h-10 w-44 rounded-2xl rounded-tl-none"></div>
+                </div>
+                <div class="flex gap-2.5 max-w-[65%] ml-auto justify-end">
+                    <div class="bg-emerald-250/20 dark:bg-emerald-950/20 h-14 w-60 rounded-2xl rounded-tr-none"></div>
+                </div>
+                <div class="flex gap-2.5 max-w-[65%]">
+                    <div class="w-7 h-7 rounded-full bg-slate-200 dark:bg-slate-800 shrink-0"></div>
+                    <div class="bg-slate-200/50 dark:bg-slate-855/40 h-16 w-52 rounded-2xl rounded-tl-none"></div>
+                </div>
             </div>
         `;
 
@@ -526,8 +584,8 @@
                 stream.innerHTML = `
                     <div class="flex flex-col items-center justify-center h-full text-red-500 space-y-3">
                         <i class="fa-solid fa-circle-exclamation text-3xl"></i>
-                        <p class="text-xs font-bold uppercase tracking-wider">Erro ao carregar mensagens</p>
-                        <p class="text-[10px] text-slate-400 max-w-[250px] text-center">${data.error || 'Falha na conexão com a Evolution API.'}</p>
+                        <p class="text-xs font-bold uppercase tracking-wider">Falha no histórico</p>
+                        <p class="text-[9.5px] text-slate-400 max-w-[200px] text-center">${data.error || 'Erro na resposta do gateway.'}</p>
                     </div>
                 `;
             }
@@ -535,18 +593,17 @@
         .catch(err => {
             stream.innerHTML = `
                 <div class="flex flex-col items-center justify-center h-full text-red-500 space-y-3">
-                    <i class="fa-solid fa-circle-exclamation text-3xl"></i>
-                    <p class="text-xs font-bold uppercase tracking-wider">Erro de Conectividade</p>
+                    <i class="fa-solid fa-circle-xmark text-3xl"></i>
+                    <p class="text-xs font-bold uppercase tracking-wider">Sem resposta da API</p>
                 </div>
             `;
         });
     }
 
-    // Normaliza mensagens brutas da Evolution para a nossa UI
+    // Parses raw Evolution response properties to standardized UI objects
     function normalizeEvolutionMessages(rawMsgs) {
         if (!Array.isArray(rawMsgs)) return [];
         
-        // Ordena mensagens por timestamp crescente
         const sorted = [...rawMsgs].sort((a, b) => {
             const tA = a.messageTimestamp || 0;
             const tB = b.messageTimestamp || 0;
@@ -563,40 +620,36 @@
 
             const m = msg.message;
             if (m) {
-                if (typeof m === 'string') {
-                    text = m;
-                } else if (m.conversation) {
-                    text = m.conversation;
-                } else if (m.extendedTextMessage && m.extendedTextMessage.text) {
-                    text = m.extendedTextMessage.text;
-                } else if (m.imageMessage) {
+                if (typeof m === 'string') text = m;
+                else if (m.conversation) text = m.conversation;
+                else if (m.extendedTextMessage && m.extendedTextMessage.text) text = m.extendedTextMessage.text;
+                else if (m.imageMessage) {
                     text = m.imageMessage.caption || '📷 Imagem';
                     fileType = 'image/png';
-                    fileUrl = '/static/img/placeholder.png'; // Placeholder de imagem
+                    fileUrl = '/static/img/placeholder.png'; 
                 } else if (m.documentMessage) {
                     text = m.documentMessage.caption || '';
                     fileName = m.documentMessage.fileName || 'documento';
                     fileType = 'application/octet-stream';
                     fileUrl = '#';
-                } else if (m.audioMessage) {
-                    text = '🎵 Áudio';
-                } else if (m.videoMessage) {
-                    text = m.videoMessage.caption || '🎥 Vídeo';
-                } else {
-                    text = '[Mensagem]';
-                }
+                } else if (m.audioMessage) text = '🎵 Áudio';
+                else if (m.videoMessage) text = m.videoMessage.caption || '🎥 Vídeo';
+                else text = '[Mensagem]';
             }
 
             let timeStr = '';
+            let dateStr = '';
             if (msg.messageTimestamp) {
                 const date = new Date(msg.messageTimestamp * 1000);
                 timeStr = `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+                dateStr = date.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
             }
 
             return {
                 sender: isMe ? 'ME' : (msg.pushName || 'Contato'),
                 text: text,
                 time: timeStr,
+                dateStr: dateStr,
                 status: 'sent',
                 fileUrl: fileUrl,
                 fileType: fileType,
@@ -605,6 +658,7 @@
         });
     }
 
+    // Chronological Message Stream Rendering with smooth iOS speech bubble layouts and checkmarks
     function renderChatStream() {
         const stream = document.getElementById('chatStream');
         stream.innerHTML = '';
@@ -613,17 +667,42 @@
             const emptyDiv = document.createElement('div');
             emptyDiv.className = 'flex flex-col items-center justify-center h-full text-slate-400 space-y-3';
             emptyDiv.innerHTML = `
-                <div class="w-16 h-16 rounded-[1.5rem] bg-slate-950/5 dark:bg-white/5 flex items-center justify-center text-slate-400 border border-slate-900/5 dark:border-white/5">
-                    <i class="fa-regular fa-comments text-2xl"></i>
+                <div class="w-14 h-14 rounded-xl bg-slate-100 dark:bg-slate-900/60 flex items-center justify-center text-slate-400 border border-slate-200 dark:border-slate-800">
+                    <i class="fa-regular fa-comments text-xl"></i>
                 </div>
-                <p class="text-xs font-bold uppercase tracking-wider">Nenhuma mensagem nesta conversa</p>
-                <p class="text-[10px] text-slate-400 max-w-[200px] text-center">Digite uma mensagem para iniciar o envio via Evolution API.</p>
+                <p class="text-xs font-bold uppercase tracking-wider">Histórico limpo</p>
+                <p class="text-[10px] text-slate-400 max-w-[200px] text-center leading-relaxed">Envie uma mensagem abaixo para registrar a comunicação assíncrona.</p>
             `;
             stream.appendChild(emptyDiv);
             return;
         }
 
+        let lastDateStr = '';
+
         activeChatHistory.forEach(msg => {
+            // Daily separator insertion
+            if (msg.dateStr && msg.dateStr !== lastDateStr) {
+                const separator = document.createElement('div');
+                separator.className = 'flex justify-center my-5';
+                
+                let displayDate = msg.dateStr;
+                const todayStr = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+                const yesterday = new Date();
+                yesterday.setDate(yesterday.getDate() - 1);
+                const yesterdayStr = yesterday.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+                
+                if (msg.dateStr === todayStr) displayDate = 'Hoje';
+                else if (msg.dateStr === yesterdayStr) displayDate = 'Ontem';
+                
+                separator.innerHTML = `
+                    <span class="px-3 py-1 bg-slate-200/50 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 text-[9px] font-extrabold uppercase tracking-widest rounded-full border border-slate-300/10 dark:border-white/5 shadow-sm">
+                        ${displayDate}
+                    </span>
+                `;
+                stream.appendChild(separator);
+                lastDateStr = msg.dateStr;
+            }
+
             const isMe = msg.sender === 'ME';
             const outerDiv = document.createElement('div');
             outerDiv.className = isMe ? 'flex gap-2.5 max-w-[80%] ml-auto justify-end' : 'flex gap-2.5 max-w-[80%]';
@@ -637,46 +716,38 @@
 
             const msgDiv = document.createElement('div');
             msgDiv.className = isMe 
-                ? 'bg-emerald-600 text-white p-3.5 rounded-2xl rounded-tr-none text-xs shadow-md relative pb-6 min-w-[80px]' 
-                : 'bg-white dark:bg-slate-800 p-3.5 rounded-2xl rounded-tl-none border border-slate-900/5 dark:border-white/5 text-xs text-slate-700 dark:text-gray-200 shadow-sm relative pb-6 min-w-[80px]';
+                ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white p-3.5 rounded-2xl rounded-tr-none text-xs shadow-md relative pb-6.5 min-w-[90px]' 
+                : 'bg-white dark:bg-slate-800 p-3.5 rounded-2xl rounded-tl-none border border-slate-200 dark:border-slate-700/60 text-xs text-slate-700 dark:text-gray-200 shadow-sm relative pb-6.5 min-w-[90px]';
             
             let statusIcon = '';
             if (isMe) {
-                if (msg.status === 'sent') {
-                    statusIcon = '<i class="fa-solid fa-check-double text-[10px] text-emerald-200 ml-1"></i>';
-                } else if (msg.status === 'error') {
-                    statusIcon = '<i class="fa-solid fa-circle-exclamation text-[10px] text-red-200 ml-1" title="Erro no envio"></i>';
-                } else if (msg.status === 'sending') {
-                    statusIcon = '<i class="fa-solid fa-circle-notch text-[10px] text-emerald-300 animate-spin ml-1"></i>';
-                } else {
-                    statusIcon = '<i class="fa-solid fa-check text-[10px] text-emerald-300 ml-1"></i>';
-                }
+                if (msg.status === 'sent') statusIcon = '<i class="fa-solid fa-check-double text-[9px] text-emerald-250 ml-1"></i>';
+                else if (msg.status === 'error') statusIcon = '<i class="fa-solid fa-circle-exclamation text-[9px] text-red-200 ml-1"></i>';
+                else if (msg.status === 'sending') statusIcon = '<i class="fa-solid fa-circle-notch text-[9px] text-emerald-350 animate-spin ml-1"></i>';
+                else statusIcon = '<i class="fa-solid fa-check text-[9px] text-emerald-350 ml-1"></i>';
             }
 
-            // Exibição de Anexo de Mídia/Arquivo no Stream
+            // Embedded attachments displays
             let mediaContent = '';
             if (msg.fileUrl) {
                 if (msg.fileType && msg.fileType.startsWith('image/')) {
                     mediaContent = `
-                        <div class="mb-2 max-w-full rounded-xl overflow-hidden shadow-sm border border-slate-900/10 dark:border-white/10">
+                        <div class="mb-2 max-w-full rounded-lg overflow-hidden shadow-sm border border-slate-200 dark:border-slate-700">
                             <img src="${msg.fileUrl}" class="max-h-48 object-cover w-full cursor-pointer hover:scale-[1.02] transition" onclick="window.open('${msg.fileUrl}', '_blank')">
                         </div>
                     `;
                 } else {
                     let docIcon = '<i class="fa-solid fa-file-invoice text-lg text-emerald-500"></i>';
-                    if (msg.fileName && msg.fileName.endsWith('.pdf')) {
-                        docIcon = '<i class="fa-solid fa-file-pdf text-lg text-red-500"></i>';
-                    } else if (msg.fileName && (msg.fileName.endsWith('.xls') || msg.fileName.endsWith('.xlsx') || msg.fileName.endsWith('.csv'))) {
-                        docIcon = '<i class="fa-solid fa-file-excel text-lg text-green-500"></i>';
-                    } else if (msg.fileName && (msg.fileName.endsWith('.doc') || msg.fileName.endsWith('.docx'))) {
-                        docIcon = '<i class="fa-solid fa-file-word text-lg text-blue-500"></i>';
-                    }
+                    if (msg.fileName && msg.fileName.endsWith('.pdf')) docIcon = '<i class="fa-solid fa-file-pdf text-lg text-red-500"></i>';
+                    else if (msg.fileName && (msg.fileName.endsWith('.xls') || msg.fileName.endsWith('.xlsx') || msg.fileName.endsWith('.csv'))) docIcon = '<i class="fa-solid fa-file-excel text-lg text-green-500"></i>';
+                    else if (msg.fileName && (msg.fileName.endsWith('.doc') || msg.fileName.endsWith('.docx'))) docIcon = '<i class="fa-solid fa-file-word text-lg text-blue-500"></i>';
+                    
                     mediaContent = `
-                        <a href="${msg.fileUrl}" target="_blank" class="flex items-center gap-3 p-3 rounded-xl bg-slate-950/5 dark:bg-white/5 border border-slate-950/10 dark:border-white/5 mb-2 hover:bg-slate-950/10 dark:hover:bg-white/10 transition block min-w-[200px]">
-                            <div class="w-10 h-10 rounded-lg bg-white dark:bg-slate-800 flex items-center justify-center shrink-0 shadow-sm">${docIcon}</div>
+                        <a href="${msg.fileUrl}" target="_blank" class="flex items-center gap-3 p-2.5 rounded-lg bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-750 mb-2 hover:bg-slate-200 dark:hover:bg-slate-800 transition block min-w-[200px]">
+                            <div class="w-9 h-9 rounded bg-white dark:bg-slate-800 flex items-center justify-center shrink-0 shadow-sm">${docIcon}</div>
                             <div class="min-w-0 flex-1">
-                                <p class="text-[11px] font-black truncate text-slate-800 dark:text-white">${msg.fileName}</p>
-                                <p class="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Visualizar Anexo</p>
+                                <p class="text-[10px] font-black truncate text-slate-800 dark:text-white">${msg.fileName}</p>
+                                <p class="text-[8px] text-slate-400 font-extrabold uppercase tracking-widest">Abrir Anexo</p>
                             </div>
                         </a>
                     `;
@@ -686,7 +757,7 @@
             msgDiv.innerHTML = `
                 ${mediaContent}
                 <div class="break-words leading-relaxed">${msg.text}</div>
-                <div class="absolute right-3.5 bottom-1.5 flex items-center gap-1 text-[8px] ${isMe ? 'text-emerald-200' : 'text-slate-400'} font-bold">
+                <div class="absolute right-3 bottom-1.5 flex items-center gap-1 text-[8px] ${isMe ? 'text-emerald-250' : 'text-slate-400'} font-extrabold tracking-wide">
                     <span>${msg.time}</span>
                     ${statusIcon}
                 </div>
@@ -695,19 +766,19 @@
             stream.appendChild(outerDiv);
         });
 
+        // Always force scrolls to bottom of stream
         stream.scrollTop = stream.scrollHeight;
     }
 
     function clearActiveChat() {
-        if (confirm(`Deseja limpar o histórico visual de mensagens com ${activeName}?`)) {
+        if (confirm(`Deseja limpar visualmente as mensagens de ${activeName}?`)) {
             activeChatHistory = [];
             renderChatStream();
-            if (typeof showToast === 'function') {
-                showToast('Histórico visual limpo.', 'success');
-            }
+            if (typeof showToast === 'function') showToast('Histórico visual limpo.', 'success');
         }
     }
 
+    // Submit live chat message through Evolution Endpoint
     function submitChatMessage(event) {
         event.preventDefault();
         const input = document.getElementById('messageInput');
@@ -717,6 +788,7 @@
 
         const now = new Date();
         const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+        const todayStr = now.toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
         
         let fileUrl = null;
         let fileType = null;
@@ -731,6 +803,7 @@
             sender: 'ME',
             text: text,
             time: timeStr,
+            dateStr: todayStr,
             status: 'sending',
             fileUrl: fileUrl,
             fileType: fileType,
@@ -759,57 +832,37 @@
         .then(data => {
             if (data.success) {
                 activeChatHistory[newMsgIndex].status = 'sent';
-                if (typeof showToast === 'function') {
-                    showToast('Disparado com sucesso!', 'success');
-                }
+                if (typeof showToast === 'function') showToast('Mensagem enviada com sucesso!', 'success');
             } else {
                 activeChatHistory[newMsgIndex].status = 'error';
-                if (typeof showToast === 'function') {
-                    showToast(data.error || 'Erro no envio. Verifique as configurações.', 'error');
-                }
+                if (typeof showToast === 'function') showToast(data.error || 'Falha ao enviar.', 'error');
             }
             renderChatStream();
         })
         .catch(err => {
             activeChatHistory[newMsgIndex].status = 'error';
-            if (typeof showToast === 'function') {
-                showToast('Falha na conexão com o servidor.', 'error');
-            }
+            if (typeof showToast === 'function') showToast('Sem conexão com o servidor.', 'error');
             renderChatStream();
         });
     }
 
     function filterContacts() {
         const query = document.getElementById('chatSearch').value.toLowerCase();
-        document.querySelectorAll('.contact-item').forEach(item => {
-            const name = item.querySelector('h4').innerText.toLowerCase();
-            const desc = item.querySelector('p').innerText.toLowerCase();
-            item.style.display = (name.includes(query) || desc.includes(query)) ? '' : 'none';
+        document.querySelectorAll('#contactsList > div').forEach(item => {
+            if (item.classList.contains('p-3.5')) {
+                const name = item.querySelector('h4').innerText.toLowerCase();
+                const desc = item.querySelector('p').innerText.toLowerCase();
+                item.style.display = (name.includes(query) || desc.includes(query)) ? '' : 'none';
+            }
         });
     }
 
+    // Startup Execution Loader
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => {
-            console.log("DOM loading, attaching DOMContentLoaded listener for chats");
-            loadChatsList();
-        });
+        document.addEventListener('DOMContentLoaded', loadChatsList);
     } else {
-        console.log("DOM already ready, loading chats directly");
         loadChatsList();
     }
 </script>
-
-<style>
-    .contact-item {
-        transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-    .contact-item:hover {
-        transform: translateY(-2px);
-    }
-    .active-contact {
-        transform: translateY(-2px) scale(1.01) !important;
-        box-shadow: 0 10px 20px -5px rgba(16, 185, 129, 0.15);
-    }
-</style>
 
 {% endblock %}

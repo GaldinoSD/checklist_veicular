@@ -14,6 +14,285 @@
         opacity: 0;
         pointer-events: none;
     }
+
+    /* ===== PREMIUM VEHICLE MARKER ===== */
+    .custom-marker {
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+    }
+
+    .marker-card {
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 12px 6px 6px;
+        border-radius: 20px;
+        color: #fff;
+        font-family: 'Outfit', sans-serif;
+        white-space: nowrap;
+        transition: transform 0.25s cubic-bezier(0.4,0,0.2,1), box-shadow 0.3s ease;
+        cursor: pointer;
+        min-width: 130px;
+    }
+    .marker-card:hover {
+        transform: scale(1.08);
+    }
+
+    /* Circular icon container */
+    .marker-icon-circle {
+        width: 32px;
+        height: 32px;
+        min-width: 32px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 13px;
+        transition: transform 0.5s ease;
+    }
+
+    /* Text section */
+    .marker-text {
+        display: flex;
+        flex-direction: column;
+        line-height: 1.15;
+    }
+    .marker-plate {
+        font-size: 11px;
+        font-weight: 900;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+    }
+    .marker-driver {
+        font-size: 9px;
+        font-weight: 600;
+        opacity: 0.8;
+        max-width: 90px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* Status badge (top-left floating) */
+    .marker-status-badge {
+        position: absolute;
+        top: -5px;
+        left: -3px;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 8px;
+        border: 2px solid #fff;
+        z-index: 2;
+    }
+    .marker-status-badge.online {
+        background: #10b981;
+        animation: pulse-badge 2s infinite;
+    }
+    .marker-status-badge.offline {
+        background: #94a3b8;
+    }
+
+    @keyframes pulse-badge {
+        0%, 100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5); }
+        50% { box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
+    }
+
+    /* Triangle pointer (bottom center) */
+    .marker-pointer {
+        position: absolute;
+        bottom: -8px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 0;
+        height: 0;
+        border-left: 8px solid transparent;
+        border-right: 8px solid transparent;
+        border-top: 9px solid #334155;
+    }
+
+    /* Speed pill (right edge) */
+    .marker-speed {
+        position: absolute;
+        top: -4px;
+        right: -2px;
+        background: rgba(0,0,0,0.55);
+        backdrop-filter: blur(4px);
+        color: #fff;
+        font-size: 7.5px;
+        font-weight: 800;
+        padding: 1px 5px;
+        border-radius: 8px;
+        letter-spacing: 0.3px;
+        border: 1px solid rgba(255,255,255,0.1);
+        z-index: 2;
+    }
+
+    /* Neon glow animation for moving vehicles */
+    @keyframes neon-glow {
+        0%, 100% { box-shadow: 0 4px 20px rgba(16, 185, 129, 0.45), 0 0 0 2px rgba(255,255,255,0.12) inset; }
+        50% { box-shadow: 0 4px 30px rgba(16, 185, 129, 0.7), 0 0 0 2px rgba(255,255,255,0.18) inset; }
+    }
+    .marker-card.is-moving {
+        animation: neon-glow 2.5s ease-in-out infinite;
+    }
+
+    /* ===== PREMIUM LEAFLET POPUP ===== */
+    .leaflet-popup-content-wrapper {
+        background: #0f172a !important;
+        border-radius: 20px !important;
+        box-shadow: 0 12px 40px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.06) inset !important;
+        padding: 0 !important;
+        overflow: hidden;
+        border: 1px solid rgba(255,255,255,0.08) !important;
+    }
+    .leaflet-popup-content {
+        margin: 0 !important;
+        width: auto !important;
+        min-width: 240px;
+    }
+    .leaflet-popup-tip-container {
+        display: block;
+    }
+    .leaflet-popup-tip {
+        background: #0f172a !important;
+        box-shadow: none !important;
+        border: none !important;
+    }
+    .leaflet-popup-close-button {
+        color: rgba(255,255,255,0.4) !important;
+        font-size: 18px !important;
+        top: 8px !important;
+        right: 10px !important;
+        z-index: 10;
+        transition: color 0.2s ease;
+    }
+    .leaflet-popup-close-button:hover {
+        color: #fff !important;
+    }
+
+    /* Popup internal layout */
+    .popup-premium {
+        font-family: 'Outfit', sans-serif;
+        color: #e2e8f0;
+    }
+    .popup-header {
+        padding: 14px 16px 10px;
+        border-bottom: 1px solid rgba(255,255,255,0.06);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+    }
+    .popup-header-online {
+        background: linear-gradient(135deg, rgba(13,148,136,0.15) 0%, rgba(5,150,105,0.08) 100%);
+    }
+    .popup-header-offline {
+        background: linear-gradient(135deg, rgba(71,85,105,0.2) 0%, rgba(51,65,85,0.1) 100%);
+    }
+    .popup-plate {
+        font-size: 14px;
+        font-weight: 900;
+        letter-spacing: 0.8px;
+        color: #fff;
+        text-transform: uppercase;
+    }
+    .popup-model {
+        font-size: 9.5px;
+        font-weight: 600;
+        color: #94a3b8;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+    }
+    .popup-status-pill {
+        font-size: 8px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        padding: 3px 8px;
+        border-radius: 10px;
+        white-space: nowrap;
+    }
+    .popup-status-pill.online {
+        background: rgba(16,185,129,0.15);
+        color: #34d399;
+        border: 1px solid rgba(16,185,129,0.25);
+    }
+    .popup-status-pill.offline {
+        background: rgba(148,163,184,0.1);
+        color: #94a3b8;
+        border: 1px solid rgba(148,163,184,0.2);
+    }
+    .popup-body {
+        padding: 12px 16px;
+    }
+    .popup-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 5px 0;
+        font-size: 11px;
+        border-bottom: 1px solid rgba(255,255,255,0.03);
+    }
+    .popup-row:last-child {
+        border-bottom: none;
+    }
+    .popup-row-icon {
+        width: 28px;
+        height: 28px;
+        min-width: 28px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 11px;
+    }
+    .popup-row-label {
+        font-size: 9px;
+        font-weight: 600;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .popup-row-value {
+        font-size: 11px;
+        font-weight: 700;
+        color: #e2e8f0;
+    }
+    .popup-footer {
+        padding: 0 16px 14px;
+    }
+    .popup-btn-geofence {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        width: 100%;
+        padding: 9px 0;
+        border: none;
+        border-radius: 12px;
+        background: linear-gradient(135deg, #0d9488 0%, #06b6d4 100%);
+        color: #fff;
+        font-family: 'Outfit', sans-serif;
+        font-size: 9px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        cursor: pointer;
+        transition: transform 0.15s ease, box-shadow 0.2s ease;
+        box-shadow: 0 4px 14px rgba(13,148,136,0.35);
+    }
+    .popup-btn-geofence:hover {
+        transform: scale(1.03);
+        box-shadow: 0 6px 20px rgba(13,148,136,0.5);
+    }
+    .popup-btn-geofence:active {
+        transform: scale(0.97);
+    }
 </style>
 
 <div class="flex flex-col h-full w-full overflow-hidden animate-premium relative">
@@ -344,88 +623,134 @@
                 return;
             }
 
-            const color = v.is_online ? (v.map_color || '#10b981') : '#94a3b8';
-            const iconClass = v.map_icon || 'fa-location-arrow';
+            const iconClass = v.map_icon || 'fa-car';
             const shouldRotate = iconClass === 'fa-location-arrow' || iconClass === 'fa-arrow-up' || iconClass === 'fa-navigation';
             const rotation = shouldRotate ? `transform: rotate(${v.angle}deg)` : '';
+            const movingClass = (v.is_online && v.speed > 5) ? 'is-moving' : '';
+            const badgeClass = v.is_online ? 'online' : 'offline';
+            const speedText = Math.round(v.speed);
+            const driverName = v.driver && v.driver !== 'N/A' ? v.driver : '';
+
+            // Suporte a cor personalizada do cadastro de veículos
+            const customColor = v.map_color || '#10b981';
+            let cardStyle = '';
+            let pointerColor = '';
+            if (v.is_online) {
+                cardStyle = `background: linear-gradient(135deg, ${customColor} 0%, ${customColor}dd 100%); box-shadow: 0 4px 20px ${customColor}73, 0 0 0 2px rgba(255,255,255,0.12) inset;`;
+                pointerColor = `border-top-color: ${customColor}dd;`;
+            } else {
+                cardStyle = 'background: linear-gradient(135deg, #475569 0%, #334155 100%); box-shadow: 0 4px 14px rgba(51,65,85,0.5), 0 0 0 2px rgba(255,255,255,0.06) inset;';
+                pointerColor = 'border-top-color: #334155;';
+            }
 
             const icon = L.divIcon({
                 className: 'custom-marker',
                 html: `
-                    <div class="relative flex flex-col items-center">
-                        <div class="w-10 h-10 rounded-2xl flex items-center justify-center text-white shadow-xl transition-all duration-500" 
-                             style="background: ${color}; ${rotation}">
+                    <div class="marker-card ${movingClass}" style="${cardStyle}">
+                        <!-- Status Badge (top-left) -->
+                        <div class="marker-status-badge ${badgeClass}">
+                            <i class="fa-solid fa-power-off"></i>
+                        </div>
+                        <!-- Speed Pill (top-right, only when moving) -->
+                        ${v.is_online && v.speed > 2 ? `<div class="marker-speed">${speedText} km/h</div>` : ''}
+                        <!-- Circular Icon -->
+                        <div class="marker-icon-circle" style="background:${v.is_online ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.15)'}; ${rotation}">
                             <i class="fa-solid ${iconClass}"></i>
                         </div>
-                        ${v.is_online ? '<div class="absolute top-0 right-0 w-3.5 h-3.5 bg-emerald-500 border-2 border-white dark:border-slate-900 rounded-full"></div>' : ''}
-                        <!-- Rótulo do Veículo + Motorista -->
-                        <div class="absolute -bottom-5 bg-slate-900/90 text-white text-[7.5px] font-black uppercase tracking-wider py-0.5 px-1.5 rounded-lg shadow-lg border border-white/10 whitespace-nowrap flex items-center gap-1">
-                            <i class="fa-solid fa-car text-[7px] opacity-75"></i>
-                            <span>${v.plate}</span>
-                            <span class="opacity-35">|</span>
-                            <i class="fa-solid fa-user text-[7px] opacity-75"></i>
-                            <span class="text-blue-300">${v.driver}</span>
+                        <!-- Text: Plate + Driver -->
+                        <div class="marker-text">
+                            <span class="marker-plate">${v.plate}</span>
+                            ${driverName ? `<span class="marker-driver">${driverName}</span>` : ''}
                         </div>
+                        <!-- Triangle Pointer -->
+                        <div class="marker-pointer" style="${pointerColor}"></div>
                     </div>
                 `,
-                iconSize: [40, 55],
-                iconAnchor: [20, 20]
+                iconSize: [160, 56],
+                iconAnchor: [80, 56]
             });
 
             const ignitionText = v.ignition ? 'Ligada' : 'Desligada';
-            const ignitionClass = v.ignition ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500';
+            const ignitionColor = v.ignition ? '#34d399' : '#f87171';
+            const ignitionBg = v.ignition ? 'rgba(16,185,129,0.1)' : 'rgba(248,113,113,0.1)';
+            const statusText = v.is_online ? (v.speed > 5 ? 'Em Movimento' : 'Online') : 'Offline';
+            const statusClass = v.is_online ? 'online' : 'offline';
+            const headerClass = v.is_online ? 'popup-header-online' : 'popup-header-offline';
+            const speedColor = v.speed > 80 ? '#f87171' : (v.speed > 5 ? '#2dd4bf' : '#94a3b8');
 
             const popupContent = `
-                <div class="p-3.5 min-w-[200px] space-y-3 font-sans dark:text-white">
-                    <div class="flex items-center justify-between border-b border-slate-900/10 dark:border-white/10 pb-2">
+                <div class="popup-premium">
+                    <!-- Header -->
+                    <div class="popup-header ${headerClass}">
                         <div>
-                            <h4 class="text-xs font-black text-slate-800 dark:text-white tracking-tight uppercase">${v.plate}</h4>
-                            <p class="text-[8px] text-slate-400 font-bold uppercase">${v.model}</p>
+                            <div class="popup-plate">${v.plate}</div>
+                            <div class="popup-model">${v.model}</div>
                         </div>
-                        <span class="w-2.5 h-2.5 rounded-full ${v.is_online ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}"></span>
+                        <span class="popup-status-pill ${statusClass}">
+                            <i class="fa-solid ${v.is_online ? 'fa-wifi' : 'fa-link-slash'}" style="margin-right:3px;font-size:7px;"></i>
+                            ${statusText}
+                        </span>
                     </div>
-                    
-                    <div class="space-y-1.5 text-[10px] font-bold text-slate-700 dark:text-slate-200">
-                        <div class="flex items-center gap-1.5">
-                            <i class="fa-solid fa-user text-slate-400 w-4 text-center"></i>
-                            <span class="text-slate-400 font-medium">Motorista:</span>
-                            <span class="text-blue-600 dark:text-blue-400">${v.driver}</span>
-                        </div>
-                        
-                        <div class="flex items-center gap-1.5">
-                            <i class="fa-solid fa-gauge text-slate-400 w-4 text-center"></i>
-                            <span class="text-slate-400 font-medium">Velocidade:</span>
-                            <span class="${v.speed > 5 ? 'text-teal-600' : 'text-slate-600 dark:text-slate-300'}">${Math.round(v.speed)} KM/H</span>
+
+                    <!-- Body -->
+                    <div class="popup-body">
+                        <!-- Motorista -->
+                        <div class="popup-row">
+                            <div class="popup-row-icon" style="background:rgba(59,130,246,0.1);color:#60a5fa;"><i class="fa-solid fa-user"></i></div>
+                            <div>
+                                <div class="popup-row-label">Motorista</div>
+                                <div class="popup-row-value">${v.driver}</div>
+                            </div>
                         </div>
 
-                        <div class="flex items-center gap-1.5">
-                            <i class="fa-solid fa-key text-slate-400 w-4 text-center"></i>
-                            <span class="text-slate-400 font-medium">Ignição:</span>
-                            <span class="${ignitionClass}">${ignitionText}</span>
+                        <!-- Velocidade -->
+                        <div class="popup-row">
+                            <div class="popup-row-icon" style="background:rgba(45,212,191,0.1);color:${speedColor};"><i class="fa-solid fa-gauge-high"></i></div>
+                            <div>
+                                <div class="popup-row-label">Velocidade</div>
+                                <div class="popup-row-value" style="color:${speedColor};">${Math.round(v.speed)} km/h</div>
+                            </div>
                         </div>
 
-                        <div class="flex items-center gap-1.5">
-                            <i class="fa-solid fa-clock text-slate-400 w-4 text-center"></i>
-                            <span class="text-slate-400 font-medium">Último Sinal:</span>
-                            <span class="text-slate-600 dark:text-slate-300 font-medium">${v.last_time}</span>
+                        <!-- Ignição -->
+                        <div class="popup-row">
+                            <div class="popup-row-icon" style="background:${ignitionBg};color:${ignitionColor};"><i class="fa-solid fa-key"></i></div>
+                            <div>
+                                <div class="popup-row-label">Ignição</div>
+                                <div class="popup-row-value" style="color:${ignitionColor};">${ignitionText}</div>
+                            </div>
+                        </div>
+
+                        <!-- Último Sinal -->
+                        <div class="popup-row">
+                            <div class="popup-row-icon" style="background:rgba(148,163,184,0.1);color:#94a3b8;"><i class="fa-solid fa-clock"></i></div>
+                            <div>
+                                <div class="popup-row-label">Último Sinal</div>
+                                <div class="popup-row-value">${v.last_time}</div>
+                            </div>
                         </div>
                     </div>
-                    
-                    <button onclick="setupGeofence(${v.id}, ${v.lat}, ${v.lon})" 
-                            class="w-full mt-2 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-black text-[8px] uppercase tracking-wider rounded-xl shadow-md transition-all active:scale-95 flex items-center justify-center gap-1 border-none cursor-pointer">
-                        <i class="fa-solid fa-circle-nodes"></i> Configurar Cerca
-                    </button>
+
+                    <!-- Footer -->
+                    <div class="popup-footer">
+                        <button onclick="setupGeofence(${v.id}, ${v.lat}, ${v.lon})" class="popup-btn-geofence">
+                            <i class="fa-solid fa-circle-nodes"></i> Configurar Cerca Virtual
+                        </button>
+                    </div>
                 </div>
             `;
 
             if (markers[v.id]) {
-                markers[v.id].addTo(map);
                 markers[v.id].setLatLng([v.lat, v.lon]);
                 markers[v.id].setIcon(icon);
-                markers[v.id].setPopupContent(popupContent);
+                // Só atualiza conteúdo do popup se ele NÃO estiver aberto (evita flickering)
+                if (!markers[v.id].isPopupOpen()) {
+                    markers[v.id].setPopupContent(popupContent);
+                }
+                markers[v.id].addTo(map);
             } else {
                 markers[v.id] = L.marker([v.lat, v.lon], { icon: icon }).addTo(map)
-                    .bindPopup(popupContent);
+                    .bindPopup(popupContent, { maxWidth: 280, minWidth: 240 });
             }
         });
     }

@@ -2,8 +2,8 @@ import sys
 import os
 from datetime import datetime
 
-# Adiciona o diretório do app ao path
-sys.path.append('/var/www/checklist_veicular')
+# Adiciona o diretório raiz ao path do Python
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
 from app import app, db, Vehicle, Checklist, generate_consolidated_report
 

@@ -1,7 +1,12 @@
 import sys
+import os
 
-path = '/var/www/checklist_veicular/app.py'
-with open(path, 'r', encoding='utf-8') as f:
+# Adiciona o diretório raiz ao path do Python (para robustez)
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+
+app_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../app.py'))
+
+with open(app_path, 'r', encoding='utf-8') as f:
     lines = f.readlines()
 
 new_func = """def generate_consolidated_report(vehicle, start_date, end_date):
@@ -141,7 +146,7 @@ for i, line in enumerate(lines):
         lines[i:i+2] = [new_func + '\n']
         break
 
-with open(path, 'w', encoding='utf-8') as f:
+with open(app_path, 'w', encoding='utf-8') as f:
     f.writelines(lines)
 
 print("Função atualizada com sucesso.")

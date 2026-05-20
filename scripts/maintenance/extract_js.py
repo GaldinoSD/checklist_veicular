@@ -1,4 +1,10 @@
 import re
+import sys
+import os
+
+# Adiciona o diretório raiz ao path do Python (para robustez)
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
+
 with open('/var/www/checklist_veicular/templates/gestao_tecnica.html', 'r') as f:
     content = f.read()
 
