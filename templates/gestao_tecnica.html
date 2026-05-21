@@ -4882,7 +4882,7 @@ function openTrainingModal(editData) {
         document.getElementById('tf-badge-color').value = editData.badge_color || '#0d9488';
         document.getElementById('tf-allow-retake').checked = editData.allow_retake || false;
         updateBadgePreview();
-        (editData.modules || []).forEach(m => addModuleField(m.title, m.content));
+        (editData.modules || []).forEach(m => addModuleField(m.title, m.content, m.image_path, m.video_path));
         (editData.questions || []).forEach(q => addQuestionField(q.question_text, q.option_a, q.option_b, q.option_c, q.option_d, q.correct_option));
     }
 
@@ -4926,7 +4926,7 @@ function wizardNext() {
     saveCourse();
 }
 
-function addModuleField(title = '', content = '') {
+function addModuleField(title = '', content = '', image_path = '', video_path = '') {
     const c = document.getElementById('modules-container');
     const idx = c.children.length + 1;
     const div = document.createElement('div');
@@ -4940,8 +4940,162 @@ function addModuleField(title = '', content = '') {
         <div>
             <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 block">Conteúdo</label>
             <textarea class="mod-content w-full bg-white dark:bg-slate-800 border border-slate-900/5 dark:border-white/5 rounded-xl px-3 py-2 text-sm font-bold dark:text-white outline-none resize-none" rows="5" placeholder="Escreva o conteúdo do módulo...">${content}</textarea>
+        </div>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3 pt-3 border-t border-slate-900/5 dark:border-white/5">
+            <!-- Upload de Imagem -->
+            <div class="space-y-2">
+                <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Imagem do Módulo (Opcional - Máx 5MB)</label>
+                <div class="flex items-center gap-3">
+                    <input type="hidden" class="mod-image-path" value="${image_path}">
+                    <input type="file" accept="image/*" class="hidden image-file-input" onchange="uploadModuleMedia(this, 'image')">
+                    
+                    <button type="button" onclick="this.previousElementSibling.click()" class="px-3 py-2 bg-slate-200 dark:bg-white/10 hover:bg-slate-300 dark:hover:bg-white/15 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-bold transition-all flex items-center gap-2">
+                        <i class="fa-solid fa-image"></i>
+                        <span>Escolher Imagem</span>
+                    </button>
+                    
+                    <span class="upload-status-image text-[10px] font-bold text-slate-400 hidden">
+                        <i class="fa-solid fa-spinner fa-spin mr-1"></i>Enviando...
+                    </span>
+                </div>
+                
+                <!-- Preview de Imagem -->
+                <div class="image-preview-container flex items-center gap-2 mt-2 ${image_path ? '' : 'hidden'}">
+                    <img src="${image_path || ''}" class="w-20 h-20 object-cover rounded-xl border border-slate-900/10 dark:border-white/10 shadow-sm">
+                    <button type="button" onclick="clearModuleMedia(this, 'image')" class="p-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg transition-all" title="Remover Imagem">
+                        <i class="fa-solid fa-trash-can text-sm"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Upload de Vídeo -->
+            <div class="space-y-2">
+                <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Vídeo do Módulo (Opcional - Máx 25MB)</label>
+                <div class="flex items-center gap-3">
+                    <input type="hidden" class="mod-video-path" value="${video_path}">
+                    <input type="file" accept="video/mp4,video/webm" class="hidden video-file-input" onchange="uploadModuleMedia(this, 'video')">
+                    
+                    <button type="button" onclick="this.previousElementSibling.click()" class="px-3 py-2 bg-slate-200 dark:bg-white/10 hover:bg-slate-300 dark:hover:bg-white/15 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-bold transition-all flex items-center gap-2">
+                        <i class="fa-solid fa-video"></i>
+                        <span>Escolher Vídeo</span>
+                    </button>
+                    
+                    <span class="upload-status-video text-[10px] font-bold text-slate-400 hidden">
+                        <i class="fa-solid fa-spinner fa-spin mr-1"></i>Enviando...
+                    </span>
+                </div>
+                
+                <!-- Preview de Vídeo -->
+                <div class="video-preview-container flex items-center gap-2 mt-2 ${video_path ? '' : 'hidden'}">
+                    <video src="${video_path || ''}" controls class="w-40 h-24 object-cover rounded-xl border border-slate-900/10 dark:border-white/10 shadow-sm"></video>
+                    <button type="button" onclick="clearModuleMedia(this, 'video')" class="p-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg transition-all" title="Remover Vídeo">
+                        <i class="fa-solid fa-trash-can text-sm"></i>
+                    </button>
+                </div>
+            </div>
         </div>`;
     c.appendChild(div);
+}
+
+async function uploadModuleMedia(input, type) {
+    const file = input.files[0];
+    if (!file) return;
+
+    // Validações frontend rápidas
+    const ext = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+    if (type === 'image') {
+        const allowedImage = ['.jpg', '.jpeg', '.png', '.webp'];
+        if (!allowedImage.includes(ext)) {
+            alert('Formato de imagem inválido. Use JPG, JPEG, PNG ou WEBP.');
+            input.value = '';
+            return;
+        }
+        if (file.size > 5 * 1024 * 1024) {
+            alert('A imagem excede o limite de 5MB.');
+            input.value = '';
+            return;
+        }
+    } else if (type === 'video') {
+        const allowedVideo = ['.mp4', '.webm'];
+        if (!allowedVideo.includes(ext)) {
+            alert('Formato de vídeo inválido. Use MP4 ou WEBM.');
+            input.value = '';
+            return;
+        }
+        if (file.size > 25 * 1024 * 1024) {
+            alert('O vídeo excede o limite de 25MB.');
+            input.value = '';
+            return;
+        }
+    }
+
+    const parent = input.closest('.space-y-2');
+    const statusSpan = parent.querySelector(`.upload-status-${type}`);
+    const previewContainer = parent.querySelector(`.${type}-preview-container`);
+    const pathInput = parent.querySelector(`.mod-${type}-path`);
+
+    if (statusSpan) statusSpan.classList.remove('hidden');
+
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('type', type);
+
+    try {
+        const res = await fetch('/api/gestao/treinamentos_lms/upload_media', {
+            method: 'POST',
+            body: formData
+        });
+        const result = await res.json();
+        
+        if (!res.ok) {
+            throw new Error(result.error || 'Erro desconhecido no servidor');
+        }
+
+        pathInput.value = result.path;
+
+        // Renderiza preview dinâmico
+        if (type === 'image') {
+            previewContainer.innerHTML = `
+                <img src="${result.path}" class="w-20 h-20 object-cover rounded-xl border border-slate-900/10 dark:border-white/10 shadow-sm">
+                <button type="button" onclick="clearModuleMedia(this, 'image')" class="p-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg transition-all" title="Remover Imagem">
+                    <i class="fa-solid fa-trash-can text-sm"></i>
+                </button>
+            `;
+        } else {
+            previewContainer.innerHTML = `
+                <video src="${result.path}" controls class="w-40 h-24 object-cover rounded-xl border border-slate-900/10 dark:border-white/10 shadow-sm"></video>
+                <button type="button" onclick="clearModuleMedia(this, 'video')" class="p-2 bg-red-500/10 hover:bg-red-500/20 text-red-500 rounded-lg transition-all" title="Remover Vídeo">
+                    <i class="fa-solid fa-trash-can text-sm"></i>
+                </button>
+            `;
+        }
+        previewContainer.classList.remove('hidden');
+        if (statusSpan) {
+            statusSpan.innerHTML = '<i class="fa-solid fa-circle-check text-emerald-500 mr-1"></i>Enviado!';
+            setTimeout(() => {
+                statusSpan.classList.add('hidden');
+                statusSpan.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i>Enviando...';
+            }, 2000);
+        }
+    } catch (e) {
+        console.error(e);
+        alert('Falha no upload: ' + e.message);
+        if (statusSpan) statusSpan.classList.add('hidden');
+        input.value = '';
+    }
+}
+
+function clearModuleMedia(button, type) {
+    const previewContainer = button.closest(`.${type}-preview-container`);
+    const parentContainer = previewContainer.parentElement;
+    const pathInput = parentContainer.querySelector(`.mod-${type}-path`);
+    const fileInput = parentContainer.querySelector(`.${type}-file-input`);
+
+    pathInput.value = '';
+    fileInput.value = '';
+    previewContainer.classList.add('hidden');
+    previewContainer.innerHTML = '';
 }
 
 function addQuestionField(qt = '', oa = '', ob = '', oc = '', od = '', correct = 'a') {
@@ -4981,7 +5135,9 @@ async function saveCourse() {
     document.querySelectorAll('#modules-container > div').forEach(div => {
         modules.push({
             title: div.querySelector('.mod-title').value,
-            content: div.querySelector('.mod-content').value
+            content: div.querySelector('.mod-content').value,
+            image_path: div.querySelector('.mod-image-path').value || null,
+            video_path: div.querySelector('.mod-video-path').value || null
         });
     });
 

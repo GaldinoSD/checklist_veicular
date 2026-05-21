@@ -73,10 +73,12 @@ ALLOWED_EXT = {".jpg", ".jpeg", ".png", ".webp"}
 
 VISTORIAS_UPLOAD_DIR = BASE_DIR / "static" / "vistorias_fotos"
 AVARIAS_UPLOAD_DIR   = BASE_DIR / "static" / "avarias_fotos"   # se você usar também
+TREINAMENTOS_UPLOAD_DIR = BASE_DIR / "static" / "uploads" / "treinamentos"
 
 # Cria as pastas automaticamente ao iniciar o app (não dá erro se já existir)
 VISTORIAS_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 AVARIAS_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+TREINAMENTOS_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 def allowed_file(filename: str) -> bool:
     if not filename:
@@ -466,6 +468,8 @@ class TrainingModule(db.Model):
     title = db.Column(db.String(200), nullable=False)
     content = db.Column(db.Text, nullable=False)
     order = db.Column(db.Integer, default=0)
+    image_path = db.Column(db.String(255), nullable=True)
+    video_path = db.Column(db.String(255), nullable=True)
 
 class TrainingQuestion(db.Model):
     __tablename__ = "training_question"
@@ -1027,7 +1031,9 @@ def ensure_min_schema():
         text("ALTER TABLE whatsapp_config ADD COLUMN IF NOT EXISTS msg_training_alert TEXT DEFAULT '*Lembrete de Treinamento LMS:* Olá {usuario}, lembramos que você tem o treinamento \"{curso}\" pendente no portal.'"),
         text("ALTER TABLE whatsapp_config ADD COLUMN IF NOT EXISTS msg_os_overdue TEXT DEFAULT '*O.S. Atrasada:* Olá {usuario}, a Ordem de Serviço #{id} está pendente há mais de 7 dias.'"),
         text("ALTER TABLE whatsapp_config ADD COLUMN IF NOT EXISTS msg_inactive_tech TEXT DEFAULT '*Lembrete de Inatividade:* Olá {usuario}, identificamos que você não realiza checklists há mais de 7 dias.'"),
-        text('ALTER TABLE avaria_os ADD COLUMN IF NOT EXISTS foto VARCHAR(255)')
+        text('ALTER TABLE avaria_os ADD COLUMN IF NOT EXISTS foto VARCHAR(255)'),
+        text('ALTER TABLE training_module ADD COLUMN IF NOT EXISTS image_path VARCHAR(255)'),
+        text('ALTER TABLE training_module ADD COLUMN IF NOT EXISTS video_path VARCHAR(255)')
     ]
     for stmt in stmts:
         try:
@@ -8339,6 +8345,55 @@ def api_gestao_treinamentos_lms_list():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route("/api/gestao/treinamentos_lms/upload_media", methods=["POST"])
+@supervisor_allowed
+def api_gestao_treinamentos_lms_upload_media():
+    try:
+        if "file" not in request.files:
+            return jsonify({"error": "Nenhum arquivo enviado"}), 400
+        
+        f = request.files["file"]
+        media_type = request.form.get("type")  # "image" ou "video"
+        
+        if not f or f.filename == "":
+            return jsonify({"error": "Arquivo vazio"}), 400
+            
+        ext = os.path.splitext(f.filename.lower())[1]
+        
+        # Validação de extensões e tamanhos
+        if media_type == "image":
+            allowed_image_exts = {".jpg", ".jpeg", ".png", ".webp"}
+            if ext not in allowed_image_exts:
+                return jsonify({"error": "Formato de imagem inválido. Use JPG, JPEG, PNG ou WEBP."}), 400
+            # Check size
+            f.seek(0, os.SEEK_END)
+            size = f.tell()
+            f.seek(0)
+            if size > 5 * 1024 * 1024:
+                return jsonify({"error": "A imagem excede o limite de 5MB."}), 400
+        elif media_type == "video":
+            allowed_video_exts = {".mp4", ".webm"}
+            if ext not in allowed_video_exts:
+                return jsonify({"error": "Formato de vídeo inválido. Use MP4 ou WEBM."}), 400
+            # Check size
+            f.seek(0, os.SEEK_END)
+            size = f.tell()
+            f.seek(0)
+            if size > 25 * 1024 * 1024:
+                return jsonify({"error": "O vídeo excede o limite de 25MB."}), 400
+        else:
+            return jsonify({"error": "Tipo de mídia inválido especificado."}), 400
+
+        # Gerar nome único e salvar
+        filename = f"{uuid.uuid4()}{ext}"
+        filepath = TREINAMENTOS_UPLOAD_DIR / filename
+        f.save(filepath)
+        
+        relative_path = f"/static/uploads/treinamentos/{filename}"
+        return jsonify({"status": "ok", "path": relative_path})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 @app.route("/api/gestao/treinamentos_lms", methods=["POST"])
 @supervisor_allowed
 def api_gestao_treinamentos_lms_save():
@@ -8385,6 +8440,8 @@ def api_gestao_treinamentos_lms_save():
                 course_id=course.id,
                 title=m.get("title"),
                 content=m.get("content"),
+                image_path=m.get("image_path"),
+                video_path=m.get("video_path"),
                 order=i
             )
             db.session.add(mod)
@@ -8434,6 +8491,8 @@ def api_gestao_treinamentos_lms_get(id):
             "id": m.id,
             "title": m.title,
             "content": m.content,
+            "image_path": m.image_path,
+            "video_path": m.video_path,
             "order": m.order
         } for m in c.modules]
         
@@ -8622,6 +8681,8 @@ def api_treinamentos_conteudo(course_id):
             "id": m.id,
             "title": m.title,
             "content": m.content,
+            "image_path": m.image_path,
+            "video_path": m.video_path,
             "order": m.order
         } for m in c.modules]
         
