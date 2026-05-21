@@ -94,7 +94,7 @@
         animation: pulse-badge 2s infinite;
     }
     .marker-status-badge.offline {
-        background: #94a3b8;
+        background: #ef4444; /* Vermelho para offline */
     }
 
     @keyframes pulse-badge {
@@ -134,8 +134,8 @@
 
     /* Neon glow animation for moving vehicles */
     @keyframes neon-glow {
-        0%, 100% { box-shadow: 0 4px 20px rgba(16, 185, 129, 0.45), 0 0 0 2px rgba(255,255,255,0.12) inset; }
-        50% { box-shadow: 0 4px 30px rgba(16, 185, 129, 0.7), 0 0 0 2px rgba(255,255,255,0.18) inset; }
+        0%, 100% { box-shadow: 0 4px 20px var(--glow-color, rgba(16, 185, 129, 0.45)), 0 0 0 2px rgba(255,255,255,0.12) inset; }
+        50% { box-shadow: 0 4px 30px var(--glow-color-intense, rgba(16, 185, 129, 0.7)), 0 0 0 2px rgba(255,255,255,0.18) inset; }
     }
     .marker-card.is-moving {
         animation: neon-glow 2.5s ease-in-out infinite;
@@ -455,7 +455,7 @@
 
     async function fetchData() {
         try {
-            const res = await fetch('/api/gps/current');
+            const res = await fetch(`/api/gps/current?_=${Date.now()}`);
             const data = await res.json();
             vehiclesData = data.vehicles;
             renderVehicleList();
@@ -469,7 +469,7 @@
 
     async function fetchAlerts() {
         try {
-            const res = await fetch('/api/gps/alerts');
+            const res = await fetch(`/api/gps/alerts?_=${Date.now()}`);
             const data = await res.json();
             if (data.success) {
                 renderAlerts(data.alerts);
@@ -633,15 +633,12 @@
 
             // Suporte a cor personalizada do cadastro de veículos
             const customColor = v.map_color || '#10b981';
-            let cardStyle = '';
-            let pointerColor = '';
-            if (v.is_online) {
-                cardStyle = `background: linear-gradient(135deg, ${customColor} 0%, ${customColor}dd 100%); box-shadow: 0 4px 20px ${customColor}73, 0 0 0 2px rgba(255,255,255,0.12) inset;`;
-                pointerColor = `border-top-color: ${customColor}dd;`;
-            } else {
-                cardStyle = 'background: linear-gradient(135deg, #475569 0%, #334155 100%); box-shadow: 0 4px 14px rgba(51,65,85,0.5), 0 0 0 2px rgba(255,255,255,0.06) inset;';
-                pointerColor = 'border-top-color: #334155;';
-            }
+            const glowColor = `${customColor}73`; // ~45% de opacidade para sombra suave
+            const glowColorIntense = `${customColor}b3`; // ~70% de opacidade para pulsação intensa
+            
+            // Sempre mantém a cor personalizada tanto online quanto offline, adicionando as variáveis CSS para brilho neon
+            const cardStyle = `background: linear-gradient(135deg, ${customColor} 0%, ${customColor}dd 100%); box-shadow: 0 4px 20px ${glowColor}, 0 0 0 2px rgba(255,255,255,0.12) inset; --glow-color: ${glowColor}; --glow-color-intense: ${glowColorIntense};`;
+            const pointerColor = `border-top-color: ${customColor}dd;`;
 
             const icon = L.divIcon({
                 className: 'custom-marker',

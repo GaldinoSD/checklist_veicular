@@ -9425,6 +9425,8 @@ def monitoramento_relatorio_pdf():
 @app.route("/api/gps/current")
 @login_required
 def api_gps_current():
+    db.session.expire_all()
+    db.session.commit()
     vehicles = Vehicle.query.filter_by(status="ATIVO").all()
     results = []
     for v in vehicles:
@@ -9456,7 +9458,12 @@ def api_gps_current():
             "map_color": v.map_color or "#10b981"
         }
         results.append(data)
-    return jsonify({"vehicles": results})
+    
+    response = jsonify({"vehicles": results})
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
 
 @app.route("/api/gps/gateway", methods=["POST"])
 def api_gps_gateway():
