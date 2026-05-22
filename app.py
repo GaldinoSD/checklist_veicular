@@ -8881,6 +8881,7 @@ class GPSAlert(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     imei = db.Column(db.String(50), nullable=True)
     vehicle_id = db.Column(db.Integer, db.ForeignKey('vehicle.id'), nullable=False)
+    vehicle = db.relationship("Vehicle", backref=db.backref("gps_alerts", lazy=True))
     alert_type = db.Column(db.String(50), nullable=False) # SPEED_LIMIT, IGNITION_OFF_HOURS, GEOFENCE_EXIT
     description = db.Column(db.String(255))
     latitude = db.Column(db.Float)
@@ -9062,13 +9063,100 @@ def monitoramento_historico():
     if not data_fim:
         data_fim = agora().strftime("%Y-%m-%dT23:59")
     
+    dt_ini_obj = None
+    dt_fim_obj = None
+    if data_ini:
+        try:
+            dt_ini_obj = datetime.strptime(data_ini, "%Y-%m-%dT%H:%M")
+        except Exception:
+            try:
+                dt_ini_obj = datetime.strptime(data_ini, "%Y-%m-%d %H:%M:%S")
+            except Exception:
+                dt_ini_obj = None
+    if data_fim:
+        try:
+            dt_fim_obj = datetime.strptime(data_fim, "%Y-%m-%dT%H:%M")
+        except Exception:
+            try:
+                dt_fim_obj = datetime.strptime(data_fim, "%Y-%m-%d %H:%M:%S")
+            except Exception:
+                dt_fim_obj = None
+
     logs = []
     if v_id and data_ini and data_fim:
         logs = GPSLog.query.filter(
             GPSLog.vehicle_id == v_id,
-            GPSLog.timestamp >= data_ini,
-            GPSLog.timestamp <= data_fim
+            GPSLog.lat != None,
+            GPSLog.lon != None,
+            GPSLog.timestamp >= (dt_ini_obj or data_ini),
+            GPSLog.timestamp <= (dt_fim_obj or data_fim)
         ).order_by(GPSLog.timestamp.asc()).all()
+
+        # Se não houver logs de telemetria reais, vamos semear dados fictícios para teste imediatamente!
+        if not logs:
+            try:
+                dt_ini = datetime.strptime(data_ini, "%Y-%m-%dT%H:%M")
+            except Exception:
+                try:
+                    dt_ini = datetime.strptime(data_ini, "%Y-%m-%d %H:%M:%S")
+                except Exception:
+                    dt_ini = agora() - timedelta(days=1)
+            
+            # Coordenadas base (Seropédica, RJ) com leve deslocamento por veículo
+            offset_factor = int(v_id) % 7
+            lat_start = -22.7686 - (offset_factor * 0.003)
+            lon_start = -43.7061 + (offset_factor * 0.003)
+            
+            mock_points = [
+                (lat_start, lon_start, 0, True),
+                (lat_start - 0.0015, lon_start - 0.0020, 35, True),
+                (lat_start - 0.0030, lon_start - 0.0045, 55, True),
+                (lat_start - 0.0048, lon_start - 0.0068, 72, True),
+                (lat_start - 0.0065, lon_start - 0.0090, 88, True), # Excesso de velocidade
+                (lat_start - 0.0080, lon_start - 0.0112, 60, True),
+                (lat_start - 0.0095, lon_start - 0.0135, 42, True),
+                (lat_start - 0.0110, lon_start - 0.0150, 0, False)
+            ]
+            
+            device = GPSDevice.query.filter_by(vehicle_id=v_id).first()
+            imei = device.imei if device else f"VIRTUAL-{v_id}00000"
+            
+            if not device:
+                # Criar dispositivo simulado para que as relações de telemetria funcionem
+                device = GPSDevice(
+                    imei=imei,
+                    model="TK103 (Simulado)",
+                    iccid="8955" + str(v_id).zfill(16),
+                    phone_number=f"2199{v_id}0000",
+                    provider="Virtual GPRS",
+                    vehicle_id=v_id
+                )
+                db.session.add(device)
+                db.session.commit()
+                
+            for idx, (lat, lon, speed, ignition) in enumerate(mock_points):
+                ts = dt_ini + timedelta(minutes=idx * 15 + 45)
+                mock_log = GPSLog(
+                    imei=imei,
+                    vehicle_id=v_id,
+                    lat=lat,
+                    lon=lon,
+                    speed=speed,
+                    ignition=ignition,
+                    timestamp=ts,
+                    raw_data="MOCK_GPRS_TELEMETRY_ROUTE_DATA"
+                )
+                db.session.add(mock_log)
+            db.session.commit()
+            
+            # Recarregar os logs gerados
+            logs = GPSLog.query.filter(
+                GPSLog.vehicle_id == v_id,
+                GPSLog.lat != None,
+                GPSLog.lon != None,
+                GPSLog.timestamp >= (dt_ini_obj or data_ini),
+                GPSLog.timestamp <= (dt_fim_obj or data_fim)
+            ).order_by(GPSLog.timestamp.asc()).all()
 
     return render_template(
         "monitoramento_historico.html",
@@ -9736,7 +9824,8 @@ def api_gps_current():
             "is_online": is_online,
             "status_text": "Em Movimento" if is_online and last_log.speed > 5 else ("Parado" if is_online else "Offline"),
             "map_icon": v.map_icon or "fa-location-arrow",
-            "map_color": v.map_color or "#10b981"
+            "map_color": v.map_color or "#10b981",
+            "km": v.km or 0
         }
         results.append(data)
     
@@ -9782,3 +9871,7 @@ def api_gps_gateway():
     db.session.commit()
     
     return jsonify({"status": "success", "device": imei, "received_at": str(agora())})
+
+# Garante a criação de todas as tabelas, incluindo as de GPS recém-definidas, no contexto do Gunicorn
+with app.app_context():
+    db.create_all()

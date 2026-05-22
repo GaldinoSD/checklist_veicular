@@ -26,15 +26,15 @@
         position: relative;
         display: flex;
         align-items: center;
-        gap: 8px;
-        padding: 6px 12px 6px 6px;
-        border-radius: 20px;
+        gap: 6px;
+        padding: 4px 10px 4px 4px;
+        border-radius: 16px;
         color: #fff;
         font-family: 'Outfit', sans-serif;
         white-space: nowrap;
         transition: transform 0.25s cubic-bezier(0.4,0,0.2,1), box-shadow 0.3s ease;
         cursor: pointer;
-        min-width: 130px;
+        min-width: 105px;
     }
     .marker-card:hover {
         transform: scale(1.08);
@@ -42,14 +42,14 @@
 
     /* Circular icon container */
     .marker-icon-circle {
-        width: 32px;
-        height: 32px;
-        min-width: 32px;
+        width: 26px;
+        height: 26px;
+        min-width: 26px;
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 13px;
+        font-size: 11px;
         transition: transform 0.5s ease;
     }
 
@@ -59,17 +59,33 @@
         flex-direction: column;
         line-height: 1.15;
     }
+    .marker-plate-row {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
     .marker-plate {
-        font-size: 11px;
+        font-size: 9.5px;
         font-weight: 900;
         letter-spacing: 0.5px;
         text-transform: uppercase;
     }
+    .marker-km-badge {
+        font-size: 7px;
+        font-weight: 900;
+        background: rgba(255, 255, 255, 0.22);
+        color: #fff;
+        padding: 1px 3px;
+        border-radius: 4px;
+        letter-spacing: 0.2px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        text-transform: uppercase;
+    }
     .marker-driver {
-        font-size: 9px;
+        font-size: 8px;
         font-weight: 600;
         opacity: 0.8;
-        max-width: 90px;
+        max-width: 75px;
         overflow: hidden;
         text-overflow: ellipsis;
     }
@@ -139,6 +155,57 @@
     }
     .marker-card.is-moving {
         animation: neon-glow 2.5s ease-in-out infinite;
+    }
+
+    /* ===== PREMIUM MARKER CLUSTER OVERRIDES ===== */
+    .marker-cluster-custom {
+        background: rgba(15, 23, 42, 0.75) !important;
+        backdrop-filter: blur(8px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 50% !important;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35), 0 0 16px rgba(13, 148, 136, 0.2) inset;
+        display: flex !important;
+        align-items: center;
+        justify-content: center;
+        color: #fff !important;
+        font-family: 'Outfit', sans-serif;
+        font-weight: 900;
+        font-size: 13px;
+        transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .marker-cluster-custom:hover {
+        transform: scale(1.1);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45), 0 0 20px rgba(13, 148, 136, 0.4) inset;
+    }
+    .marker-cluster-custom div {
+        width: 38px;
+        height: 38px;
+        border-radius: 50%;
+        background: rgba(13, 148, 136, 0.15);
+        border: 2px solid rgba(13, 148, 136, 0.6);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 0 12px rgba(13, 148, 136, 0.3);
+        animation: pulse-cluster 3s infinite;
+    }
+    
+    @keyframes pulse-cluster {
+        0%, 100% { border-color: rgba(13, 148, 136, 0.6); box-shadow: 0 0 12px rgba(13, 148, 136, 0.3); }
+        50% { border-color: rgba(6, 182, 212, 0.8); box-shadow: 0 0 18px rgba(6, 182, 212, 0.5); }
+    }
+
+    /* Zoom-based dynamic scaling for individual markers */
+    .map-zoom-far .marker-card {
+        transform: scale(0.8);
+    }
+    .map-zoom-far .marker-driver,
+    .map-zoom-far .marker-speed,
+    .map-zoom-far .marker-status-badge {
+        display: none !important;
+    }
+    .map-zoom-far .marker-card:hover {
+        transform: scale(1.05);
     }
 
     /* ===== PREMIUM LEAFLET POPUP ===== */
@@ -293,12 +360,34 @@
     .popup-btn-geofence:active {
         transform: scale(0.97);
     }
+
+    /* ===== MODO TV / TELA CHEIA COMPLETA (SIMULADO & PERSISTENTE) ===== */
+    body.tv-mode-active #sidebar {
+        display: none !important;
+    }
+    body.tv-mode-active #main-content {
+        margin-left: 0 !important;
+        padding: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        min-height: 100vh !important;
+    }
+    body.tv-mode-active #fullscreen-container {
+        position: fixed !important;
+        inset: 0 !important;
+        z-index: 99999 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        margin: 0 !important;
+        border-radius: 0 !important;
+        border: none !important;
+    }
 </style>
 
 <div class="flex flex-col h-full w-full overflow-hidden animate-premium relative">
     
     <!-- ✅ ÁREA DO MAPA E HUD FLUTUANTE -->
-    <div class="flex-1 relative lg:m-4 lg:rounded-[2.5rem] overflow-hidden shadow-2xl border-none lg:border border-slate-900/5 dark:border-white/5 bg-white dark:bg-slate-950">
+    <div id="fullscreen-container" class="flex-1 relative lg:m-4 lg:rounded-[2.5rem] overflow-hidden shadow-2xl border-none lg:border border-slate-900/5 dark:border-white/5 bg-white dark:bg-slate-950">
         
         <!-- LEAFLET MAP -->
         <div id="map" class="absolute inset-0 z-0"></div>
@@ -336,6 +425,13 @@
             <button id="btn-expand-hud" onclick="toggleControlPanel(true)" 
                     class="hidden w-12 h-12 rounded-2xl bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border border-slate-900/10 dark:border-white/10 shadow-2xl flex items-center justify-center text-slate-700 dark:text-white hover:scale-105 active:scale-95 transition-all duration-300">
                 <i class="fa-solid fa-satellite-dish text-sm"></i>
+            </button>
+
+            <!-- BOTÃO TELA CHEIA (Fullscreen para TV) -->
+            <button id="btn-fullscreen" onclick="toggleFullscreen()" 
+                    class="w-12 h-12 rounded-2xl bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border border-slate-900/10 dark:border-white/10 shadow-2xl flex items-center justify-center text-slate-700 dark:text-white hover:scale-105 active:scale-95 transition-all duration-300"
+                    title="Tela Cheia (TV)">
+                <i id="fullscreen-icon" class="fa-solid fa-expand text-sm"></i>
             </button>
         </div>
 
@@ -414,14 +510,38 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
+<!-- Leaflet Marker Cluster -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.css" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.4.1/dist/MarkerCluster.Default.css" />
+<script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
+
 <script>
     let map;
+    let markerClusterGroup;
     let markers = {};
     let geofenceCircles = {};
     let vehiclesData = [];
     let currentFilter = 'all';
 
     function initMap() {
+        // Verifica se o Modo TV estava ativo anteriormente
+        const savedTvMode = localStorage.getItem('map_tv_mode');
+        if (savedTvMode === 'enabled') {
+            document.body.classList.add('tv-mode-active');
+            // Colapsa o painel lateral de controle por padrão no Modo TV
+            toggleControlPanel(false);
+            
+            // Inicia o auto-refresh inteligente de 12 horas para painéis/TVs de monitoramento
+            setTimeout(() => {
+                window.location.reload();
+            }, 12 * 60 * 60 * 1000); // 12 horas
+            
+            // Atualiza a interface do botão após o carregamento do DOM
+            setTimeout(() => {
+                updateFullscreenUI(true);
+            }, 100);
+        }
+
         map = L.map('map', {
             zoomControl: false,
             attributionControl: false
@@ -429,6 +549,32 @@
         
         L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png').addTo(map);
         L.control.zoom({ position: 'bottomleft' }).addTo(map);
+        
+        // Inicializa o cluster group de marcadores com tema unificado escuro/teal
+        markerClusterGroup = L.markerClusterGroup({
+            showCoverageOnHover: false,
+            maxClusterRadius: 45,
+            iconCreateFunction: function(cluster) {
+                const count = cluster.getChildCount();
+                return L.divIcon({
+                    html: `<div>${count}</div>`,
+                    className: 'marker-cluster-custom',
+                    iconSize: L.point(44, 44)
+                });
+            }
+        });
+        map.addLayer(markerClusterGroup);
+        
+        // Listener de zoom para escala dinâmica dos marcadores
+        map.on('zoomend', function() {
+            const zoom = map.getZoom();
+            const mapDiv = document.getElementById('map');
+            if (zoom < 14) {
+                mapDiv.classList.add('map-zoom-far');
+            } else {
+                mapDiv.classList.remove('map-zoom-far');
+            }
+        });
         
         fetchData();
         fetchAlerts();
@@ -619,7 +765,10 @@
                              (currentFilter === 'offline' && !v.is_online);
 
             if(!isVisible) {
-                if(markers[v.id]) markers[v.id].remove();
+                if(markers[v.id]) {
+                    markerClusterGroup.removeLayer(markers[v.id]);
+                    markers[v.id] = null;
+                }
                 return;
             }
 
@@ -648,23 +797,24 @@
                         <div class="marker-status-badge ${badgeClass}">
                             <i class="fa-solid fa-power-off"></i>
                         </div>
-                        <!-- Speed Pill (top-right, only when moving) -->
-                        ${v.is_online && v.speed > 2 ? `<div class="marker-speed">${speedText} km/h</div>` : ''}
                         <!-- Circular Icon -->
                         <div class="marker-icon-circle" style="background:${v.is_online ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.15)'}; ${rotation}">
                             <i class="fa-solid ${iconClass}"></i>
                         </div>
-                        <!-- Text: Plate + Driver -->
+                        <!-- Text: Plate & KM Badge + Driver -->
                         <div class="marker-text">
-                            <span class="marker-plate">${v.plate}</span>
+                            <div class="marker-plate-row">
+                                <span class="marker-plate">${v.plate}</span>
+                                <span class="marker-km-badge">${Math.round(v.speed)} KM/H</span>
+                            </div>
                             ${driverName ? `<span class="marker-driver">${driverName}</span>` : ''}
                         </div>
                         <!-- Triangle Pointer -->
                         <div class="marker-pointer" style="${pointerColor}"></div>
                     </div>
                 `,
-                iconSize: [160, 56],
-                iconAnchor: [80, 56]
+                iconSize: [128, 46],
+                iconAnchor: [64, 46]
             });
 
             const ignitionText = v.ignition ? 'Ligada' : 'Desligada';
@@ -744,10 +894,14 @@
                 if (!markers[v.id].isPopupOpen()) {
                     markers[v.id].setPopupContent(popupContent);
                 }
-                markers[v.id].addTo(map);
+                // Adiciona de volta ao cluster se por acaso estiver fora
+                if (!markerClusterGroup.hasLayer(markers[v.id])) {
+                    markerClusterGroup.addLayer(markers[v.id]);
+                }
             } else {
-                markers[v.id] = L.marker([v.lat, v.lon], { icon: icon }).addTo(map)
+                markers[v.id] = L.marker([v.lat, v.lon], { icon: icon })
                     .bindPopup(popupContent, { maxWidth: 280, minWidth: 240 });
+                markerClusterGroup.addLayer(markers[v.id]);
             }
         });
     }
@@ -856,6 +1010,77 @@
             hud.classList.add('max-h-[50px]');
         }
     }
+
+    function updateFullscreenUI(active) {
+        const icon = document.getElementById('fullscreen-icon');
+        const btn = document.getElementById('btn-fullscreen');
+        if (!icon || !btn) return;
+        if (active) {
+            icon.classList.remove('fa-expand');
+            icon.classList.add('fa-compress');
+            btn.title = "Sair do Modo TV (Esc)";
+        } else {
+            icon.classList.remove('fa-compress');
+            icon.classList.add('fa-expand');
+            btn.title = "Tela Cheia (TV)";
+        }
+    }
+
+    function toggleFullscreen() {
+        const body = document.body;
+        const isTvActive = body.classList.contains('tv-mode-active');
+        const container = document.getElementById('fullscreen-container');
+
+        if (!isTvActive) {
+            body.classList.add('tv-mode-active');
+            localStorage.setItem('map_tv_mode', 'enabled');
+            toggleControlPanel(false); // Colapsa painel lateral de veículos
+            
+            // Tenta ativar o fullscreen nativo do navegador
+            if (!document.fullscreenElement && container) {
+                container.requestFullscreen().catch(err => {
+                    console.log("Fullscreen nativo não suportado ou rejeitado:", err.message);
+                });
+            }
+            
+            updateFullscreenUI(true);
+            showToast('Modo TV (Tela Cheia) ativado!', 'success');
+        } else {
+            body.classList.remove('tv-mode-active');
+            localStorage.setItem('map_tv_mode', 'disabled');
+            toggleControlPanel(true); // Restaura painel lateral
+            
+            if (document.fullscreenElement) {
+                document.exitFullscreen().catch(err => {});
+            }
+            
+            updateFullscreenUI(false);
+            showToast('Modo TV desativado.', 'info');
+        }
+
+        setTimeout(() => {
+            if (map) map.invalidateSize();
+        }, 200);
+    }
+
+    document.addEventListener('fullscreenchange', () => {
+        const body = document.body;
+        const isNativeActive = !!document.fullscreenElement;
+        const isTvActive = body.classList.contains('tv-mode-active');
+
+        // Se sair do fullscreen nativo mas o Modo TV de CSS estava ativo (ex: pressionou ESC no teclado),
+        // sincroniza o estado de volta para layout normal.
+        if (!isNativeActive && isTvActive) {
+            body.classList.remove('tv-mode-active');
+            localStorage.setItem('map_tv_mode', 'disabled');
+            toggleControlPanel(true);
+            updateFullscreenUI(false);
+        }
+
+        setTimeout(() => {
+            if (map) map.invalidateSize();
+        }, 200);
+    });
 
     document.getElementById('searchVehicle').addEventListener('input', renderVehicleList);
     window.onload = initMap;
