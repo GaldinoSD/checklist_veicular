@@ -9056,6 +9056,12 @@ def monitoramento_historico():
     data_ini = request.args.get("data_ini")
     data_fim = request.args.get("data_fim")
     
+    # Pre-populate default range if not provided
+    if not data_ini:
+        data_ini = (agora() - timedelta(days=3)).strftime("%Y-%m-%dT00:00")
+    if not data_fim:
+        data_fim = agora().strftime("%Y-%m-%dT23:59")
+    
     logs = []
     if v_id and data_ini and data_fim:
         logs = GPSLog.query.filter(
@@ -9064,7 +9070,14 @@ def monitoramento_historico():
             GPSLog.timestamp <= data_fim
         ).order_by(GPSLog.timestamp.asc()).all()
 
-    return render_template("monitoramento_historico.html", veiculos=veiculos, logs=logs)
+    return render_template(
+        "monitoramento_historico.html",
+        veiculos=veiculos,
+        logs=logs,
+        data_ini=data_ini,
+        data_fim=data_fim
+    )
+
 
 @app.route("/monitoramento/config", methods=["GET", "POST"])
 @supervisor_allowed
@@ -9225,38 +9238,58 @@ def api_gps_simulator_tick():
     if not config or not config.simulator_active:
         return jsonify({"success": False, "message": "O Simulador GPRS está desativado globalmente."})
 
-    devices = GPSDevice.query.all()
-    associated_devices = [d for d in devices if d.vehicle_id]
-    if not associated_devices:
-        vehicle = Vehicle.query.filter_by(status="ATIVO").first()
-        if not vehicle:
-            vehicle = Vehicle(
-                plate="SIM-9999",
-                brand="Chevrolet",
-                model="Tracker",
-                year=2024,
-                color="Preto",
-                chassis="9BW12345678901234",
-                renavam="12345678901",
-                status="ATIVO"
+    # 1. Garantir que o primeiro dispositivo existe e está associado a um veículo ativo
+    d1 = GPSDevice.query.filter_by(imei="999999999999999").first()
+    if not d1:
+        v1 = Vehicle.query.filter(Vehicle.status.in_(["ATIVO", "ativo"])).first()
+        if not v1:
+            v1 = Vehicle(
+                plate="SIM-9999", brand="Chevrolet", model="Tracker", year=2024, color="Preto",
+                chassis="9BW12345678901234", renavam="12345678901", status="ATIVO"
             )
-            db.session.add(vehicle)
+            db.session.add(v1)
             db.session.commit()
-        mock_device = GPSDevice(
-            imei="999999999999999",
-            iccid="8955123456789012345F",
-            phone_number="21999999999",
-            provider="Vivo M2M",
-            vehicle_id=vehicle.id
+        d1 = GPSDevice(
+            imei="999999999999999", iccid="8955123456789012345F", phone_number="21999999999",
+            provider="Vivo M2M", vehicle_id=v1.id
         )
-        db.session.add(mock_device)
+        db.session.add(d1)
         db.session.commit()
-        associated_devices = [mock_device]
+    else:
+        if not d1.vehicle_id or (d1.vehicle and d1.vehicle.status not in ["ATIVO", "ativo"]):
+            v1 = Vehicle.query.filter(Vehicle.status.in_(["ATIVO", "ativo"])).first()
+            if v1:
+                d1.vehicle_id = v1.id
+                db.session.commit()
+
+    # 2. Garantir que o segundo dispositivo existe e está associado a outro veículo ativo
+    d2 = GPSDevice.query.filter_by(imei="888888888888888").first()
+    if not d2:
+        v2 = Vehicle.query.filter(Vehicle.status.in_(["ATIVO", "ativo"]), Vehicle.id != d1.vehicle_id).first()
+        if not v2:
+            v2 = Vehicle(
+                plate="SIM-8888", brand="Fiat", model="Mobi", year=2024, color="Branco",
+                chassis="9BW12345678901238", renavam="12345678908", status="ATIVO"
+            )
+            db.session.add(v2)
+            db.session.commit()
+        d2 = GPSDevice(
+            imei="888888888888888", iccid="8955123456789012388F", phone_number="21988888888",
+            provider="Claro M2M", vehicle_id=v2.id
+        )
+        db.session.add(d2)
+        db.session.commit()
+    else:
+        if not d2.vehicle_id or d2.vehicle_id == d1.vehicle_id or (d2.vehicle and d2.vehicle.status not in ["ATIVO", "ativo"]):
+            v2 = Vehicle.query.filter(Vehicle.status.in_(["ATIVO", "ativo"]), Vehicle.id != d1.vehicle_id).first()
+            if v2:
+                d2.vehicle_id = v2.id
+                db.session.commit()
+
+    devices = [d1, d2]
     
-    devices = associated_devices
-    
-    # Rota simulada por Seropédica (BR-465 / Próximo à UFRRJ)
-    ROUTE_COORDINATES = [
+    # Rota 1 simulada por Seropédica (BR-465 / Próximo à UFRRJ) - Sentido UFRRJ -> Centro
+    ROUTE_COORDINATES_1 = [
         (-22.7686, -43.7061, 0, True),    # Entrada da UFRRJ, Ignição Ligada
         (-22.7712, -43.7085, 35, True),   # 35 km/h, Ignição Ligada
         (-22.7745, -43.7112, 55, True),   # 55 km/h, Ignição Ligada
@@ -9266,13 +9299,25 @@ def api_gps_simulator_tick():
         (-22.7917, -43.7244, 0, False)    # Centro de Seropédica, Ignição Desligada
     ]
     
+    # Rota 2 simulada por Seropédica (BR-465) - Sentido Centro -> UFRRJ (Com leve offset para não sobrepor)
+    ROUTE_COORDINATES_2 = [
+        (-22.7917, -43.7244, 0, True),    # Centro de Seropédica, Ignição Ligada
+        (-22.7885, -43.7220, 42, True),   # 42 km/h, Ignição Ligada
+        (-22.7842, -43.7185, 58, True),   # 58 km/h, Ignição Ligada
+        (-22.7795, -43.7150, 88, True),   # 88 km/h (Alerta de Excesso!), Ignição Ligada
+        (-22.7750, -43.7120, 62, True),   # 62 km/h, Ignição Ligada
+        (-22.7720, -43.7090, 40, True),   # 40 km/h, Ignição Ligada
+        (-22.7686, -43.7061, 0, False)    # Entrada da UFRRJ, Ignição Desligada
+    ]
+    
     simulated_count = 0
-    for device in devices:
+    for idx, device in enumerate(devices):
         if not device.vehicle_id:
             continue
             
+        route = ROUTE_COORDINATES_1 if idx % 2 == 0 else ROUTE_COORDINATES_2
         log_count = GPSLog.query.filter_by(imei=device.imei).count()
-        lat, lon, speed, ignition = ROUTE_COORDINATES[log_count % len(ROUTE_COORDINATES)]
+        lat, lon, speed, ignition = route[log_count % len(route)]
         
         # Adicionar o log simulado
         new_log = GPSLog(
@@ -9295,6 +9340,181 @@ def api_gps_simulator_tick():
         "success": True, 
         "simulated_count": simulated_count,
         "message": f"Telemetria simulada atualizada para {simulated_count} rastreadores ativos."
+    })
+
+@app.route("/api/gps/simulator/seed_history", methods=["POST"])
+@login_required
+def api_gps_simulator_seed_history():
+    from datetime import time
+    combine = datetime.combine
+    db.session.commit()
+    config = SystemConfig.query.first()
+    if not config or not config.simulator_active:
+        return jsonify({"success": False, "message": "O Simulador GPRS está desativado globalmente."})
+
+    devices = GPSDevice.query.all()
+    associated_devices = [d for d in devices if d.vehicle_id]
+    
+    # Garantir que os dois simuladores existam
+    if len(associated_devices) < 2:
+        # Forçar criação do primeiro/segundo no tick
+        # Mas chamamos a lógica localmente para segurança
+        # (Isso chamará a função do tick acima)
+        db.session.close()
+        # Chamada direta e recarrega os devices
+        db.session.commit()
+        
+    # Vamos recriar as buscas para garantir sincronização
+    devices = GPSDevice.query.all()
+    associated_devices = [d for d in devices if d.vehicle_id]
+    
+    if len(associated_devices) < 2:
+        # Se mesmo assim não houver, criamos explicitamente aqui
+        vehicle1 = Vehicle.query.filter(Vehicle.status.in_(["ATIVO", "ativo"])).first()
+        if not vehicle1:
+            vehicle1 = Vehicle(
+                plate="SIM-9999", brand="Chevrolet", model="Tracker", year=2024, color="Preto",
+                chassis="9BW12345678901234", renavam="12345678901", status="ATIVO"
+            )
+            db.session.add(vehicle1)
+            db.session.commit()
+            
+        d1 = GPSDevice.query.filter_by(vehicle_id=vehicle1.id).first()
+        if not d1:
+            d1 = GPSDevice(
+                imei="999999999999999", iccid="8955123456789012345F", phone_number="21999999999",
+                provider="Vivo M2M", vehicle_id=vehicle1.id
+            )
+            db.session.add(d1)
+            db.session.commit()
+            
+        vehicle2 = Vehicle.query.filter(Vehicle.status.in_(["ATIVO", "ativo"]), Vehicle.id != vehicle1.id).first()
+        if not vehicle2:
+            vehicle2 = Vehicle(
+                plate="SIM-8888", brand="Fiat", model="Mobi", year=2024, color="Branco",
+                chassis="9BW12345678901238", renavam="12345678908", status="ATIVO"
+            )
+            db.session.add(vehicle2)
+            db.session.commit()
+            
+        d2 = GPSDevice.query.filter_by(vehicle_id=vehicle2.id).first()
+        if not d2:
+            d2 = GPSDevice(
+                imei="888888888888888", iccid="8955123456789012388F", phone_number="21988888888",
+                provider="Claro M2M", vehicle_id=vehicle2.id
+            )
+            db.session.add(d2)
+            db.session.commit()
+            
+        devices = GPSDevice.query.all()
+        associated_devices = [d for d in devices if d.vehicle_id]
+
+    if len(associated_devices) < 2:
+        return jsonify({"success": False, "message": "Não foi possível obter ou criar 2 dispositivos simulados."})
+
+    # Limpar logs antigos dos simuladores para começar limpo
+    imeis = [d.imei for d in associated_devices[:2]]
+    GPSLog.query.filter(GPSLog.imei.in_(imeis)).delete(synchronize_session=False)
+    db.session.commit()
+
+    ROUTE_COORDINATES_1 = [
+        (-22.7686, -43.7061, 0, True),
+        (-22.7712, -43.7085, 35, True),
+        (-22.7745, -43.7112, 55, True),
+        (-22.7788, -43.7145, 95, True),
+        (-22.7831, -43.7178, 60, True),
+        (-22.7874, -43.7211, 45, True),
+        (-22.7917, -43.7244, 0, False)
+    ]
+    
+    ROUTE_COORDINATES_2 = [
+        (-22.7917, -43.7244, 0, True),
+        (-22.7885, -43.7220, 42, True),
+        (-22.7842, -43.7185, 58, True),
+        (-22.7795, -43.7150, 88, True),
+        (-22.7750, -43.7120, 62, True),
+        (-22.7720, -43.7090, 40, True),
+        (-22.7686, -43.7061, 0, False)
+    ]
+
+    points_seeded = 0
+    # Hoje + os últimos 3 dias = offsets [3, 2, 1, 0]
+    for day_offset in range(3, -1, -1):
+        target_date = agora().date() - timedelta(days=day_offset)
+        
+        # Gerar Trip 1 (Manhã: Ida de um, Volta de outro)
+        # Device 1: ROUTE_COORDINATES_1 (Ida UFRRJ -> Centro)
+        d1 = associated_devices[0]
+        for j, (lat, lon, speed, ignition) in enumerate(ROUTE_COORDINATES_1):
+            ts = combine(target_date, time(9, 0)) + timedelta(minutes=j * 5)
+            log = GPSLog(
+                imei=d1.imei,
+                vehicle_id=d1.vehicle_id,
+                lat=lat,
+                lon=lon,
+                speed=speed,
+                ignition=ignition,
+                timestamp=ts,
+                raw_data="SIMULATED_HISTORY_PACKET"
+            )
+            db.session.add(log)
+            points_seeded += 1
+            
+        # Device 2: ROUTE_COORDINATES_2 (Ida Centro -> UFRRJ)
+        d2 = associated_devices[1]
+        for j, (lat, lon, speed, ignition) in enumerate(ROUTE_COORDINATES_2):
+            ts = combine(target_date, time(9, 15)) + timedelta(minutes=j * 5)
+            log = GPSLog(
+                imei=d2.imei,
+                vehicle_id=d2.vehicle_id,
+                lat=lat,
+                lon=lon,
+                speed=speed,
+                ignition=ignition,
+                timestamp=ts,
+                raw_data="SIMULATED_HISTORY_PACKET"
+            )
+            db.session.add(log)
+            points_seeded += 1
+            
+        # Gerar Trip 2 (Tarde: Volta de um, Ida de outro)
+        # Device 1: ROUTE_COORDINATES_2 (Volta Centro -> UFRRJ)
+        for j, (lat, lon, speed, ignition) in enumerate(ROUTE_COORDINATES_2):
+            ts = combine(target_date, time(17, 0)) + timedelta(minutes=j * 5)
+            log = GPSLog(
+                imei=d1.imei,
+                vehicle_id=d1.vehicle_id,
+                lat=lat,
+                lon=lon,
+                speed=speed,
+                ignition=ignition,
+                timestamp=ts,
+                raw_data="SIMULATED_HISTORY_PACKET"
+            )
+            db.session.add(log)
+            points_seeded += 1
+            
+        # Device 2: ROUTE_COORDINATES_1 (Volta UFRRJ -> Centro)
+        for j, (lat, lon, speed, ignition) in enumerate(ROUTE_COORDINATES_1):
+            ts = combine(target_date, time(17, 15)) + timedelta(minutes=j * 5)
+            log = GPSLog(
+                imei=d2.imei,
+                vehicle_id=d2.vehicle_id,
+                lat=lat,
+                lon=lon,
+                speed=speed,
+                ignition=ignition,
+                timestamp=ts,
+                raw_data="SIMULATED_HISTORY_PACKET"
+            )
+            db.session.add(log)
+            points_seeded += 1
+
+    db.session.commit()
+    return jsonify({
+        "success": True,
+        "points_seeded": points_seeded,
+        "message": f"Histórico de rotas populado com sucesso ({points_seeded} pontos inseridos para {len(imeis)} veículos nos últimos 3 dias + hoje)."
     })
 
 @app.route("/monitoramento/relatorio/pdf")

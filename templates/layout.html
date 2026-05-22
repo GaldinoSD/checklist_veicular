@@ -1,6 +1,17 @@
 <!doctype html>
 <html lang="pt-BR" class="h-full">
   <head>
+    {% if current_user.is_authenticated %}
+    <script>
+      console.log("[SessionCheck] sessionStorage.session_active =", sessionStorage.getItem('session_active'));
+      if (!sessionStorage.getItem('session_active')) {
+        console.warn("[SessionCheck] No active session found in sessionStorage. Redirecting to logout...");
+        window.location.replace("{{ url_for('logout') }}");
+      } else {
+        console.log("[SessionCheck] Active session verified.");
+      }
+    </script>
+    {% endif %}
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{{ page_title or 'Sistema' }}</title>

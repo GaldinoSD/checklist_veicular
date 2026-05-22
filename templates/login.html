@@ -119,7 +119,7 @@
   <div class="bg-overlay"></div>
 
   <!-- CARD GLASS -->
-  <form method="post" {% if is_preview %}onsubmit="event.preventDefault(); alert('Modo Pré-visualização: a autenticação foi desativada temporariamente.'); return false;"{% endif %}
+  <form method="post" {% if is_preview %}onsubmit="event.preventDefault(); alert('Modo Pré-visualização: a autenticação foi desativada temporariamente.'); return false;"{% else %}onsubmit="sessionStorage.setItem('session_active', 'true');"{% endif %}
         class="login-card relative z-10 w-full max-w-sm backdrop-blur-md
                bg-black/60 
                border border-white/10 
