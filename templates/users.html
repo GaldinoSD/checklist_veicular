@@ -174,175 +174,224 @@
             </div>
           </td>
         </tr>
-
-        <!-- Modal Editar -->
-        <div id="modalEdit{{ u.id }}" class="fixed inset-0 hidden items-center justify-center z-[100] p-4">
-          <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="closeModal('modalEdit{{ u.id }}')"></div>
-          <div class="relative w-full max-w-md rounded-[2rem] bg-white dark:bg-slate-900 border border-slate-900/10 dark:border-white/10 shadow-2xl overflow-hidden animate-premium">
-            <div class="p-8 border-b border-slate-900/5 dark:border-white/5">
-              <h3 class="text-2xl font-black text-slate-900 dark:text-white">Ajustar Perfil</h3>
-              <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Colaborador: {{ u.username }}</p>
-            </div>
-            <div class="p-8">
-              <form method="post" action="{{ url_for('users_pwd', uid=u.id) }}" class="space-y-6">
-                <div>
-                  <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Alterar Senha</label>
-                  <input name="password" type="password" placeholder="Digite a nova senha" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl px-5 py-3.5 text-sm dark:text-white outline-none focus:ring-4 focus:ring-blue-500/10 transition-all">
-                </div>
-                
-                {% if u.username == 'admin' %}
-                <div class="p-5 bg-red-500/5 border border-red-500/20 rounded-2xl">
-                  <label class="text-[10px] font-black text-red-600 uppercase tracking-widest mb-2 block">Senha Mestre Requerida</label>
-                  <input name="master_key" type="password" placeholder="Senha do Admin Principal" required class="w-full bg-white dark:bg-white/5 border border-red-500/20 rounded-xl px-4 py-3 text-sm outline-none">
-                </div>
-                {% endif %}
-
-                {% if u.username != 'admin' %}
-                <div>
-                  <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Perfil de Acesso</label>
-                  <select name="role" form="formRole{{ u.id }}" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl px-5 py-3.5 text-sm dark:text-white outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all cursor-pointer">
-                    <option value="tech" {% if u.role == 'tech' %}selected{% endif %}>Técnico</option>
-                    <option value="supervisor" {% if u.role == 'supervisor' %}selected{% endif %}>Supervisor</option>
-                    <option value="admin" {% if u.role == 'admin' %}selected{% endif %}>Administrador</option>
-                    <option value="manutencao" {% if u.role == 'manutencao' %}selected{% endif %}>Manutenção</option>
-                  </select>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">E-mail</label>
-                    <input name="email" type="email" value="{{ u.email or '' }}" placeholder="ex@email.com" form="formRole{{ u.id }}" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl px-5 py-3 text-sm dark:text-white outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all">
-                  </div>
-                  <div>
-                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Telefone</label>
-                    <input name="phone" type="text" value="{{ u.phone or '' }}" placeholder="(00) 00000-0000" form="formRole{{ u.id }}" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl px-5 py-3 text-sm dark:text-white outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all">
-                  </div>
-                </div>
-                {% endif %}
-
-                <div class="flex flex-col gap-3 pt-4">
-                  <button formaction="{{ url_for('users_pwd', uid=u.id) }}" class="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-xl shadow-blue-500/30 transition-all active:scale-95">Salvar Nova Senha</button>
-                  {% if u.username != 'admin' %}
-                  <button form="formRole{{ u.id }}" class="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-xl shadow-indigo-500/30 transition-all active:scale-95">Atualizar Dados</button>
-                  {% endif %}
-                  <button type="button" onclick="closeModal('modalEdit{{ u.id }}')" class="w-full py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] hover:text-slate-600 transition-colors">Cancelar</button>
-                </div>
-              </form>
-              <form id="formRole{{ u.id }}" method="post" action="{{ url_for('users_role', uid=u.id) }}"></form>
-            </div>
-          </div>
-        </div>
-
-        <!-- Modal Permissões -->
-        <div id="modalPermissoes{{ u.id }}" class="fixed inset-0 hidden items-center justify-center z-[100] p-4">
-          <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="closeModal('modalPermissoes{{ u.id }}')"></div>
-          <div class="relative w-full max-w-4xl max-h-[90vh] flex flex-col rounded-[2rem] bg-white dark:bg-slate-900 border border-slate-900/10 dark:border-white/10 shadow-2xl overflow-hidden animate-premium">
-            <div class="p-6 border-b border-slate-900/5 dark:border-white/5 bg-slate-50/50 dark:bg-white/5 flex justify-between items-center">
-              <div>
-                <h3 class="text-2xl font-black text-slate-900 dark:text-white flex items-center gap-2">
-                   <i class="fa-solid fa-user-lock text-purple-500"></i> Controle de Acesso
-                </h3>
-                <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Colaborador: {{ u.username }} | Perfil Base: {{ u.role }}</p>
-              </div>
-              <button onclick="closeModal('modalPermissoes{{ u.id }}')" class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-slate-200 dark:hover:bg-white/10 text-slate-400 transition-all"><i class="fa-solid fa-xmark"></i></button>
-            </div>
-            
-            <form method="post" action="{{ url_for('users_permissions', uid=u.id) }}" class="flex-1 flex flex-col overflow-hidden">
-                <div class="flex-1 overflow-y-auto p-6 custom-scrollbar">
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        <!-- Auditoria -->
-                        <div class="p-5 bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl">
-                            <h4 class="text-xs font-black text-slate-500 uppercase tracking-widest mb-4"><i class="fa-solid fa-chart-pie mr-1"></i> Visão Geral e Auditoria</h4>
-                            <div class="space-y-3">
-                                <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_dashboard" value="on" {% if u.has_permission('dashboard') %}checked{% endif %} class="rounded text-purple-600 focus:ring-purple-500"> <span class="text-sm text-slate-700 dark:text-gray-300 group-hover:text-purple-600">Dashboard Central</span></label>
-                                <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_logs" value="on" {% if u.has_permission('logs') %}checked{% endif %} class="rounded text-purple-600 focus:ring-purple-500"> <span class="text-sm text-slate-700 dark:text-gray-300 group-hover:text-purple-600">Logs do Sistema</span></label>
-                                <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_relatorios" value="on" {% if u.has_permission('relatorios') %}checked{% endif %} class="rounded text-purple-600 focus:ring-purple-500"> <span class="text-sm text-slate-700 dark:text-gray-300 group-hover:text-purple-600">Relatórios</span></label>
-                                <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_avisos" value="on" {% if u.has_permission('avisos') %}checked{% endif %} class="rounded text-purple-600 focus:ring-purple-500"> <span class="text-sm text-slate-700 dark:text-gray-300 group-hover:text-purple-600">Central de Avisos</span></label>
-                                <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_whatsapp_conversas" value="on" {% if u.has_permission('whatsapp_conversas') %}checked{% endif %} class="rounded text-purple-600 focus:ring-purple-500"> <span class="text-sm text-slate-700 dark:text-gray-300 group-hover:text-purple-600">WhatsApp Conversas</span></label>
-                                <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_whatsapp_evolution" value="on" {% if u.has_permission('whatsapp_evolution') %}checked{% endif %} class="rounded text-purple-600 focus:ring-purple-500"> <span class="text-sm text-slate-700 dark:text-gray-300 group-hover:text-purple-600">WhatsApp Configurações</span></label>
-                            </div>
-                        </div>
-                        
-                        <!-- Frota e Usuarios -->
-                        <div class="p-5 bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl">
-                            <h4 class="text-xs font-black text-slate-500 uppercase tracking-widest mb-4"><i class="fa-solid fa-users mr-1"></i> Frota e Usuários</h4>
-                            <div class="space-y-3">
-                                <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_usuarios" value="on" {% if u.has_permission('usuarios') %}checked{% endif %} class="rounded text-purple-600 focus:ring-purple-500"> <span class="text-sm text-slate-700 dark:text-gray-300 group-hover:text-purple-600">Usuários</span></label>
-                                <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_veiculos" value="on" {% if u.has_permission('veiculos') %}checked{% endif %} class="rounded text-purple-600 focus:ring-purple-500"> <span class="text-sm text-slate-700 dark:text-gray-300 group-hover:text-purple-600">Veículos (Cadastro Base)</span></label>
-                                <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_controle_veiculos" value="on" {% if u.has_permission('controle_veiculos') %}checked{% endif %} class="rounded text-purple-600 focus:ring-purple-500"> <span class="text-sm text-slate-700 dark:text-gray-300 group-hover:text-purple-600">Controle de Frota</span></label>
-                            </div>
-                        </div>
-
-                        <!-- Operação e Manutenção -->
-                        <div class="p-5 bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl">
-                            <h4 class="text-xs font-black text-slate-500 uppercase tracking-widest mb-4"><i class="fa-solid fa-wrench mr-1"></i> Operação e Manutenção</h4>
-                            <div class="space-y-3">
-                                <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_checklist_mobile" value="on" {% if u.has_permission('checklist_mobile') %}checked{% endif %} class="rounded text-purple-600 focus:ring-purple-500"> <span class="text-sm font-bold text-emerald-600 dark:text-emerald-400 group-hover:text-purple-600">Checklist Mobile</span></label>
-                                <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_treinamentos_mobile" value="on" {% if u.has_permission('treinamentos_mobile') %}checked{% endif %} class="rounded text-purple-600 focus:ring-purple-500"> <span class="text-sm font-bold text-emerald-600 dark:text-emerald-400 group-hover:text-purple-600">Treinamentos Mobile</span></label>
-                                <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_vistorias_nova" value="on" {% if u.has_permission('vistorias_nova') %}checked{% endif %} class="rounded text-purple-600 focus:ring-purple-500"> <span class="text-sm font-bold text-emerald-600 dark:text-emerald-400 group-hover:text-purple-600">Nova Vistoria</span></label>
-                                <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_avarias" value="on" {% if u.has_permission('avarias') %}checked{% endif %} class="rounded text-purple-600 focus:ring-purple-500"> <span class="text-sm text-slate-700 dark:text-gray-300 group-hover:text-purple-600">Registro de Avarias</span></label>
-                                <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_checklists_view" value="on" {% if u.has_permission('checklists_view') %}checked{% endif %} class="rounded text-purple-600 focus:ring-purple-500"> <span class="text-sm text-slate-700 dark:text-gray-300 group-hover:text-purple-600">Histórico de Checklists</span></label>
-                                <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_config_checklist" value="on" {% if u.has_permission('config_checklist') %}checked{% endif %} class="rounded text-purple-600 focus:ring-purple-500"> <span class="text-sm text-slate-700 dark:text-gray-300 group-hover:text-purple-600">Configuração de Checklists</span></label>
-                                <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_config_layout" value="on" {% if u.has_permission('config_layout') %}checked{% endif %} class="rounded text-purple-600 focus:ring-purple-500"> <span class="text-sm text-slate-700 dark:text-gray-300 group-hover:text-purple-600">Configuração de Layout</span></label>
-                                <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_manutencao_os" value="on" {% if u.has_permission('manutencao_os') %}checked{% endif %} class="rounded text-purple-600 focus:ring-purple-500"> <span class="text-sm font-bold text-orange-600 dark:text-orange-400 group-hover:text-purple-600">Manutenção / OS</span></label>
-                                <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_vistorias_list" value="on" {% if u.has_permission('vistorias_list') %}checked{% endif %} class="rounded text-purple-600 focus:ring-purple-500"> <span class="text-sm text-slate-700 dark:text-gray-300 group-hover:text-purple-600">Painel de Vistorias</span></label>
-                            </div>
-                        </div>
-
-                        <!-- Monitoramento GPS -->
-                        <div class="p-5 bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl">
-                            <h4 class="text-xs font-black text-slate-500 uppercase tracking-widest mb-4"><i class="fa-solid fa-satellite-dish mr-1"></i> Monitoramento GPS</h4>
-                            <div class="space-y-3">
-                                <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_frota" value="on" {% if u.has_permission('frota') %}checked{% endif %} class="rounded text-purple-600 focus:ring-purple-500"> <span class="text-sm text-slate-700 dark:text-gray-300 group-hover:text-purple-600">Mapa ao Vivo</span></label>
-                                <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_monitoramento_aparelhos" value="on" {% if u.has_permission('monitoramento_aparelhos') %}checked{% endif %} class="rounded text-purple-600 focus:ring-purple-500"> <span class="text-sm text-slate-700 dark:text-gray-300 group-hover:text-purple-600">Aparelhos GPS</span></label>
-                                <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_monitoramento_historico" value="on" {% if u.has_permission('monitoramento_historico') %}checked{% endif %} class="rounded text-purple-600 focus:ring-purple-500"> <span class="text-sm text-slate-700 dark:text-gray-300 group-hover:text-purple-600">Histórico de Rotas</span></label>
-                                <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_monitoramento_config" value="on" {% if u.has_permission('monitoramento_config') %}checked{% endif %} class="rounded text-purple-600 focus:ring-purple-500"> <span class="text-sm text-slate-700 dark:text-gray-300 group-hover:text-purple-600">Configurações GPS</span></label>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Gestão Técnica -->
-                    <div class="mt-6 p-5 bg-indigo-50/50 dark:bg-indigo-900/10 border border-indigo-200 dark:border-indigo-900/30 rounded-2xl">
-                        <div class="flex items-center gap-3 mb-4">
-                            <div class="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600">
-                                <i class="fa-solid fa-cogs"></i>
-                            </div>
-                            <h4 class="text-sm font-black text-indigo-800 dark:text-indigo-400 uppercase tracking-widest">Gestão Técnica (Controle Fino)</h4>
-                        </div>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-                            <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_gestao_equipes" value="on" {% if u.has_permission('gestao_equipes') %}checked{% endif %} class="rounded text-indigo-600 focus:ring-indigo-500"> <span class="text-xs font-bold text-slate-700 dark:text-gray-300 group-hover:text-indigo-600">Equipes</span></label>
-                            <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_gestao_calendario" value="on" {% if u.has_permission('gestao_calendario') %}checked{% endif %} class="rounded text-indigo-600 focus:ring-indigo-500"> <span class="text-xs font-bold text-slate-700 dark:text-gray-300 group-hover:text-indigo-600">Calendário</span></label>
-                            <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_gestao_escalas" value="on" {% if u.has_permission('gestao_escalas') %}checked{% endif %} class="rounded text-indigo-600 focus:ring-indigo-500"> <span class="text-xs font-bold text-slate-700 dark:text-gray-300 group-hover:text-indigo-600">Escalas</span></label>
-                            <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_gestao_reunioes" value="on" {% if u.has_permission('gestao_reunioes') %}checked{% endif %} class="rounded text-indigo-600 focus:ring-indigo-500"> <span class="text-xs font-bold text-slate-700 dark:text-gray-300 group-hover:text-indigo-600">Reuniões</span></label>
-                            <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_gestao_anotacoes" value="on" {% if u.has_permission('gestao_anotacoes') %}checked{% endif %} class="rounded text-indigo-600 focus:ring-indigo-500"> <span class="text-xs font-bold text-slate-700 dark:text-gray-300 group-hover:text-indigo-600">Anotações</span></label>
-                            <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_gestao_atividades" value="on" {% if u.has_permission('gestao_atividades') %}checked{% endif %} class="rounded text-indigo-600 focus:ring-indigo-500"> <span class="text-xs font-bold text-slate-700 dark:text-gray-300 group-hover:text-indigo-600">Relatório Atividades</span></label>
-                            <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_gestao_encerramento" value="on" {% if u.has_permission('gestao_encerramento') %}checked{% endif %} class="rounded text-indigo-600 focus:ring-indigo-500"> <span class="text-xs font-bold text-slate-700 dark:text-gray-300 group-hover:text-indigo-600">Encerramento Diário</span></label>
-                            <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_gestao_rfo" value="on" {% if u.has_permission('gestao_rfo') %}checked{% endif %} class="rounded text-indigo-600 focus:ring-indigo-500"> <span class="text-xs font-bold text-slate-700 dark:text-gray-300 group-hover:text-indigo-600">RFO</span></label>
-                            <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_gestao_tarefas" value="on" {% if u.has_permission('gestao_tarefas') %}checked{% endif %} class="rounded text-indigo-600 focus:ring-indigo-500"> <span class="text-xs font-bold text-slate-700 dark:text-gray-300 group-hover:text-indigo-600">Plano de Ação (Tarefas)</span></label>
-                            <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_gestao_geradores" value="on" {% if u.has_permission('gestao_geradores') %}checked{% endif %} class="rounded text-indigo-600 focus:ring-indigo-500"> <span class="text-xs font-bold text-slate-700 dark:text-gray-300 group-hover:text-indigo-600">Geradores</span></label>
-                            <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_gestao_rota_exata" value="on" {% if u.has_permission('gestao_rota_exata') %}checked{% endif %} class="rounded text-indigo-600 focus:ring-indigo-500"> <span class="text-xs font-bold text-slate-700 dark:text-gray-300 group-hover:text-indigo-600">Rota Exata</span></label>
-                            <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_gestao_supervisao" value="on" {% if u.has_permission('gestao_supervisao') %}checked{% endif %} class="rounded text-indigo-600 focus:ring-indigo-500"> <span class="text-xs font-bold text-slate-700 dark:text-gray-300 group-hover:text-indigo-600">Supervisão</span></label>
-                            <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_gestao_treinamentos" value="on" {% if u.has_permission('gestao_treinamentos') %}checked{% endif %} class="rounded text-indigo-600 focus:ring-indigo-500"> <span class="text-xs font-bold text-slate-700 dark:text-gray-300 group-hover:text-indigo-600">Treinamentos</span></label>
-                            <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_gestao_solicitacoes" value="on" {% if u.has_permission('gestao_solicitacoes') %}checked{% endif %} class="rounded text-indigo-600 focus:ring-indigo-500"> <span class="text-xs font-bold text-slate-700 dark:text-gray-300 group-hover:text-indigo-600">Solicitações</span></label>
-                            <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_gestao_relatorios" value="on" {% if u.has_permission('gestao_relatorios') %}checked{% endif %} class="rounded text-indigo-600 focus:ring-indigo-500"> <span class="text-xs font-bold text-slate-700 dark:text-gray-300 group-hover:text-indigo-600">Relatórios Técnicos</span></label>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="p-6 border-t border-slate-900/5 dark:border-white/5 bg-slate-50/50 dark:bg-white/5 flex justify-end gap-3">
-                    <button type="button" onclick="closeModal('modalPermissoes{{ u.id }}')" class="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] hover:text-slate-600 transition-colors">Cancelar</button>
-                    <button type="submit" class="px-8 py-3 bg-purple-600 hover:bg-purple-700 text-white font-black text-xs uppercase tracking-widest rounded-xl shadow-xl shadow-purple-500/30 transition-all active:scale-95 flex items-center gap-2">
-                        <i class="fa-solid fa-save"></i> Salvar Permissões
-                    </button>
-                </div>
-            </form>
-          </div>
-        </div>
         {% endfor %}
       </tbody>
     </table>
   </div>
 </div>
+
+<!-- Modal Novo -->
+<div id="modalNovoUsuario" class="fixed inset-0 hidden items-center justify-center z-[100] p-4">
+  <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="closeModal('modalNovoUsuario')"></div>
+  <div class="relative w-full max-w-md rounded-[2rem] bg-white dark:bg-slate-900 border border-slate-900/10 dark:border-white/10 shadow-2xl overflow-hidden animate-premium">
+    <div class="p-8 border-b border-slate-900/5 dark:border-white/5 bg-emerald-500/5">
+      <h3 class="text-2xl font-black text-slate-900 dark:text-white">Novo Colaborador</h3>
+      <p class="text-[10px] font-black text-emerald-600 uppercase tracking-widest mt-1">Adicionar técnico ou administrativo</p>
+    </div>
+    <div class="p-8">
+      <form method="post" action="{{ url_for('users_new') }}" class="space-y-6">
+        <div>
+          <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Nome de Usuário</label>
+          <input name="username" required placeholder="Ex: joao.silva" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl px-5 py-3.5 text-sm dark:text-white outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all">
+        </div>
+        <div>
+          <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Senha Inicial</label>
+          <input name="password" type="password" required placeholder="••••••••" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl px-5 py-3.5 text-sm dark:text-white outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all">
+        </div>
+        <div>
+          <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Perfil de Acesso</label>
+          <select name="role" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl px-5 py-3.5 text-sm dark:text-white outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all cursor-pointer">
+            <option value="tech">Técnico</option>
+            <option value="supervisor">Supervisor</option>
+            <option value="admin">Administrador</option>
+            <option value="manutencao">Manutenção</option>
+          </select>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">E-mail</label>
+            <input name="email" type="email" placeholder="ex@email.com" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl px-5 py-3 text-sm dark:text-white outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all">
+          </div>
+          <div>
+            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Telefone</label>
+            <input name="phone" type="text" placeholder="(00) 00000-0000" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl px-5 py-3 text-sm dark:text-white outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all">
+          </div>
+        </div>
+        <div class="flex flex-col gap-3 pt-4">
+          <button class="w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-xl shadow-emerald-500/30 transition-all active:scale-95">Criar Colaborador</button>
+          <button type="button" onclick="closeModal('modalNovoUsuario')" class="w-full py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] hover:text-slate-600 transition-colors">Cancelar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Modais de Edição e Permissões dos Colaboradores -->
+{% for u in items %}
+<!-- Modal Editar -->
+<div id="modalEdit{{ u.id }}" class="fixed inset-0 hidden items-center justify-center z-[100] p-4">
+  <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="closeModal('modalEdit{{ u.id }}')"></div>
+  <div class="relative w-full max-w-md rounded-[2rem] bg-white dark:bg-slate-900 border border-slate-900/10 dark:border-white/10 shadow-2xl overflow-hidden animate-premium">
+    <div class="p-8 border-b border-slate-900/5 dark:border-white/5">
+      <h3 class="text-2xl font-black text-slate-900 dark:text-white">Ajustar Perfil</h3>
+      <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Colaborador: {{ u.username }}</p>
+    </div>
+    <div class="p-8">
+      <form method="post" action="{{ url_for('users_pwd', uid=u.id) }}" class="space-y-6">
+        <div>
+          <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Alterar Senha</label>
+          <input name="password" type="password" placeholder="Digite a nova senha" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl px-5 py-3.5 text-sm dark:text-white outline-none focus:ring-4 focus:ring-blue-500/10 transition-all">
+        </div>
+        
+        {% if u.username == 'admin' %}
+        <div class="p-5 bg-red-500/5 border border-red-500/20 rounded-2xl">
+          <label class="text-[10px] font-black text-red-600 uppercase tracking-widest mb-2 block">Senha Mestre Requerida</label>
+          <input name="master_key" type="password" placeholder="Senha do Admin Principal" required class="w-full bg-white dark:bg-white/5 border border-red-500/20 rounded-xl px-4 py-3 text-sm outline-none">
+        </div>
+        {% endif %}
+
+        {% if u.username != 'admin' %}
+        <div>
+          <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Perfil de Acesso</label>
+          <select name="role" form="formRole{{ u.id }}" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl px-5 py-3.5 text-sm dark:text-white outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all cursor-pointer">
+            <option value="tech" {% if u.role == 'tech' %}selected{% endif %}>Técnico</option>
+            <option value="supervisor" {% if u.role == 'supervisor' %}selected{% endif %}>Supervisor</option>
+            <option value="admin" {% if u.role == 'admin' %}selected{% endif %}>Administrador</option>
+            <option value="manutencao" {% if u.role == 'manutencao' %}selected{% endif %}>Manutenção</option>
+          </select>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">E-mail</label>
+            <input name="email" type="email" value="{{ u.email or '' }}" placeholder="ex@email.com" form="formRole{{ u.id }}" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl px-5 py-3 text-sm dark:text-white outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all">
+          </div>
+          <div>
+            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Telefone</label>
+            <input name="phone" type="text" value="{{ u.phone or '' }}" placeholder="(00) 00000-0000" form="formRole{{ u.id }}" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl px-5 py-3 text-sm dark:text-white outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all">
+          </div>
+        </div>
+        {% endif %}
+
+        <div class="flex flex-col gap-3 pt-4">
+          <button formaction="{{ url_for('users_pwd', uid=u.id) }}" class="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-xl shadow-blue-500/30 transition-all active:scale-95">Salvar Nova Senha</button>
+          {% if u.username != 'admin' %}
+          <button form="formRole{{ u.id }}" class="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-xl shadow-indigo-500/30 transition-all active:scale-95">Atualizar Dados</button>
+          {% endif %}
+          <button type="button" onclick="closeModal('modalEdit{{ u.id }}')" class="w-full py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] hover:text-slate-600 transition-colors">Cancelar</button>
+        </div>
+      </form>
+      <form id="formRole{{ u.id }}" method="post" action="{{ url_for('users_role', uid=u.id) }}"></form>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Permissões -->
+<div id="modalPermissoes{{ u.id }}" class="fixed inset-0 hidden items-center justify-center z-[100] p-4">
+  <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="closeModal('modalPermissoes{{ u.id }}')"></div>
+  <div class="relative w-full max-w-4xl max-h-[90vh] flex flex-col rounded-[2rem] bg-white dark:bg-slate-900 border border-slate-900/10 dark:border-white/10 shadow-2xl overflow-hidden animate-premium">
+    <div class="p-6 border-b border-slate-900/5 dark:border-white/5 bg-slate-50/50 dark:bg-white/5 flex justify-between items-center">
+      <div>
+        <h3 class="text-2xl font-black text-slate-900 dark:text-white flex items-center gap-2">
+           <i class="fa-solid fa-user-lock text-purple-500"></i> Controle de Acesso
+        </h3>
+        <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Colaborador: {{ u.username }} | Perfil Base: {{ u.role }}</p>
+      </div>
+      <button onclick="closeModal('modalPermissoes{{ u.id }}')" class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-slate-200 dark:hover:bg-white/10 text-slate-400 transition-all"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    
+    <form method="post" action="{{ url_for('users_permissions', uid=u.id) }}" class="flex-1 flex flex-col overflow-hidden">
+        <div class="flex-1 overflow-y-auto p-6 custom-scrollbar">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <!-- Auditoria -->
+                <div class="p-5 bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl">
+                    <h4 class="text-xs font-black text-slate-500 uppercase tracking-widest mb-4"><i class="fa-solid fa-chart-pie mr-1"></i> Visão Geral e Auditoria</h4>
+                    <div class="space-y-3">
+                        <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_dashboard" value="on" {% if u.has_permission('dashboard') %}checked{% endif %} class="rounded text-purple-600 focus:ring-purple-500"> <span class="text-sm text-slate-700 dark:text-gray-300 group-hover:text-purple-600">Dashboard Central</span></label>
+                        <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_logs" value="on" {% if u.has_permission('logs') %}checked{% endif %} class="rounded text-purple-600 focus:ring-purple-500"> <span class="text-sm text-slate-700 dark:text-gray-300 group-hover:text-purple-600">Logs do Sistema</span></label>
+                        <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_relatorios" value="on" {% if u.has_permission('relatorios') %}checked{% endif %} class="rounded text-purple-600 focus:ring-purple-500"> <span class="text-sm text-slate-700 dark:text-gray-300 group-hover:text-purple-600">Relatórios</span></label>
+                        <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_avisos" value="on" {% if u.has_permission('avisos') %}checked{% endif %} class="rounded text-purple-600 focus:ring-purple-500"> <span class="text-sm text-slate-700 dark:text-gray-300 group-hover:text-purple-600">Central de Avisos</span></label>
+                        <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_whatsapp_conversas" value="on" {% if u.has_permission('whatsapp_conversas') %}checked{% endif %} class="rounded text-purple-600 focus:ring-purple-500"> <span class="text-sm text-slate-700 dark:text-gray-300 group-hover:text-purple-600">WhatsApp Conversas</span></label>
+                        <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_whatsapp_evolution" value="on" {% if u.has_permission('whatsapp_evolution') %}checked{% endif %} class="rounded text-purple-600 focus:ring-purple-500"> <span class="text-sm text-slate-700 dark:text-gray-300 group-hover:text-purple-600">WhatsApp Configurações</span></label>
+                    </div>
+                </div>
+                
+                <!-- Frota e Usuarios -->
+                <div class="p-5 bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl">
+                    <h4 class="text-xs font-black text-slate-500 uppercase tracking-widest mb-4"><i class="fa-solid fa-users mr-1"></i> Frota e Usuários</h4>
+                    <div class="space-y-3">
+                        <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_usuarios" value="on" {% if u.has_permission('usuarios') %}checked{% endif %} class="rounded text-purple-600 focus:ring-purple-500"> <span class="text-sm text-slate-700 dark:text-gray-300 group-hover:text-purple-600">Usuários</span></label>
+                        <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_veiculos" value="on" {% if u.has_permission('veiculos') %}checked{% endif %} class="rounded text-purple-600 focus:ring-purple-500"> <span class="text-sm text-slate-700 dark:text-gray-300 group-hover:text-purple-600">Veículos (Cadastro Base)</span></label>
+                        <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_controle_veiculos" value="on" {% if u.has_permission('controle_veiculos') %}checked{% endif %} class="rounded text-purple-600 focus:ring-purple-500"> <span class="text-sm text-slate-700 dark:text-gray-300 group-hover:text-purple-600">Controle de Frota</span></label>
+                    </div>
+                </div>
+
+                <!-- Operação e Manutenção -->
+                <div class="p-5 bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl">
+                    <h4 class="text-xs font-black text-slate-500 uppercase tracking-widest mb-4"><i class="fa-solid fa-wrench mr-1"></i> Operação e Manutenção</h4>
+                    <div class="space-y-3">
+                        <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_checklist_mobile" value="on" {% if u.has_permission('checklist_mobile') %}checked{% endif %} class="rounded text-purple-600 focus:ring-purple-500"> <span class="text-sm font-bold text-emerald-600 dark:text-emerald-400 group-hover:text-purple-600">Checklist Mobile</span></label>
+                        <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_treinamentos_mobile" value="on" {% if u.has_permission('treinamentos_mobile') %}checked{% endif %} class="rounded text-purple-600 focus:ring-purple-500"> <span class="text-sm font-bold text-emerald-600 dark:text-emerald-400 group-hover:text-purple-600">Treinamentos Mobile</span></label>
+                        <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_vistorias_nova" value="on" {% if u.has_permission('vistorias_nova') %}checked{% endif %} class="rounded text-purple-600 focus:ring-purple-500"> <span class="text-sm font-bold text-emerald-600 dark:text-emerald-400 group-hover:text-purple-600">Nova Vistoria</span></label>
+                        <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_avarias" value="on" {% if u.has_permission('avarias') %}checked{% endif %} class="rounded text-purple-600 focus:ring-purple-500"> <span class="text-sm text-slate-700 dark:text-gray-300 group-hover:text-purple-600">Registro de Avarias</span></label>
+                        <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_checklists_view" value="on" {% if u.has_permission('checklists_view') %}checked{% endif %} class="rounded text-purple-600 focus:ring-purple-500"> <span class="text-sm text-slate-700 dark:text-gray-300 group-hover:text-purple-600">Histórico de Checklists</span></label>
+                        <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_config_checklist" value="on" {% if u.has_permission('config_checklist') %}checked{% endif %} class="rounded text-purple-600 focus:ring-purple-500"> <span class="text-sm text-slate-700 dark:text-gray-300 group-hover:text-purple-600">Configuração de Checklists</span></label>
+                        <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_config_layout" value="on" {% if u.has_permission('config_layout') %}checked{% endif %} class="rounded text-purple-600 focus:ring-purple-500"> <span class="text-sm text-slate-700 dark:text-gray-300 group-hover:text-purple-600">Configuração de Layout</span></label>
+                        <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_manutencao_os" value="on" {% if u.has_permission('manutencao_os') %}checked{% endif %} class="rounded text-purple-600 focus:ring-purple-500"> <span class="text-sm font-bold text-orange-600 dark:text-orange-400 group-hover:text-purple-600">Manutenção / OS</span></label>
+                        <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_vistorias_list" value="on" {% if u.has_permission('vistorias_list') %}checked{% endif %} class="rounded text-purple-600 focus:ring-purple-500"> <span class="text-sm text-slate-700 dark:text-gray-300 group-hover:text-purple-600">Painel de Vistorias</span></label>
+                    </div>
+                </div>
+
+                <!-- Monitoramento GPS -->
+                <div class="p-5 bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl">
+                    <h4 class="text-xs font-black text-slate-500 uppercase tracking-widest mb-4"><i class="fa-solid fa-satellite-dish mr-1"></i> Monitoramento GPS</h4>
+                    <div class="space-y-3">
+                        <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_frota" value="on" {% if u.has_permission('frota') %}checked{% endif %} class="rounded text-purple-600 focus:ring-purple-500"> <span class="text-sm text-slate-700 dark:text-gray-300 group-hover:text-purple-600">Mapa ao Vivo</span></label>
+                        <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_monitoramento_aparelhos" value="on" {% if u.has_permission('monitoramento_aparelhos') %}checked{% endif %} class="rounded text-purple-600 focus:ring-purple-500"> <span class="text-sm text-slate-700 dark:text-gray-300 group-hover:text-purple-600">Aparelhos GPS</span></label>
+                        <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_monitoramento_historico" value="on" {% if u.has_permission('monitoramento_historico') %}checked{% endif %} class="rounded text-purple-600 focus:ring-purple-500"> <span class="text-sm text-slate-700 dark:text-gray-300 group-hover:text-purple-600">Histórico de Rotas</span></label>
+                        <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_monitoramento_config" value="on" {% if u.has_permission('monitoramento_config') %}checked{% endif %} class="rounded text-purple-600 focus:ring-purple-500"> <span class="text-sm text-slate-700 dark:text-gray-300 group-hover:text-purple-600">Configurações GPS</span></label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Gestão Técnica -->
+            <div class="mt-6 p-5 bg-indigo-50/50 dark:bg-indigo-900/10 border border-indigo-200 dark:border-indigo-900/30 rounded-2xl">
+                <div class="flex items-center gap-3 mb-4">
+                    <div class="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600">
+                        <i class="fa-solid fa-cogs"></i>
+                    </div>
+                    <h4 class="text-sm font-black text-indigo-800 dark:text-indigo-400 uppercase tracking-widest">Gestão Técnica (Controle Fino)</h4>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_gestao_equipes" value="on" {% if u.has_permission('gestao_equipes') %}checked{% endif %} class="rounded text-indigo-600 focus:ring-indigo-500"> <span class="text-xs font-bold text-slate-700 dark:text-gray-300 group-hover:text-indigo-600">Equipes</span></label>
+                    <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_gestao_calendario" value="on" {% if u.has_permission('gestao_calendario') %}checked{% endif %} class="rounded text-indigo-600 focus:ring-indigo-500"> <span class="text-xs font-bold text-slate-700 dark:text-gray-300 group-hover:text-indigo-600">Calendário</span></label>
+                    <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_gestao_escalas" value="on" {% if u.has_permission('gestao_escalas') %}checked{% endif %} class="rounded text-indigo-600 focus:ring-indigo-500"> <span class="text-xs font-bold text-slate-700 dark:text-gray-300 group-hover:text-indigo-600">Escalas</span></label>
+                    <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_gestao_reunioes" value="on" {% if u.has_permission('gestao_reunioes') %}checked{% endif %} class="rounded text-indigo-600 focus:ring-indigo-500"> <span class="text-xs font-bold text-slate-700 dark:text-gray-300 group-hover:text-indigo-600">Reuniões</span></label>
+                    <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_gestao_anotacoes" value="on" {% if u.has_permission('gestao_anotacoes') %}checked{% endif %} class="rounded text-indigo-600 focus:ring-indigo-500"> <span class="text-xs font-bold text-slate-700 dark:text-gray-300 group-hover:text-indigo-600">Anotações</span></label>
+                    <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_gestao_atividades" value="on" {% if u.has_permission('gestao_atividades') %}checked{% endif %} class="rounded text-indigo-600 focus:ring-indigo-500"> <span class="text-xs font-bold text-slate-700 dark:text-gray-300 group-hover:text-indigo-600">Relatório Atividades</span></label>
+                    <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_gestao_encerramento" value="on" {% if u.has_permission('gestao_encerramento') %}checked{% endif %} class="rounded text-indigo-600 focus:ring-indigo-500"> <span class="text-xs font-bold text-slate-700 dark:text-gray-300 group-hover:text-indigo-600">Encerramento Diário</span></label>
+                    <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_gestao_rfo" value="on" {% if u.has_permission('gestao_rfo') %}checked{% endif %} class="rounded text-indigo-600 focus:ring-indigo-500"> <span class="text-xs font-bold text-slate-700 dark:text-gray-300 group-hover:text-indigo-600">RFO</span></label>
+                    <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_gestao_tarefas" value="on" {% if u.has_permission('gestao_tarefas') %}checked{% endif %} class="rounded text-indigo-600 focus:ring-indigo-500"> <span class="text-xs font-bold text-slate-700 dark:text-gray-300 group-hover:text-indigo-600">Plano de Ação (Tarefas)</span></label>
+                    <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_gestao_geradores" value="on" {% if u.has_permission('gestao_geradores') %}checked{% endif %} class="rounded text-indigo-600 focus:ring-indigo-500"> <span class="text-xs font-bold text-slate-700 dark:text-gray-300 group-hover:text-indigo-600">Geradores</span></label>
+                    <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_gestao_rota_exata" value="on" {% if u.has_permission('gestao_rota_exata') %}checked{% endif %} class="rounded text-indigo-600 focus:ring-indigo-500"> <span class="text-xs font-bold text-slate-700 dark:text-gray-300 group-hover:text-indigo-600">Rota Exata</span></label>
+                    <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_gestao_supervisao" value="on" {% if u.has_permission('gestao_supervisao') %}checked{% endif %} class="rounded text-indigo-600 focus:ring-indigo-500"> <span class="text-xs font-bold text-slate-700 dark:text-gray-300 group-hover:text-indigo-600">Supervisão</span></label>
+                    <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_gestao_treinamentos" value="on" {% if u.has_permission('gestao_treinamentos') %}checked{% endif %} class="rounded text-indigo-600 focus:ring-indigo-500"> <span class="text-xs font-bold text-slate-700 dark:text-gray-300 group-hover:text-indigo-600">Treinamentos</span></label>
+                    <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_gestao_solicitacoes" value="on" {% if u.has_permission('gestao_solicitacoes') %}checked{% endif %} class="rounded text-indigo-600 focus:ring-indigo-500"> <span class="text-xs font-bold text-slate-700 dark:text-gray-300 group-hover:text-indigo-600">Solicitações</span></label>
+                    <label class="flex items-center gap-3 cursor-pointer group"><input type="checkbox" name="perm_gestao_relatorios" value="on" {% if u.has_permission('gestao_relatorios') %}checked{% endif %} class="rounded text-indigo-600 focus:ring-indigo-500"> <span class="text-xs font-bold text-slate-700 dark:text-gray-300 group-hover:text-indigo-600">Relatórios Técnicos</span></label>
+                </div>
+            </div>
+        </div>
+
+        <div class="p-6 border-t border-slate-900/5 dark:border-white/5 bg-slate-50/50 dark:bg-white/5 flex justify-end gap-3">
+            <button type="button" onclick="closeModal('modalPermissoes{{ u.id }}')" class="px-6 py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] hover:text-slate-600 transition-colors">Cancelar</button>
+            <button type="submit" class="px-8 py-3 bg-purple-600 hover:bg-purple-700 text-white font-black text-xs uppercase tracking-widest rounded-xl shadow-xl shadow-purple-500/30 transition-all active:scale-95 flex items-center gap-2">
+                <i class="fa-solid fa-save"></i> Salvar Permissões
+            </button>
+        </div>
+    </form>
+  </div>
+</div>
+{% endfor %}
 
 <!-- Modal Novo -->
 <div id="modalNovoUsuario" class="fixed inset-0 hidden items-center justify-center z-[100] p-4">
