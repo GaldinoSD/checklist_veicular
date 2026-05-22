@@ -340,7 +340,8 @@
               ('Vistoria', 'vistorias_list', 'fa-magnifying-glass', 'vistorias_list'),
               ('Controle E/S', 'controle_veiculos', 'fa-right-left', 'controle_veiculos'),
               ('Relatórios', 'reports', 'fa-file-invoice', 'relatorios'),
-              ('Avarias / O.S.', 'avarias_registro', 'fa-wrench', 'avarias')
+              ('Avarias / O.S.', 'avarias_registro', 'fa-wrench', 'avarias'),
+              ('Controle Ferramentas', 'controle_ferramentas_atual', 'fa-toolbox', 'controle_ferramentas_atual')
             ] %}
             
             {% set ns_gerenc = namespace(has_any=false) %}
@@ -423,7 +424,7 @@
           </div>
           {% endif %}
 
-          {% if current_user.has_permission('checklist_mobile') or current_user.has_permission('treinamentos_mobile') or current_user.has_permission('manutencao_os') %}
+          {% if current_user.has_permission('checklist_mobile') or current_user.has_permission('treinamentos_mobile') or current_user.has_permission('manutencao_os') or current_user.has_permission('controle_ferramentas') %}
           <div class="py-3 px-4 text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-gray-500 mt-6">Operacional</div>
           
           {% if current_user.has_permission('checklist_mobile') %}
@@ -436,6 +437,19 @@
                     {% endif %}">
             <i class="fa-solid fa-mobile-button w-5 text-center text-base {% if request.endpoint == 'checklist_mobile' %}text-white{% else %}text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200{% endif %} transition-colors"></i>
             <span class="text-[13px] font-bold tracking-tight">Checklist Técnico</span>
+          </a>
+          {% endif %}
+
+          {% if current_user.has_permission('controle_ferramentas') %}
+          <a href="{{ url_for('controle_ferramentas') }}" 
+             class="flex items-center gap-3.5 px-4 py-3 rounded-2xl transition-all duration-300 group
+                    {% if request.endpoint == 'controle_ferramentas' %}
+                      bg-emerald-600 text-white shadow-xl shadow-emerald-500/30 scale-[1.02]
+                    {% else %}
+                      text-slate-500 dark:text-gray-400 hover:bg-slate-900/5 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white
+                    {% endif %}">
+            <i class="fa-solid fa-toolbox w-5 text-center text-base {% if request.endpoint == 'controle_ferramentas' %}text-white{% else %}text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200{% endif %} transition-colors"></i>
+            <span class="text-[13px] font-bold tracking-tight">Controle Ferramentas</span>
           </a>
           {% endif %}
 
@@ -531,7 +545,7 @@
             <span class="text-[13px] font-bold tracking-tight">Alterar Senha</span>
           </button>
 
-            {% if current_user.has_permission('usuarios') or current_user.has_permission('avisos') or current_user.has_permission('config_checklist') or current_user.has_permission('logs') or current_user.has_permission('config_layout') %}
+            {% if current_user.has_permission('usuarios') or current_user.has_permission('avisos') or current_user.has_permission('config_checklist') or current_user.has_permission('logs') or current_user.has_permission('config_layout') or current_user.has_permission('config_ferramentas') %}
             <div class="py-3 px-4 text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-gray-500 mt-6">Sistema</div>
             
             {% if current_user.has_permission('usuarios') %}
@@ -570,6 +584,19 @@
                       {% endif %}">
               <i class="fa-solid fa-sliders w-5 text-center text-base {% if request.endpoint == 'config_checklist' %}text-white dark:text-slate-900{% else %}text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200{% endif %} transition-colors"></i>
               <span class="text-[13px] font-bold tracking-tight">Config. Checklist</span>
+            </a>
+            {% endif %}
+
+            {% if current_user.has_permission('config_ferramentas') %}
+            <a href="{{ url_for('config_ferramentas') }}" 
+               class="flex items-center gap-3.5 px-4 py-3 rounded-2xl transition-all duration-300 group
+                      {% if request.endpoint == 'config_ferramentas' %}
+                        bg-slate-800 dark:bg-white text-white dark:text-slate-900 shadow-xl scale-[1.02]
+                      {% else %}
+                        text-slate-500 dark:text-gray-400 hover:bg-slate-900/5 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white
+                      {% endif %}">
+              <i class="fa-solid fa-toolbox w-5 text-center text-base {% if request.endpoint == 'config_ferramentas' %}text-white dark:text-slate-900{% else %}text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200{% endif %} transition-colors"></i>
+              <span class="text-[13px] font-bold tracking-tight">Config. Ferramentas</span>
             </a>
             {% endif %}
 

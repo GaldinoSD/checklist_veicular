@@ -1,0 +1,493 @@
+{% extends 'layout.html' %}
+{% set page_title = "Controle Atual de Ferramentas" %}
+{% block content %}
+
+<!-- 🖥️ HEADER PREMIUM AUDITORIA DE FERRAMENTAS -->
+<div class="mb-8 animate-premium">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 glass-premium p-6 rounded-[2rem] shadow-xl overflow-hidden relative">
+        <!-- Decorativos -->
+        <div class="absolute -top-24 -right-24 w-64 h-64 bg-rose-500/10 rounded-full blur-3xl"></div>
+        <div class="absolute -bottom-24 -left-24 w-64 h-64 bg-slate-500/10 rounded-full blur-3xl"></div>
+
+        <div class="flex items-center gap-5 relative z-10">
+            <div class="w-12 h-12 rounded-[1.25rem] bg-gradient-to-br from-slate-700 to-slate-900 dark:from-slate-600 dark:to-slate-800 flex items-center justify-center text-white shadow-2xl shadow-slate-900/20">
+                <i class="fa-solid fa-list-check text-xl"></i>
+            </div>
+            <div>
+                <nav class="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-0.5">
+                    <span>Administração</span>
+                    <i class="fa-solid fa-chevron-right text-[8px] opacity-30"></i>
+                    <span class="text-rose-500">Auditoria Operacional</span>
+                </nav>
+                <h2 class="text-2xl font-black text-slate-800 dark:text-white tracking-tight">Controle Atual de Ferramentas</h2>
+                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+                    Consulte o estado atual dos equipamentos de trabalho de cada técnico (sem histórico acumulativo).
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- STATS CARDS -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+    <div class="card-premium p-6 flex items-center justify-between">
+        <div>
+            <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Técnicos Inspecionados</span>
+            <h3 class="text-3xl font-black text-slate-800 dark:text-white mt-1">{{ total_tecnicos }}</h3>
+        </div>
+        <div class="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-white/5 flex items-center justify-center text-slate-500">
+            <i class="fa-solid fa-users text-xl"></i>
+        </div>
+    </div>
+    
+    <div class="card-premium p-6 flex items-center justify-between border-l-4 border-l-rose-500">
+        <div>
+            <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Itens Danificados</span>
+            <h3 class="text-3xl font-black text-rose-600 dark:text-rose-400 mt-1">{{ total_avarias }}</h3>
+        </div>
+        <div class="w-12 h-12 rounded-2xl bg-rose-500/10 flex items-center justify-center text-rose-500">
+            <i class="fa-solid fa-triangle-exclamation text-xl"></i>
+        </div>
+    </div>
+
+    <div class="card-premium p-6 flex items-center justify-between border-l-4 border-l-orange-500">
+        <div>
+            <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Itens Perdidos</span>
+            <h3 class="text-3xl font-black text-orange-600 dark:text-orange-400 mt-1">{{ total_perdidos }}</h3>
+        </div>
+        <div class="w-12 h-12 rounded-2xl bg-orange-500/10 flex items-center justify-center text-orange-500">
+            <i class="fa-solid fa-circle-xmark text-xl"></i>
+        </div>
+    </div>
+</div>
+
+<!-- FILTROS E BUSCA RÁPIDA -->
+<div class="card-premium p-6 mb-8">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <!-- Busca rápida -->
+        <div class="relative flex-1 max-w-md">
+            <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400 dark:text-gray-500">
+                <i class="fa-solid fa-magnifying-glass"></i>
+            </span>
+            <input type="text" id="tech-search" onkeyup="filterTechnicians()" placeholder="Buscar por técnico ou placa..."
+                   class="w-full rounded-2xl pl-11 pr-5 py-3.5 border text-sm font-semibold
+                          bg-slate-50 text-slate-900 border-slate-900/5 dark:bg-white/5 dark:text-white dark:border-white/5
+                          outline-none focus:ring-4 focus:ring-slate-500/10 transition-all">
+        </div>
+
+        <!-- Filtros segmentados -->
+        <div class="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0">
+            <button onclick="setFilter('todos')" id="btn-filter-todos"
+                    class="px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all outline-none bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-md">
+                Todos
+            </button>
+            <button onclick="setFilter('avaria')" id="btn-filter-avaria"
+                    class="px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-all outline-none border border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-white/5 text-slate-600 dark:text-gray-400 hover:bg-slate-100 dark:hover:bg-white/10">
+                Com Avaria
+            </button>
+            <button onclick="setFilter('ausente')" id="btn-filter-ausente"
+                    class="px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-all outline-none border border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-white/5 text-slate-600 dark:text-gray-400 hover:bg-slate-100 dark:hover:bg-white/10">
+                Com Perda/Ausência
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- AUDITORIA DOS TÉCNICOS -->
+<div class="card-premium p-6 overflow-hidden">
+    <div class="flex items-center justify-between mb-6">
+        <div>
+            <h3 class="text-lg font-black text-slate-800 dark:text-white">Estado Atual de Cada Técnico</h3>
+            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Painel consolidado da vistoria</p>
+        </div>
+    </div>
+
+    <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+            <thead>
+                <tr class="border-b border-slate-900/10 dark:border-white/10">
+                    <th class="pb-3 text-[10px] font-black uppercase text-slate-400 tracking-wider">Técnico Responsável</th>
+                    <th class="pb-3 text-[10px] font-black uppercase text-slate-400 tracking-wider">Última Vistoria</th>
+                    <th class="pb-3 text-[10px] font-black uppercase text-slate-400 tracking-wider">Status Geral</th>
+                    <th class="pb-3 text-[10px] font-black uppercase text-slate-400 tracking-wider">Contadores</th>
+                    <th class="pb-3 text-[10px] font-black uppercase text-slate-400 tracking-wider text-right">Ações</th>
+                </tr>
+            </thead>
+            <tbody id="tech-table-body" class="divide-y divide-slate-900/5 dark:divide-white/5">
+                {% for item in inspections %}
+                <tr class="tech-row hover:bg-slate-900/[0.01] dark:hover:bg-white/[0.01] transition-colors"
+                    data-username="{{ item.user.username|lower }}"
+                    data-has-avaria="{% if item.count_avaria > 0 %}true{% else %}false{% endif %}"
+                    data-has-ausente="{% if item.count_perdido > 0 or item.count_nao_recebi > 0 %}true{% else %}false{% endif %}">
+                    
+                    <td class="py-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-9 h-9 rounded-full bg-slate-800 text-white flex items-center justify-center text-sm font-black uppercase tracking-wider shrink-0 shadow-lg">
+                                {{ item.user.username[0] }}
+                            </div>
+                            <div>
+                                <span class="text-sm font-bold text-slate-800 dark:text-white block">{{ item.user.username }}</span>
+                                <span class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Técnico Operacional</span>
+                            </div>
+                        </div>
+                    </td>
+
+                    <td class="py-4 text-xs font-semibold text-slate-500 dark:text-gray-400">
+                        {{ item.inspection.updated_at.strftime('%d/%m/%Y %H:%M') }}
+                    </td>
+
+                    <td class="py-4">
+                        <!-- Progress bar visual do estado das ferramentas -->
+                        <div class="w-40">
+                            {% set total = item.total_items %}
+                            {% set ok_pct = (item.count_ok / total * 100) if total > 0 else 0 %}
+                            {% set av_pct = (item.count_avaria / total * 100) if total > 0 else 0 %}
+                            {% set miss_pct = ((item.count_perdido + item.count_nao_recebi) / total * 100) if total > 0 else 0 %}
+                            
+                            <div class="h-2.5 bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden flex shadow-inner">
+                                <div class="bg-emerald-500 h-full transition-all duration-300" style="width: {{ ok_pct }}%" title="Em bom estado: {{ item.count_ok }}"></div>
+                                <div class="bg-rose-500 h-full transition-all duration-300" style="width: {{ av_pct }}%" title="Com Avaria: {{ item.count_avaria }}"></div>
+                                <div class="bg-orange-500 h-full transition-all duration-300" style="width: {{ miss_pct }}%" title="Ausente: {{ item.count_perdido + item.count_nao_recebi }}"></div>
+                            </div>
+                            <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider mt-1 block">
+                                {% if item.count_avaria > 0 or item.count_perdido > 0 or item.count_nao_recebi > 0 %}
+                                    <span class="text-rose-500 font-bold">Atenção Necessária</span>
+                                {% else %}
+                                    <span class="text-emerald-500 font-bold">100% Em Ordem</span>
+                                {% endif %}
+                            </span>
+                        </div>
+                    </td>
+
+                    <td class="py-4">
+                        <div class="flex items-center gap-1.5">
+                            <span class="inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400">
+                                {{ item.count_ok }} OK
+                            </span>
+                            
+                            {% if item.count_avaria > 0 %}
+                            <span class="inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-[10px] font-black bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400 animate-pulse">
+                                {{ item.count_avaria }} Avaria
+                            </span>
+                            {% endif %}
+
+                            {% if (item.count_perdido + item.count_nao_recebi) > 0 %}
+                            <span class="inline-flex items-center gap-0.5 px-2 py-0.5 rounded text-[10px] font-black bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400">
+                                {{ item.count_perdido + item.count_nao_recebi }} Ausente
+                            </span>
+                            {% endif %}
+                        </div>
+                    </td>
+
+                    <td class="py-4 text-right">
+                        <button onclick="viewCompleteControl('{{ item.user.id }}')"
+                                class="px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200 rounded-xl font-bold text-xs uppercase tracking-wider transition-all flex items-center gap-1.5 ml-auto">
+                            <i class="fa-solid fa-eye text-[10px]"></i> Visualizar Completo
+                        </button>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="5" class="py-12 text-center text-sm text-slate-400 dark:text-gray-500">
+                        Nenhuma vistoria de ferramenta realizada até o momento.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- ======================= MODAL CONTROLE COMPLETO DO TÉCNICO ======================= -->
+<div id="modalDetails" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+        <!-- Overlay -->
+        <div onclick="closeDetailsModal()" class="fixed inset-0 transition-opacity bg-slate-900/60 backdrop-blur-sm" aria-hidden="true"></div>
+        
+        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+        
+        <!-- Conteúdo do Modal -->
+        <div class="inline-block align-bottom bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-900/10 dark:border-white/10 text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
+            <div class="px-8 pt-8 pb-6">
+                <!-- Header -->
+                <div class="flex items-center justify-between mb-6 pb-4 border-b border-slate-900/5 dark:border-white/5">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-rose-500/10 flex items-center justify-center text-rose-500 shadow-inner">
+                            <i class="fa-solid fa-toolbox text-lg"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-black text-slate-800 dark:text-white" id="detail-title">Auditoria do Técnico</h3>
+                            <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider" id="detail-subtitle">Carregando informações...</p>
+                        </div>
+                    </div>
+                    <button type="button" onclick="closeDetailsModal()" class="w-8 h-8 rounded-full hover:bg-slate-100 dark:hover:bg-white/5 flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-white transition-all">
+                        <i class="fa-solid fa-xmark text-sm"></i>
+                    </button>
+                </div>
+
+                <!-- Conteúdo central -->
+                <div class="space-y-6 max-h-[55vh] overflow-y-auto pr-2 custom-scrollbar">
+                    <!-- Itens Críticos/Problemas -->
+                    <div>
+                        <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+                            <i class="fa-solid fa-circle-exclamation text-rose-500"></i> Itens Ausentes ou Danificados
+                        </h4>
+                        <div id="critical-items-container" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <!-- Injetado dinamicamente -->
+                        </div>
+                    </div>
+
+                    <!-- Itens Normais -->
+                    <div>
+                        <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+                            <i class="fa-solid fa-circle-check text-emerald-500"></i> Itens em Bom Estado
+                        </h4>
+                        <div id="normal-items-container" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <!-- Injetado dinamicamente -->
+                        </div>
+                    </div>
+
+                    <!-- Observações Gerais -->
+                    <div class="pt-4 border-t border-slate-900/5 dark:border-white/5">
+                        <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                            <i class="fa-solid fa-comment-dots"></i> Observações do Técnico
+                        </h4>
+                        <blockquote id="detail-notes" class="p-4 bg-slate-50 dark:bg-white/[0.02] border-l-4 border-l-slate-400 rounded-r-2xl text-xs font-semibold text-slate-600 dark:text-gray-300 italic leading-relaxed">
+                            Nenhuma observação geral inserida.
+                        </blockquote>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="px-8 py-6 bg-slate-50 dark:bg-white/[0.02] border-t border-slate-900/5 dark:border-white/5 flex items-center justify-end rounded-b-[2.5rem]">
+                <button type="button" onclick="closeDetailsModal()"
+                        class="px-6 py-3 bg-slate-900 dark:bg-white hover:bg-slate-800 dark:hover:bg-slate-100 text-white dark:text-slate-900 rounded-xl font-black text-xs uppercase tracking-widest shadow-md transition-all">
+                    Fechar Auditoria
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ======================= JAVASCRIPT DINÂMICO ======================= -->
+<script>
+let currentFilter = 'todos';
+
+function filterTechnicians() {
+    const searchVal = document.getElementById('tech-search').value.toLowerCase().trim();
+    const rows = document.querySelectorAll('.tech-row');
+    
+    rows.forEach(row => {
+        const username = row.getAttribute('data-username');
+        const hasAvaria = row.getAttribute('data-has-avaria') === 'true';
+        const hasAusente = row.getAttribute('data-has-ausente') === 'true';
+        
+        let matchSearch = username.includes(searchVal);
+        let matchFilter = true;
+        
+        if (currentFilter === 'avaria') {
+            matchFilter = hasAvaria;
+        } else if (currentFilter === 'ausente') {
+            matchFilter = hasAusente;
+        }
+        
+        if (matchSearch && matchFilter) {
+            row.classList.remove('hidden');
+        } else {
+            row.classList.add('hidden');
+        }
+    });
+}
+
+function setFilter(filterType) {
+    currentFilter = filterType;
+    
+    // Reseta visual dos botões de filtro
+    const filters = ['todos', 'avaria', 'ausente'];
+    filters.forEach(type => {
+        const btn = document.getElementById(`btn-filter-${type}`);
+        if (type === filterType) {
+            btn.className = "px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all outline-none bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-md";
+        } else {
+            btn.className = "px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-all outline-none border border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-white/5 text-slate-600 dark:text-gray-400 hover:bg-slate-100 dark:hover:bg-white/10";
+        }
+    });
+    
+    filterTechnicians();
+}
+
+function viewCompleteControl(userId) {
+    // Abre modal com estado de carregando
+    document.getElementById('detail-title').textContent = 'Consultando Técnico...';
+    document.getElementById('detail-subtitle').textContent = 'Buscando os status mais recentes no banco...';
+    document.getElementById('critical-items-container').innerHTML = '<div class="col-span-2 text-center text-xs text-slate-400 dark:text-gray-500 py-4"><i class="fa-solid fa-spinner animate-spin mr-2"></i> Carregando ferramentas...</div>';
+    document.getElementById('normal-items-container').innerHTML = '';
+    document.getElementById('detail-notes').textContent = 'Nenhuma observação geral inserida.';
+    
+    document.getElementById('modalDetails').classList.remove('hidden');
+    
+    // Faz a consulta via AJAX
+    fetch(`/controle/ferramentas/atual/detalhes/${userId}`)
+        .then(response => {
+            if (!response.ok) throw new Error('Falha ao obter detalhes.');
+            return response.json();
+        })
+        .then(data => {
+            document.getElementById('detail-title').textContent = `Auditoria: ${data.technician}`;
+            document.getElementById('detail-subtitle').textContent = `Preenchimento Atual em ${data.updated_at}`;
+            
+            if (data.notes) {
+                document.getElementById('detail-notes').textContent = data.notes;
+            } else {
+                document.getElementById('detail-notes').textContent = 'Sem observações gerais informadas.';
+            }
+            
+            const criticalContainer = document.getElementById('critical-items-container');
+            const normalContainer = document.getElementById('normal-items-container');
+            
+            criticalContainer.innerHTML = '';
+            normalContainer.innerHTML = '';
+            
+            let countCritical = 0;
+            let countNormal = 0;
+            
+            // Group by category
+            const grouped = {};
+            data.statuses.forEach(item => {
+                const cat = (item.category || 'Outros').trim();
+                if (!grouped[cat]) {
+                    grouped[cat] = [];
+                }
+                grouped[cat].push(item);
+            });
+            
+            // Sort category names alphabetically, putting "Outros" at the end
+            const categories = Object.keys(grouped).sort((a, b) => {
+                if (a === 'Outros') return 1;
+                if (b === 'Outros') return -1;
+                return a.localeCompare(b);
+            });
+            
+            // Sort items inside each category alphabetically by tool_name
+            categories.forEach(cat => {
+                grouped[cat].sort((a, b) => a.tool_name.localeCompare(b.tool_name));
+            });
+            
+            // Render by category
+            categories.forEach(cat => {
+                const catItems = grouped[cat];
+                
+                // 1. Critical Items
+                const hasCritical = catItems.some(item => !(item.status === 'possui' && item.sub_status === 'bom'));
+                if (hasCritical) {
+                    const divider = document.createElement('div');
+                    divider.className = "col-span-1 sm:col-span-2 mt-4 first:mt-0 pb-1 border-b border-slate-950/5 dark:border-white/5 select-none";
+                    divider.innerHTML = `
+                        <h5 class="text-[9px] font-black text-rose-500/80 dark:text-rose-400/80 uppercase tracking-widest flex items-center gap-1.5">
+                            <i class="fa-solid fa-tag text-[8px]"></i> Categoria: ${cat}
+                        </h5>
+                    `;
+                    criticalContainer.appendChild(divider);
+                    
+                    catItems.forEach(item => {
+                        if (!(item.status === 'possui' && item.sub_status === 'bom')) {
+                            countCritical++;
+                            const card = document.createElement('div');
+                            card.className = "p-3.5 bg-rose-500/[0.02] border border-rose-500/25 rounded-2xl relative overflow-hidden";
+                            
+                            let subStatusLabel = '';
+                            let subStatusClass = '';
+                            let extraDesc = '';
+                            
+                            if (item.sub_status === 'ruim') {
+                                subStatusLabel = 'Ferramenta com avaria';
+                                subStatusClass = 'bg-rose-500/10 text-rose-600 dark:bg-rose-500/20 dark:text-rose-400';
+                                extraDesc = `<p class="mt-2 text-xs font-black text-rose-500 dark:text-rose-400 bg-rose-500/5 p-2 rounded-xl border border-rose-500/10 leading-relaxed italic"><i class="fa-solid fa-triangle-exclamation mr-1 shrink-0"></i> Avaria: ${item.damage_description || 'Sem descrição cadastrada'}</p>`;
+                            } else if (item.sub_status === 'nao_recebi') {
+                                subStatusLabel = 'Ferramentas não recebidas';
+                                subStatusClass = 'bg-orange-500/10 text-orange-600 dark:bg-orange-500/20 dark:text-orange-400';
+                            } else if (item.sub_status === 'perdi') {
+                                subStatusLabel = 'Ferramenta perdida';
+                                subStatusClass = 'bg-red-500/10 text-red-600 dark:bg-red-500/20 dark:text-red-400';
+                            } else {
+                                subStatusLabel = 'Não possui';
+                                subStatusClass = 'bg-rose-500/10 text-rose-600 dark:bg-rose-500/20 dark:text-rose-400';
+                            }
+                            
+                            card.innerHTML = `
+                                <div class="flex items-start justify-between gap-3">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-8 h-8 rounded-lg bg-rose-500/10 flex items-center justify-center text-rose-500 text-xs shrink-0">
+                                            <i class="fa-solid fa-triangle-exclamation"></i>
+                                        </div>
+                                        <div>
+                                            <span class="text-xs font-bold text-slate-800 dark:text-white block">${item.tool_name}</span>
+                                            <span class="text-[8px] font-black text-slate-400 uppercase tracking-wider">${item.category}</span>
+                                        </div>
+                                    </div>
+                                    <span class="text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded ${subStatusClass}">${subStatusLabel}</span>
+                                </div>
+                                ${extraDesc}
+                            `;
+                            criticalContainer.appendChild(card);
+                        }
+                    });
+                }
+                
+                // 2. Normal Items
+                const hasNormal = catItems.some(item => (item.status === 'possui' && item.sub_status === 'bom'));
+                if (hasNormal) {
+                    const divider = document.createElement('div');
+                    divider.className = "col-span-1 sm:col-span-2 mt-4 first:mt-0 pb-1 border-b border-slate-950/5 dark:border-white/5 select-none";
+                    divider.innerHTML = `
+                        <h5 class="text-[9px] font-black text-teal-600/80 dark:text-teal-400/80 uppercase tracking-widest flex items-center gap-1.5">
+                            <i class="fa-solid fa-tag text-[8px]"></i> Categoria: ${cat}
+                        </h5>
+                    `;
+                    normalContainer.appendChild(divider);
+                    
+                    catItems.forEach(item => {
+                        if (item.status === 'possui' && item.sub_status === 'bom') {
+                            countNormal++;
+                            const card = document.createElement('div');
+                            card.className = "p-3.5 bg-emerald-500/[0.02] border border-emerald-500/10 rounded-2xl flex items-center justify-between";
+                            card.innerHTML = `
+                                <div class="flex items-center gap-3">
+                                    <div class="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-500 text-xs">
+                                        <i class="fa-solid fa-circle-check"></i>
+                                    </div>
+                                    <div>
+                                        <span class="text-xs font-bold text-slate-800 dark:text-white block">${item.tool_name}</span>
+                                        <span class="text-[8px] font-black text-slate-400 uppercase tracking-wider">${item.category}</span>
+                                    </div>
+                                </div>
+                                <span class="text-[9px] font-bold text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded">Bom Estado</span>
+                            `;
+                            normalContainer.appendChild(card);
+                        }
+                    });
+                }
+            });
+            
+            if (countCritical === 0) {
+                criticalContainer.innerHTML = '<div class="col-span-2 text-center text-xs text-emerald-500 py-3 font-semibold"><i class="fa-solid fa-circle-check mr-1.5"></i> Todas as ferramentas estão em bom estado!</div>';
+            }
+            if (countNormal === 0) {
+                normalContainer.innerHTML = '<div class="col-span-2 text-center text-xs text-slate-400 dark:text-gray-500 py-3">Nenhuma ferramenta em bom estado.</div>';
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            document.getElementById('detail-title').textContent = 'Erro ao Carregar';
+            document.getElementById('detail-subtitle').textContent = 'Não foi possível carregar as informações do técnico.';
+            document.getElementById('critical-items-container').innerHTML = '<div class="col-span-2 text-center text-xs text-red-500 py-4"><i class="fa-solid fa-circle-exclamation mr-1.5"></i> Erro ao buscar os dados. Tente novamente mais tarde.</div>';
+        });
+}
+
+function closeDetailsModal() {
+    document.getElementById('modalDetails').classList.add('hidden');
+}
+</script>
+
+{% endblock %}

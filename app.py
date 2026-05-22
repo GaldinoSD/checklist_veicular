@@ -425,6 +425,46 @@ class Manual(db.Model):
     content = db.Column(db.Text, nullable=False)
     updated_at = db.Column(db.DateTime, default=agora, onupdate=agora)
 
+
+# ===============================
+# 🔧 CONTROLE DE FERRAMENTAS
+# ===============================
+class ToolCategory(db.Model):
+    __tablename__ = "tool_category"
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), unique=True, nullable=False)
+    created_at = db.Column(db.DateTime, default=agora)
+
+class Tool(db.Model):
+    __tablename__ = "tool"
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    category = db.Column(db.String(50), nullable=True)
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=agora)
+
+class UserToolInspection(db.Model):
+    __tablename__ = "user_tool_inspection"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="CASCADE"), unique=True, nullable=False)
+    user = db.relationship("User", backref=db.backref("tool_inspection", uselist=False, cascade="all, delete-orphan"))
+    updated_at = db.Column(db.DateTime, default=agora, onupdate=agora)
+    notes = db.Column(db.Text)
+    is_locked = db.Column(db.Boolean, default=True, nullable=False)
+
+class UserToolStatus(db.Model):
+    __tablename__ = "user_tool_status"
+    id = db.Column(db.Integer, primary_key=True)
+    inspection_id = db.Column(db.Integer, db.ForeignKey("user_tool_inspection.id", ondelete="CASCADE"), nullable=False)
+    inspection = db.relationship("UserToolInspection", backref=db.backref("statuses", lazy=True, cascade="all, delete-orphan"))
+    tool_id = db.Column(db.Integer, db.ForeignKey("tool.id", ondelete="CASCADE"), nullable=False)
+    tool = db.relationship("Tool")
+    status = db.Column(db.String(20), nullable=False)  # possui, nao_possui
+    sub_status = db.Column(db.String(20), nullable=False)  # bom, ruim, nao_recebi, perdi
+    damage_description = db.Column(db.Text)
+    updated_at = db.Column(db.DateTime, default=agora, onupdate=agora)
+    is_editable = db.Column(db.Boolean, default=False, nullable=False)
+
 # ===============================
 # 🎓 LMS (TREINAMENTOS)
 # ===============================
@@ -1189,6 +1229,10 @@ def admin_required(view):
             allowed = current_user.has_permission("logs")
         elif endpoint in {"config_layout", "reset_layout_field", "test_layout_pdf", "preview_layout"}:
             allowed = current_user.has_permission("config_layout")
+        elif endpoint in {"config_ferramentas", "config_ferramentas_new", "config_ferramentas_edit", "config_ferramentas_del", "config_ferramentas_toggle"}:
+            allowed = current_user.has_permission("config_ferramentas")
+        elif endpoint in {"controle_ferramentas_atual", "controle_ferramentas_detalhes"}:
+            allowed = current_user.has_permission("controle_ferramentas_atual")
             
         if allowed:
             return view(*args, **kwargs)
@@ -1859,7 +1903,8 @@ def users_permissions(uid):
         "perm_gestao_encerramento", "perm_gestao_rfo", "perm_gestao_tarefas",
         "perm_gestao_geradores", "perm_gestao_rota_exata", "perm_gestao_supervisao",
         "perm_gestao_treinamentos", "perm_gestao_solicitacoes", "perm_gestao_relatorios",
-        "perm_whatsapp_evolution", "perm_whatsapp_conversas"
+        "perm_whatsapp_evolution", "perm_whatsapp_conversas",
+        "perm_config_ferramentas", "perm_controle_ferramentas", "perm_controle_ferramentas_atual"
     ]
     
     perms_data = request.form.to_dict()
@@ -9872,6 +9917,389 @@ def api_gps_gateway():
     
     return jsonify({"status": "success", "device": imei, "received_at": str(agora())})
 
+
+# ==========================================
+# 🔧 ROTAS: CONTROLE E CONFIG DE FERRAMENTAS
+# ==========================================
+
+@app.route("/config/ferramentas")
+@admin_required
+def config_ferramentas():
+    all_tools = Tool.query.all()
+    tools = sorted(all_tools, key=lambda x: (
+        1 if not x.category else 0,
+        (x.category or "").strip().lower(),
+        x.name.strip().lower()
+    ))
+    categories = ToolCategory.query.order_by(ToolCategory.name.asc()).all()
+    return render_template("config_ferramentas.html", tools=tools, categories=categories)
+
+@app.route("/config/ferramentas/categorias/new", methods=["POST"])
+@admin_required
+def config_ferramentas_categoria_new():
+    name = request.form.get("name", "").strip()
+    if not name:
+        flash("O nome da categoria é obrigatório.", "error")
+        return redirect(url_for("config_ferramentas"))
+    
+    # Validação case-insensitive
+    exists = ToolCategory.query.filter(db.func.lower(ToolCategory.name) == name.lower()).first()
+    if exists:
+        flash(f"A categoria '{name}' já existe.", "error")
+        return redirect(url_for("config_ferramentas"))
+    
+    new_cat = ToolCategory(name=name)
+    db.session.add(new_cat)
+    db.session.commit()
+    registrar_log(f"Nova categoria de ferramentas cadastrada: {name}")
+    flash(f"Categoria '{name}' cadastrada com sucesso.", "success")
+    return redirect(url_for("config_ferramentas"))
+
+@app.route("/config/ferramentas/categorias/delete/<int:id>", methods=["POST"])
+@admin_required
+def config_ferramentas_categoria_del(id):
+    cat = ToolCategory.query.get_or_404(id)
+    name = cat.name
+    
+    # Reverte as ferramentas desta categoria para None (Outros)
+    Tool.query.filter_by(category=name).update({Tool.category: None})
+    
+    db.session.delete(cat)
+    db.session.commit()
+    registrar_log(f"Categoria de ferramentas excluída: {name}")
+    flash(f"Categoria '{name}' excluída com sucesso. Ferramentas associadas foram movidas para 'Outros'.", "success")
+    return redirect(url_for("config_ferramentas"))
+
+@app.route("/config/ferramentas/new", methods=["POST"])
+@admin_required
+def config_ferramentas_new():
+    name = request.form.get("name", "").strip()
+    category = request.form.get("category", "").strip() or None
+    if not name:
+        flash("O nome da ferramenta é obrigatório.", "error")
+        return redirect(url_for("config_ferramentas"))
+    
+    new_tool = Tool(name=name, category=category, is_active=True)
+    db.session.add(new_tool)
+    db.session.commit()
+    registrar_log(f"Nova ferramenta cadastrada: {name}")
+    flash(f"Ferramenta '{name}' cadastrada com sucesso.", "success")
+    return redirect(url_for("config_ferramentas"))
+
+@app.route("/config/ferramentas/edit/<int:id>", methods=["POST"])
+@admin_required
+def config_ferramentas_edit(id):
+    tool = Tool.query.get_or_404(id)
+    name = request.form.get("name", "").strip()
+    category = request.form.get("category", "").strip() or None
+    if not name:
+        flash("O nome da ferramenta é obrigatório.", "error")
+        return redirect(url_for("config_ferramentas"))
+    
+    tool.name = name
+    tool.category = category
+    db.session.commit()
+    registrar_log(f"Ferramenta editada (ID {id}): {name}")
+    flash(f"Ferramenta atualizada com sucesso.", "success")
+    return redirect(url_for("config_ferramentas"))
+
+@app.route("/config/ferramentas/toggle/<int:id>", methods=["POST"])
+@admin_required
+def config_ferramentas_toggle(id):
+    tool = Tool.query.get_or_404(id)
+    tool.is_active = not tool.is_active
+    db.session.commit()
+    status_str = "ativada" if tool.is_active else "desativada"
+    registrar_log(f"Ferramenta {tool.name} {status_str}")
+    flash(f"Ferramenta '{tool.name}' {status_str} com sucesso.", "success")
+    return redirect(url_for("config_ferramentas"))
+
+@app.route("/config/ferramentas/delete/<int:id>", methods=["POST"])
+@admin_required
+def config_ferramentas_del(id):
+    tool = Tool.query.get_or_404(id)
+    name = tool.name
+    db.session.delete(tool)
+    db.session.commit()
+    registrar_log(f"Ferramenta excluída: {name}")
+    flash(f"Ferramenta '{name}' excluída com sucesso.", "success")
+    return redirect(url_for("config_ferramentas"))
+
+@app.route("/controle/ferramentas", methods=["GET", "POST"])
+@login_required
+def controle_ferramentas():
+    if not current_user.has_permission("controle_ferramentas"):
+        flash("Você não possui permissão para acessar o Controle de Ferramentas.", "error")
+        return redirect(url_for("checklist_mobile") if current_user.has_permission("checklist_mobile") else url_for("index"))
+
+    all_active_tools = Tool.query.filter_by(is_active=True).all()
+    active_tools = sorted(all_active_tools, key=lambda x: (
+        1 if not x.category else 0,
+        (x.category or "").strip().lower(),
+        x.name.strip().lower()
+    ))
+    
+    # Busca a inspeção atual do técnico se existir
+    inspection = UserToolInspection.query.filter_by(user_id=current_user.id).first()
+    
+    # Prepara dicionário de status anteriores para pré-preenchimento
+    prev_status = {}
+    if inspection:
+        for status_item in inspection.statuses:
+            prev_status[status_item.tool_id] = {
+                "status": status_item.status,
+                "sub_status": status_item.sub_status,
+                "damage_description": status_item.damage_description or "",
+                "is_editable": status_item.is_editable
+            }
+
+    if request.method == "POST":
+        notes = request.form.get("notes", "").strip() or None
+        
+        if inspection and inspection.is_locked:
+            # Vistoria bloqueada - Apenas atualiza ferramentas com is_editable == True
+            editable_statuses = {s.tool_id: s for s in inspection.statuses if s.is_editable}
+            for tool in active_tools:
+                if tool.id in editable_statuses:
+                    status = request.form.get(f"tool_status_{tool.id}")
+                    if not status:
+                        status = "nao_possui"
+                    sub_status = request.form.get(f"tool_sub_{tool.id}")
+                    if not sub_status:
+                        sub_status = "nao_recebi" if status == "nao_possui" else "bom"
+                    damage_description = request.form.get(f"damage_desc_{tool.id}", "").strip() or None
+                    if status == "possui" and sub_status != "ruim":
+                        damage_description = None
+                    if status == "nao_possui":
+                        damage_description = None
+                        
+                    tool_status = editable_statuses[tool.id]
+                    tool_status.status = status
+                    tool_status.sub_status = sub_status
+                    tool_status.damage_description = damage_description
+                    tool_status.is_editable = False # Bloqueia de volta!
+                    tool_status.updated_at = agora()
+            
+            inspection.updated_at = agora()
+            db.session.commit()
+            registrar_log(f"Itens liberados do controle de ferramentas atualizados pelo técnico: {current_user.username}")
+            flash("Controle de ferramentas atualizado com sucesso!", "success")
+        else:
+            # Vistoria nova ou totalmente desbloqueada
+            if not inspection:
+                inspection = UserToolInspection(user_id=current_user.id, notes=notes, is_locked=True)
+                db.session.add(inspection)
+                db.session.flush() # Para gerar o id
+            else:
+                inspection.notes = notes
+                inspection.is_locked = True
+                inspection.updated_at = agora()
+                
+            # Vamos processar cada ferramenta ativa enviada
+            for tool in active_tools:
+                status = request.form.get(f"tool_status_{tool.id}")
+                # Se não recebeu o status, assumimos 'nao_possui' por segurança
+                if not status:
+                    status = "nao_possui"
+                
+                sub_status = request.form.get(f"tool_sub_{tool.id}")
+                if not sub_status:
+                    sub_status = "nao_recebi" if status == "nao_possui" else "bom"
+                    
+                damage_description = request.form.get(f"damage_desc_{tool.id}", "").strip() or None
+                if status == "possui" and sub_status != "ruim":
+                    damage_description = None
+                if status == "nao_possui":
+                    damage_description = None
+                    
+                # Busca status existente para essa ferramenta nesta inspeção
+                tool_status = UserToolStatus.query.filter_by(inspection_id=inspection.id, tool_id=tool.id).first()
+                if not tool_status:
+                    tool_status = UserToolStatus(
+                        inspection_id=inspection.id,
+                        tool_id=tool.id,
+                        status=status,
+                        sub_status=sub_status,
+                        damage_description=damage_description,
+                        is_editable=False # Bloqueada por padrão
+                    )
+                    db.session.add(tool_status)
+                else:
+                    tool_status.status = status
+                    tool_status.sub_status = sub_status
+                    tool_status.damage_description = damage_description
+                    tool_status.is_editable = False # Bloqueada por padrão
+                    tool_status.updated_at = agora()
+                    
+            db.session.commit()
+            registrar_log(f"Controle de ferramentas preenchido pelo técnico: {current_user.username}")
+            flash("Controle de ferramentas enviado com sucesso!", "success")
+        return redirect(url_for("controle_ferramentas"))
+
+    has_editable_tools = False
+    if not inspection or not inspection.is_locked:
+        has_editable_tools = True
+    else:
+        has_editable_tools = any(s.is_editable for s in inspection.statuses)
+
+    return render_template(
+        "controle_ferramentas.html", 
+        tools=active_tools, 
+        prev_status=prev_status, 
+        inspection=inspection,
+        has_editable_tools=has_editable_tools
+    )
+
+@app.route("/controle/ferramentas/atual")
+@admin_required
+def controle_ferramentas_atual():
+    # Carrega todas as inspeções realizadas pelos técnicos
+    inspections = UserToolInspection.query.order_by(UserToolInspection.updated_at.desc()).all()
+    
+    # Montamos as estatísticas para os boxes informativos
+    total_tecnicos = len(inspections)
+    total_avarias = 0
+    total_perdidos = 0
+    
+    inspections_data = []
+    for ins in inspections:
+        user = ins.user
+        statuses = ins.statuses
+        
+        count_ok = 0
+        count_avaria = 0
+        count_perdido = 0
+        count_nao_recebi = 0
+        
+        for s in statuses:
+            # Conta se a ferramenta está ativa atualmente (para evitar contabilizar ferramentas desativadas)
+            if s.tool and s.tool.is_active:
+                if s.status == "possui":
+                    if s.sub_status == "bom":
+                        count_ok += 1
+                    else:
+                        count_avaria += 1
+                        total_avarias += 1
+                else:
+                    if s.sub_status == "perdi":
+                        count_perdido += 1
+                        total_perdidos += 1
+                    else:
+                        count_nao_recebi += 1
+                        
+        inspections_data.append({
+            "inspection": ins,
+            "user": user,
+            "count_ok": count_ok,
+            "count_avaria": count_avaria,
+            "count_perdido": count_perdido,
+            "count_nao_recebi": count_nao_recebi,
+            "total_items": count_ok + count_avaria + count_perdido + count_nao_recebi
+        })
+        
+    return render_template(
+        "controle_ferramentas_atual.html", 
+        inspections=inspections_data,
+        total_tecnicos=total_tecnicos,
+        total_avarias=total_avarias,
+        total_perdidos=total_perdidos
+    )
+
+@app.route("/controle/ferramentas/atual/detalhes/<int:user_id>")
+@admin_required
+def controle_ferramentas_detalhes(user_id):
+    inspection = UserToolInspection.query.filter_by(user_id=user_id).first_or_404()
+    
+    # Filtramos apenas os statuses das ferramentas que ainda estão ativas no sistema
+    statuses_data = []
+    for s in inspection.statuses:
+        if s.tool and s.tool.is_active:
+            statuses_data.append({
+                "tool_id": s.tool.id,
+                "tool_name": s.tool.name,
+                "category": s.tool.category or "Outros",
+                "status": s.status,
+                "sub_status": s.sub_status,
+                "damage_description": s.damage_description or "",
+                "is_editable": s.is_editable
+            })
+            
+    return jsonify({
+        "user_id": user_id,
+        "technician": inspection.user.username,
+        "updated_at": inspection.updated_at.strftime("%d/%m/%Y %H:%M:%S"),
+        "notes": inspection.notes or "",
+        "statuses": statuses_data,
+        "is_locked": inspection.is_locked
+    })
+
+@app.route("/controle/ferramentas/atual/excluir/<int:user_id>", methods=["POST"])
+@admin_required
+def controle_ferramentas_excluir(user_id):
+    inspection = UserToolInspection.query.filter_by(user_id=user_id).first_or_404()
+    tech_name = inspection.user.username
+    
+    db.session.delete(inspection)
+    db.session.commit()
+    
+    registrar_log(f"Vistoria de ferramentas do técnico {tech_name} excluída por administrador.")
+    flash(f"Checklist de ferramentas de {tech_name} excluído e zerado com sucesso!", "success")
+    return redirect(url_for("controle_ferramentas_atual"))
+
+@app.route("/controle/ferramentas/atual/liberar-total/<int:user_id>", methods=["POST"])
+@admin_required
+def controle_ferramentas_liberar_total(user_id):
+    inspection = UserToolInspection.query.filter_by(user_id=user_id).first_or_404()
+    
+    inspection.is_locked = False
+    
+    for s in inspection.statuses:
+        s.is_editable = False
+        
+    db.session.commit()
+    
+    registrar_log(f"Checklist de ferramentas do técnico {inspection.user.username} totalmente liberado por administrador.")
+    flash(f"Checklist de {inspection.user.username} totalmente liberado para edição!", "success")
+    return redirect(url_for("controle_ferramentas_atual"))
+
+@app.route("/controle/ferramentas/atual/liberar-item/<int:user_id>/<int:tool_id>", methods=["POST"])
+@admin_required
+def controle_ferramentas_liberar_item(user_id, tool_id):
+    inspection = UserToolInspection.query.filter_by(user_id=user_id).first_or_404()
+    status_item = UserToolStatus.query.filter_by(inspection_id=inspection.id, tool_id=tool_id).first_or_404()
+    
+    inspection.is_locked = True
+    status_item.is_editable = True
+    
+    db.session.commit()
+    
+    registrar_log(f"Ferramenta '{status_item.tool.name}' liberada para edição do técnico {inspection.user.username} por administrador.")
+    return jsonify({
+        "success": True,
+        "message": f"Item '{status_item.tool.name}' liberado com sucesso!"
+    })
+
+
 # Garante a criação de todas as tabelas, incluindo as de GPS recém-definidas, no contexto do Gunicorn
 with app.app_context():
     db.create_all()
+    
+    # Migrações automáticas inline para colunas de bloqueio/liberação de ferramentas
+    try:
+        db.session.execute(db.text("ALTER TABLE user_tool_inspection ADD COLUMN is_locked BOOLEAN DEFAULT 1"))
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        
+    try:
+        db.session.execute(db.text("ALTER TABLE user_tool_status ADD COLUMN is_editable BOOLEAN DEFAULT 0"))
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+
+    # Executa a ativação de todas as ferramentas e garante a tabela de categorias inicializada se necessário
+    try:
+        Tool.query.update({Tool.is_active: True})
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
