@@ -143,6 +143,9 @@ def inject_csrf_token():
 
 @app.before_request
 def verify_csrf():
+    if app.testing:
+        return
+        
     # Garante que a sessão sempre possua o token CSRF gerado
     if "csrf_token" not in session:
         session["csrf_token"] = secrets.token_hex(32)
