@@ -73,7 +73,9 @@
             <div id="card-{{ tool.id }}" 
                  class="card-premium p-3.5 transition-all duration-300 relative overflow-hidden border-2 
                         {% if prev %}
-                            {% if prev.status == 'possui' and prev.sub_status == 'bom' %}
+                            {% if inspection and inspection.is_locked and prev.is_editable %}
+                                border-amber-500/50 shadow-lg shadow-amber-500/[0.05] bg-amber-500/[0.01] animate-pulse
+                            {% elif prev.status == 'possui' and prev.sub_status == 'bom' %}
                                 border-emerald-500/30 shadow-lg shadow-emerald-500/[0.03] bg-emerald-500/[0.01]
                             {% else %}
                                 border-rose-500/30 shadow-lg shadow-rose-500/[0.03] bg-rose-500/[0.01]
@@ -86,6 +88,11 @@
                  
                  <!-- Badge de status atual flutuante -->
                  <div class="absolute top-3 right-3 flex items-center gap-1">
+                     {% if inspection and inspection.is_locked and prev and prev.is_editable %}
+                     <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider bg-amber-500/20 text-amber-600 dark:bg-amber-500/30 dark:text-amber-400 animate-pulse border border-amber-500/30">
+                         <i class="fa-solid fa-lock-open animate-bounce"></i> Edição Liberada
+                     </span>
+                     {% endif %}
                      <span id="badge-pending-{{ tool.id }}" class="{% if prev %}hidden{% endif %} inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400">
                          <i class="fa-solid fa-clock"></i> Pendente
                      </span>

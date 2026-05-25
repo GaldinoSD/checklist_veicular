@@ -216,7 +216,10 @@
                             <i class="fa-solid fa-toolbox text-lg"></i>
                         </div>
                         <div>
-                            <h3 class="text-lg font-black text-slate-800 dark:text-white" id="detail-title">Auditoria do Técnico</h3>
+                            <div class="flex items-center gap-2.5 flex-wrap">
+                                <h3 class="text-lg font-black text-slate-800 dark:text-white" id="detail-title">Auditoria do Técnico</h3>
+                                <span id="detail-status-badge" class="hidden text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border"></span>
+                            </div>
                             <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider" id="detail-subtitle">Carregando informações...</p>
                         </div>
                     </div>
@@ -260,9 +263,25 @@
             </div>
 
             <!-- Footer -->
-            <div class="px-8 py-6 bg-slate-50 dark:bg-white/[0.02] border-t border-slate-900/5 dark:border-white/5 flex items-center justify-end rounded-b-[2.5rem]">
+            <div class="px-8 py-6 bg-slate-50 dark:bg-white/[0.02] border-t border-slate-900/5 dark:border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4 rounded-b-[2.5rem]">
+                <!-- Ações Administrativas -->
+                <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                    <form id="form-excluir" method="POST" class="hidden" onsubmit="return confirm('⚠️ ATENÇÃO: Tem certeza que deseja excluir esta vistoria? Isso irá zerar o checklist do técnico, voltando o status para Pendente e deletando permanentemente as respostas atuais.');">
+                        <button type="submit" class="px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-md transition-all flex items-center gap-1.5">
+                            <i class="fa-solid fa-trash-can"></i> Zerar Vistoria (Excluir)
+                        </button>
+                    </form>
+                    <form id="form-liberar-total" method="POST" class="hidden" onsubmit="return confirm('Deseja liberar o checklist completo para o técnico? Ele poderá editar qualquer ferramenta e enviar novamente.');">
+                        <button type="submit" class="px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-md transition-all flex items-center gap-1.5">
+                            <i class="fa-solid fa-lock-open"></i> Liberar Checklist Total
+                        </button>
+                    </form>
+                    <span id="label-checklist-liberado" class="hidden text-[9px] font-black uppercase tracking-wider px-3 py-2 bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400 rounded-xl border border-emerald-500/20">
+                        <i class="fa-solid fa-circle-check mr-1"></i> Totalmente Liberado
+                    </span>
+                </div>
                 <button type="button" onclick="closeDetailsModal()"
-                        class="px-6 py-3 bg-slate-900 dark:bg-white hover:bg-slate-800 dark:hover:bg-slate-100 text-white dark:text-slate-900 rounded-xl font-black text-xs uppercase tracking-widest shadow-md transition-all">
+                        class="w-full sm:w-auto px-6 py-3 bg-slate-900 dark:bg-white hover:bg-slate-800 dark:hover:bg-slate-100 text-white dark:text-slate-900 rounded-xl font-black text-xs uppercase tracking-widest shadow-md transition-all">
                     Fechar Auditoria
                 </button>
             </div>
@@ -325,6 +344,12 @@ function viewCompleteControl(userId) {
     document.getElementById('normal-items-container').innerHTML = '';
     document.getElementById('detail-notes').textContent = 'Nenhuma observação geral inserida.';
     
+    // Oculta badges e ações anteriores para evitar flash visual
+    document.getElementById('detail-status-badge').classList.add('hidden');
+    document.getElementById('form-excluir').style.display = 'none';
+    document.getElementById('form-liberar-total').style.display = 'none';
+    document.getElementById('label-checklist-liberado').classList.add('hidden');
+    
     document.getElementById('modalDetails').classList.remove('hidden');
     
     // Faz a consulta via AJAX
@@ -336,6 +361,30 @@ function viewCompleteControl(userId) {
         .then(data => {
             document.getElementById('detail-title').textContent = `Auditoria: ${data.technician}`;
             document.getElementById('detail-subtitle').textContent = `Preenchimento Atual em ${data.updated_at}`;
+            
+            // Configura e exibe o Badge de Status Geral no cabeçalho
+            const badge = document.getElementById('detail-status-badge');
+            badge.classList.remove('hidden');
+            if (data.is_locked) {
+                badge.className = "inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider bg-rose-500/10 text-rose-600 dark:bg-rose-500/20 dark:text-rose-400 border border-rose-500/20 animate-pulse";
+                badge.innerHTML = '<i class="fa-solid fa-lock"></i> Trancado';
+                
+                // Exibe botões administrativos
+                document.getElementById('form-liberar-total').style.display = 'inline-block';
+                document.getElementById('form-liberar-total').action = `/controle/ferramentas/atual/liberar-total/${userId}`;
+                document.getElementById('label-checklist-liberado').classList.add('hidden');
+            } else {
+                badge.className = "inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400 border border-emerald-500/20";
+                badge.innerHTML = '<i class="fa-solid fa-lock-open"></i> Desbloqueado';
+                
+                // Oculta liberação total e mostra etiqueta informativa
+                document.getElementById('form-liberar-total').style.display = 'none';
+                document.getElementById('label-checklist-liberado').classList.remove('hidden');
+            }
+            
+            // Exibe e configura a ação de Zerar/Excluir
+            document.getElementById('form-excluir').style.display = 'inline-block';
+            document.getElementById('form-excluir').action = `/controle/ferramentas/atual/excluir/${userId}`;
             
             if (data.notes) {
                 document.getElementById('detail-notes').textContent = data.notes;
@@ -415,6 +464,16 @@ function viewCompleteControl(userId) {
                                 subStatusClass = 'bg-rose-500/10 text-rose-600 dark:bg-rose-500/20 dark:text-rose-400';
                             }
                             
+                            // Ação de Liberação Cirúrgica do Item
+                            let releaseAction = '';
+                            if (!data.is_locked) {
+                                releaseAction = `<span class="text-[7px] font-bold text-emerald-500 uppercase tracking-wider"><i class="fa-solid fa-circle-check"></i> Aberto</span>`;
+                            } else if (item.is_editable) {
+                                releaseAction = `<span class="text-[7px] font-black text-teal-600 bg-teal-500/10 px-1.5 py-0.5 rounded uppercase tracking-wider"><i class="fa-solid fa-lock-open"></i> Liberado Técnico</span>`;
+                            } else {
+                                releaseAction = `<button type="button" onclick="liberarItem(${userId}, ${item.tool_id}, this)" class="text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200 transition-all flex items-center gap-1"><i class="fa-solid fa-lock text-[8px]"></i> Liberar Item</button>`;
+                            }
+                            
                             card.innerHTML = `
                                 <div class="flex items-start justify-between gap-3">
                                     <div class="flex items-center gap-3">
@@ -426,7 +485,10 @@ function viewCompleteControl(userId) {
                                             <span class="text-[8px] font-black text-slate-400 uppercase tracking-wider">${item.category}</span>
                                         </div>
                                     </div>
-                                    <span class="text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded ${subStatusClass}">${subStatusLabel}</span>
+                                    <div class="flex flex-col items-end gap-1.5">
+                                        <span class="text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded ${subStatusClass}">${subStatusLabel}</span>
+                                        ${releaseAction}
+                                    </div>
                                 </div>
                                 ${extraDesc}
                             `;
@@ -452,9 +514,20 @@ function viewCompleteControl(userId) {
                             countNormal++;
                             const card = document.createElement('div');
                             card.className = "p-3.5 bg-emerald-500/[0.02] border border-emerald-500/10 rounded-2xl flex items-center justify-between";
+                            
+                            // Ação de Liberação Cirúrgica do Item
+                            let releaseActionNormal = '';
+                            if (!data.is_locked) {
+                                releaseActionNormal = `<span class="text-[7px] font-bold text-emerald-500 uppercase tracking-wider"><i class="fa-solid fa-circle-check"></i> Aberto</span>`;
+                            } else if (item.is_editable) {
+                                releaseActionNormal = `<span class="text-[7px] font-black text-teal-600 bg-teal-500/10 px-1.5 py-0.5 rounded uppercase tracking-wider"><i class="fa-solid fa-lock-open"></i> Liberado Técnico</span>`;
+                            } else {
+                                releaseActionNormal = `<button type="button" onclick="liberarItem(${userId}, ${item.tool_id}, this)" class="text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200 transition-all flex items-center gap-1"><i class="fa-solid fa-lock text-[8px]"></i> Liberar Item</button>`;
+                            }
+                            
                             card.innerHTML = `
                                 <div class="flex items-center gap-3">
-                                    <div class="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-500 text-xs">
+                                    <div class="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-500 text-xs shrink-0">
                                         <i class="fa-solid fa-circle-check"></i>
                                     </div>
                                     <div>
@@ -462,7 +535,10 @@ function viewCompleteControl(userId) {
                                         <span class="text-[8px] font-black text-slate-400 uppercase tracking-wider">${item.category}</span>
                                     </div>
                                 </div>
-                                <span class="text-[9px] font-bold text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded">Bom Estado</span>
+                                <div class="flex flex-col items-end gap-1.5">
+                                    <span class="text-[9px] font-bold text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded">Bom Estado</span>
+                                    ${releaseActionNormal}
+                                </div>
                             `;
                             normalContainer.appendChild(card);
                         }
@@ -483,6 +559,31 @@ function viewCompleteControl(userId) {
             document.getElementById('detail-subtitle').textContent = 'Não foi possível carregar as informações do técnico.';
             document.getElementById('critical-items-container').innerHTML = '<div class="col-span-2 text-center text-xs text-red-500 py-4"><i class="fa-solid fa-circle-exclamation mr-1.5"></i> Erro ao buscar os dados. Tente novamente mais tarde.</div>';
         });
+}
+
+function liberarItem(userId, toolId, buttonElement) {
+    if (!confirm('Deseja liberar este item específico para edição pelo técnico?')) return;
+    
+    buttonElement.disabled = true;
+    buttonElement.innerHTML = '<i class="fa-solid fa-spinner animate-spin mr-1"></i> Liberando...';
+    
+    fetch(`/controle/ferramentas/atual/liberar-item/${userId}/${toolId}`, {
+        method: 'POST'
+    })
+    .then(response => {
+        if (!response.ok) throw new Error('Falha ao liberar item.');
+        return response.json();
+    })
+    .then(data => {
+        // Recarrega o modal de auditoria na mesma hora de forma dinâmica!
+        viewCompleteControl(userId);
+    })
+    .catch(err => {
+        console.error(err);
+        alert('Erro ao liberar item. Tente novamente.');
+        buttonElement.disabled = false;
+        buttonElement.innerHTML = '<i class="fa-solid fa-lock text-[8px]"></i> Liberar Item';
+    });
 }
 
 function closeDetailsModal() {

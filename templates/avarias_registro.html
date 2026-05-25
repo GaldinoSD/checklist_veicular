@@ -264,17 +264,17 @@
   <!-- JSON INVISÍVEL COM DADOS DA O.S -->
   <script type="application/json" id="os_data_{{ os.id }}">
     {
-      "veiculo": "{{ os.vehicle.brand }} {{ os.vehicle.model }} - {{ os.vehicle.plate }}",
-      "responsavel": "{{ os.responsavel.username if os.responsavel else '' }}",
-      "descricao": "{{ os.descricao }}",
-      "gravidade": "{{ os.gravidade }}",
-      "km": "{{ os.km }}",
-      "valor_gasto": "{{ os.valor_gasto if os.valor_gasto else '' }}",
-      "pecas_trocadas": "{{ os.pecas_trocadas|safe if os.pecas_trocadas else '' }}",
-      "servico_realizado": "{{ os.servico_realizado|safe if os.servico_realizado else '' }}",
-      "data_abertura": "{{ os.data_abertura|br_datetime if os.data_abertura else '' }}",
-      "data_fechamento": "{{ os.data_fechamento|br_datetime if os.data_fechamento else '' }}",
-      "foto": "{{ os.foto if os.foto else '' }}"
+      "veiculo": {{ (os.vehicle.brand ~ " " ~ os.vehicle.model ~ " - " ~ os.vehicle.plate)|tojson }},
+      "responsavel": {{ (os.responsavel.username if os.responsavel else '')|tojson }},
+      "descricao": {{ (os.descricao if os.descricao else '')|tojson }},
+      "gravidade": {{ (os.gravidade if os.gravidade else '')|tojson }},
+      "km": {{ (os.km|string if os.km else '')|tojson }},
+      "valor_gasto": {{ (os.valor_gasto|string if os.valor_gasto else '')|tojson }},
+      "pecas_trocadas": {{ (os.pecas_trocadas if os.pecas_trocadas else '')|tojson }},
+      "servico_realizado": {{ (os.servico_realizado if os.servico_realizado else '')|tojson }},
+      "data_abertura": {{ (os.data_abertura|br_datetime if os.data_abertura else '')|tojson }},
+      "data_fechamento": {{ (os.data_fechamento|br_datetime if os.data_fechamento else '')|tojson }},
+      "foto": {{ (os.foto if os.foto else '')|tojson }}
     }
   </script>
 

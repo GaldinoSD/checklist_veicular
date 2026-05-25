@@ -15,6 +15,52 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{{ page_title or 'Sistema' }}</title>
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <script>
+      // 🛡️ Injetor Global de Proteção contra CSRF para Formulários e Requisições AJAX (Fetch)
+      document.addEventListener("submit", function(event) {
+        const form = event.target;
+        if (form.method && form.method.toUpperCase() === "POST") {
+          // Se o formulário não tiver um input de csrf_token, anexa dinamicamente antes do envio
+          if (!form.querySelector('input[name="csrf_token"]')) {
+            const tokenMeta = document.querySelector('meta[name="csrf-token"]');
+            if (tokenMeta) {
+              const input = document.createElement("input");
+              input.type = "hidden";
+              input.name = "csrf_token";
+              input.value = tokenMeta.content;
+              form.appendChild(input);
+            }
+          }
+        }
+      });
+
+      // Interceptar requisições da Fetch API para anexar automaticamente o cabeçalho X-CSRFToken
+      const originalFetch = window.fetch;
+      window.fetch = function(input, init) {
+        if (init && init.method && ["POST", "PUT", "PATCH", "DELETE"].includes(init.method.toUpperCase())) {
+          const tokenMeta = document.querySelector('meta[name="csrf-token"]');
+          if (tokenMeta) {
+            init.headers = init.headers || {};
+            if (init.headers instanceof Headers) {
+              if (!init.headers.has("X-CSRFToken")) {
+                init.headers.set("X-CSRFToken", tokenMeta.content);
+              }
+            } else if (Array.isArray(init.headers)) {
+              const hasCsrf = init.headers.some(h => h[0].toUpperCase() === "X-CSRFTOKEN");
+              if (!hasCsrf) {
+                init.headers.push(["X-CSRFToken", tokenMeta.content]);
+              }
+            } else {
+              if (!init.headers["X-CSRFToken"] && !init.headers["x-csrf-token"]) {
+                init.headers["X-CSRFToken"] = tokenMeta.content;
+              }
+            }
+          }
+        }
+        return originalFetch(input, init);
+      };
+    </script>
 
     <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico', v='1') }}" type="image/x-icon">
     <link rel="icon" href="{{ url_for('static', filename='favicon.ico', v='1') }}" type="image/x-icon">
@@ -420,6 +466,34 @@
                   Configurações
                 </a>
                 {% endif %}
+            </div>
+          </div>
+          {% endif %}
+
+          {% if current_user.has_permission('gestao_mapas') %}
+          <!-- ✅ MAPAS COLLAPSIBLE -->
+          <div class="space-y-1 mb-2">
+            <button onclick="toggleSubmenu('submenu-mapas', this)" 
+                    class="w-full flex items-center justify-between gap-3.5 px-4 py-3 rounded-2xl transition-all duration-300 group
+                           {% if request.path.startswith('/mapa-rede') %}
+                             bg-indigo-600/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20
+                           {% else %}
+                             text-slate-500 dark:text-gray-400 hover:bg-slate-900/5 dark:hover:bg-white/5
+                           {% endif %}">
+              <div class="flex items-center gap-3.5">
+                <i class="fa-solid fa-map-location-dot w-5 text-center text-base transition-colors {% if request.path.startswith('/mapa-rede') %}text-indigo-500{% else %}text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200{% endif %}"></i>
+                <span class="text-[13px] font-bold tracking-tight">Rede & Mapas</span>
+              </div>
+              <i class="fa-solid fa-chevron-down text-[10px] chevron-rotate {% if request.path.startswith('/mapa-rede') %}open-chevron{% endif %}"></i>
+            </button>
+            
+            <div id="submenu-mapas" class="submenu-container {% if request.path.startswith('/mapa-rede') %}open{% endif %} ml-4 border-l border-slate-900/5 dark:border-white/5 pl-2 space-y-1 mt-1">
+                <a href="{{ url_for('mapa_rede') }}" 
+                   class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-[12px] font-bold transition-all
+                          {% if request.endpoint == 'mapa_rede' %}text-indigo-500 bg-indigo-500/5{% else %}text-slate-500 dark:text-gray-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-900/5 dark:hover:bg-white/5{% endif %}">
+                  <i class="fa-solid fa-route w-4 text-center opacity-70"></i>
+                  Mapa de Fibra
+                </a>
             </div>
           </div>
           {% endif %}

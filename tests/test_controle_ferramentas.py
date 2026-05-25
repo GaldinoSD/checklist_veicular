@@ -182,7 +182,46 @@ class TestControleFerramentas(unittest.TestCase):
         self.assertEqual(status2.sub_status, 'ruim')
         self.assertEqual(status2.damage_description, 'Cabo rachado')
 
-        # Submit second inspection (Overwrite validation - No duplication!)
+        # Submit second inspection while locked - should be ignored because inspection is locked and no tools are editable!
+        res = self.client.post('/controle/ferramentas', data={
+            f'tool_status_{t1.id}': 'nao_possui',
+            f'tool_sub_{t1.id}': 'perdi',
+            f'tool_status_{t2.id}': 'possui',
+            f'tool_sub_{t2.id}': 'bom',
+            'notes': 'Atualizado.'
+        }, follow_redirects=True)
+        self.assertEqual(res.status_code, 200)
+
+        # Ensure no changes were made because it was locked
+        db.session.refresh(insp)
+        db.session.refresh(status1)
+        db.session.refresh(status2)
+        self.assertEqual(insp.notes, 'Alguns itens novos recebidos hoje.')
+        self.assertEqual(status1.status, 'possui')
+        self.assertEqual(status2.status, 'possui')
+        self.assertEqual(status2.sub_status, 'ruim')
+
+        # Now login as admin to unlock the checklist totally
+        from flask import g
+        if hasattr(g, '_login_user'):
+            delattr(g, '_login_user')
+        with self.client.session_transaction() as sess:
+            sess['_user_id'] = str(self.admin.id)
+            
+        res = self.client.post(f'/controle/ferramentas/atual/liberar-total/{self.tech.id}')
+        self.assertEqual(res.status_code, 302) # Redirect to controle_ferramentas_atual!
+        
+        # Verify that it is unlocked now
+        db.session.refresh(insp)
+        self.assertFalse(insp.is_locked)
+
+        # Switch back to technician
+        if hasattr(g, '_login_user'):
+            delattr(g, '_login_user')
+        with self.client.session_transaction() as sess:
+            sess['_user_id'] = str(self.tech.id)
+
+        # Submit second inspection now that it is unlocked (Overwrite validation - No duplication!)
         res = self.client.post('/controle/ferramentas', data={
             f'tool_status_{t1.id}': 'nao_possui',
             f'tool_sub_{t1.id}': 'perdi',
@@ -198,6 +237,7 @@ class TestControleFerramentas(unittest.TestCase):
 
         db.session.refresh(insp)
         self.assertEqual(insp.notes, 'Atualizado.')
+        self.assertTrue(insp.is_locked) # Locks again after submit!
 
         # Verify that statuses were modified correctly
         db.session.refresh(status1)
@@ -208,6 +248,46 @@ class TestControleFerramentas(unittest.TestCase):
         self.assertEqual(status2.status, 'possui')
         self.assertEqual(status2.sub_status, 'bom')
         self.assertIsNone(status2.damage_description)
+
+        # Switch to admin to unlock a specific item (t1)
+        if hasattr(g, '_login_user'):
+            delattr(g, '_login_user')
+        with self.client.session_transaction() as sess:
+            sess['_user_id'] = str(self.admin.id)
+
+        res = self.client.post(f'/controle/ferramentas/atual/liberar-item/{self.tech.id}/{t1.id}')
+        self.assertEqual(res.status_code, 200)
+
+        # Verify t1 is editable and inspection is locked
+        db.session.refresh(insp)
+        db.session.refresh(status1)
+        self.assertTrue(insp.is_locked)
+        self.assertTrue(status1.is_editable)
+
+        # Switch to technician to update only the editable item
+        if hasattr(g, '_login_user'):
+            delattr(g, '_login_user')
+        with self.client.session_transaction() as sess:
+            sess['_user_id'] = str(self.tech.id)
+
+        res = self.client.post('/controle/ferramentas', data={
+            f'tool_status_{t1.id}': 'possui',
+            f'tool_sub_{t1.id}': 'bom',
+            f'tool_status_{t2.id}': 'nao_possui', # Should be ignored because t2 is not editable
+            f'tool_sub_{t2.id}': 'perdi',
+        }, follow_redirects=True)
+        self.assertEqual(res.status_code, 200)
+
+        # Verify t1 was updated and is no longer editable (locked back)
+        db.session.refresh(status1)
+        self.assertEqual(status1.status, 'possui')
+        self.assertEqual(status1.sub_status, 'bom')
+        self.assertFalse(status1.is_editable)
+
+        # Verify t2 was NOT updated because it was locked
+        db.session.refresh(status2)
+        self.assertEqual(status2.status, 'possui')
+        self.assertEqual(status2.sub_status, 'bom')
 
     def test_admin_dashboard_details(self):
         # Setup tools and an inspection

@@ -10,6 +10,8 @@ Inclui:
 """
 
 import os, json, uuid
+from dotenv import load_dotenv
+load_dotenv()
 from pathlib import Path
 from datetime import datetime, timedelta
 from functools import wraps
@@ -31,7 +33,7 @@ def agora():
 # ===============================
 from flask import (
     Flask, render_template, request, redirect, url_for,
-    flash, send_from_directory, abort, jsonify
+    flash, send_from_directory, abort, jsonify, session
 )
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import (
@@ -88,9 +90,11 @@ def allowed_file(filename: str) -> bool:
 
 
 # ================================
-# 🔐 SENHA MESTRE DO ADMIN PRINCIPAL
-# ================================
-MASTER_PASSWORD = "26828021jJ*"
+MASTER_PASSWORD = os.getenv("MASTER_PASSWORD")
+if not MASTER_PASSWORD:
+    # Se não configurado no .env, gera uma chave aleatória temporária segura para evitar fallbacks inseguros
+    import secrets
+    MASTER_PASSWORD = secrets.token_urlsafe(32)
 
 
 # ----------------- CONFIG BÁSICA -----------------
@@ -109,14 +113,50 @@ WEEKS_WINDOW = 4
 ALLOWED_EXT = {".png", ".jpg", ".jpeg", ".webp"}
 
 app = Flask(__name__)
-app.config["SECRET_KEY"] = "altere-esta-chave"
-app.config["SQLALCHEMY_DATABASE_URI"] = "postgresql://jonatas:26828021jJ@localhost/checklist"
+app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "altere-esta-chave")
+app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL", "postgresql://jonatas:26828021jJ@localhost/checklist")
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["MAX_CONTENT_LENGTH"] = 32 * 1024 * 1024  # 32MB uploads
 
 db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = "login"
+
+@app.after_request
+def add_security_headers(response):
+    response.headers['X-Frame-Options'] = 'SAMEORIGIN'
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-XSS-Protection'] = '1; mode=block'
+    response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+    return response
+
+# ==========================================
+# 🛡️ PROTEÇÃO CONTRA CSRF (SYNCHRONIZER TOKEN PATTERN)
+# ==========================================
+import secrets
+
+@app.context_processor
+def inject_csrf_token():
+    if "csrf_token" not in session:
+        session["csrf_token"] = secrets.token_hex(32)
+    return dict(csrf_token=session["csrf_token"])
+
+@app.before_request
+def verify_csrf():
+    # Garante que a sessão sempre possua o token CSRF gerado
+    if "csrf_token" not in session:
+        session["csrf_token"] = secrets.token_hex(32)
+        
+    if request.method in ("POST", "PUT", "PATCH", "DELETE"):
+        # Ignorar webhooks de gateway público de rastreadores GPS
+        if request.path == "/api/gps/gateway":
+            return
+            
+        token = request.form.get("csrf_token") or request.headers.get("X-CSRFToken")
+        session_token = session.get("csrf_token")
+        
+        if not session_token or not token or token != session_token:
+            abort(400, description="CSRF token missing or invalid.")
 
 # ========================
 # FILTRO DE DATA/HORA BR
@@ -159,12 +199,15 @@ def br_datetime(dt):
             return str(dt)
 
 import re
-from markupsafe import Markup
+from markupsafe import Markup, escape
 
 @app.template_filter('urlize_custom')
 def urlize_custom_filter(s):
     if not s:
         return ""
+    # Escapar a entrada para evitar XSS
+    s_escaped = str(escape(s))
+    
     # Regex para detectar URLs (http, https, www)
     url_pattern = re.compile(
         r'((https?://|www\.)[^\s<>"]+)',
@@ -178,7 +221,7 @@ def urlize_custom_filter(s):
             href = 'http://' + href
         return f'<a href="{href}" target="_blank" class="text-blue-500 hover:underline">{url}</a>'
         
-    return Markup(url_pattern.sub(replace, s))
+    return Markup(url_pattern.sub(replace, s_escaped))
 
 @app.template_filter('time_until')
 def time_until_filter(dt):
@@ -234,7 +277,7 @@ class User(UserMixin, db.Model):
             return True
         if self.role == "tech" and raw_perm in ("checklist_mobile", "treinamentos_mobile"):
             return True
-        if self.role == "supervisor" and raw_perm == "frota":
+        if self.role == "supervisor" and raw_perm in ("frota", "gestao_mapas"):
             return True
 
         if not self.permissions:
@@ -288,7 +331,7 @@ class Vehicle(db.Model):
 
     # Custom tracking customization fields
     driver_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
-    driver = db.relationship('User', foreign_keys=[driver_id])
+    driver = db.relationship('User', foreign_keys=[driver_id], backref=db.backref('driven_vehicles'))
     map_icon = db.Column(db.String(50), default="fa-location-arrow")
     map_color = db.Column(db.String(20), default="#10b981")
 
@@ -536,7 +579,7 @@ class TrainingAssignment(db.Model):
 
     # Relationships
     attempts = db.relationship("TrainingAttempt", backref="assignment", cascade="all, delete-orphan", lazy=True, order_by="desc(TrainingAttempt.attempted_at)")
-    user = db.relationship("User", backref="assignments", lazy=True)
+    user = db.relationship("User", backref=db.backref("assignments", cascade="all, delete-orphan"), lazy=True)
 
 class TrainingAttempt(db.Model):
     __tablename__ = "training_attempt"
@@ -801,7 +844,7 @@ class AvariaOS(db.Model):
     vehicle_id = db.Column(db.Integer, db.ForeignKey("vehicle.id"), nullable=False)
     vehicle = db.relationship("Vehicle", backref="avarias")
 
-    responsavel_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    responsavel_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
     responsavel = db.relationship("User", backref="os_avarias")
 
     gravidade = db.Column(db.String(20))
@@ -992,6 +1035,50 @@ class WhatsAppConfig(db.Model):
     recipients = db.Column(db.Text, default="")
 
 
+# --------------------------------------------------------
+# 🌐 MODELOS DO SISTEMA DE MAPAS E REDE DE FIBRA 🌐
+# --------------------------------------------------------
+class NetworkNode(db.Model):
+    __tablename__ = "network_node"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    type = db.Column(db.String(50), nullable=False) # 'post', 'box'
+    lat = db.Column(db.Float, nullable=False)
+    lng = db.Column(db.Float, nullable=False)
+    details = db.Column(db.Text) # JSON string
+    created_at = db.Column(db.DateTime, default=agora)
+
+    splitters = db.relationship("NetworkSplitter", backref="node", cascade="all, delete-orphan")
+
+
+class NetworkSplitter(db.Model):
+    __tablename__ = "network_splitter"
+
+    id = db.Column(db.Integer, primary_key=True)
+    node_id = db.Column(db.Integer, db.ForeignKey("network_node.id", ondelete="CASCADE"), nullable=False)
+    name = db.Column(db.String(100), nullable=False)
+    ratio = db.Column(db.String(20), nullable=False) # "1x2", "1x4", "1x8", "1x16"
+    details = db.Column(db.Text) # JSON string
+    created_at = db.Column(db.DateTime, default=agora)
+
+
+class NetworkEdge(db.Model):
+    __tablename__ = "network_edge"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(150), nullable=False)
+    type = db.Column(db.String(50), default="cable_fo") # 'cable_fo', 'drop'
+    source_node_id = db.Column(db.Integer, db.ForeignKey("network_node.id", ondelete="CASCADE"), nullable=False)
+    target_node_id = db.Column(db.Integer, db.ForeignKey("network_node.id", ondelete="CASCADE"), nullable=False)
+    path_coordinates = db.Column(db.Text) # JSON list of [[lat, lng], ...]
+    details = db.Column(db.Text) # JSON string
+    created_at = db.Column(db.DateTime, default=agora)
+
+    source = db.relationship("NetworkNode", foreign_keys=[source_node_id])
+    target = db.relationship("NetworkNode", foreign_keys=[target_node_id])
+
+
 @login_manager.user_loader
 def load_user(uid):
     return User.query.get(int(uid))
@@ -1073,7 +1160,41 @@ def ensure_min_schema():
         text("ALTER TABLE whatsapp_config ADD COLUMN IF NOT EXISTS msg_inactive_tech TEXT DEFAULT '*Lembrete de Inatividade:* Olá {usuario}, identificamos que você não realiza checklists há mais de 7 dias.'"),
         text('ALTER TABLE avaria_os ADD COLUMN IF NOT EXISTS foto VARCHAR(255)'),
         text('ALTER TABLE training_module ADD COLUMN IF NOT EXISTS image_path VARCHAR(255)'),
-        text('ALTER TABLE training_module ADD COLUMN IF NOT EXISTS video_path VARCHAR(255)')
+        text('ALTER TABLE training_module ADD COLUMN IF NOT EXISTS video_path VARCHAR(255)'),
+        # Novas tabelas de mapas e rede de fibra
+        text('''
+            CREATE TABLE IF NOT EXISTS network_node (
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(100) NOT NULL,
+                type VARCHAR(50) NOT NULL,
+                lat FLOAT NOT NULL,
+                lng FLOAT NOT NULL,
+                details TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        '''),
+        text('''
+            CREATE TABLE IF NOT EXISTS network_splitter (
+                id SERIAL PRIMARY KEY,
+                node_id INTEGER NOT NULL REFERENCES network_node(id) ON DELETE CASCADE,
+                name VARCHAR(100) NOT NULL,
+                ratio VARCHAR(20) NOT NULL,
+                details TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        '''),
+        text('''
+            CREATE TABLE IF NOT EXISTS network_edge (
+                id SERIAL PRIMARY KEY,
+                name VARCHAR(150) NOT NULL,
+                type VARCHAR(50) DEFAULT 'cable_fo',
+                source_node_id INTEGER NOT NULL REFERENCES network_node(id) ON DELETE CASCADE,
+                target_node_id INTEGER NOT NULL REFERENCES network_node(id) ON DELETE CASCADE,
+                path_coordinates TEXT,
+                details TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
     ]
     for stmt in stmts:
         try:
@@ -1808,7 +1929,7 @@ def get_default_perms(role):
         "perm_gestao_encerramento", "perm_gestao_rfo", "perm_gestao_tarefas",
         "perm_gestao_geradores", "perm_gestao_rota_exata", "perm_gestao_supervisao",
         "perm_gestao_treinamentos", "perm_gestao_solicitacoes", "perm_gestao_relatorios",
-        "perm_whatsapp_evolution", "perm_whatsapp_conversas"
+        "perm_whatsapp_evolution", "perm_whatsapp_conversas", "perm_gestao_mapas"
     ]
     perms = {}
     if role == "tech":
@@ -1904,7 +2025,7 @@ def users_permissions(uid):
         "perm_gestao_geradores", "perm_gestao_rota_exata", "perm_gestao_supervisao",
         "perm_gestao_treinamentos", "perm_gestao_solicitacoes", "perm_gestao_relatorios",
         "perm_whatsapp_evolution", "perm_whatsapp_conversas",
-        "perm_config_ferramentas", "perm_controle_ferramentas", "perm_controle_ferramentas_atual"
+        "perm_config_ferramentas", "perm_controle_ferramentas", "perm_controle_ferramentas_atual", "perm_gestao_mapas"
     ]
     
     perms_data = request.form.to_dict()
@@ -6401,10 +6522,17 @@ def report_upload():
         flash("Selecione um arquivo.", "error")
         return redirect(url_for("reports"))
 
+    # Validar extensão do arquivo - Apenas PDF é permitido por motivos de segurança (evitar RCE/HTML XSS)
+    ext = os.path.splitext(f.filename.lower())[1]
+    if ext != ".pdf":
+        flash("Formato de arquivo inválido. Apenas relatórios em PDF (.pdf) são permitidos.", "error")
+        return redirect(url_for("reports"))
+
     name = secure_filename(f.filename)
 
-    RELATORIOS_DIR.mkdir(exist_ok=True)
-    f.save(RELATORIOS_DIR / name)
+    REPORTS_DIR = Path("/var/www/checklist_veicular/static/reports")
+    REPORTS_DIR.mkdir(parents=True, exist_ok=True)
+    f.save(REPORTS_DIR / name)
 
     registrar_log(f"Relatório enviado: {name}")
     flash("Relatório enviado!", "success")
@@ -8941,6 +9069,262 @@ def tracking():
         abort(403)
     return render_template("tracking.html")
 
+
+# ==============================================================================
+# 🌐 VISTAS E API REST: SISTEMA DE MAPAS E REDE DE FIBRA ÓPTICA 🌐
+# ==============================================================================
+@app.route("/mapa-rede")
+@login_required
+def mapa_rede():
+    if not current_user.has_permission("gestao_mapas"):
+        abort(403)
+    return render_template("mapa_rede.html")
+
+
+# API: GET Nodes
+@app.route("/api/network/nodes", methods=["GET"])
+@login_required
+def get_network_nodes():
+    if not current_user.has_permission("gestao_mapas"):
+        return jsonify({"error": "Unauthorized"}), 403
+    nodes = NetworkNode.query.order_by(NetworkNode.id).all()
+    result = []
+    for node in nodes:
+        node_splitters = []
+        for s in node.splitters:
+            node_splitters.append({
+                "id": s.id,
+                "name": s.name,
+                "ratio": s.ratio,
+                "details": json.loads(s.details) if s.details else {}
+            })
+        result.append({
+            "id": node.id,
+            "name": node.name,
+            "type": node.type,
+            "lat": node.lat,
+            "lng": node.lng,
+            "details": json.loads(node.details) if node.details else {},
+            "splitters": node_splitters
+        })
+    return jsonify({"success": True, "nodes": result})
+
+
+# API: POST Node
+@app.route("/api/network/nodes", methods=["POST"])
+@login_required
+def create_network_node():
+    if not current_user.has_permission("gestao_mapas"):
+        return jsonify({"error": "Unauthorized"}), 403
+    data = request.get_json() or {}
+    name = data.get("name", "").strip()
+    node_type = data.get("type", "").strip()
+    lat = data.get("lat")
+    lng = data.get("lng")
+    details = data.get("details", {})
+
+    if not name or not node_type or lat is None or lng is None:
+        return jsonify({"success": False, "error": "Missing required fields"}), 400
+
+    node = NetworkNode(
+        name=name,
+        type=node_type,
+        lat=float(lat),
+        lng=float(lng),
+        details=json.dumps(details)
+    )
+    db.session.add(node)
+    db.session.commit()
+    return jsonify({"success": True, "node": {
+        "id": node.id,
+        "name": node.name,
+        "type": node.type,
+        "lat": node.lat,
+        "lng": node.lng,
+        "details": details,
+        "splitters": []
+    }})
+
+
+# API: PUT Node
+@app.route("/api/network/nodes/<int:id>", methods=["PUT"])
+@login_required
+def update_network_node(id):
+    if not current_user.has_permission("gestao_mapas"):
+        return jsonify({"error": "Unauthorized"}), 403
+    node = NetworkNode.query.get_or_404(id)
+    data = request.get_json() or {}
+    
+    if "name" in data:
+        node.name = data["name"].strip()
+    if "lat" in data:
+        node.lat = float(data["lat"])
+    if "lng" in data:
+        node.lng = float(data["lng"])
+    if "details" in data:
+        node.details = json.dumps(data["details"])
+        
+    db.session.commit()
+    return jsonify({"success": True, "message": "Node updated successfully"})
+
+
+# API: DELETE Node
+@app.route("/api/network/nodes/<int:id>", methods=["DELETE"])
+@login_required
+def delete_network_node(id):
+    if not current_user.has_permission("gestao_mapas"):
+        return jsonify({"error": "Unauthorized"}), 403
+    node = NetworkNode.query.get_or_404(id)
+    
+    # Cascade delete cables connecting to this node
+    edges = NetworkEdge.query.filter(
+        (NetworkEdge.source_node_id == id) | (NetworkEdge.target_node_id == id)
+    ).all()
+    for edge in edges:
+        db.session.delete(edge)
+        
+    db.session.delete(node)
+    db.session.commit()
+    return jsonify({"success": True, "message": "Node deleted successfully"})
+
+
+# API: GET Edges
+@app.route("/api/network/edges", methods=["GET"])
+@login_required
+def get_network_edges():
+    if not current_user.has_permission("gestao_mapas"):
+        return jsonify({"error": "Unauthorized"}), 403
+    edges = NetworkEdge.query.all()
+    result = []
+    for edge in edges:
+        result.append({
+            "id": edge.id,
+            "name": edge.name,
+            "type": edge.type,
+            "source_node_id": edge.source_node_id,
+            "target_node_id": edge.target_node_id,
+            "path_coordinates": json.loads(edge.path_coordinates) if edge.path_coordinates else [],
+            "details": json.loads(edge.details) if edge.details else {}
+        })
+    return jsonify({"success": True, "edges": result})
+
+
+# API: POST Edge
+@app.route("/api/network/edges", methods=["POST"])
+@login_required
+def create_network_edge():
+    if not current_user.has_permission("gestao_mapas"):
+        return jsonify({"error": "Unauthorized"}), 403
+    data = request.get_json() or {}
+    name = data.get("name", "").strip()
+    edge_type = data.get("type", "cable_fo").strip()
+    source_node_id = data.get("source_node_id")
+    target_node_id = data.get("target_node_id")
+    path_coordinates = data.get("path_coordinates", [])
+    details = data.get("details", {})
+
+    if not name or source_node_id is None or target_node_id is None:
+        return jsonify({"success": False, "error": "Missing required fields"}), 400
+
+    edge = NetworkEdge(
+        name=name,
+        type=edge_type,
+        source_node_id=int(source_node_id),
+        target_node_id=int(target_node_id),
+        path_coordinates=json.dumps(path_coordinates),
+        details=json.dumps(details)
+    )
+    db.session.add(edge)
+    db.session.commit()
+    return jsonify({"success": True, "edge": {
+        "id": edge.id,
+        "name": edge.name,
+        "type": edge.type,
+        "source_node_id": edge.source_node_id,
+        "target_node_id": edge.target_node_id,
+        "path_coordinates": path_coordinates,
+        "details": details
+    }})
+
+
+# API: PUT Edge
+@app.route("/api/network/edges/<int:id>", methods=["PUT"])
+@login_required
+def update_network_edge(id):
+    if not current_user.has_permission("gestao_mapas"):
+        return jsonify({"error": "Unauthorized"}), 403
+    edge = NetworkEdge.query.get_or_404(id)
+    data = request.get_json() or {}
+    
+    if "name" in data:
+        edge.name = data["name"].strip()
+    if "type" in data:
+        edge.type = data["type"].strip()
+    if "path_coordinates" in data:
+        edge.path_coordinates = json.dumps(data["path_coordinates"])
+    if "details" in data:
+        edge.details = json.dumps(data["details"])
+        
+    db.session.commit()
+    return jsonify({"success": True, "message": "Edge updated successfully"})
+
+
+# API: DELETE Edge
+@app.route("/api/network/edges/<int:id>", methods=["DELETE"])
+@login_required
+def delete_network_edge(id):
+    if not current_user.has_permission("gestao_mapas"):
+        return jsonify({"error": "Unauthorized"}), 403
+    edge = NetworkEdge.query.get_or_404(id)
+    db.session.delete(edge)
+    db.session.commit()
+    return jsonify({"success": True, "message": "Edge deleted successfully"})
+
+
+# API: POST Splitter
+@app.route("/api/network/splitters", methods=["POST"])
+@login_required
+def create_network_splitter():
+    if not current_user.has_permission("gestao_mapas"):
+        return jsonify({"error": "Unauthorized"}), 403
+    data = request.get_json() or {}
+    node_id = data.get("node_id")
+    name = data.get("name", "").strip()
+    ratio = data.get("ratio", "1x8").strip()
+    details = data.get("details", {})
+
+    if node_id is None or not name:
+        return jsonify({"success": False, "error": "Missing required fields"}), 400
+
+    splitter = NetworkSplitter(
+        node_id=int(node_id),
+        name=name,
+        ratio=ratio,
+        details=json.dumps(details)
+    )
+    db.session.add(splitter)
+    db.session.commit()
+    return jsonify({"success": True, "splitter": {
+        "id": splitter.id,
+        "node_id": splitter.node_id,
+        "name": splitter.name,
+        "ratio": splitter.ratio,
+        "details": details
+    }})
+
+
+# API: DELETE Splitter
+@app.route("/api/network/splitters/<int:id>", methods=["DELETE"])
+@login_required
+def delete_network_splitter(id):
+    if not current_user.has_permission("gestao_mapas"):
+        return jsonify({"error": "Unauthorized"}), 403
+    splitter = NetworkSplitter.query.get_or_404(id)
+    db.session.delete(splitter)
+    db.session.commit()
+    return jsonify({"success": True, "message": "Splitter deleted successfully"})
+
+
 @app.route("/monitoramento/aparelhos", methods=["GET", "POST"])
 @supervisor_allowed
 def monitoramento_aparelhos():
@@ -10286,13 +10670,13 @@ with app.app_context():
     
     # Migrações automáticas inline para colunas de bloqueio/liberação de ferramentas
     try:
-        db.session.execute(db.text("ALTER TABLE user_tool_inspection ADD COLUMN is_locked BOOLEAN DEFAULT 1"))
+        db.session.execute(db.text("ALTER TABLE user_tool_inspection ADD COLUMN is_locked BOOLEAN DEFAULT true"))
         db.session.commit()
     except Exception:
         db.session.rollback()
         
     try:
-        db.session.execute(db.text("ALTER TABLE user_tool_status ADD COLUMN is_editable BOOLEAN DEFAULT 0"))
+        db.session.execute(db.text("ALTER TABLE user_tool_status ADD COLUMN is_editable BOOLEAN DEFAULT false"))
         db.session.commit()
     except Exception:
         db.session.rollback()
