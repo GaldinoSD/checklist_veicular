@@ -142,7 +142,8 @@
         </div>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 mb-8">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <!-- Status Inspeção (30d) -->
         <div class="card-premium p-8">
             <h3 class="text-sm font-black text-slate-800 dark:text-white mb-6 uppercase tracking-widest flex items-center gap-2">
                 <i class="fa-solid fa-magnifying-glass-chart text-indigo-500"></i> Status Inspeção (30d)
@@ -152,6 +153,49 @@
             </div>
         </div>
 
+        <!-- Visão Geral da Frota (Melhoria) -->
+        <div class="card-premium p-8 flex flex-col justify-between">
+            <div>
+                <h3 class="text-sm font-black text-slate-800 dark:text-white mb-5 uppercase tracking-widest flex items-center gap-2">
+                    <i class="fa-solid fa-car text-blue-500"></i> Inventário da Frota
+                </h3>
+                <div class="space-y-4">
+                    <div class="flex justify-between items-center bg-slate-50 dark:bg-white/5 p-3 rounded-2xl border border-slate-900/5">
+                        <div>
+                            <p class="text-[9px] font-black text-slate-400 uppercase tracking-wider">Total de Veículos</p>
+                            <h4 id="stat-total-veiculos" class="text-lg font-black text-slate-800 dark:text-white">0 veículos</h4>
+                        </div>
+                        <div class="w-8 h-8 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500">
+                            <i class="fa-solid fa-warehouse text-xs"></i>
+                        </div>
+                    </div>
+                    
+                    <div class="space-y-1.5">
+                        <div class="flex justify-between items-center text-[9px] font-black uppercase tracking-wider">
+                            <span class="text-emerald-500">Veículos Ativos</span>
+                            <span id="stat-ativos-perc" class="text-slate-500">0%</span>
+                        </div>
+                        <div class="w-full h-1.5 bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden">
+                            <div id="bar-ativos" class="h-full bg-emerald-500 transition-all duration-1000" style="width: 0%"></div>
+                        </div>
+                        <p id="stat-ativos-count" class="text-[9px] text-slate-400 font-bold">0 de 0 ativos</p>
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <div class="flex justify-between items-center text-[9px] font-black uppercase tracking-wider">
+                            <span class="text-orange-500">Em Manutenção</span>
+                            <span id="stat-manutencao-perc" class="text-slate-500">0%</span>
+                        </div>
+                        <div class="w-full h-1.5 bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden">
+                            <div id="bar-manutencao" class="h-full bg-orange-500 transition-all duration-1000" style="width: 0%"></div>
+                        </div>
+                        <p id="stat-manutencao-count" class="text-[9px] text-slate-400 font-bold">0 em oficina</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- O.S Recentes -->
         <div class="card-premium p-8">
             <h3 class="text-sm font-black text-slate-800 dark:text-white mb-6 uppercase tracking-widest flex items-center gap-2">
                 <i class="fa-solid fa-triangle-exclamation text-rose-500"></i> O.S Recentes
@@ -159,6 +203,7 @@
             <div id="dashboard-os-recent" class="space-y-3"></div>
         </div>
 
+        <!-- Últimos Registros -->
         <div class="card-premium p-8">
             <h3 class="text-sm font-black text-slate-800 dark:text-white mb-6 uppercase tracking-widest flex items-center gap-2">
                 <i class="fa-solid fa-history text-blue-500"></i> Últimos Registros
@@ -179,7 +224,7 @@
         </div>
     </div>
 
-    <!-- Tabelas de Histórico (Manter o que já tinha, mas com estilo premium) -->
+    <!-- Tabelas de Histórico (Manter o que já tinha, mas com estilo premium e suporte a filtro de período) -->
     <div class="card-premium p-8 mb-8">
         <h3 class="text-sm font-black text-slate-800 dark:text-white mb-6 uppercase tracking-widest flex items-center gap-2">
             <i class="fa-solid fa-users text-blue-500"></i> Checklist por Técnico
@@ -189,10 +234,14 @@
                 <thead>
                     <tr class="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-900/5 dark:border-white/5">
                         <th class="py-4 px-2">Técnico</th>
+                        {% if request.args.get('periodo') %}
+                        <th class="py-4 px-2 text-center text-blue-500">Checklists no Período</th>
+                        {% else %}
                         <th class="py-4 px-2 text-center">Semana</th>
                         <th class="py-4 px-2 text-center">Mês</th>
                         <th class="py-4 px-2 text-center">Ano</th>
-                        <th class="py-4 px-2 text-center">Total</th>
+                        {% endif %}
+                        <th class="py-4 px-2 text-center">Total Geral</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -206,10 +255,14 @@
                                 <span class="text-xs font-bold text-slate-700 dark:text-gray-200">{{ us.username }}</span>
                             </div>
                         </td>
+                        {% if request.args.get('periodo') %}
+                        <td class="py-4 px-2 text-center text-sm font-black text-blue-600">{{ us.semanal }}</td>
+                        {% else %}
                         <td class="py-4 px-2 text-center text-xs font-bold text-slate-600 dark:text-gray-400">{{ us.semanal }}</td>
                         <td class="py-4 px-2 text-center text-xs font-bold text-slate-600 dark:text-gray-400">{{ us.mensal }}</td>
                         <td class="py-4 px-2 text-center text-xs font-bold text-slate-600 dark:text-gray-400">{{ us.anual }}</td>
-                        <td class="py-4 px-2 text-center text-sm font-black text-blue-600">{{ us.total }}</td>
+                        {% endif %}
+                        <td class="py-4 px-2 text-center text-sm font-black text-slate-800 dark:text-white">{{ us.total }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -445,6 +498,35 @@
                     </span>
                 </div>
             `).join('') : '<p class="text-xs text-slate-400 text-center py-10">Nenhuma O.S aberta.</p>';
+
+            // Populando os novos cards da frota (Inventário)
+            const totalVehicles = data.total_vehicles || 0;
+            const activeVehicles = data.active_vehicles || 0;
+            const maintenanceVehicles = data.maintenance_vehicles || 0;
+            
+            const activePerc = totalVehicles > 0 ? Math.round((activeVehicles / totalVehicles) * 100) : 0;
+            const maintenancePerc = totalVehicles > 0 ? Math.round((maintenanceVehicles / totalVehicles) * 100) : 0;
+
+            const statTotalVeiculos = document.getElementById('stat-total-veiculos');
+            if (statTotalVeiculos) statTotalVeiculos.textContent = totalVehicles + (totalVehicles === 1 ? ' veículo' : ' veículos');
+
+            const statAtivosPerc = document.getElementById('stat-ativos-perc');
+            if (statAtivosPerc) statAtivosPerc.textContent = activePerc + '%';
+
+            const statAtivosCount = document.getElementById('stat-ativos-count');
+            if (statAtivosCount) statAtivosCount.textContent = `${activeVehicles} de ${totalVehicles} ativos`;
+
+            const barAtivos = document.getElementById('bar-ativos');
+            if (barAtivos) barAtivos.style.width = activePerc + '%';
+
+            const statManutencaoPerc = document.getElementById('stat-manutencao-perc');
+            if (statManutencaoPerc) statManutencaoPerc.textContent = maintenancePerc + '%';
+
+            const statManutencaoCount = document.getElementById('stat-manutencao-count');
+            if (statManutencaoCount) statManutencaoCount.textContent = `${maintenanceVehicles} em manutenção`;
+
+            const barManutencao = document.getElementById('bar-manutencao');
+            if (barManutencao) barManutencao.style.width = maintenancePerc + '%';
 
         } catch (e) { console.error("Erro dashboard frota:", e); }
     }

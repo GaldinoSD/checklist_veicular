@@ -25,6 +25,13 @@
                 </p>
             </div>
         </div>
+
+        <!-- Botão Ver Sugestões -->
+        <div class="relative z-10 shrink-0">
+            <button type="button" onclick="openSuggestionsModal()" class="w-full md:w-auto px-5 py-3 bg-gradient-to-br from-slate-700 to-slate-900 dark:from-slate-600 dark:to-slate-800 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-slate-900/20 transition-all active:scale-95 flex items-center justify-center gap-2">
+                <i class="fa-solid fa-lightbulb text-amber-400 animate-pulse"></i> Ver Sugestões
+            </button>
+        </div>
     </div>
 </div>
 
@@ -589,6 +596,187 @@ function liberarItem(userId, toolId, buttonElement) {
 function closeDetailsModal() {
     document.getElementById('modalDetails').classList.add('hidden');
 }
+
+function openSuggestionsModal() {
+    document.getElementById('modalSuggestions').classList.remove('hidden');
+    loadSuggestions();
+}
+
+function closeSuggestionsModal() {
+    document.getElementById('modalSuggestions').classList.add('hidden');
+}
+
+function loadSuggestions() {
+    const list = document.getElementById('suggestions-list');
+    list.innerHTML = `
+        <div class="text-center text-xs text-slate-400 dark:text-gray-500 py-8">
+            <i class="fa-solid fa-spinner animate-spin mr-2"></i> Carregando sugestões...
+        </div>
+    `;
+    
+    fetch('/controle/ferramentas/sugestoes')
+        .then(response => response.json())
+        .then(data => {
+            if (data.suggestions.length === 0) {
+                list.innerHTML = `
+                    <div class="text-center text-sm text-slate-400 dark:text-gray-500 py-12">
+                        <i class="fa-solid fa-lightbulb text-3xl mb-3 block opacity-20"></i>
+                        Nenhuma sugestão enviada pelos técnicos no momento.
+                    </div>
+                `;
+                return;
+            }
+            
+            list.innerHTML = '';
+            data.suggestions.forEach(s => {
+                const card = document.createElement('div');
+                card.className = "p-5 bg-slate-50 dark:bg-white/[0.02] border border-slate-900/5 dark:border-white/5 rounded-2xl transition-all hover:shadow-md";
+                card.id = `suggestion-card-${s.id}`;
+                
+                let linkHtml = '';
+                if (s.purchase_link) {
+                    linkHtml = `
+                        <a href="${s.purchase_link}" target="_blank" class="inline-flex items-center gap-1.5 text-xs font-bold text-teal-600 dark:text-teal-400 hover:underline mt-1">
+                            <i class="fa-solid fa-up-right-from-square text-[10px]"></i> Ver Link de Compra
+                        </a>
+                    `;
+                } else {
+                    linkHtml = `<span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1 block">Nenhum link fornecido</span>`;
+                }
+                
+                card.innerHTML = `
+                    <div class="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                        <div class="space-y-1.5 flex-1">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <h4 class="text-base font-black text-slate-800 dark:text-white leading-tight">${s.name}</h4>
+                                <span class="text-[8px] font-black uppercase tracking-wider bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-slate-400 px-2 py-0.5 rounded-full">
+                                    Enviado por: ${s.tech}
+                                </span>
+                            </div>
+                            <p class="text-xs text-slate-500 dark:text-gray-400 leading-relaxed font-medium bg-white dark:bg-slate-950/40 p-3 rounded-xl border border-slate-900/5 dark:border-white/5">
+                                <strong>Utilidade e Benefícios:</strong> ${s.utility}
+                            </p>
+                            ${linkHtml}
+                        </div>
+                        <div class="flex sm:flex-col items-center gap-2 shrink-0 w-full sm:w-32 self-end sm:self-start">
+                            <button type="button" onclick="aprovarSugestao(${s.id})" class="w-full px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold text-xs uppercase tracking-wider shadow-md transition-all flex items-center justify-center gap-1.5">
+                                <i class="fa-solid fa-check"></i> Aprovar
+                            </button>
+                            <button type="button" onclick="reprovarSugestao(${s.id})" class="w-full px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold text-xs uppercase tracking-wider shadow-md transition-all flex items-center justify-center gap-1.5">
+                                <i class="fa-solid fa-trash-can"></i> Reprovar
+                            </button>
+                        </div>
+                    </div>
+                    <div class="mt-3 text-[9px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
+                        <i class="fa-solid fa-calendar text-[8px]"></i> Sugerida em ${s.created_at}
+                    </div>
+                `;
+                list.appendChild(card);
+            });
+        })
+        .catch(err => {
+            console.error(err);
+            list.innerHTML = `
+                <div class="text-center text-xs text-red-500 py-8">
+                    <i class="fa-solid fa-triangle-exclamation mr-1.5"></i> Erro ao buscar sugestões. Tente novamente mais tarde.
+                </div>
+            `;
+        });
+}
+
+function aprovarSugestao(id) {
+    if (!confirm("Tem certeza que deseja aprovar essa sugestão? Ela será criada como ferramenta real no sistema.")) return;
+    
+    fetch(`/controle/ferramentas/sugestoes/aprovar/${id}`, { method: 'POST' })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const card = document.getElementById(`suggestion-card-${id}`);
+                card.style.opacity = '0';
+                card.style.transform = 'scale(0.95)';
+                setTimeout(() => {
+                    card.remove();
+                    loadSuggestions();
+                }, 300);
+            } else {
+                alert("Erro ao aprovar sugestão.");
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            alert("Erro de conexão ao aprovar.");
+        });
+}
+
+function reprovarSugestao(id) {
+    if (!confirm("Tem certeza que deseja reprovar/excluir essa sugestão?")) return;
+    
+    fetch(`/controle/ferramentas/sugestoes/reprovar/${id}`, { method: 'POST' })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const card = document.getElementById(`suggestion-card-${id}`);
+                card.style.opacity = '0';
+                card.style.transform = 'scale(0.95)';
+                setTimeout(() => {
+                    card.remove();
+                    loadSuggestions();
+                }, 300);
+            } else {
+                alert("Erro ao reprovar sugestão.");
+            }
+        })
+        .catch(err => {
+            console.error(err);
+            alert("Erro de conexão ao reprovar.");
+        });
+}
 </script>
+
+<!-- ======================= MODAL VER SUGESTÕES DE FERRAMENTAS ======================= -->
+<div id="modalSuggestions" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+        <!-- Overlay -->
+        <div onclick="closeSuggestionsModal()" class="fixed inset-0 transition-opacity bg-slate-900/60 backdrop-blur-sm" aria-hidden="true"></div>
+        
+        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+        
+        <!-- Conteúdo do Modal -->
+        <div class="inline-block align-bottom bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-900/10 dark:border-white/10 text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-3xl sm:w-full">
+            <div class="px-8 pt-8 pb-6">
+                <!-- Header -->
+                <div class="flex items-center justify-between mb-6 pb-4 border-b border-slate-900/5 dark:border-white/5">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500 shadow-inner">
+                            <i class="fa-solid fa-lightbulb text-lg"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-black text-slate-800 dark:text-white">Sugestões de Ferramentas</h3>
+                            <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Sugestões feitas pelos técnicos operacionais</p>
+                        </div>
+                    </div>
+                    <button type="button" onclick="closeSuggestionsModal()" class="w-8 h-8 rounded-full hover:bg-slate-100 dark:hover:bg-white/5 flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-white transition-all">
+                        <i class="fa-solid fa-xmark text-sm"></i>
+                    </button>
+                </div>
+
+                <!-- Conteúdo central -->
+                <div class="max-h-[55vh] overflow-y-auto pr-2 custom-scrollbar">
+                    <div id="suggestions-list" class="space-y-4">
+                        <!-- Injetado via AJAX -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="px-8 py-6 bg-slate-50 dark:bg-white/[0.02] border-t border-slate-900/5 dark:border-white/5 flex items-center justify-end gap-3 rounded-b-[2.5rem]">
+                <button type="button" onclick="closeSuggestionsModal()"
+                        class="px-6 py-3 bg-slate-900 dark:bg-white hover:bg-slate-800 dark:hover:bg-slate-100 text-white dark:text-slate-900 rounded-xl font-black text-xs uppercase tracking-widest shadow-md transition-all">
+                    Fechar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
 {% endblock %}

@@ -79,6 +79,9 @@ with app.test_client() as client:
     print("\n[TEST] Publicando o treinamento...")
     resp = client.post(f"/api/gestao/treinamentos_lms/{course_id}/publicar")
     print(f"Status: {resp.status_code}")
+    if resp.status_code != 200:
+        print(f"Erro na publicação: {resp.data.decode('utf-8')}")
+        sys.exit(1)
     pub_data = resp.get_json()
     print(f"Treinamento publicado? {pub_data.get('is_published')}")
     if not pub_data.get('is_published'):

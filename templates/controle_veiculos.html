@@ -22,7 +22,11 @@
             </div>
         </div>
 
-        <div class="flex items-center gap-4 relative z-10">
+        <div class="flex items-center gap-3 relative z-10">
+            <button type="button" onclick="abrirLeitorQR()"
+                    class="px-5 py-2.5 bg-slate-900/5 hover:bg-slate-900/10 dark:bg-white/5 dark:hover:bg-white/10 text-slate-800 dark:text-white border border-slate-900/10 dark:border-white/10 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all active:scale-95 flex items-center gap-2">
+                <i class="fa-solid fa-qrcode text-xs text-blue-500"></i> Escanear QR Code
+            </button>
             <button type="button" onclick="abrirModalSaida()"
                     class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-blue-500/20 transition-all active:scale-95 flex items-center gap-2">
                 <i class="fa-solid fa-plus text-xs"></i> Nova Saída
@@ -59,10 +63,77 @@
           </tr>
         </thead>
 
-        <tbody class="divide-y divide-slate-900/10 dark:divide-white/10 text-slate-900 dark:text-gray-200">
-          {% for r in registros %}
+        {# namespace para controlar o grupo mês/ano #}
+        {% set ns = namespace(last_group=None, is_first=true, group_index=0) %}
+
+        {% for r in registros %}
           {% set s = r.saida %}
           {% set c = r.chegada %}
+
+          {# pega mês em número e converte para PT #}
+          {% set mes_num = s.data_hora.strftime('%m') %}
+          {% if mes_num == '01' %}
+            {% set mes_pt = 'Janeiro' %}
+          {% elif mes_num == '02' %}
+            {% set mes_pt = 'Fevereiro' %}
+          {% elif mes_num == '03' %}
+            {% set mes_pt = 'Março' %}
+          {% elif mes_num == '04' %}
+            {% set mes_pt = 'Abril' %}
+          {% elif mes_num == '05' %}
+            {% set mes_pt = 'Maio' %}
+          {% elif mes_num == '06' %}
+            {% set mes_pt = 'Junho' %}
+          {% elif mes_num == '07' %}
+            {% set mes_pt = 'Julho' %}
+          {% elif mes_num == '08' %}
+            {% set mes_pt = 'Agosto' %}
+          {% elif mes_num == '09' %}
+            {% set mes_pt = 'Setembro' %}
+          {% elif mes_num == '10' %}
+            {% set mes_pt = 'Outubro' %}
+          {% elif mes_num == '11' %}
+            {% set mes_pt = 'Novembro' %}
+          {% elif mes_num == '12' %}
+            {% set mes_pt = 'Dezembro' %}
+          {% else %}
+            {% set mes_pt = mes_num %}
+          {% endif %}
+
+          {% set grupo = mes_pt ~ ' de ' ~ s.data_hora.strftime('%Y') %}
+
+          {# só mostra o cabeçalho quando mudar mês/ano #}
+          {% if grupo != ns.last_group %}
+            {% if ns.last_group is not none %}
+              <!-- Fecha o tbody de itens do grupo anterior -->
+              </tbody>
+            {% endif %}
+
+            {% set ns.group_index = ns.group_index + 1 %}
+
+            <!-- Tbody para o cabeçalho do grupo (sempre visível) -->
+            <tbody>
+              <tr class="bg-slate-900/5 dark:bg-white/5 cursor-pointer hover:bg-slate-900/10 dark:hover:bg-white/10 transition-all select-none" 
+                  onclick="toggleMonthGroup({{ ns.group_index }})">
+                <td colspan="8" class="px-4 py-3 text-blue-700 dark:text-blue-300 font-black uppercase tracking-wider text-xs">
+                  <div class="flex items-center justify-between">
+                    <span class="flex items-center gap-2">
+                      <i class="fa-solid fa-calendar-days text-blue-500"></i>
+                      {{ grupo }}
+                    </span>
+                    <i id="chevron-group-{{ ns.group_index }}" class="fa-solid fa-chevron-down text-[10px] transition-transform duration-300 {% if ns.is_first %}rotate-180{% endif %}"></i>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+
+            <!-- Tbody para os itens do grupo (colapsável) -->
+            <tbody id="tbody-group-{{ ns.group_index }}" class="divide-y divide-slate-900/10 dark:divide-white/10 text-slate-900 dark:text-gray-200 {% if not ns.is_first %}hidden{% endif %}">
+
+            {% set ns.last_group = grupo %}
+            {% set ns.is_first = false %}
+          {% endif %}
+
           <tr class="hover:bg-slate-900/5 dark:hover:bg-white/5">
             <td class="px-3 py-2 whitespace-nowrap">
               {{ s.data_hora | br_datetime }}
@@ -115,6 +186,7 @@
               <div class="flex items-center gap-3">
                 {% if r.pode_registrar_chegada %}
                   <button type="button"
+                          data-qr-plate="{{ s.vehicle.plate }}"
                           onclick="abrirModalChegada('{{ s.vehicle_id }}','{{ s.id }}','{{ s.km }}','{{ s.responsavel }}')"
                           class="px-3 py-1.5 rounded-lg
                                  bg-green-600/20 dark:bg-green-600/25
@@ -135,14 +207,20 @@
               </div>
             </td>
           </tr>
-          {% else %}
-          <tr>
-            <td colspan="8" class="px-3 py-6 text-center text-slate-500 dark:text-gray-400">
-              Nenhum registro encontrado.
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
+        {% else %}
+          <tbody>
+            <tr>
+              <td colspan="8" class="px-3 py-6 text-center text-slate-500 dark:text-gray-400 uppercase text-[10px] font-black tracking-widest">
+                Nenhum registro encontrado.
+              </td>
+            </tr>
+          </tbody>
+        {% endfor %}
+
+        {% if ns.last_group is not none %}
+          <!-- Fecha o último tbody de itens -->
+          </tbody>
+        {% endif %}
       </table>
     </div>
   </div>
@@ -191,7 +269,7 @@
                        focus:outline-none focus:ring-2 focus:ring-blue-600/40">
           <option value="">Selecione o veículo</option>
           {% for v in vehicles %}
-            <option value="{{ v.id }}">{{ v.plate }} — {{ v.brand }} {{ v.model }}</option>
+            <option value="{{ v.id }}" data-km="{{ v.km or 0 }}">{{ v.plate }} — {{ v.brand }} {{ v.model }}</option>
           {% endfor %}
         </select>
       </div>
@@ -393,6 +471,49 @@
   </div>
 </div>
 
+<!-- LEITOR QR CODE CDN -->
+<script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+
+<!-- =========================
+     MODAL 3: LEITOR QR CODE
+========================= -->
+<div id="modalQRScanner" class="fixed inset-0 hidden z-[9999] items-center justify-center">
+  <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" onclick="fecharLeitorQR()"></div>
+
+  <div class="relative w-full max-w-md mx-4 rounded-2xl
+              border border-slate-900/10 dark:border-white/20
+              bg-white/95 dark:bg-slate-900/95
+              backdrop-blur-md shadow-2xl overflow-hidden">
+
+    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-900/10 dark:border-white/10">
+      <div>
+        <h3 class="text-lg font-semibold text-slate-900 dark:text-white">Escanear QR Code</h3>
+        <p class="text-xs text-slate-500 dark:text-gray-400">Aponte a câmera para o QR Code do veículo</p>
+      </div>
+
+      <button type="button" onclick="fecharLeitorQR()"
+              class="w-10 h-10 grid place-items-center rounded-lg
+                     bg-slate-900/5 hover:bg-slate-900/10 border border-slate-900/10
+                     dark:bg-white/5 dark:hover:bg-white/10 dark:border-white/10">
+        <span class="text-slate-700 dark:text-gray-200 text-xl">×</span>
+      </button>
+    </div>
+
+    <div class="p-6">
+      <div id="qr-reader" class="w-full rounded-2xl overflow-hidden border border-slate-900/10 dark:border-white/10 bg-slate-900/5 dark:bg-white/5" style="max-width: 100%;"></div>
+      <div id="qr-scanner-error" class="text-center text-rose-500 text-xs mt-3 hidden"></div>
+      
+      <div class="flex justify-end gap-2 pt-4 border-t border-slate-900/10 dark:border-white/10 mt-4">
+        <button type="button" onclick="fecharLeitorQR()"
+                class="w-full py-3 rounded-xl bg-slate-900/5 hover:bg-slate-900/10 border border-slate-900/10 text-slate-800 font-black text-[10px] uppercase tracking-widest
+                       dark:bg-white/5 dark:hover:bg-white/10 dark:border-white/10 dark:text-gray-200">
+          Cancelar Escaneamento
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
   function abrirModal(id) {
     const m = document.getElementById(id);
@@ -458,6 +579,109 @@
     if (e.key !== "Escape") return;
     fecharModalSaida();
     fecharModalChegada();
+  });
+
+  // Atualizar KM automaticamente ao selecionar veículo na nova saída
+  const saidaVehicleSelect = document.getElementById("saida_vehicle_id");
+  if (saidaVehicleSelect) {
+    saidaVehicleSelect.addEventListener("change", function() {
+      const selectedOption = this.options[this.selectedIndex];
+      const kmInput = document.getElementById("saida_km");
+      if (selectedOption && kmInput) {
+        const kmValue = selectedOption.getAttribute("data-km");
+        kmInput.value = kmValue || "";
+      }
+    });
+  }
+
+  function toggleMonthGroup(index) {
+      const tbody = document.getElementById(`tbody-group-${index}`);
+      const chevron = document.getElementById(`chevron-group-${index}`);
+      if (tbody && chevron) {
+          tbody.classList.toggle('hidden');
+          chevron.classList.toggle('rotate-180');
+      }
+  }
+  
+  // ==========================================
+  // 🔥 LEITOR DE QR CODE DO VEÍCULO (PORTARIA)
+  // ==========================================
+  let html5QrcodeScanner = null;
+
+  function abrirLeitorQR() {
+    abrirModal("modalQRScanner");
+    
+    // Esconde qualquer erro anterior
+    const errDiv = document.getElementById("qr-scanner-error");
+    if(errDiv) errDiv.classList.add("hidden");
+
+    // Instancia o leitor com as configurações recomendadas
+    html5QrcodeScanner = new Html5Qrcode("qr-reader");
+    
+    const qrCodeSuccessCallback = (decodedText, decodedResult) => {
+      // Código QR detectado! O conteúdo do QR deve ser a placa em texto puro (ex: RKJ-2H69)
+      const plate = decodedText.trim().toUpperCase();
+      
+      fecharLeitorQR();
+      processarScanPlaca(plate);
+    };
+    
+    const config = { fps: 15, qrbox: { width: 220, height: 220 } };
+    
+    // Inicia usando a câmera traseira ("environment")
+    html5QrcodeScanner.start({ facingMode: "environment" }, config, qrCodeSuccessCallback)
+      .catch(err => {
+        console.error("Erro câmera:", err);
+        const errDiv = document.getElementById("qr-scanner-error");
+        if(errDiv) {
+          errDiv.textContent = "Não foi possível acessar a câmera. Verifique as permissões de vídeo.";
+          errDiv.classList.remove("hidden");
+        }
+      });
+  }
+
+  function fecharLeitorQR() {
+    if (html5QrcodeScanner) {
+      html5QrcodeScanner.stop().then(() => {
+        fecharModal("modalQRScanner");
+        html5QrcodeScanner = null;
+      }).catch(err => {
+        console.error("Erro ao parar scanner:", err);
+        fecharModal("modalQRScanner");
+        html5QrcodeScanner = null;
+      });
+    } else {
+      fecharModal("modalQRScanner");
+    }
+  }
+
+  function processarScanPlaca(plate) {
+    // 1. Procura se há uma chegada pendente para este veículo na tabela (veículo na rua)
+    const chegadaBtn = document.querySelector(`button[data-qr-plate="${plate}"]`);
+    if (chegadaBtn) {
+      // Dispara o clique no botão para carregar todos os dados e abrir o modal de chegada!
+      chegadaBtn.click();
+      return;
+    }
+    
+    // 2. Caso contrário, abre a nova saída e seleciona o veículo na lista
+    abrirModalSaida();
+    const select = document.getElementById("saida_vehicle_id");
+    if (select) {
+      const opt = [...select.options].find(o => o.textContent.includes(plate));
+      if (opt) {
+        select.value = opt.value;
+        // Dispara o evento de mudança para que a KM seja preenchida automaticamente
+        select.dispatchEvent(new Event('change'));
+      } else {
+        alert(`O veículo com placa ${plate} não foi localizado ou está desativado.`);
+      }
+    }
+  }
+
+  // Permite fechar o scanner com a tecla ESC também
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") fecharLeitorQR();
   });
 </script>
 

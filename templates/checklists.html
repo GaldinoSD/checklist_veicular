@@ -62,10 +62,8 @@
         </tr>
       </thead>
 
-      <tbody class="text-slate-900 dark:text-gray-200">
-
         {# namespace para controlar o grupo mês/ano #}
-        {% set ns = namespace(last_group=None) %}
+        {% set ns = namespace(last_group=None, is_first=true, group_index=0) %}
 
         {% for c in itens %}
 
@@ -103,12 +101,34 @@
 
           {# só mostra o cabeçalho quando mudar mês/ano #}
           {% if grupo != ns.last_group %}
-            <tr class="bg-slate-900/5 dark:bg-white/5">
-              <td colspan="6" class="px-4 py-2 text-blue-700 dark:text-blue-300 font-semibold uppercase tracking-wide">
-                📅 {{ grupo }}
-              </td>
-            </tr>
+            {% if ns.last_group is not none %}
+              <!-- Fecha o tbody de itens do grupo anterior -->
+              </tbody>
+            {% endif %}
+
+            {% set ns.group_index = ns.group_index + 1 %}
+
+            <!-- Tbody para o cabeçalho do grupo (sempre visível) -->
+            <tbody>
+              <tr class="bg-slate-900/5 dark:bg-white/5 cursor-pointer hover:bg-slate-900/10 dark:hover:bg-white/10 transition-all select-none" 
+                  onclick="toggleMonthGroup({{ ns.group_index }})">
+                <td colspan="6" class="px-4 py-3 text-blue-700 dark:text-blue-300 font-black uppercase tracking-wider text-xs">
+                  <div class="flex items-center justify-between">
+                    <span class="flex items-center gap-2">
+                      <i class="fa-solid fa-calendar-days text-blue-500"></i>
+                      {{ grupo }}
+                    </span>
+                    <i id="chevron-group-{{ ns.group_index }}" class="fa-solid fa-chevron-down text-[10px] transition-transform duration-300 {% if ns.is_first %}rotate-180{% endif %}"></i>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+
+            <!-- Tbody para os itens do grupo (colapsável) -->
+            <tbody id="tbody-group-{{ ns.group_index }}" class="text-slate-900 dark:text-gray-200 {% if not ns.is_first %}hidden{% endif %}">
+
             {% set ns.last_group = grupo %}
+            {% set ns.is_first = false %}
           {% endif %}
 
           <tr class="border-b border-slate-900/10 dark:border-white/10 hover:bg-slate-900/5 dark:hover:bg-white/5 transition">
@@ -169,17 +189,36 @@
           </tr>
 
         {% else %}
-          <tr>
-            <td class="py-3 text-slate-500 dark:text-gray-400 text-center" colspan="6">
-              Sem registros.
-            </td>
-          </tr>
+          <tbody>
+            <tr>
+              <td class="py-6 text-slate-500 dark:text-gray-400 text-center uppercase text-[10px] font-black tracking-widest" colspan="6">
+                Sem registros.
+              </td>
+            </tr>
+          </tbody>
         {% endfor %}
-      </tbody>
 
-    </table>
+        {% if ns.last_group is not none %}
+          <!-- Fecha o último tbody de itens -->
+          </tbody>
+        {% endif %}
+
+      </table>
+    </div>
+
   </div>
 
 </div>
+
+<script>
+function toggleMonthGroup(index) {
+    const tbody = document.getElementById(`tbody-group-${index}`);
+    const chevron = document.getElementById(`chevron-group-${index}`);
+    if (tbody && chevron) {
+        tbody.classList.toggle('hidden');
+        chevron.classList.toggle('rotate-180');
+    }
+}
+</script>
 
 {% endblock %}

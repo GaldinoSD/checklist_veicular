@@ -112,9 +112,30 @@ WEEKS_WINDOW = 4
 
 ALLOWED_EXT = {".png", ".jpg", ".jpeg", ".webp"}
 
+import sys
+
+def _detect_testing():
+    if os.getenv("TESTING") == "true":
+        return True
+    if "pytest" in sys.modules or "unittest" in sys.modules:
+        return True
+    for arg in sys.argv:
+        if "pytest" in arg or "unittest" in arg or "tox" in arg:
+            return True
+        if "tests/" in arg or arg.startswith("test_") or arg.endswith("_test.py") or "test_lms" in arg:
+            return True
+    return False
+
+is_testing = _detect_testing()
+
 app = Flask(__name__)
 app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "altere-esta-chave")
-app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL", "postgresql://jonatas:26828021jJ@localhost/checklist")
+if is_testing:
+    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///:memory:"
+    app.config["TESTING"] = True
+    app.testing = True
+else:
+    app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL", "postgresql://jonatas:26828021jJ@localhost/checklist")
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["MAX_CONTENT_LENGTH"] = 32 * 1024 * 1024  # 32MB uploads
 
@@ -511,7 +532,18 @@ class UserToolStatus(db.Model):
     updated_at = db.Column(db.DateTime, default=agora, onupdate=agora)
     is_editable = db.Column(db.Boolean, default=False, nullable=False)
 
+class ToolSuggestion(db.Model):
+    __tablename__ = "tool_suggestion"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="CASCADE"), nullable=False)
+    user = db.relationship("User", backref=db.backref("tool_suggestions", lazy=True, cascade="all, delete-orphan"))
+    name = db.Column(db.String(100), nullable=False)
+    purchase_link = db.Column(db.String(500), nullable=True)
+    utility = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=agora)
+
 # ===============================
+
 # 🎓 LMS (TREINAMENTOS)
 # ===============================
 class Training(db.Model):
@@ -1249,7 +1281,8 @@ def seed_defaults():
 
 with app.app_context():
     db.create_all()
-    ensure_min_schema()
+    if not is_testing:
+        ensure_min_schema()
     seed_defaults()
 
 
@@ -1575,15 +1608,33 @@ def dashboard():
         # Incluindo todos os usuários exceto o admin principal para garantir reconhecimento total
         users = User.query.filter(User.username != 'admin').all()
         now = agora()
-        start_week = now - timedelta(days=now.weekday())
-        start_month = now.replace(day=1, hour=0, minute=0, second=0)
-        start_year = now.replace(month=1, day=1, hour=0, minute=0, second=0)
+        start_week = (now - timedelta(days=now.weekday())).replace(hour=0, minute=0, second=0, microsecond=0)
+        start_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        start_year = now.replace(month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
+
+        # Trata período selecionado se houver
+        periodo_custom = False
+        if periodo and " - " in periodo:
+            try:
+                start_str, end_str = periodo.split(" - ")
+                start_dt = datetime.strptime(start_str.strip(), "%Y-%m-%d")
+                end_dt = datetime.strptime(end_str.strip(), "%Y-%m-%d").replace(hour=23, minute=59, second=59)
+                periodo_custom = True
+            except Exception:
+                pass
 
         for u in users:
-            total = Checklist.query.filter_by(technician=u.username).count()
-            semanal = Checklist.query.filter(Checklist.technician == u.username, Checklist.date >= start_week).count()
-            mensal = Checklist.query.filter(Checklist.technician == u.username, Checklist.date >= start_month).count()
-            anual = Checklist.query.filter(Checklist.technician == u.username, Checklist.date >= start_year).count()
+            if periodo_custom:
+                # Se há período personalizado, 'semanal' conterá o valor do período e total será o geral
+                total = Checklist.query.filter_by(technician=u.username).count()
+                semanal = Checklist.query.filter(Checklist.technician == u.username, Checklist.date >= start_dt, Checklist.date <= end_dt).count()
+                mensal = 0
+                anual = 0
+            else:
+                total = Checklist.query.filter_by(technician=u.username).count()
+                semanal = Checklist.query.filter(Checklist.technician == u.username, Checklist.date >= start_week).count()
+                mensal = Checklist.query.filter(Checklist.technician == u.username, Checklist.date >= start_month).count()
+                anual = Checklist.query.filter(Checklist.technician == u.username, Checklist.date >= start_year).count()
             
             user_stats_list.append({
                 'username': u.username,
@@ -1592,8 +1643,11 @@ def dashboard():
                 'anual': anual,
                 'total': total
             })
-        # Ordenar por total desc
-        user_stats_list.sort(key=lambda x: x['total'], reverse=True)
+        # Ordenar pelo total de checklists no filtro correspondente (semanal para custom ou total geral)
+        if periodo_custom:
+            user_stats_list.sort(key=lambda x: x['semanal'], reverse=True)
+        else:
+            user_stats_list.sort(key=lambda x: x['total'], reverse=True)
 
     return render_template(
         "dashboard.html",
@@ -1635,8 +1689,8 @@ def api_frota_stats():
     # 2. Custo de Manutenção (Período - Apenas OS Finalizadas)
     total_cost = db.session.query(db.func.sum(AvariaOS.valor_gasto)).filter(
         AvariaOS.status == "finalizada",
-        AvariaOS.data_abertura >= start_month, 
-        AvariaOS.data_abertura <= now
+        AvariaOS.data_fechamento >= start_month, 
+        AvariaOS.data_fechamento <= now
     ).scalar() or 0
 
     # 3. Checklists do Período e O.S Abertas
@@ -1699,6 +1753,17 @@ def api_frota_stats():
             "gravity": o.gravidade or "Média"
         })
 
+    # 8. Estatísticas adicionais da Frota (Melhoria requisitada)
+    total_vehicles = Vehicle.query.count()
+    active_vehicles = Vehicle.query.filter_by(status="ATIVO").count()
+    maintenance_vehicles = Vehicle.query.filter_by(status="MANUTENCAO").count()
+    inactive_vehicles = Vehicle.query.filter(Vehicle.status.in_(["INATIVO", "DESATIVADO"])).count()
+
+    type_carro = Vehicle.query.filter_by(type="carro").count()
+    type_moto = Vehicle.query.filter_by(type="moto").count()
+    type_caminhao = Vehicle.query.filter_by(type="caminhao").count()
+    type_van = Vehicle.query.filter_by(type="van").count()
+
     return json.dumps({
         "fleet_health": fleet_health,
         "total_cost_month": float(total_cost),
@@ -1707,7 +1772,17 @@ def api_frota_stats():
         "km_history": {"labels": km_labels, "values": km_values},
         "status_dist": status_dist,
         "rev_alerts": rev_alerts[:3],
-        "latest_os": latest_os
+        "latest_os": latest_os,
+        "total_vehicles": total_vehicles,
+        "active_vehicles": active_vehicles,
+        "maintenance_vehicles": maintenance_vehicles,
+        "inactive_vehicles": inactive_vehicles,
+        "types_dist": {
+            "carro": type_carro,
+            "moto": type_moto,
+            "caminhao": type_caminhao,
+            "van": type_van
+        }
     })
 
 # --- API DASHBOARD GESTÃO (DADOS REAIS) ---
@@ -8738,35 +8813,36 @@ def api_gestao_treinamentos_lms_publish(id):
         c.is_published = True
         
         # Lê os parâmetros do corpo da requisição JSON (assign_all e user_ids)
-        req_data = request.get_json() or {}
+        req_data = request.get_json(silent=True) or {}
         assign_all = req_data.get("assign_all", False)
         user_ids = req_data.get("user_ids", [])
         
-        if assign_all:
-            # Seleciona todos os colaboradores ativos com o papel de técnicos (tech)
-            target_users = User.query.filter_by(role="tech").all()
-            target_user_ids = {u.id for u in target_users}
-        else:
-            target_user_ids = {int(uid) for uid in user_ids}
+        if assign_all or user_ids:
+            if assign_all:
+                # Seleciona todos os colaboradores ativos com o papel de técnicos (tech)
+                target_users = User.query.filter_by(role="tech").all()
+                target_user_ids = {u.id for u in target_users}
+            else:
+                target_user_ids = {int(uid) for uid in user_ids}
+                
+            # 1. Remove atribuições existentes que não estão na nova seleção
+            TrainingAssignment.query.filter(
+                TrainingAssignment.course_id == c.id,
+                ~TrainingAssignment.user_id.in_(list(target_user_ids))
+            ).delete(synchronize_session=False)
             
-        # 1. Remove atribuições existentes que não estão na nova seleção
-        TrainingAssignment.query.filter(
-            TrainingAssignment.course_id == c.id,
-            ~TrainingAssignment.user_id.in_(list(target_user_ids))
-        ).delete(synchronize_session=False)
-        
-        # 2. Cria novas atribuições para os técnicos selecionados que ainda não as possuem
-        existing_assigns = TrainingAssignment.query.filter_by(course_id=c.id).all()
-        existing_user_ids = {a.user_id for a in existing_assigns}
-        
-        for uid in target_user_ids:
-            if uid not in existing_user_ids:
-                new_assign = TrainingAssignment(
-                    course_id=c.id,
-                    user_id=uid,
-                    status="pendente"
-                )
-                db.session.add(new_assign)
+            # 2. Cria novas atribuições para os técnicos selecionados que ainda não as possuem
+            existing_assigns = TrainingAssignment.query.filter_by(course_id=c.id).all()
+            existing_user_ids = {a.user_id for a in existing_assigns}
+            
+            for uid in target_user_ids:
+                if uid not in existing_user_ids:
+                    new_assign = TrainingAssignment(
+                        course_id=c.id,
+                        user_id=uid,
+                        status="pendente"
+                    )
+                    db.session.add(new_assign)
                 
         db.session.commit()
         return jsonify({"status": "ok", "is_published": c.is_published})
@@ -9082,6 +9158,58 @@ def mapa_rede():
     if not current_user.has_permission("gestao_mapas"):
         abort(403)
     return render_template("mapa_rede.html")
+
+
+@app.route("/rede-registros")
+@login_required
+def rede_registros():
+    if not (current_user.has_permission("gestao_mapas") or current_user.role == "tech"):
+        abort(403)
+
+    nodes = NetworkNode.query.order_by(NetworkNode.id).all()
+    edges = NetworkEdge.query.order_by(NetworkEdge.id).all()
+
+    nodes_list = []
+    for node in nodes:
+        node_splitters = []
+        for s in node.splitters:
+            node_splitters.append({
+                "id": s.id,
+                "name": s.name,
+                "ratio": s.ratio,
+                "details": json.loads(s.details) if s.details else {}
+            })
+        nodes_list.append({
+            "id": node.id,
+            "name": node.name,
+            "type": node.type,
+            "lat": node.lat,
+            "lng": node.lng,
+            "details": json.loads(node.details) if node.details else {},
+            "splitters": node_splitters,
+            "created_at": node.created_at.strftime("%d/%m/%Y %H:%M") if node.created_at else None
+        })
+
+    edges_list = []
+    for edge in edges:
+        source = next((n for n in nodes_list if n["id"] == edge.source_node_id), None)
+        target = next((n for n in nodes_list if n["id"] == edge.target_node_id), None)
+        edges_list.append({
+            "id": edge.id,
+            "name": edge.name,
+            "type": edge.type,
+            "source_node_id": edge.source_node_id,
+            "target_node_id": edge.target_node_id,
+            "source_name": source["name"] if source else "N/A",
+            "target_name": target["name"] if target else "N/A",
+            "path_coordinates": json.loads(edge.path_coordinates) if edge.path_coordinates else [],
+            "details": json.loads(edge.details) if edge.details else {},
+            "created_at": edge.created_at.strftime("%d/%m/%Y %H:%M") if edge.created_at else None
+        })
+
+    return render_template("rede_registros.html",
+                           nodes_json=json.dumps(nodes_list),
+                           edges_json=json.dumps(edges_list))
 
 
 # API: GET Nodes
@@ -10665,6 +10793,73 @@ def controle_ferramentas_liberar_item(user_id, tool_id):
         "success": True,
         "message": f"Item '{status_item.tool.name}' liberado com sucesso!"
     })
+
+@app.route("/controle/ferramentas/sugerir", methods=["POST"])
+@login_required
+def controle_ferramentas_sugerir():
+    name = request.form.get("name", "").strip()
+    purchase_link = request.form.get("purchase_link", "").strip() or None
+    utility = request.form.get("utility", "").strip()
+    
+    if not name or not utility:
+        flash("Nome da ferramenta e utilidade/benefícios são obrigatórios.", "error")
+        return redirect(url_for("controle_ferramentas"))
+        
+    suggestion = ToolSuggestion(
+        user_id=current_user.id,
+        name=name,
+        purchase_link=purchase_link,
+        utility=utility
+    )
+    db.session.add(suggestion)
+    db.session.commit()
+    
+    registrar_log(f"Nova sugestão de ferramenta enviada por {current_user.username}: {name}")
+    flash(f"Sugestão de ferramenta '{name}' enviada com sucesso!", "success")
+    return redirect(url_for("controle_ferramentas"))
+
+@app.route("/controle/ferramentas/sugestoes", methods=["GET"])
+@admin_required
+def controle_ferramentas_sugestoes():
+    suggestions = ToolSuggestion.query.order_by(ToolSuggestion.created_at.desc()).all()
+    data = []
+    for s in suggestions:
+        data.append({
+            "id": s.id,
+            "tech": s.user.username,
+            "name": s.name,
+            "purchase_link": s.purchase_link or "",
+            "utility": s.utility,
+            "created_at": s.created_at.strftime("%d/%m/%Y %H:%M")
+        })
+    return jsonify({"success": True, "suggestions": data})
+
+@app.route("/controle/ferramentas/sugestoes/aprovar/<int:id>", methods=["POST"])
+@admin_required
+def controle_ferramentas_sugestoes_aprovar(id):
+    suggestion = ToolSuggestion.query.get_or_404(id)
+    name = suggestion.name
+    
+    # Criar ferramenta real no banco de dados
+    new_tool = Tool(name=name, category="Outros", is_active=True)
+    db.session.add(new_tool)
+    db.session.delete(suggestion)
+    db.session.commit()
+    
+    registrar_log(f"Sugestão de ferramenta '{name}' aprovada por admin. Criada como nova ferramenta.")
+    return jsonify({"success": True, "message": f"Sugestão '{name}' aprovada e cadastrada no sistema!"})
+
+@app.route("/controle/ferramentas/sugestoes/reprovar/<int:id>", methods=["POST"])
+@admin_required
+def controle_ferramentas_sugestoes_reprovar(id):
+    suggestion = ToolSuggestion.query.get_or_404(id)
+    name = suggestion.name
+    
+    db.session.delete(suggestion)
+    db.session.commit()
+    
+    registrar_log(f"Sugestão de ferramenta '{name}' reprovada/excluída por admin.")
+    return jsonify({"success": True, "message": f"Sugestão '{name}' reprovada e excluída com sucesso!"})
 
 
 # Garante a criação de todas as tabelas, incluindo as de GPS recém-definidas, no contexto do Gunicorn

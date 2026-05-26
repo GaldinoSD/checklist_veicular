@@ -88,202 +88,316 @@
     </div>
 </div>
 
-<!-- ✅ BARRA DE FILTROS AVANÇADA PREMIUM -->
+<!-- ✅ BARRA DE FILTROS AVANÇADA PREMIUM COM TABS EMBUTIDAS -->
 <div class="mb-8 animate-premium">
     <form method="GET" action="{{ url_for('avarias_registro') }}" class="glass-premium p-5 rounded-[2rem] shadow-xl relative overflow-hidden">
-        <div class="flex flex-col lg:flex-row items-end gap-4">
-            <!-- Busca por Texto -->
-            <div class="flex-1 w-full">
-                <label class="text-[10px] font-black text-slate-400 dark:text-slate-300 uppercase tracking-widest block mb-1.5 flex items-center gap-1">
-                    <i class="fa-solid fa-magnifying-glass text-blue-500"></i> Buscar O.S.
-                </label>
-                <input type="text" name="q" value="{{ request.args.get('q', '') }}" 
-                       placeholder="Digite Placa, Modelo, Descrição ou Responsável..." 
-                       class="w-full text-xs font-bold text-slate-700 dark:text-white bg-slate-900/5 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 px-4 py-3 rounded-xl focus:border-blue-500 outline-none transition-all duration-300">
+        <div class="flex flex-col lg:flex-row items-end justify-between gap-6">
+            
+            <!-- Lado Esquerdo: Filtros de Busca e Gravidade -->
+            <div class="flex flex-col md:flex-row items-end gap-4 flex-1 w-full">
+                <!-- Busca por Texto -->
+                <div class="flex-1 w-full">
+                    <label class="text-[10px] font-black text-slate-400 dark:text-slate-300 uppercase tracking-widest block mb-1.5 flex items-center gap-1">
+                        <i class="fa-solid fa-magnifying-glass text-blue-500"></i> Buscar O.S.
+                    </label>
+                    <input type="text" name="q" value="{{ request.args.get('q', '') }}" 
+                           placeholder="Digite Placa, Modelo, Descrição..." 
+                           class="w-full text-xs font-bold text-slate-700 dark:text-white bg-slate-900/5 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 px-4 py-3 rounded-xl focus:border-blue-500 outline-none transition-all duration-300">
+                </div>
+                
+                <!-- Filtro de Gravidade -->
+                <div class="w-full md:w-44">
+                    <label class="text-[10px] font-black text-slate-400 dark:text-slate-300 uppercase tracking-widest block mb-1.5 flex items-center gap-1">
+                        <i class="fa-solid fa-triangle-exclamation text-blue-500"></i> Gravidade
+                    </label>
+                    <select name="gravidade" class="w-full text-xs font-bold text-slate-700 dark:text-white bg-slate-900/5 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 px-4 py-3 rounded-xl focus:border-blue-500 outline-none transition-all duration-300">
+                        <option value="">Todas</option>
+                        <option value="baixa" {% if request.args.get('gravidade') == 'baixa' %}selected{% endif %}>Baixa</option>
+                        <option value="media" {% if request.args.get('gravidade') == 'media' %}selected{% endif %}>Média</option>
+                        <option value="alta" {% if request.args.get('gravidade') == 'alta' %}selected{% endif %}>Alta</option>
+                        <option value="critica" {% if request.args.get('gravidade') == 'critica' %}selected{% endif %}>Crítica</option>
+                    </select>
+                </div>
+                
+                <!-- Botões de Ação -->
+                <div class="flex items-center gap-2 w-full md:w-auto h-[42px] md:self-end">
+                    <button type="submit" 
+                            class="flex-1 md:flex-none px-5 py-3 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-blue-500/20 transition-all flex items-center justify-center gap-2 h-full whitespace-nowrap">
+                        <i class="fa-solid fa-filter text-xs"></i>
+                    </button>
+                    <a href="{{ url_for('avarias_registro') }}" 
+                       class="flex-1 md:flex-none px-5 py-3 bg-slate-900/5 hover:bg-slate-900/10 dark:bg-white/5 dark:hover:bg-white/10 active:scale-95 text-slate-800 dark:text-white rounded-xl font-black text-[10px] uppercase tracking-widest transition-all text-center flex items-center justify-center gap-2 h-full whitespace-nowrap"
+                       title="Limpar Filtros">
+                        <i class="fa-solid fa-eraser text-xs"></i>
+                    </a>
+                </div>
             </div>
             
-            <!-- Filtro de Status -->
-            <div class="w-full lg:w-48">
+            <!-- Lado Direito: Seletor de Status (Tabs Abertas / Finalizadas) -->
+            <div class="w-full lg:w-auto">
                 <label class="text-[10px] font-black text-slate-400 dark:text-slate-300 uppercase tracking-widest block mb-1.5 flex items-center gap-1">
-                    <i class="fa-solid fa-circle-info text-blue-500"></i> Status
+                    <i class="fa-solid fa-list-check text-blue-500"></i> Status O.S.
                 </label>
-                <select name="status" class="w-full text-xs font-bold text-slate-700 dark:text-white bg-slate-900/5 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 px-4 py-3 rounded-xl focus:border-blue-500 outline-none transition-all duration-300">
-                    <option value="">Todos</option>
-                    <option value="aberta" {% if request.args.get('status') == 'aberta' %}selected{% endif %}>Aberta</option>
-                    <option value="finalizada" {% if request.args.get('status') == 'finalizada' %}selected{% endif %}>Finalizada</option>
-                </select>
+                <div class="flex items-center bg-slate-900/5 dark:bg-white/5 p-1 rounded-2xl border border-slate-900/5 dark:border-white/5 h-[42px] w-full lg:w-[260px]">
+                    <!-- Botão O.S. Abertas -->
+                    <button type="button" id="btnTabAbertas" onclick="switchTab('abertas')"
+                            class="flex-1 py-1.5 px-3 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-1.5 h-full active:scale-95">
+                        <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse shadow-[0_0_6px_rgba(245,158,11,0.5)]"></span>
+                        <span>Abertas</span>
+                        <span id="badgeAbertas" class="px-1.5 py-0.5 rounded text-[8px] font-black transition-colors">
+                            {{ abertas }}
+                        </span>
+                    </button>
+                    
+                    <!-- Botão O.S. Finalizadas -->
+                    <button type="button" id="btnTabFinalizadas" onclick="switchTab('finalizadas')"
+                            class="flex-1 py-1.5 px-3 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-1.5 h-full active:scale-95">
+                        <span class="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_6px_rgba(34,197,94,0.5)]"></span>
+                        <span>Concluídas</span>
+                        <span id="badgeFinalizadas" class="px-1.5 py-0.5 rounded text-[8px] font-black transition-colors">
+                            {{ resolvidas }}
+                        </span>
+                    </button>
+                </div>
             </div>
             
-            <!-- Filtro de Gravidade -->
-            <div class="w-full lg:w-48">
-                <label class="text-[10px] font-black text-slate-400 dark:text-slate-300 uppercase tracking-widest block mb-1.5 flex items-center gap-1">
-                    <i class="fa-solid fa-triangle-exclamation text-blue-500"></i> Gravidade
-                </label>
-                <select name="gravidade" class="w-full text-xs font-bold text-slate-700 dark:text-white bg-slate-900/5 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 px-4 py-3 rounded-xl focus:border-blue-500 outline-none transition-all duration-300">
-                    <option value="">Todas</option>
-                    <option value="baixa" {% if request.args.get('gravidade') == 'baixa' %}selected{% endif %}>Baixa</option>
-                    <option value="media" {% if request.args.get('gravidade') == 'media' %}selected{% endif %}>Média</option>
-                    <option value="alta" {% if request.args.get('gravidade') == 'alta' %}selected{% endif %}>Alta</option>
-                    <option value="critica" {% if request.args.get('gravidade') == 'critica' %}selected{% endif %}>Crítica</option>
-                </select>
-            </div>
-            
-            <!-- Botões de Ação -->
-            <div class="flex items-center gap-3 w-full lg:w-auto">
-                <button type="submit" 
-                        class="flex-1 lg:flex-none px-6 py-3 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-blue-500/20 transition-all flex items-center justify-center gap-2 whitespace-nowrap">
-                    <i class="fa-solid fa-filter text-xs"></i> Filtrar
-                </button>
-                <a href="{{ url_for('avarias_registro') }}" 
-                   class="flex-1 lg:flex-none px-6 py-3 bg-slate-900/5 hover:bg-slate-900/10 dark:bg-white/5 dark:hover:bg-white/10 active:scale-95 text-slate-800 dark:text-white rounded-xl font-black text-[10px] uppercase tracking-widest transition-all text-center flex items-center justify-center gap-2 whitespace-nowrap">
-                    <i class="fa-solid fa-eraser text-xs"></i> Limpar
-                </a>
-            </div>
         </div>
     </form>
 </div>
 
-<!-- ============================
-     LISTA DE ORDENS DE SERVIÇO
-============================ -->
-<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 animate-premium">
-
-  {% for os in ordens %}
-  <div class="backdrop-blur-md bg-white/70 dark:bg-white/10 p-5 rounded-[2rem]
-              border border-slate-900/10 dark:border-white/10 shadow-xl hover:shadow-2xl hover:scale-[1.02] transition-all duration-300 relative overflow-hidden flex flex-col justify-between">
-    
-    <!-- Efeito decorativo sutil dependendo da gravidade -->
-    {% if os.gravidade == 'critica' %}
-      <div class="absolute top-0 left-0 w-full h-[4px] bg-gradient-to-r from-red-600 to-rose-500"></div>
-    {% elif os.gravidade == 'alta' %}
-      <div class="absolute top-0 left-0 w-full h-[4px] bg-gradient-to-r from-orange-600 to-amber-500"></div>
-    {% elif os.gravidade == 'media' %}
-      <div class="absolute top-0 left-0 w-full h-[4px] bg-gradient-to-r from-yellow-600 to-yellow-400"></div>
-    {% else %}
-      <div class="absolute top-0 left-0 w-full h-[4px] bg-gradient-to-r from-blue-600 to-sky-500"></div>
-    {% endif %}
-
-    <div>
-      <div class="flex justify-between items-center mb-3">
-        <h2 class="text-lg font-black text-slate-800 dark:text-white flex items-center gap-1.5">
-          <i class="fa-solid fa-file-contract text-blue-500"></i>
-          #{{ os.id }}
-        </h2>
-
-        <div class="flex items-center gap-1.5">
-          <!-- Badge Gravidade -->
-          {% if os.gravidade == 'critica' %}
-            <span class="px-2 py-0.5 rounded bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-400 text-[8px] font-black uppercase tracking-wider animate-pulse">
-              Crítica
-            </span>
-          {% elif os.gravidade == 'alta' %}
-            <span class="px-2 py-0.5 rounded bg-orange-500/10 border border-orange-500/30 text-orange-600 dark:text-orange-400 text-[8px] font-black uppercase tracking-wider">
-              Alta
-            </span>
-          {% elif os.gravidade == 'media' %}
-            <span class="px-2 py-0.5 rounded bg-yellow-500/10 border border-yellow-500/30 text-yellow-600 dark:text-yellow-400 text-[8px] font-black uppercase tracking-wider">
-              Média
-            </span>
-          {% else %}
-            <span class="px-2 py-0.5 rounded bg-blue-500/10 border border-blue-500/30 text-blue-600 dark:text-blue-400 text-[8px] font-black uppercase tracking-wider">
-              Baixa
-            </span>
-          {% endif %}
-
-          <!-- Badge Status -->
-          {% if os.status == 'aberta' %}
-            <span class="px-2 py-0.5 rounded bg-amber-500/15 border border-amber-500/30 text-amber-800 dark:text-amber-300 text-[8px] font-black uppercase tracking-wider">
-              Aberta
-            </span>
-          {% else %}
-            <span class="px-2 py-0.5 rounded bg-green-500/15 border border-green-500/30 text-green-800 dark:text-green-300 text-[8px] font-black uppercase tracking-wider">
-              Pronto
-            </span>
-          {% endif %}
-        </div>
-      </div>
-
-      <div class="space-y-1.5 mb-4">
-        <p class="text-slate-700 dark:text-slate-200 text-xs font-bold flex items-center gap-1.5">
-          <i class="fa-solid fa-car text-[10px] text-slate-400 w-3 text-center"></i>
-          {{ os.vehicle.brand }} {{ os.vehicle.model }} - <span class="bg-slate-900/5 dark:bg-white/5 px-1.5 py-0.5 rounded text-[10px] font-black text-slate-800 dark:text-white">{{ os.vehicle.plate }}</span>
-        </p>
-
-        <p class="text-slate-700 dark:text-slate-200 text-xs font-medium flex items-center gap-1.5">
-          <i class="fa-solid fa-gauge text-[10px] text-slate-400 w-3 text-center"></i>
-          <span>{{ os.km or 0 }} KM</span>
-        </p>
-
-        {% if os.responsavel %}
-        <p class="text-slate-700 dark:text-slate-200 text-xs font-medium flex items-center gap-1.5">
-          <i class="fa-solid fa-user-gear text-[10px] text-slate-400 w-3 text-center"></i>
-          <span>{{ os.responsavel.username }}</span>
-        </p>
+<!-- ============================================
+     SEÇÃO: ORDENS DE SERVIÇO ABERTAS (PENDENTES)
+     ============================================ -->
+<div id="tabAbertas" class="mb-12 animate-premium">
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+      {% for os in ordens if os.status == 'aberta' %}
+      <div class="backdrop-blur-md bg-white/70 dark:bg-white/10 p-5 rounded-[2rem]
+                  border border-slate-900/10 dark:border-white/10 shadow-xl hover:shadow-2xl hover:scale-[1.02] transition-all duration-300 relative overflow-hidden flex flex-col justify-between">
+        
+        <!-- Efeito decorativo sutil dependendo da gravidade -->
+        {% if os.gravidade == 'critica' %}
+          <div class="absolute top-0 left-0 w-full h-[4px] bg-gradient-to-r from-red-600 to-rose-500"></div>
+        {% elif os.gravidade == 'alta' %}
+          <div class="absolute top-0 left-0 w-full h-[4px] bg-gradient-to-r from-orange-600 to-amber-500"></div>
+        {% elif os.gravidade == 'media' %}
+          <div class="absolute top-0 left-0 w-full h-[4px] bg-gradient-to-r from-yellow-600 to-yellow-400"></div>
+        {% else %}
+          <div class="absolute top-0 left-0 w-full h-[4px] bg-gradient-to-r from-blue-600 to-sky-500"></div>
         {% endif %}
 
-        <p class="text-slate-700 dark:text-slate-200 text-xs font-medium flex items-center gap-1.5">
-          <i class="fa-solid fa-calendar text-[10px] text-slate-400 w-3 text-center"></i>
-          <span>{{ os.data_abertura|br_datetime if os.data_abertura else 'N/A' }}</span>
-        </p>
+        <div>
+          <div class="flex justify-between items-center mb-3">
+            <h2 class="text-lg font-black text-slate-800 dark:text-white flex items-center gap-1.5">
+              <i class="fa-solid fa-file-contract text-blue-500"></i>
+              #{{ os.id }}
+            </h2>
+
+            <div class="flex items-center gap-1.5">
+              <!-- Badge Gravidade -->
+              {% if os.gravidade == 'critica' %}
+                <span class="px-2 py-0.5 rounded bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-400 text-[8px] font-black uppercase tracking-wider animate-pulse">
+                  Crítica
+                </span>
+              {% elif os.gravidade == 'alta' %}
+                <span class="px-2 py-0.5 rounded bg-orange-500/10 border border-orange-500/30 text-orange-600 dark:text-orange-400 text-[8px] font-black uppercase tracking-wider">
+                  Alta
+                </span>
+              {% elif os.gravidade == 'media' %}
+                <span class="px-2 py-0.5 rounded bg-yellow-500/10 border border-yellow-500/30 text-yellow-600 dark:text-yellow-400 text-[8px] font-black uppercase tracking-wider">
+                  Média
+                </span>
+              {% else %}
+                <span class="px-2 py-0.5 rounded bg-blue-500/10 border border-blue-500/30 text-blue-600 dark:text-blue-400 text-[8px] font-black uppercase tracking-wider">
+                  Baixa
+                </span>
+              {% endif %}
+
+              <!-- Badge Status -->
+              <span class="px-2 py-0.5 rounded bg-amber-500/15 border border-amber-500/30 text-amber-800 dark:text-amber-300 text-[8px] font-black uppercase tracking-wider">
+                Aberta
+              </span>
+            </div>
+          </div>
+
+          <div class="space-y-1.5 mb-4">
+            <p class="text-slate-700 dark:text-slate-200 text-xs font-bold flex items-center gap-1.5">
+              <i class="fa-solid fa-car text-[10px] text-slate-400 w-3 text-center"></i>
+              {{ os.vehicle.brand }} {{ os.vehicle.model }} - <span class="bg-slate-900/5 dark:bg-white/5 px-1.5 py-0.5 rounded text-[10px] font-black text-slate-800 dark:text-white">{{ os.vehicle.plate }}</span>
+            </p>
+
+            <p class="text-slate-700 dark:text-slate-200 text-xs font-medium flex items-center gap-1.5">
+              <i class="fa-solid fa-gauge text-[10px] text-slate-400 w-3 text-center"></i>
+              <span>{{ os.km or 0 }} KM</span>
+            </p>
+
+            {% if os.responsavel %}
+            <p class="text-slate-700 dark:text-slate-200 text-xs font-medium flex items-center gap-1.5">
+              <i class="fa-solid fa-user-gear text-[10px] text-slate-400 w-3 text-center"></i>
+              <span>{{ os.responsavel.username }}</span>
+            </p>
+            {% endif %}
+
+            <p class="text-slate-700 dark:text-slate-200 text-xs font-medium flex items-center gap-1.5">
+              <i class="fa-solid fa-calendar text-[10px] text-slate-400 w-3 text-center"></i>
+              <span>{{ os.data_abertura|br_datetime if os.data_abertura else 'N/A' }}</span>
+            </p>
+          </div>
+
+          <div class="bg-slate-900/5 dark:bg-white/5 p-3 rounded-xl border border-slate-900/5 dark:border-white/5 mb-4">
+            <p class="text-slate-500 dark:text-slate-400 text-[10px] font-black uppercase tracking-wider mb-1">Descrição da Avaria</p>
+            <p class="text-slate-700 dark:text-slate-300 text-xs leading-relaxed font-medium line-clamp-3">
+              {{ os.descricao }}
+            </p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2 pt-2 border-t border-slate-900/10 dark:border-white/10 mt-auto">
+          <button class="flex-1 py-2 rounded-xl bg-green-600 hover:bg-green-700 active:scale-95 text-white font-black text-[10px] uppercase tracking-wider shadow-lg shadow-green-500/10 transition-all flex items-center justify-center gap-1"
+                  onclick="openFinalizar({{ os.id }})">
+            <i class="fa-solid fa-check text-xs"></i> Finalizar
+          </button>
+
+          <!-- FORMULÁRIO DE EXCLUSÃO SEGURO -->
+          <form method="POST" action="{{ url_for('avarias_excluir', avaria_id=os.id) }}" class="inline" 
+                onsubmit="return confirm('⚠️ Tem certeza que deseja excluir permanentemente esta Avaria / O.S. #{{ os.id }}?');">
+            <button type="submit" 
+                    class="p-2 bg-red-500/10 hover:bg-red-500/20 active:scale-95 text-red-600 dark:text-red-400 border border-red-500/20 hover:border-red-500/30 rounded-xl transition-all"
+                    title="Excluir O.S.">
+              <i class="fa-solid fa-trash-can text-xs"></i>
+            </button>
+          </form>
+        </div>
+
       </div>
 
-      <div class="bg-slate-900/5 dark:bg-white/5 p-3 rounded-xl border border-slate-900/5 dark:border-white/5 mb-4">
-        <p class="text-slate-500 dark:text-slate-400 text-[10px] font-black uppercase tracking-wider mb-1">Descrição da Avaria</p>
-        <p class="text-slate-700 dark:text-slate-300 text-xs leading-relaxed font-medium line-clamp-3">
-          {{ os.descricao }}
-        </p>
+      <!-- JSON INVISÍVEL COM DADOS DA O.S -->
+      <script type="application/json" id="os_data_{{ os.id }}">
+        {
+          "veiculo": {{ (os.vehicle.brand ~ " " ~ os.vehicle.model ~ " - " ~ os.vehicle.plate)|tojson }},
+          "responsavel": {{ (os.responsavel.username if os.responsavel else '')|tojson }},
+          "descricao": {{ (os.descricao if os.descricao else '')|tojson }},
+          "gravidade": {{ (os.gravidade if os.gravidade else '')|tojson }},
+          "km": {{ (os.km|string if os.km else '')|tojson }},
+          "valor_gasto": {{ (os.valor_gasto|string if os.valor_gasto else '')|tojson }},
+          "pecas_trocadas": {{ (os.pecas_trocadas if os.pecas_trocadas else '')|tojson }},
+          "servico_realizado": {{ (os.servico_realizado if os.servico_realizado else '')|tojson }},
+          "data_abertura": {{ (os.data_abertura|br_datetime if os.data_abertura else '')|tojson }},
+          "data_fechamento": {{ (os.data_fechamento|br_datetime if os.data_fechamento else '')|tojson }},
+          "foto": {{ (os.foto if os.foto else '')|tojson }}
+        }
+      </script>
+      {% endfor %}
+      
+      {% if abertas == 0 %}
+      <div class="col-span-full py-8 text-center bg-slate-900/5 dark:bg-white/5 border border-dashed border-slate-900/10 dark:border-white/10 rounded-[2rem]">
+          <p class="text-slate-400 text-xs font-bold uppercase tracking-wider">Nenhuma O.S. aberta no momento.</p>
       </div>
-    </div>
-
-    <div class="flex items-center gap-2 pt-2 border-t border-slate-900/10 dark:border-white/10 mt-auto">
-      {% if os.status == 'aberta' %}
-      <button class="flex-1 py-2 rounded-xl bg-green-600 hover:bg-green-700 active:scale-95 text-white font-black text-[10px] uppercase tracking-wider shadow-lg shadow-green-500/10 transition-all flex items-center justify-center gap-1"
-              onclick="openFinalizar({{ os.id }})">
-        <i class="fa-solid fa-check text-xs"></i> Finalizar
-      </button>
-      {% else %}
-      <button class="flex-1 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-black text-[10px] uppercase tracking-wider shadow-lg shadow-blue-500/10 transition-all flex items-center justify-center gap-1"
-              onclick="openDetalhes({{ os.id }})">
-        <i class="fa-solid fa-eye text-xs"></i> Detalhes
-      </button>
       {% endif %}
-
-      <!-- FORMULÁRIO DE EXCLUSÃO SEGURO -->
-      <form method="POST" action="{{ url_for('avarias_excluir', avaria_id=os.id) }}" class="inline" 
-            onsubmit="return confirm('⚠️ Tem certeza que deseja excluir permanentemente esta Avaria / O.S. #{{ os.id }}?');">
-        <button type="submit" 
-                class="p-2 bg-red-500/10 hover:bg-red-500/20 active:scale-95 text-red-600 dark:text-red-400 border border-red-500/20 hover:border-red-500/30 rounded-xl transition-all"
-                title="Excluir O.S.">
-          <i class="fa-solid fa-trash-can text-xs"></i>
-        </button>
-      </form>
     </div>
+</div>
 
-  </div>
+<!-- ============================================
+     SEÇÃO: ORDENS DE SERVIÇO FINALIZADAS (CONCLUÍDAS)
+     ============================================ -->
+<div id="tabFinalizadas" class="mb-8 animate-premium hidden">
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+      {% for os in ordens if os.status == 'finalizada' %}
+      <div class="backdrop-blur-md bg-white/70 dark:bg-white/10 p-5 rounded-[2rem]
+                  border border-slate-900/10 dark:border-white/10 shadow-xl hover:shadow-2xl hover:scale-[1.02] transition-all duration-300 relative overflow-hidden flex flex-col justify-between opacity-85 hover:opacity-100 transition-opacity">
+        
+        <!-- Top border indicator -->
+        <div class="absolute top-0 left-0 w-full h-[4px] bg-gradient-to-r from-green-600 to-emerald-500"></div>
 
-  <!-- JSON INVISÍVEL COM DADOS DA O.S -->
-  <script type="application/json" id="os_data_{{ os.id }}">
-    {
-      "veiculo": {{ (os.vehicle.brand ~ " " ~ os.vehicle.model ~ " - " ~ os.vehicle.plate)|tojson }},
-      "responsavel": {{ (os.responsavel.username if os.responsavel else '')|tojson }},
-      "descricao": {{ (os.descricao if os.descricao else '')|tojson }},
-      "gravidade": {{ (os.gravidade if os.gravidade else '')|tojson }},
-      "km": {{ (os.km|string if os.km else '')|tojson }},
-      "valor_gasto": {{ (os.valor_gasto|string if os.valor_gasto else '')|tojson }},
-      "pecas_trocadas": {{ (os.pecas_trocadas if os.pecas_trocadas else '')|tojson }},
-      "servico_realizado": {{ (os.servico_realizado if os.servico_realizado else '')|tojson }},
-      "data_abertura": {{ (os.data_abertura|br_datetime if os.data_abertura else '')|tojson }},
-      "data_fechamento": {{ (os.data_fechamento|br_datetime if os.data_fechamento else '')|tojson }},
-      "foto": {{ (os.foto if os.foto else '')|tojson }}
-    }
-  </script>
+        <div>
+          <div class="flex justify-between items-center mb-3">
+            <h2 class="text-lg font-black text-slate-800 dark:text-white flex items-center gap-1.5">
+              <i class="fa-solid fa-circle-check text-green-500"></i>
+              #{{ os.id }}
+            </h2>
 
-  {% endfor %}
+            <div class="flex items-center gap-1.5">
+              <!-- Badge Status -->
+              <span class="px-2 py-0.5 rounded bg-green-500/15 border border-green-500/30 text-green-800 dark:text-green-300 text-[8px] font-black uppercase tracking-wider">
+                Pronto
+              </span>
+            </div>
+          </div>
 
-  {% if ordens|length == 0 %}
-  <p class="text-slate-500 dark:text-gray-400 text-center col-span-full text-lg">Nenhuma O.S registrada até o momento.</p>
-  {% endif %}
+          <div class="space-y-1.5 mb-4">
+            <p class="text-slate-700 dark:text-slate-200 text-xs font-bold flex items-center gap-1.5">
+              <i class="fa-solid fa-car text-[10px] text-slate-400 w-3 text-center"></i>
+              {{ os.vehicle.brand }} {{ os.vehicle.model }} - <span class="bg-slate-900/5 dark:bg-white/5 px-1.5 py-0.5 rounded text-[10px] font-black text-slate-800 dark:text-white">{{ os.vehicle.plate }}</span>
+            </p>
 
+            <p class="text-slate-700 dark:text-slate-200 text-xs font-medium flex items-center gap-1.5">
+              <i class="fa-solid fa-gauge text-[10px] text-slate-400 w-3 text-center"></i>
+              <span>{{ os.km or 0 }} KM</span>
+            </p>
+
+            {% if os.responsavel %}
+            <p class="text-slate-700 dark:text-slate-200 text-xs font-medium flex items-center gap-1.5">
+              <i class="fa-solid fa-user-gear text-[10px] text-slate-400 w-3 text-center"></i>
+              <span>{{ os.responsavel.username }}</span>
+            </p>
+            {% endif %}
+
+            <p class="text-slate-700 dark:text-slate-200 text-xs font-medium flex items-center gap-1.5">
+              <i class="fa-solid fa-calendar text-[10px] text-slate-400 w-3 text-center"></i>
+              <span>{{ os.data_abertura|br_datetime if os.data_abertura else 'N/A' }}</span>
+            </p>
+          </div>
+
+          <div class="bg-slate-900/5 dark:bg-white/5 p-3 rounded-xl border border-slate-900/5 dark:border-white/5 mb-4">
+            <p class="text-slate-500 dark:text-slate-400 text-[10px] font-black uppercase tracking-wider mb-1">Serviço Realizado</p>
+            <p class="text-slate-700 dark:text-slate-300 text-xs leading-relaxed font-medium line-clamp-3">
+              {{ os.servico_realizado or 'Nenhuma descrição fornecida.' }}
+            </p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2 pt-2 border-t border-slate-900/10 dark:border-white/10 mt-auto">
+          <button class="flex-1 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-black text-[10px] uppercase tracking-wider shadow-lg shadow-blue-500/10 transition-all flex items-center justify-center gap-1"
+                  onclick="openDetalhes({{ os.id }})">
+            <i class="fa-solid fa-eye text-xs"></i> Detalhes
+          </button>
+
+          <!-- FORMULÁRIO DE EXCLUSÃO SEGURO -->
+          <form method="POST" action="{{ url_for('avarias_excluir', avaria_id=os.id) }}" class="inline" 
+                onsubmit="return confirm('⚠️ Tem certeza que deseja excluir permanentemente esta Avaria / O.S. #{{ os.id }}?');">
+            <button type="submit" 
+                    class="p-2 bg-red-500/10 hover:bg-red-500/20 active:scale-95 text-red-600 dark:text-red-400 border border-red-500/20 hover:border-red-500/30 rounded-xl transition-all"
+                    title="Excluir O.S.">
+              <i class="fa-solid fa-trash-can text-xs"></i>
+            </button>
+          </form>
+        </div>
+
+      </div>
+
+      <!-- JSON INVISÍVEL COM DADOS DA O.S -->
+      <script type="application/json" id="os_data_{{ os.id }}">
+        {
+          "veiculo": {{ (os.vehicle.brand ~ " " ~ os.vehicle.model ~ " - " ~ os.vehicle.plate)|tojson }},
+          "responsavel": {{ (os.responsavel.username if os.responsavel else '')|tojson }},
+          "descricao": {{ (os.descricao if os.descricao else '')|tojson }},
+          "gravidade": {{ (os.gravidade if os.gravidade else '')|tojson }},
+          "km": {{ (os.km|string if os.km else '')|tojson }},
+          "valor_gasto": {{ (os.valor_gasto|string if os.valor_gasto else '')|tojson }},
+          "pecas_trocadas": {{ (os.pecas_trocadas if os.pecas_trocadas else '')|tojson }},
+          "servico_realizado": {{ (os.servico_realizado if os.servico_realizado else '')|tojson }},
+          "data_abertura": {{ (os.data_abertura|br_datetime if os.data_abertura else '')|tojson }},
+          "data_fechamento": {{ (os.data_fechamento|br_datetime if os.data_fechamento else '')|tojson }},
+          "foto": {{ (os.foto if os.foto else '')|tojson }}
+        }
+      </script>
+      {% endfor %}
+      
+      {% if resolvidas == 0 %}
+      <div class="col-span-full py-8 text-center bg-slate-900/5 dark:bg-white/5 border border-dashed border-slate-900/10 dark:border-white/10 rounded-[2rem]">
+          <p class="text-slate-400 text-xs font-bold uppercase tracking-wider">Nenhuma O.S. finalizada no momento.</p>
+      </div>
+      {% endif %}
+    </div>
 </div>
 
 </div>
@@ -556,9 +670,56 @@ function atualizarKM() {
   document.getElementById("km").value = km || 0;
 }
 
+/////////////////////////////////////////////////////
+// 🔥 NAVEGAÇÃO DE TABS (ABERTAS VS FINALIZADAS)
+/////////////////////////////////////////////////////
+function switchTab(tab) {
+  const tabAbertas = document.getElementById("tabAbertas");
+  const tabFinalizadas = document.getElementById("tabFinalizadas");
+  const btnAbertas = document.getElementById("btnTabAbertas");
+  const btnFinalizadas = document.getElementById("btnTabFinalizadas");
+  const badgeAbertas = document.getElementById("badgeAbertas");
+  const badgeFinalizadas = document.getElementById("badgeFinalizadas");
+
+  if (!tabAbertas || !tabFinalizadas || !btnAbertas || !btnFinalizadas) return;
+
+  if (tab === "abertas") {
+    tabAbertas.classList.remove("hidden");
+    tabFinalizadas.classList.add("hidden");
+
+    // Abertas Active (Amber Style)
+    btnAbertas.className = "flex-1 py-1.5 px-3 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-1.5 h-full active:scale-95 bg-amber-500 text-white shadow-md shadow-amber-500/25";
+    if (badgeAbertas) {
+      badgeAbertas.className = "px-1.5 py-0.5 rounded text-[8px] font-black bg-white/20 text-white";
+    }
+
+    // Finalizadas Inactive
+    btnFinalizadas.className = "flex-1 py-1.5 px-3 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-1.5 h-full active:scale-95 text-slate-400 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-200";
+    if (badgeFinalizadas) {
+      badgeFinalizadas.className = "px-1.5 py-0.5 rounded text-[8px] font-black bg-slate-900/5 dark:bg-white/5 text-slate-400 dark:text-slate-400";
+    }
+  } else {
+    tabAbertas.classList.add("hidden");
+    tabFinalizadas.classList.remove("hidden");
+
+    // Finalizadas Active (Green Style)
+    btnFinalizadas.className = "flex-1 py-1.5 px-3 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-1.5 h-full active:scale-95 bg-green-600 text-white shadow-md shadow-green-500/25";
+    if (badgeFinalizadas) {
+      badgeFinalizadas.className = "px-1.5 py-0.5 rounded text-[8px] font-black bg-white/20 text-white";
+    }
+
+    // Abertas Inactive
+    btnAbertas.className = "flex-1 py-1.5 px-3 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-1.5 h-full active:scale-95 text-slate-400 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-200";
+    if (badgeAbertas) {
+      badgeAbertas.className = "px-1.5 py-0.5 rounded text-[8px] font-black bg-slate-900/5 dark:bg-white/5 text-slate-400 dark:text-slate-400";
+    }
+  }
+}
+
 // quando abrir a página
 document.addEventListener("DOMContentLoaded", () => {
   atualizarKM();
+  switchTab('abertas');
 });
 
 // quando abrir o modal

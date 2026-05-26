@@ -25,6 +25,13 @@
                 </p>
             </div>
         </div>
+
+        <!-- Botão Sugerir Ferramenta (Opção A) -->
+        <div class="relative z-10 shrink-0">
+            <button type="button" onclick="openSuggestModal()" class="w-full md:w-auto px-5 py-3 bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-teal-500/20 transition-all active:scale-95 flex items-center justify-center gap-2">
+                <i class="fa-solid fa-lightbulb animate-pulse"></i> Sugerir Ferramenta
+            </button>
+        </div>
     </div>
 </div>
 
@@ -487,6 +494,83 @@ function validateForm(e) {
 window.onload = function() {
     updateProgress();
 };
+
+function openSuggestModal() {
+    document.getElementById('modalSuggest').classList.remove('hidden');
+}
+function closeSuggestModal() {
+    document.getElementById('modalSuggest').classList.add('hidden');
+}
 </script>
+
+<!-- ======================= MODAL SUGERIR FERRAMENTA ======================= -->
+<div id="modalSuggest" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+        <!-- Overlay -->
+        <div onclick="closeSuggestModal()" class="fixed inset-0 transition-opacity bg-slate-900/60 backdrop-blur-sm" aria-hidden="true"></div>
+        
+        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+        
+        <!-- Conteúdo do Modal -->
+        <form action="{{ url_for('controle_ferramentas_sugerir') }}" method="POST" class="inline-block align-bottom bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-900/10 dark:border-white/10 text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+            <div class="px-8 pt-8 pb-6">
+                <!-- Header -->
+                <div class="flex items-center justify-between mb-6 pb-4 border-b border-slate-900/5 dark:border-white/5">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-teal-500/10 flex items-center justify-center text-teal-500 shadow-inner">
+                            <i class="fa-solid fa-lightbulb text-lg"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-black text-slate-800 dark:text-white">Sugerir Nova Ferramenta</h3>
+                            <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Envie sugestões de melhoria para os seus equipamentos</p>
+                        </div>
+                    </div>
+                    <button type="button" onclick="closeSuggestModal()" class="w-8 h-8 rounded-full hover:bg-slate-100 dark:hover:hover:bg-white/5 flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-white transition-all">
+                        <i class="fa-solid fa-xmark text-sm"></i>
+                    </button>
+                </div>
+
+                <!-- Conteúdo -->
+                <div class="space-y-4">
+                    <div>
+                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">Nome da Ferramenta *</label>
+                        <input type="text" name="name" required placeholder="Ex: Chave Estrela 13mm, Soprador Térmico..."
+                               class="w-full rounded-2xl px-4 py-3 border text-sm font-semibold
+                                      bg-slate-50 text-slate-900 border-slate-900/5 dark:bg-white/5 dark:text-white dark:border-white/5
+                                      outline-none focus:ring-4 focus:ring-teal-500/10 transition-all">
+                    </div>
+
+                    <div>
+                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">Link de Compra (Opcional)</label>
+                        <input type="url" name="purchase_link" placeholder="Ex: https://www.loja.com/ferramenta"
+                               class="w-full rounded-2xl px-4 py-3 border text-sm font-semibold
+                                      bg-slate-50 text-slate-900 border-slate-900/5 dark:bg-white/5 dark:text-white dark:border-white/5
+                                      outline-none focus:ring-4 focus:ring-teal-500/10 transition-all">
+                    </div>
+
+                    <div>
+                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">Utilidade e Benefícios *</label>
+                        <textarea name="utility" required placeholder="Explique como essa ferramenta vai ajudar no seu dia a dia e quais os benefícios..."
+                                  class="w-full rounded-2xl px-4 py-3 border text-sm font-semibold h-28
+                                         bg-slate-50 text-slate-900 border-slate-900/5 dark:bg-white/5 dark:text-white dark:border-white/5
+                                         outline-none focus:ring-4 focus:ring-teal-500/10 transition-all"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="px-8 py-6 bg-slate-50 dark:bg-white/[0.02] border-t border-slate-900/5 dark:border-white/5 flex items-center justify-end gap-3 rounded-b-[2.5rem]">
+                <button type="button" onclick="closeSuggestModal()"
+                        class="px-5 py-3 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200 rounded-xl font-bold text-xs uppercase tracking-wider transition-all">
+                    Cancelar
+                </button>
+                <button type="submit"
+                        class="px-6 py-3 bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 text-white rounded-xl font-black text-xs uppercase tracking-widest shadow-md transition-all">
+                    Enviar Sugestão
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
 
 {% endblock %}
