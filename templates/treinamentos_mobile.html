@@ -25,6 +25,16 @@
         </div>
     </div>
 
+    <!-- SUB-TABS SEGMENTED CONTROLS -->
+    <div class="flex p-1 bg-slate-100 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 rounded-2xl max-w-md mb-8 relative z-10 shrink-0 mx-auto">
+        <button onclick="switchMobileTab('lms')" id="btn-mobile-tab-lms" class="mobile-tab-btn flex-1 py-3 text-xs font-black rounded-xl text-slate-800 dark:text-white bg-white dark:bg-white/10 shadow-sm transition-all duration-200">
+            🎓 Meus Cursos
+        </button>
+        <button onclick="switchMobileTab('rpg_crisis')" id="btn-mobile-tab-rpg" class="mobile-tab-btn flex-1 py-3 text-xs font-black rounded-xl text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white transition-all duration-200">
+            ⚡ Simuladores de Crise
+        </button>
+    </div>
+
     <!-- LOADING STATE -->
     <div id="training-loading" class="text-center py-20 animate-premium">
         <div class="animate-spin inline-block w-8 h-8 border-2 border-teal-500 border-t-transparent rounded-full mb-4"></div>
@@ -154,6 +164,67 @@
             </div>
         </div>
     </div>
+
+    <!-- ====================== FULLSCREEN: SIMULADOR DE CRISE (RPG) ====================== -->
+    <div id="rpg-overlay" class="fixed inset-0 z-[200] bg-slate-950 text-white hidden flex-col">
+        <!-- RPG Header -->
+        <div class="h-16 border-b border-white/5 flex items-center justify-between px-6 bg-slate-900/90 backdrop-blur-xl shrink-0">
+            <button onclick="closeRPG()" class="p-2 rounded-xl hover:bg-white/10 text-slate-400 transition-all">
+                <i class="fa-solid fa-arrow-left text-lg"></i>
+            </button>
+            <div class="text-center">
+                <div id="rpg-header-title" class="text-xs font-black text-white uppercase tracking-tight truncate max-w-[200px]">Cenário de Crise</div>
+                <div id="rpg-progress" class="text-[9px] font-black text-amber-500 uppercase tracking-widest">Ação 1 de 5</div>
+            </div>
+            <div class="w-10"></div>
+        </div>
+
+        <!-- RPG Content -->
+        <div class="flex-1 overflow-y-auto p-6 md:p-10 custom-scrollbar flex flex-col justify-center items-center">
+            <div class="max-w-2xl w-full space-y-6">
+                <!-- Story Card (Glassmorphism Dark) -->
+                <div class="glass-premium p-6 md:p-8 rounded-[2rem] border border-white/10 shadow-2xl relative overflow-hidden bg-slate-900/40 animate-premium">
+                    <div class="absolute -top-16 -right-16 w-48 h-48 bg-amber-500/10 rounded-full blur-2xl"></div>
+                    <div class="relative z-10 space-y-4">
+                        <div id="rpg-badge-category" class="text-[8px] font-black text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-full uppercase tracking-widest w-fit">Incidente Crítico</div>
+                        <h2 id="rpg-scene-title" class="text-xl md:text-2xl font-black text-white tracking-tight leading-snug">Cenário</h2>
+                        
+                        <!-- Media (Image/Video) -->
+                        <div id="rpg-media-container" class="w-full hidden"></div>
+
+                        <p id="rpg-scene-text" class="text-sm md:text-base text-slate-300 leading-relaxed font-medium whitespace-pre-wrap"></p>
+                    </div>
+                </div>
+
+                <!-- Immediate RPG Feedback Card -->
+                <div id="rpg-feedback" class="hidden p-5 rounded-2xl border-2 transition-all duration-300">
+                    <div class="flex items-start gap-4">
+                        <div id="rpg-feedback-icon" class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"></div>
+                        <div>
+                            <h4 id="rpg-feedback-title" class="text-sm font-black uppercase tracking-widest"></h4>
+                            <p id="rpg-feedback-text" class="text-xs text-slate-300 mt-1 leading-relaxed"></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Decision Choices (RPG Action Buttons) -->
+                <div class="space-y-3">
+                    <h3 id="rpg-action-label" class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-2 text-center">O que você fará? Escolha sua ação:</h3>
+                    <div id="rpg-choices" class="grid grid-cols-1 gap-3"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- RPG Footer -->
+        <div class="h-20 border-t border-white/5 flex items-center justify-between px-6 bg-slate-900/90 backdrop-blur-xl shrink-0 gap-3">
+            <button id="rpg-prev-btn" onclick="rpgNav(-1)" class="px-5 py-3 bg-white/10 hover:bg-white/15 text-white rounded-2xl font-bold text-xs uppercase tracking-widest transition-all">
+                <i class="fa-solid fa-chevron-left mr-1"></i> Anterior
+            </button>
+            <button id="rpg-next-btn" onclick="rpgSubmitChoice()" class="px-5 py-3 bg-amber-500 hover:bg-amber-600 text-white rounded-2xl font-bold text-xs uppercase tracking-widest shadow-xl shadow-amber-500/30 transition-all active:scale-95">
+                Confirmar Ação <i class="fa-solid fa-chevron-right ml-1"></i>
+            </button>
+        </div>
+    </div>
 </div>
 
 <style>
@@ -170,6 +241,11 @@ let courseData = null;
 let currentModuleIdx = 0;
 let currentQuestionIdx = 0;
 let examAnswers = {};
+let currentMobileTab = 'lms';
+
+// RPG Specific Variables
+let rpgAnswers = {};
+let rpgHasAnswered = false;
 
 function escapeHTML(str) {
     if (!str) return '';
@@ -224,14 +300,18 @@ async function loadTrainings() {
         document.getElementById('training-loading').classList.add('hidden');
     }
 
-    if (!allTrainings || allTrainings.length === 0) {
+    const filtered = allTrainings.filter(t => (t.course_type || 'lms') === currentMobileTab);
+
+    if (!filtered || filtered.length === 0) {
         document.getElementById('training-empty').classList.remove('hidden');
+        document.getElementById('training-list').classList.add('hidden');
         return;
     }
 
+    document.getElementById('training-empty').classList.add('hidden');
     const list = document.getElementById('training-list');
     list.classList.remove('hidden');
-    list.innerHTML = allTrainings.map(t => {
+    list.innerHTML = filtered.map(t => {
         const statusMap = {
             'pendente': { icon: 'fa-circle-exclamation', color: 'amber', label: 'NOVO' },
             'em_andamento': { icon: 'fa-book-open-reader', color: 'blue', label: 'EM ANDAMENTO' },
@@ -287,6 +367,21 @@ async function loadTrainings() {
     }).join('');
 }
 
+function switchMobileTab(tab) {
+    currentMobileTab = tab;
+    document.querySelectorAll('.mobile-tab-btn').forEach(btn => {
+        const isTarget = (tab === 'lms' && btn.id === 'btn-mobile-tab-lms') || (tab === 'rpg_crisis' && btn.id === 'btn-mobile-tab-rpg');
+        if (isTarget) {
+            btn.classList.add('bg-white', 'dark:bg-white/10', 'text-slate-800', 'dark:text-white', 'shadow-sm');
+            btn.classList.remove('text-slate-500', 'dark:text-slate-400');
+        } else {
+            btn.classList.remove('bg-white', 'dark:bg-white/10', 'text-slate-800', 'dark:text-white', 'shadow-sm');
+            btn.classList.add('text-slate-500', 'dark:text-slate-400');
+        }
+    });
+    loadTrainings();
+}
+
 // ============ OPEN COURSE ============
 async function openCourse(courseId) {
     currentCourseId = courseId;
@@ -295,6 +390,11 @@ async function openCourse(courseId) {
         const res = await fetch(`/api/treinamentos/${courseId}/conteudo`);
         courseData = await res.json();
     } catch(e) { return alert('Erro ao carregar treinamento.'); }
+
+    if (courseData.course_type === 'rpg_crisis') {
+        openRPG();
+        return;
+    }
 
     if (courseData.modules.length === 0) {
         if (!courseData.allow_retake && courseData.attempts_count > 0) {
@@ -396,6 +496,183 @@ function startExam(courseId) {
     ov.classList.remove('hidden');
     ov.classList.add('flex');
     renderQuestion();
+}
+
+// ============ RPG OVERLAY FUNCTIONS ============
+function openRPG() {
+    rpgAnswers = {};
+    rpgHasAnswered = false;
+    currentModuleIdx = 0;
+    const ov = document.getElementById('rpg-overlay');
+    ov.classList.remove('hidden');
+    ov.classList.add('flex');
+    renderRPGScene();
+}
+
+function closeRPG() {
+    const ov = document.getElementById('rpg-overlay');
+    ov.classList.add('hidden');
+    ov.classList.remove('flex');
+    loadTrainings();
+}
+
+function renderRPGScene() {
+    const mod = courseData.modules[currentModuleIdx];
+    if (!mod) return;
+
+    rpgHasAnswered = false;
+    document.getElementById('rpg-header-title').textContent = courseData.title;
+    document.getElementById('rpg-progress').textContent = `Fase ${currentModuleIdx + 1} de ${courseData.modules.length}`;
+    document.getElementById('rpg-scene-title').textContent = mod.title;
+    document.getElementById('rpg-scene-text').textContent = mod.content;
+
+    // Media
+    const mediaContainer = document.getElementById('rpg-media-container');
+    mediaContainer.innerHTML = '';
+    if (mod.video_path) {
+        mediaContainer.classList.remove('hidden');
+        mediaContainer.innerHTML = `<video controls class="w-full rounded-2xl mb-4 shadow-lg border border-white/10 max-h-[220px] bg-black" src="${mod.video_path}"></video>`;
+    } else if (mod.image_path) {
+        mediaContainer.classList.remove('hidden');
+        mediaContainer.innerHTML = `<img class="w-full rounded-2xl mb-4 shadow-md border border-white/10 object-cover max-h-[220px]" src="${mod.image_path}">`;
+    } else {
+        mediaContainer.classList.add('hidden');
+    }
+
+    // Mark as read
+    fetch(`/api/treinamentos/${currentCourseId}/mark_module`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({module_id: mod.id})
+    });
+
+    document.getElementById('rpg-feedback').classList.add('hidden');
+
+    // Question
+    const q = courseData.questions[currentModuleIdx] || courseData.questions[0];
+    if (q) {
+        document.getElementById('rpg-action-label').classList.remove('hidden');
+        const letters = ['a', 'b', 'c', 'd'];
+        const labels = [q.option_a, q.option_b, q.option_c, q.option_d];
+        const selected = rpgAnswers[q.id] || '';
+
+        document.getElementById('rpg-choices').innerHTML = letters.map((l, i) => `
+            <button onclick="rpgSelectChoice(${q.id}, '${l}', '${q.correct_option}')" id="btn-rpg-opt-${l}" class="w-full text-left p-4 rounded-2xl border-2 ${selected === l ? 'border-amber-500 bg-amber-500/10' : 'border-white/10 bg-slate-900'} hover:border-amber-500/50 transition-all flex items-center gap-4">
+                <div class="w-8 h-8 rounded-lg ${selected === l ? 'bg-amber-500 text-slate-950 font-black' : 'bg-white/10 text-slate-400 font-bold'} flex items-center justify-center text-xs uppercase shrink-0 transition-all">${l}</div>
+                <span class="text-xs font-bold text-slate-200">${labels[i]}</span>
+            </button>
+        `).join('');
+    } else {
+        document.getElementById('rpg-action-label').classList.add('hidden');
+        document.getElementById('rpg-choices').innerHTML = `<p class="text-center text-xs text-slate-400 py-4">Nenhuma decisão nesta fase.</p>`;
+        rpgHasAnswered = true;
+    }
+
+    document.getElementById('rpg-prev-btn').style.visibility = currentModuleIdx > 0 ? 'visible' : 'hidden';
+    const nextBtn = document.getElementById('rpg-next-btn');
+    if (currentModuleIdx >= courseData.modules.length - 1) {
+        nextBtn.innerHTML = '<i class="fa-solid fa-circle-check mr-1"></i> Concluir Missão';
+    } else {
+        nextBtn.innerHTML = 'Confirmar Ação <i class="fa-solid fa-chevron-right ml-1"></i>';
+    }
+}
+
+function rpgSelectChoice(qId, choice, correctOption) {
+    if (rpgHasAnswered) return;
+    rpgAnswers[qId] = choice;
+    ['a', 'b', 'c', 'd'].forEach(l => {
+        const btn = document.getElementById(`btn-rpg-opt-${l}`);
+        if (btn) {
+            btn.className = `w-full text-left p-4 rounded-2xl border-2 ${l === choice ? 'border-amber-500 bg-amber-500/10' : 'border-white/10 bg-slate-900'}`;
+        }
+    });
+}
+
+function rpgSubmitChoice() {
+    const q = courseData.questions[currentModuleIdx] || courseData.questions[0];
+    if (q && !rpgAnswers[q.id]) {
+        alert('Por favor, escolha uma ação para continuar!');
+        return;
+    }
+
+    if (q && !rpgHasAnswered) {
+        rpgHasAnswered = true;
+        const choice = rpgAnswers[q.id];
+        const isCorrect = choice === q.correct_option;
+
+        const fb = document.getElementById('rpg-feedback');
+        const icon = document.getElementById('rpg-feedback-icon');
+        const title = document.getElementById('rpg-feedback-title');
+        const text = document.getElementById('rpg-feedback-text');
+
+        fb.classList.remove('hidden');
+        if (isCorrect) {
+            fb.className = "p-5 rounded-2xl border-2 border-emerald-500/30 bg-emerald-500/10 transition-all duration-300";
+            icon.className = "w-10 h-10 rounded-xl bg-emerald-500 text-slate-950 flex items-center justify-center shrink-0 font-black";
+            icon.innerHTML = `<i class="fa-solid fa-circle-check text-lg"></i>`;
+            title.className = "text-sm font-black uppercase tracking-widest text-emerald-400";
+            title.textContent = "Excelente Decisão!";
+            text.textContent = "Sua ação foi precisa e resolveu o problema de forma segura. Você agiu em conformidade operacional.";
+        } else {
+            fb.className = "p-5 rounded-2xl border-2 border-red-500/30 bg-red-500/10 transition-all duration-300";
+            icon.className = "w-10 h-10 rounded-xl bg-red-500 text-white flex items-center justify-center shrink-0 font-black";
+            icon.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-lg"></i>`;
+            title.className = "text-sm font-black uppercase tracking-widest text-red-400";
+            title.textContent = "Ação de Alto Risco!";
+            text.textContent = `A resposta correta seria a alternativa ${q.correct_option.toUpperCase()}. Lembre-se sempre dos procedimentos de segurança.`;
+        }
+
+        ['a', 'b', 'c', 'd'].forEach(l => {
+            const btn = document.getElementById(`btn-rpg-opt-${l}`);
+            if (btn) {
+                if (l === q.correct_option) {
+                    btn.className = `w-full text-left p-4 rounded-2xl border-2 border-emerald-500 bg-emerald-500/15 flex items-center gap-4`;
+                } else if (l === choice) {
+                    btn.className = `w-full text-left p-4 rounded-2xl border-2 border-red-500 bg-red-500/15 flex items-center gap-4`;
+                } else {
+                    btn.className = `w-full text-left p-4 rounded-2xl border-2 border-white/5 bg-slate-950/20 opacity-40 flex items-center gap-4`;
+                }
+            }
+        });
+
+        const nextBtn = document.getElementById('rpg-next-btn');
+        if (currentModuleIdx >= courseData.modules.length - 1) {
+            nextBtn.innerHTML = '<i class="fa-solid fa-circle-check mr-1"></i> Concluir Missão';
+        } else {
+            nextBtn.innerHTML = 'Próxima Cena <i class="fa-solid fa-chevron-right ml-1"></i>';
+        }
+        return;
+    }
+
+    const newIdx = currentModuleIdx + 1;
+    if (newIdx >= courseData.modules.length) {
+        submitRPGExam();
+        return;
+    }
+    currentModuleIdx = newIdx;
+    renderRPGScene();
+}
+
+function rpgNav(dir) {
+    const newIdx = currentModuleIdx + dir;
+    if (newIdx < 0 || newIdx >= courseData.modules.length) return;
+    currentModuleIdx = newIdx;
+    renderRPGScene();
+}
+
+async function submitRPGExam() {
+    try {
+        const res = await fetch(`/api/treinamentos/${currentCourseId}/responder`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({answers: rpgAnswers})
+        });
+        const result = await res.json();
+        closeRPG();
+        showResult(result);
+    } catch(e) {
+        alert('Erro ao enviar respostas do simulador.');
+    }
 }
 
 function closeExam() {

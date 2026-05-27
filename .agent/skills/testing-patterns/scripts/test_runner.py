@@ -88,8 +88,13 @@ def detect_test_framework(project_path: Path) -> dict:
             result["coverage_cmd"] = [sys.executable, "-m", "pytest", "--cov", "--cov-report=term-missing"]
         else:
             result["framework"] = "unittest"
-            result["cmd"] = [sys.executable, "-m", "unittest", "discover", "-v"]
-            result["coverage_cmd"] = [sys.executable, "-m", "coverage", "run", "-m", "unittest", "discover"]
+            has_tests_dir = (project_path / "tests").exists()
+            if has_tests_dir:
+                result["cmd"] = [sys.executable, "-m", "unittest", "discover", "-s", "tests", "-v"]
+                result["coverage_cmd"] = [sys.executable, "-m", "coverage", "run", "-m", "unittest", "discover", "-s", "tests"]
+            else:
+                result["cmd"] = [sys.executable, "-m", "unittest", "discover", "-v"]
+                result["coverage_cmd"] = [sys.executable, "-m", "coverage", "run", "-m", "unittest", "discover"]
     
     return result
 

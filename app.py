@@ -579,6 +579,7 @@ class TrainingCourse(db.Model):
     badge_icon = db.Column(db.String(50), default='fa-award')
     badge_color = db.Column(db.String(20), default='#0d9488')
     allow_retake = db.Column(db.Boolean, default=False)
+    course_type = db.Column(db.String(50), default="lms")
 
     # Relationships
     modules = db.relationship("TrainingModule", backref="course", cascade="all, delete-orphan", lazy=True, order_by="TrainingModule.order")
@@ -1235,7 +1236,8 @@ def ensure_min_schema():
                 details TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
-        ''')
+        '''),
+        text('ALTER TABLE training_course ADD COLUMN IF NOT EXISTS course_type VARCHAR(50) DEFAULT \'lms\'')
     ]
     for stmt in stmts:
         try:
@@ -8714,6 +8716,7 @@ def api_gestao_treinamentos_lms_list():
                 "badge_icon": c.badge_icon,
                 "badge_color": c.badge_color,
                 "allow_retake": c.allow_retake,
+                "course_type": c.course_type or 'lms',
                 "total_assignments": total_assigns,
                 "approved_assignments": approved_assigns
             })
@@ -8805,6 +8808,7 @@ def api_gestao_treinamentos_lms_save():
         course.badge_icon = data.get("badge_icon") or 'fa-award'
         course.badge_color = data.get("badge_color") or '#0d9488'
         course.allow_retake = bool(data.get("allow_retake"))
+        course.course_type = data.get("course_type") or 'lms'
         
         # Flush so new courses get an ID
         db.session.flush()
@@ -8905,6 +8909,7 @@ def api_gestao_treinamentos_lms_get(id):
             "badge_icon": c.badge_icon,
             "badge_color": c.badge_color,
             "allow_retake": c.allow_retake,
+            "course_type": c.course_type or 'lms',
             "modules": modules,
             "questions": questions,
             "assignments": assignments
@@ -9012,7 +9017,8 @@ def api_treinamentos_meus():
                 "questions_total": len(c.questions),
                 "badge_name": c.badge_name,
                 "badge_icon": c.badge_icon,
-                "badge_color": c.badge_color
+                "badge_color": c.badge_color,
+                "course_type": c.course_type or 'lms'
             })
         return jsonify(results)
     except Exception as e:
@@ -9081,6 +9087,7 @@ def api_treinamentos_conteudo(course_id):
             "description": c.description,
             "allow_retake": c.allow_retake,
             "attempts_count": attempts_count,
+            "course_type": c.course_type or 'lms',
             "modules": modules,
             "questions": questions
         })
