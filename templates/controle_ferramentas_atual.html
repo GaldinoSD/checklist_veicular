@@ -287,10 +287,16 @@
                         <i class="fa-solid fa-circle-check mr-1"></i> Totalmente Liberado
                     </span>
                 </div>
-                <button type="button" onclick="closeDetailsModal()"
-                        class="w-full sm:w-auto px-6 py-3 bg-slate-900 dark:bg-white hover:bg-slate-800 dark:hover:bg-slate-100 text-white dark:text-slate-900 rounded-xl font-black text-xs uppercase tracking-widest shadow-md transition-all">
-                    Fechar Auditoria
-                </button>
+                <div class="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto shrink-0 justify-end">
+                    <a id="btn-gerar-pdf-individual" href="#" target="_blank"
+                       class="w-full sm:w-auto px-6 py-3 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-black text-xs uppercase tracking-widest shadow-md transition-all flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-file-pdf text-sm"></i> Gerar PDF do Técnico
+                    </a>
+                    <button type="button" onclick="closeDetailsModal()"
+                            class="w-full sm:w-auto px-6 py-3 bg-slate-900 dark:bg-white hover:bg-slate-800 dark:hover:bg-slate-100 text-white dark:text-slate-900 rounded-xl font-black text-xs uppercase tracking-widest shadow-md transition-all">
+                        Fechar Auditoria
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -350,6 +356,9 @@ function viewCompleteControl(userId) {
     document.getElementById('critical-items-container').innerHTML = '<div class="col-span-2 text-center text-xs text-slate-400 dark:text-gray-500 py-4"><i class="fa-solid fa-spinner animate-spin mr-2"></i> Carregando ferramentas...</div>';
     document.getElementById('normal-items-container').innerHTML = '';
     document.getElementById('detail-notes').textContent = 'Nenhuma observação geral inserida.';
+    
+    // Vincula link de PDF individual
+    document.getElementById('btn-gerar-pdf-individual').href = `/controle/ferramentas/relatorio/pdf/${userId}`;
     
     // Oculta badges e ações anteriores para evitar flash visual
     document.getElementById('detail-status-badge').classList.add('hidden');

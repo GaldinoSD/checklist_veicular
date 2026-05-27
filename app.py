@@ -444,6 +444,7 @@ class Checklist(db.Model):
     status = db.Column(db.String(40), default="OK")
     notes = db.Column(db.Text)
     raw_json = db.Column(db.Text)
+    signature = db.Column(db.String(255), nullable=True)
 
 
 
@@ -522,6 +523,7 @@ class UserToolInspection(db.Model):
     updated_at = db.Column(db.DateTime, default=agora, onupdate=agora)
     notes = db.Column(db.Text)
     is_locked = db.Column(db.Boolean, default=True, nullable=False)
+    signature = db.Column(db.String(255), nullable=True)
 
 class UserToolStatus(db.Model):
     __tablename__ = "user_tool_status"
@@ -4620,7 +4622,7 @@ def api_status_toggle(slug, id):
 # 🔥 GERADORES DE RELATÓRIO PDF PREMIUM 🔥
 # ==========================================
 
-def make_premium_pdf(buffer, title, metadata, content_table_data, image_paths=None):
+def make_premium_pdf(buffer, title, metadata, content_table_data, image_paths=None, signature_path=None):
     from reportlab.lib.pagesizes import A4
     from reportlab.lib import colors
     from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image as RLImage
@@ -4828,6 +4830,35 @@ def make_premium_pdf(buffer, title, metadata, content_table_data, image_paths=No
                 ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
             ]))
             story.append(photos_table)
+
+    # Seção 4: Assinatura Digital
+    if signature_path and os.path.exists(signature_path):
+        story.append(Spacer(1, 8*mm))
+        story.append(Paragraph("<b>Assinatura Digital de Validação</b>", styles["Heading3"]))
+        story.append(Spacer(1, 3*mm))
+        try:
+            sig_img = RLImage(signature_path, width=60*mm, height=18*mm)
+            sig_img.hAlign = 'LEFT'
+            
+            tech_name = metadata.get("Técnico Responsável") or metadata.get("Técnico") or "N/A"
+            date_time_str = metadata.get("Última Atualização") or metadata.get("Data") or metadata.get("Data/Hora") or agora().strftime("%d/%m/%Y %H:%M")
+            
+            sig_table_data = [
+                [sig_img],
+                [Paragraph("____________________________________________", value_style)],
+                [Paragraph(f"<b>Técnico:</b> {tech_name}", label_style)],
+                [Paragraph(f"<b>Data/Hora:</b> {date_time_str}", label_style)]
+            ]
+            sig_table = Table(sig_table_data, colWidths=[170*mm])
+            sig_table.setStyle(TableStyle([
+                ('ALIGN', (0,0), (-1,-1), 'LEFT'),
+                ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+                ('BOTTOMPADDING', (0,0), (-1,-1), 1),
+                ('TOPPADDING', (0,0), (-1,-1), 1),
+            ]))
+            story.append(sig_table)
+        except Exception as e:
+            print("⚠️ Erro ao renderizar assinatura no PDF:", e)
 
     doc.build(story, onFirstPage=draw_background, onLaterPages=draw_background)
 
@@ -6655,6 +6686,26 @@ def checklist_detail(cid):
     items = data.get("items", {})
     return render_template("checklist_detail.html", c=c, items=items, photos=photos)
 
+@app.route("/checklists/<int:cid>/pdf")
+@supervisor_allowed
+def checklist_pdf_download(cid):
+    import io
+    from flask import send_file
+    
+    c = Checklist.query.get_or_404(cid)
+    try:
+        raw = json.loads(c.raw_json) if c.raw_json else {}
+    except Exception:
+        raw = {}
+        
+    pdf_path_str = generate_checklist_pdf(c, raw)
+    
+    return send_file(
+        pdf_path_str,
+        mimetype="application/pdf",
+        as_attachment=False,
+        download_name=f"checklist_{c.id}_{c.technician}.pdf"
+    )
 
 @app.route("/checklists/<int:cid>/excluir", methods=["POST"])
 @supervisor_allowed
@@ -6975,8 +7026,7 @@ def generate_checklist_pdf(checklist_obj: Checklist, raw: dict) -> str:
     plate = checklist_obj.vehicle.plate if checklist_obj.vehicle else "SEM_PLACA"
     safe_user = (checklist_obj.technician or "tecnico").replace(" ", "_")
 
-    dt_utc = checklist_obj.date.replace(tzinfo=UTC) if checklist_obj.date.tzinfo is None else checklist_obj.date.astimezone(UTC)
-    dt_brt = dt_utc.astimezone(BRT)
+    dt_brt = checklist_obj.date.astimezone(BRT) if checklist_obj.date.tzinfo is not None else checklist_obj.date
     dt_str = dt_brt.strftime("%Y-%m-%d_%Hh%M")
     now_brt_str = datetime.datetime.now(BRT).strftime("%d/%m/%Y %H:%M")
 
@@ -6984,9 +7034,9 @@ def generate_checklist_pdf(checklist_obj: Checklist, raw: dict) -> str:
     out_path = RELATORIOS_DIR / filename
 
     styles = getSampleStyleSheet()
-    styles.add(ParagraphStyle(name="BodyJustify", parent=styles["Normal"], leading=14))
-    styles.add(ParagraphStyle(name="SectionTitle", parent=styles["Heading3"], spaceAfter=6,
-                              textColor=colors.HexColor("#1F3C78")))
+    styles.add(ParagraphStyle(name="BodyJustify", parent=styles["Normal"], fontSize=7, leading=9))
+    styles.add(ParagraphStyle(name="SectionTitle", parent=styles["Heading3"], spaceBefore=5, spaceAfter=2,
+                              textColor=colors.HexColor("#1F3C78"), fontSize=9, leading=11))
 
     AZUL = colors.Color(25/255, 60/255, 120/255)
     CINZA_TEXTO = colors.HexColor("#4D4D4D")
@@ -7022,46 +7072,45 @@ def generate_checklist_pdf(checklist_obj: Checklist, raw: dict) -> str:
             width, height = A4
             if pdf_logo_path:
                 try:
-                    # Bounding box: max 120px (31.75mm), max 50px (13.22mm)
-                    c.drawImage(pdf_logo_path, 15*mm, height-28*mm, 31.75*mm, 13.22*mm,
+                    c.drawImage(pdf_logo_path, 15*mm, height-24*mm, 26*mm, 11*mm,
                                 preserveAspectRatio=True, mask="auto")
                 except Exception:
                     pass
             c.setStrokeColor(AZUL)
             c.setLineWidth(1.0)
-            c.line(15*mm, height-32*mm, width-15*mm, height-32*mm)
-            c.setFont("Helvetica-Bold", 14)
+            c.line(12*mm, height-27*mm, width-12*mm, height-27*mm)
+            c.setFont("Helvetica-Bold", 12)
             c.setFillColor(AZUL)
-            c.drawCentredString(width/2, height-17*mm, titulo)
-            c.setFont("Helvetica", 11)
+            c.drawCentredString(width/2, height-14*mm, titulo)
+            c.setFont("Helvetica", 9)
             c.setFillColor(colors.black)
-            c.drawCentredString(width/2, height-24*mm, subtitulo)
-            c.setFont("Helvetica", 8)
+            c.drawCentredString(width/2, height-20*mm, subtitulo)
+            c.setFont("Helvetica", 7)
             c.setFillColor(CINZA_TEXTO)
-            c.drawString(15*mm, height-36*mm, f"Emitido em: {now_brt_str}")
-            c.drawRightString(width-15*mm, height-36*mm, "Relatório gerado automaticamente")
+            c.drawString(12*mm, height-31*mm, f"Emitido em: {now_brt_str}")
+            c.drawRightString(width-12*mm, height-31*mm, "Relatório gerado automaticamente")
 
-            footer_line_y = 32*mm
+            footer_line_y = 20*mm
             c.setStrokeColor(colors.HexColor("#BBBBBB"))
             c.setLineWidth(0.8)
-            c.line(15*mm, footer_line_y, width-15*mm, footer_line_y)
-            c.setFont("Helvetica", 8)
+            c.line(12*mm, footer_line_y, width-12*mm, footer_line_y)
+            c.setFont("Helvetica", 6.5)
             c.setFillColor(colors.HexColor("#6E6E6E"))
-            y = 28*mm
+            y = 16*mm
             for linha in pdf_rodape_linhas:
                 c.drawCentredString(width/2, y, linha)
-                y -= 4*mm
-            c.setFont("Helvetica-Oblique", 8)
-            c.drawRightString(width-15*mm, 6*mm, f"Página {c.getPageNumber()}")
+                y -= 2.6*mm
+            c.setFont("Helvetica-Oblique", 6.5)
+            c.drawRightString(width-12*mm, 5*mm, f"Página {c.getPageNumber()}")
         return _on_page
 
     doc = SimpleDocTemplate(
         str(out_path),
         pagesize=A4,
-        rightMargin=20 * mm,
-        leftMargin=20 * mm,
-        topMargin=45 * mm,
-        bottomMargin=40 * mm
+        rightMargin=12 * mm,
+        leftMargin=12 * mm,
+        topMargin=34 * mm,
+        bottomMargin=23 * mm
     )
 
     elements = []
@@ -7069,24 +7118,26 @@ def generate_checklist_pdf(checklist_obj: Checklist, raw: dict) -> str:
     # Cabeçalho / meta
     elements.append(Paragraph("<b>Informações do Checklist</b>", styles["SectionTitle"]))
     meta_data = [
-        ["Técnico", checklist_obj.technician or "-"],
-        ["Placa", plate],
-        ["Veículo", f"{checklist_obj.vehicle.brand or ''} {checklist_obj.vehicle.model or ''}".strip()],
-        ["KM", str(checklist_obj.km)],
-        ["Data", dt_brt.strftime("%d/%m/%Y %H:%M")],
-        ["Status", checklist_obj.status],
+        ["Técnico:", checklist_obj.technician or "-", "Placa:", plate],
+        ["Veículo:", f"{checklist_obj.vehicle.brand or ''} {checklist_obj.vehicle.model or ''}".strip(), "KM:", str(checklist_obj.km)],
+        ["Data:", dt_brt.strftime("%d/%m/%Y %H:%M"), "Status:", checklist_obj.status],
     ]
 
-    t = Table(meta_data, colWidths=[40 * mm, 110 * mm])
+    t = Table(meta_data, colWidths=[22 * mm, 71 * mm, 22 * mm, 71 * mm])
     t.setStyle(TableStyle([
         ("BOX", (0, 0), (-1, -1), 0.8, colors.HexColor("#707070")),
         ("GRID", (0, 0), (-1, -1), 0.6, colors.HexColor("#707070")),
-        ("FONTSIZE", (0, 0), (-1, -1), 9),
+        ("FONTSIZE", (0, 0), (-1, -1), 7.5),
         ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-        ("ROWBACKGROUNDS", (0, 0), (-1, -1), [colors.white, colors.HexColor("#F4F4F4")]),
+        ("TOPPADDING", (0, 0), (-1, -1), 1.0),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 1.0),
+        ("BACKGROUND", (0, 0), (0, -1), colors.HexColor("#F4F4F4")),
+        ("BACKGROUND", (2, 0), (2, -1), colors.HexColor("#F4F4F4")),
+        ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
+        ("FONTNAME", (2, 0), (2, -1), "Helvetica-Bold"),
     ]))
     elements.append(t)
-    elements.append(Spacer(1, 10))
+    elements.append(Spacer(1, 2))
 
     # Itens
     elements.append(Paragraph("<b>Itens Verificados</b>", styles["SectionTitle"]))
@@ -7105,37 +7156,85 @@ def generate_checklist_pdf(checklist_obj: Checklist, raw: dict) -> str:
             Paragraph(just, styles["BodyJustify"]),
         ])
 
-    tbl = Table(data_tbl, colWidths=[80 * mm, 35 * mm, 45 * mm])
+    tbl = Table(data_tbl, colWidths=[100 * mm, 30 * mm, 56 * mm])
     tbl.setStyle(TableStyle([
         ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#D9E2F3")),
         ("TEXTCOLOR", (0, 0), (-1, 0), colors.black),
         ("GRID", (0, 0), (-1, -1), 0.6, colors.HexColor("#707070")),
-        ("FONTSIZE", (0, 0), (-1, -1), 9),
+        ("FONTSIZE", (0, 0), (-1, -1), 7),
         ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("TOPPADDING", (0, 0), (-1, -1), 0.8),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 0.8),
         ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#F5F5F5")]),
     ]))
     elements.append(tbl)
-    elements.append(Spacer(1, 10))
+    elements.append(Spacer(1, 2))
 
     photos = raw.get("photos", [])
+    photo_elements = []
     if photos:
-        elements.append(Paragraph("<b>Fotos Registradas</b>", styles["SectionTitle"]))
         for p in photos[:6]:
             try:
                 img_path = BASE_DIR / p.lstrip("/")
                 if not img_path.exists():
                     img_path = BASE_DIR / "static" / Path(p).name
-                img = RLImage(str(img_path), width=60 * mm, height=45 * mm)
-                elements.append(img)
-                elements.append(Spacer(1, 5))
+                img = RLImage(str(img_path), width=40 * mm, height=30 * mm)
+                photo_elements.append(img)
             except Exception:
                 continue
 
-    elements.append(Spacer(1, 15))
+    if photo_elements:
+        elements.append(Paragraph("<b>Fotos Registradas</b>", styles["SectionTitle"]))
+        photo_rows = []
+        for i in range(0, len(photo_elements), 3):
+            row = photo_elements[i:i+3]
+            while len(row) < 3:
+                row.append("")
+            photo_rows.append(row)
+        
+        t_photos = Table(photo_rows, colWidths=[62 * mm, 62 * mm, 62 * mm])
+        t_photos.setStyle(TableStyle([
+            ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("TOPPADDING", (0, 0), (-1, -1), 1.5),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 1.5),
+        ]))
+        elements.append(t_photos)
+        elements.append(Spacer(1, 2))
+
     elements.append(Paragraph("<b>Assinatura do Técnico</b>", styles["SectionTitle"]))
-    elements.append(Spacer(1, 5))
-    elements.append(Paragraph(f"Nome: {checklist_obj.technician or '-'}", styles["BodyJustify"]))
-    elements.append(Paragraph(f"Data: {dt_brt.strftime('%d/%m/%Y %H:%M')}", styles["BodyJustify"]))
+    
+    sig_cell = []
+    if checklist_obj.signature:
+        sig_path = BASE_DIR / "static" / "assinaturas" / checklist_obj.signature
+        if sig_path.exists():
+            try:
+                sig_img = RLImage(str(sig_path), width=50 * mm, height=14 * mm)
+                sig_img.hAlign = 'LEFT'
+                sig_cell.append(sig_img)
+            except Exception as e:
+                print("Erro ao renderizar assinatura em PDF do checklist veicular:", e)
+                
+    sig_table_data = []
+    if sig_cell:
+        sig_table_data.append(sig_cell)
+    else:
+        sig_table_data.append([Spacer(1, 8 * mm)])
+        
+    sig_table_data.append([Paragraph("____________________________________________", styles["BodyJustify"])])
+    sig_table_data.append([Paragraph(f"<b>Técnico:</b> {checklist_obj.technician or '-'}", styles["BodyJustify"])])
+    sig_table_data.append([Paragraph(f"<b>Data/Hora:</b> {dt_brt.strftime('%d/%m/%Y %H:%M')}", styles["BodyJustify"])])
+    
+    sig_table = Table(sig_table_data, colWidths=[186 * mm])
+    sig_table.setStyle(TableStyle([
+        ("ALIGN", (0, 0), (-1, -1), "LEFT"),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("LEFTPADDING", (0, 0), (-1, -1), 0),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+        ("TOPPADDING", (0, 0), (-1, -1), 0.5),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 0.5),
+    ]))
+    elements.append(sig_table)
 
     doc.build(
         elements,
@@ -7158,7 +7257,7 @@ def generate_checklist_pdf(checklist_obj: Checklist, raw: dict) -> str:
 def checklist_mobile():
     vehicles = Vehicle.query.order_by(Vehicle.plate.asc()).all()
     items_qs = ChecklistItem.query.order_by(ChecklistItem.order.asc()).all()
-    success = False
+    success = request.args.get("success") == "true"
 
     config = SystemConfig.query.first()
     mode = config.mode if config else "start_only"
@@ -7278,6 +7377,27 @@ def checklist_mobile():
         # =====================================================
         # 🔥 CORRIGIDO: NÃO USAR datetime.utcnow()
         # =====================================================
+        # Processamento da assinatura digital
+        sig_data = request.form.get("signature_data")
+        sig_filename = None
+        if sig_data and sig_data.startswith("data:image/png;base64,"):
+            import base64
+            from pathlib import Path
+            try:
+                header, encoded = sig_data.split(",", 1)
+                data = base64.b64decode(encoded)
+                sig_dir = Path("/var/www/checklist_veicular/static/assinaturas")
+                sig_dir.mkdir(parents=True, exist_ok=True)
+                from uuid import uuid4
+                sig_filename = f"sig_veiculo_{tech}_{uuid4().hex[:8]}.png"
+                with open(sig_dir / sig_filename, "wb") as f:
+                    f.write(data)
+            except Exception as e:
+                print("Erro ao salvar assinatura de veículo:", e)
+
+        # =====================================================
+        # 🔥 CORRIGIDO: NÃO USAR datetime.utcnow()
+        # =====================================================
         checklist = Checklist(
             vehicle_id=vehicle_id,
             technician=tech,
@@ -7286,6 +7406,7 @@ def checklist_mobile():
             status="Com Avaria" if has_just else "OK",
             notes="Checklist via web",
             raw_json=json.dumps(raw, ensure_ascii=False),
+            signature=sig_filename
         )
         db.session.add(checklist)
 
@@ -7328,7 +7449,7 @@ def checklist_mobile():
 
         registrar_log(f"Checklist criado para veículo ID={vehicle_id} por {tech}")
         flash("✅ Checklist enviado com sucesso!", "success")
-        success = True
+        return redirect(url_for("checklist_mobile", success="true"))
 
     return render_template("checklist_mobile.html", vehicles=vehicles, items=items_qs, success=success)
 
@@ -9167,7 +9288,7 @@ def mapa_rede():
 @app.route("/rede-registros")
 @login_required
 def rede_registros():
-    if not (current_user.has_permission("gestao_mapas") or current_user.role == "tech"):
+    if not current_user.has_permission("gestao_mapas"):
         abort(403)
 
     nodes = NetworkNode.query.order_by(NetworkNode.id).all()
@@ -10575,6 +10696,24 @@ def controle_ferramentas():
     if request.method == "POST":
         notes = request.form.get("notes", "").strip() or None
         
+        # Processamento da assinatura digital
+        sig_data = request.form.get("signature_data")
+        sig_filename = None
+        if sig_data and sig_data.startswith("data:image/png;base64,"):
+            import base64
+            from pathlib import Path
+            try:
+                header, encoded = sig_data.split(",", 1)
+                data = base64.b64decode(encoded)
+                sig_dir = Path("/var/www/checklist_veicular/static/assinaturas")
+                sig_dir.mkdir(parents=True, exist_ok=True)
+                from uuid import uuid4
+                sig_filename = f"sig_ferramentas_{current_user.username}_{uuid4().hex[:8]}.png"
+                with open(sig_dir / sig_filename, "wb") as f:
+                    f.write(data)
+            except Exception as e:
+                print("Erro ao salvar assinatura de ferramentas:", e)
+        
         if inspection and inspection.is_locked:
             # Vistoria bloqueada - Apenas atualiza ferramentas com is_editable == True
             editable_statuses = {s.tool_id: s for s in inspection.statuses if s.is_editable}
@@ -10593,26 +10732,39 @@ def controle_ferramentas():
                         damage_description = None
                         
                     tool_status = editable_statuses[tool.id]
-                    tool_status.status = status
-                    tool_status.sub_status = sub_status
-                    tool_status.damage_description = damage_description
-                    tool_status.is_editable = False # Bloqueia de volta!
-                    tool_status.updated_at = agora()
+                    
+                    # Verifica se o item foi realmente modificado pelo técnico
+                    is_changed = (
+                        tool_status.status != status or
+                        tool_status.sub_status != sub_status or
+                        tool_status.damage_description != damage_description
+                    )
+                    
+                    if is_changed:
+                        tool_status.status = status
+                        tool_status.sub_status = sub_status
+                        tool_status.damage_description = damage_description
+                        tool_status.is_editable = False  # Bloqueia de volta apenas se foi modificado!
+                        tool_status.updated_at = agora()
             
             inspection.updated_at = agora()
+            if sig_filename:
+                inspection.signature = sig_filename
             db.session.commit()
             registrar_log(f"Itens liberados do controle de ferramentas atualizados pelo técnico: {current_user.username}")
-            flash("Controle de ferramentas atualizado com sucesso!", "success")
+            flash("Controle de ferramentas updated com sucesso!", "success")
         else:
             # Vistoria nova ou totalmente desbloqueada
             if not inspection:
-                inspection = UserToolInspection(user_id=current_user.id, notes=notes, is_locked=True)
+                inspection = UserToolInspection(user_id=current_user.id, notes=notes, is_locked=True, signature=sig_filename)
                 db.session.add(inspection)
                 db.session.flush() # Para gerar o id
             else:
                 inspection.notes = notes
                 inspection.is_locked = True
                 inspection.updated_at = agora()
+                if sig_filename:
+                    inspection.signature = sig_filename
                 
             # Vamos processar cada ferramenta ativa enviada
             for tool in active_tools:
@@ -10865,6 +11017,91 @@ def controle_ferramentas_sugestoes_reprovar(id):
     registrar_log(f"Sugestão de ferramenta '{name}' reprovada/excluída por admin.")
     return jsonify({"success": True, "message": f"Sugestão '{name}' reprovada e excluída com sucesso!"})
 
+@app.route("/controle/ferramentas/relatorio/pdf/<int:user_id>")
+@admin_required
+def controle_ferramentas_relatorio_pdf(user_id):
+    import io
+    from flask import send_file
+    
+    ins = UserToolInspection.query.filter_by(user_id=user_id).first_or_404()
+    user = ins.user
+    
+    metadata = {
+        "Documento": "Termo de Responsabilidade e Controle",
+        "Técnico Responsável": user.username,
+        "Última Atualização": ins.updated_at.strftime("%d/%m/%Y %H:%M"),
+        "Status Geral": "Trancado (Confirmado)" if ins.is_locked else "Aberto para Edição",
+        "Emissor": current_user.username
+    }
+    
+    # Agrupar ferramentas por categoria
+    grouped = {}
+    total_ok = 0
+    total_avarias = 0
+    total_faltas = 0
+    
+    for s in ins.statuses:
+        if s.tool and s.tool.is_active:
+            cat = (s.tool.category or "Outros").strip()
+            if cat not in grouped:
+                grouped[cat] = []
+            
+            # Formatação do status
+            if s.status == "possui" and s.sub_status == "bom":
+                status_html = "• <b>{}</b>: <font color='#10b981'>Em Bom Estado (Possui)</font>".format(s.tool.name)
+                total_ok += 1
+            elif s.status == "possui" and s.sub_status == "ruim":
+                avaria_desc = f" ({s.damage_description})" if s.damage_description else ""
+                status_html = "• <b>{}</b>: <font color='#ef4444'>Com Avaria</font>{}".format(s.tool.name, avaria_desc)
+                total_avarias += 1
+            else:
+                tipo_falta = "Não Possui"
+                if s.sub_status == "perdi":
+                    tipo_falta = "Perdido"
+                elif s.sub_status == "nao_recebi":
+                    tipo_falta = "Não Recebido"
+                
+                status_html = "• <b>{}</b>: <font color='#f97316'>Ausente</font> ({})".format(s.tool.name, tipo_falta)
+                total_faltas += 1
+                
+            grouped[cat].append(status_html)
+            
+    # Ordenar as categorias
+    categories = sorted(grouped.keys(), key=lambda x: (1 if x == "Outros" else 0, x.lower()))
+    
+    content = []
+    for cat in categories:
+        items_html = "<br/>".join(sorted(grouped[cat]))
+        content.append((f"Categoria: {cat}", items_html))
+        
+    # Adicionar observações do técnico se existirem
+    if ins.notes:
+        content.append(("Observações do Técnico", f"<i>\"{ins.notes}\"</i>"))
+        
+    # Adicionar contadores resumidos aos metadados
+    metadata["Itens OK"] = str(total_ok)
+    metadata["Itens com Avaria"] = str(total_avarias)
+    metadata["Itens em Falta/Ausentes"] = str(total_faltas)
+    
+    sig_path = None
+    if ins.signature:
+        from pathlib import Path
+        full_sig = Path("/var/www/checklist_veicular/static/assinaturas") / ins.signature
+        if full_sig.exists():
+            sig_path = str(full_sig)
+
+    buffer = io.BytesIO()
+    make_premium_pdf(buffer, f"VISTORIA DE FERRAMENTAS - {user.username.upper()}", metadata, content, signature_path=sig_path)
+    buffer.seek(0)
+    
+    return send_file(
+        buffer,
+        mimetype="application/pdf",
+        as_attachment=False,
+        download_name=f"vistoria_ferramentas_{user.username}.pdf"
+    )
+
+
 
 # Garante a criação de todas as tabelas, incluindo as de GPS recém-definidas, no contexto do Gunicorn
 with app.app_context():
@@ -10879,6 +11116,18 @@ with app.app_context():
         
     try:
         db.session.execute(db.text("ALTER TABLE user_tool_status ADD COLUMN is_editable BOOLEAN DEFAULT false"))
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+
+    try:
+        db.session.execute(db.text("ALTER TABLE user_tool_inspection ADD COLUMN signature VARCHAR(255)"))
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+
+    try:
+        db.session.execute(db.text("ALTER TABLE checklist ADD COLUMN signature VARCHAR(255)"))
         db.session.commit()
     except Exception:
         db.session.rollback()

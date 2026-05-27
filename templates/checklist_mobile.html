@@ -45,7 +45,7 @@
     </div>
     {% endif %}
 
-    {% if not disabled %}
+    {% if not disabled and not success %}
     <div class="mb-8 grid grid-cols-1 gap-4 animate-premium">
         {% if mode == "start_only" %}
         <div class="p-5 glass-premium rounded-[2rem] border-blue-500/10 flex items-center gap-4">
@@ -71,7 +71,7 @@
     </div>
 
     <!-- ====================== FORMULÁRIO PREMIUM ====================== -->
-    <form method="post" enctype="multipart/form-data" class="space-y-6 animate-premium">
+    <form id="vehicle-checklist-form" method="post" enctype="multipart/form-data" class="space-y-6 animate-premium" onsubmit="return handleChecklistSubmit(event)">
         
         <div class="card-premium p-8 space-y-6">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -220,7 +220,7 @@
         </div>
         <h3 class="text-2xl font-black text-slate-800 dark:text-white mb-2">Concluído com Sucesso!</h3>
         <p class="text-sm text-slate-500 mb-8">Sua inspeção foi registrada e enviada para a central.</p>
-        <a href="{{ url_for('dashboard') }}" class="inline-flex items-center gap-2 px-8 py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-bold text-sm transition-all hover:scale-105">
+        <a href="{{ url_for('checklist_mobile') }}" class="inline-flex items-center gap-2 px-8 py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-bold text-sm transition-all hover:scale-105">
             Voltar ao Início
         </a>
     </div>
@@ -237,5 +237,166 @@
         to { opacity: 1; transform: translateY(0); }
     }
 </style>
+
+<!-- ======================= MODAL ASSINATURA DIGITAL ======================= -->
+<div id="modalSignature" class="hidden fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+    <div class="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+        <!-- Overlay -->
+        <div onclick="closeSignatureModal()" class="fixed inset-0 transition-opacity bg-slate-900/60 backdrop-blur-sm" aria-hidden="true"></div>
+        
+        <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+        
+        <!-- Conteúdo do Modal -->
+        <div class="inline-block align-bottom bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-900/10 dark:border-white/10 text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+            <div class="px-8 pt-8 pb-6">
+                <!-- Header -->
+                <div class="flex items-center justify-between mb-6 pb-4 border-b border-slate-900/5 dark:border-white/5">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500 shadow-inner">
+                            <i class="fa-solid fa-signature text-lg"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-black text-slate-800 dark:text-white">Assinatura Digital</h3>
+                            <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Desenhe sua assinatura no quadro abaixo para enviar</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quadro de Desenho (Canvas) -->
+                <div class="border-2 border-dashed border-slate-900/10 dark:border-white/10 rounded-3xl overflow-hidden bg-slate-50 dark:bg-slate-950/40 relative">
+                    <canvas id="signature-canvas" class="w-full h-48 block touch-none cursor-crosshair"></canvas>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="px-8 py-6 bg-slate-50 dark:bg-white/[0.02] border-t border-slate-900/5 dark:border-white/5 flex items-center justify-end gap-3 rounded-b-[2.5rem]">
+                <button type="button" onclick="closeSignatureModal()"
+                        class="px-5 py-3 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200 rounded-xl font-bold text-xs uppercase tracking-wider transition-all">
+                    Cancelar
+                </button>
+                <button type="button" onclick="clearSignatureCanvas()"
+                        class="px-5 py-3 bg-rose-100 hover:bg-rose-200 text-rose-700 rounded-xl font-bold text-xs uppercase tracking-wider transition-all">
+                    Limpar
+                </button>
+                <button type="button" onclick="confirmAndSubmit()"
+                        class="px-6 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl font-black text-xs uppercase tracking-widest shadow-md transition-all">
+                    Confirmar e Enviar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function handleChecklistSubmit(e) {
+    // Bloqueia envio para abrir modal de assinatura
+    e.preventDefault();
+    openSignatureModal(document.getElementById('vehicle-checklist-form'));
+    return false;
+}
+
+// Lógica de assinatura digital canvas
+let canvas, ctx;
+let drawing = false;
+let formToSubmit = null;
+
+function openSignatureModal(formElement) {
+    formToSubmit = formElement;
+    document.getElementById('modalSignature').classList.remove('hidden');
+    
+    canvas = document.getElementById('signature-canvas');
+    ctx = canvas.getContext('2d');
+    
+    // Ajustar tamanho
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width;
+    canvas.height = rect.height;
+    
+    ctx.strokeStyle = '#0f172a';
+    if (document.documentElement.classList.contains('dark')) {
+        ctx.strokeStyle = '#f8fafc';
+    }
+    ctx.lineWidth = 3;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    
+    // Mouse
+    canvas.addEventListener('mousedown', startDrawing);
+    canvas.addEventListener('mousemove', draw);
+    canvas.addEventListener('mouseup', stopDrawing);
+    canvas.addEventListener('mouseleave', stopDrawing);
+    
+    // Touch
+    canvas.addEventListener('touchstart', startDrawingTouch);
+    canvas.addEventListener('touchmove', drawTouch);
+    canvas.addEventListener('touchend', stopDrawing);
+}
+
+function closeSignatureModal() {
+    document.getElementById('modalSignature').classList.add('hidden');
+}
+
+function clearSignatureCanvas() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+}
+
+function startDrawing(e) {
+    drawing = true;
+    ctx.beginPath();
+    ctx.moveTo(e.offsetX, e.offsetY);
+}
+
+function draw(e) {
+    if (!drawing) return;
+    ctx.lineTo(e.offsetX, e.offsetY);
+    ctx.stroke();
+}
+
+function stopDrawing() {
+    drawing = false;
+}
+
+function startDrawingTouch(e) {
+    drawing = true;
+    ctx.beginPath();
+    const touch = e.touches[0];
+    const rect = canvas.getBoundingClientRect();
+    ctx.moveTo(touch.clientX - rect.left, touch.clientY - rect.top);
+    e.preventDefault();
+}
+
+function drawTouch(e) {
+    if (!drawing) return;
+    const touch = e.touches[0];
+    const rect = canvas.getBoundingClientRect();
+    ctx.lineTo(touch.clientX - rect.left, touch.clientY - rect.top);
+    ctx.stroke();
+    e.preventDefault();
+}
+
+function confirmAndSubmit() {
+    const blank = document.createElement('canvas');
+    blank.width = canvas.width;
+    blank.height = canvas.height;
+    if (canvas.toDataURL() === blank.toDataURL()) {
+        alert('Por favor, assine no quadro antes de enviar.');
+        return;
+    }
+    
+    const dataUrl = canvas.toDataURL('image/png');
+    let sigInput = document.getElementById('signature-data-input');
+    if (!sigInput) {
+        sigInput = document.createElement('input');
+        sigInput.type = 'hidden';
+        sigInput.name = 'signature_data';
+        sigInput.id = 'signature-data-input';
+        formToSubmit.appendChild(sigInput);
+    }
+    sigInput.value = dataUrl;
+    
+    closeSignatureModal();
+    formToSubmit.submit();
+}
+</script>
 
 {% endblock %}

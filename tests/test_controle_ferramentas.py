@@ -425,6 +425,42 @@ class TestControleFerramentas(unittest.TestCase):
         db.session.refresh(tool)
         self.assertIsNone(tool.category)
 
+    def test_pdf_report_generation(self):
+        # Setup tools and inspection with a bad tool and a missing tool
+        t_ruim = Tool(name="Alicate com Cabo Quebrado", category="Manual", is_active=True)
+        t_falta = Tool(name="Chave Phillips", category="Manual", is_active=True)
+        db.session.add_all([t_ruim, t_falta])
+        db.session.commit()
+
+        insp = UserToolInspection(user_id=self.tech.id, notes="Test PDF Report")
+        db.session.add(insp)
+        db.session.flush()
+
+        s_ruim = UserToolStatus(
+            inspection_id=insp.id,
+            tool_id=t_ruim.id,
+            status="possui",
+            sub_status="ruim",
+            damage_description="Cabo quebrado"
+        )
+        s_falta = UserToolStatus(
+            inspection_id=insp.id,
+            tool_id=t_falta.id,
+            status="nao_possui",
+            sub_status="perdi"
+        )
+        db.session.add_all([s_ruim, s_falta])
+        db.session.commit()
+
+        # Login as admin
+        with self.client.session_transaction() as sess:
+            sess['_user_id'] = str(self.admin.id)
+
+        # Access PDF report endpoint
+        res = self.client.get(f'/controle/ferramentas/relatorio/pdf/{self.tech.id}')
+        self.assertEqual(res.status_code, 200)
+        self.assertEqual(res.mimetype, 'application/pdf')
+
 if __name__ == '__main__':
     unittest.main()
 
