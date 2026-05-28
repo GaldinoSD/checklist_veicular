@@ -129,13 +129,31 @@ def _detect_testing():
 is_testing = _detect_testing()
 
 app = Flask(__name__)
-app.config["SECRET_KEY"] = os.getenv("SECRET_KEY", "altere-esta-chave")
+
+# 🛡️ SECRET_KEY: Obrigatoriamente forte — falha se estiver com o valor padrão inseguro
+_secret = os.getenv("SECRET_KEY", "")
+if not _secret or _secret == "altere-esta-chave":
+    if not _detect_testing():
+        print("⚠️  AVISO CRÍTICO: SECRET_KEY não configurada ou usando valor padrão inseguro!")
+        print("    Gere uma chave forte com: python3 -c \"import secrets; print(secrets.token_urlsafe(64))\"")
+        print("    E configure no arquivo .env: SECRET_KEY=<sua_chave>")
+    # Em testing, usa chave temporária; em produção, usa a chave forte gerada temporariamente
+    import secrets as _s
+    _secret = _s.token_urlsafe(64)
+app.config["SECRET_KEY"] = _secret
+
 if is_testing:
     app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///:memory:"
     app.config["TESTING"] = True
     app.testing = True
 else:
-    app.config["SQLALCHEMY_DATABASE_URI"] = os.getenv("DATABASE_URL", "postgresql://jonatas:26828021jJ@localhost/checklist")
+    _db_url = os.getenv("DATABASE_URL")
+    if not _db_url:
+        raise RuntimeError(
+            "❌ DATABASE_URL não configurada! "
+            "Defina no arquivo .env: DATABASE_URL=postgresql://user:pass@host/dbname"
+        )
+    app.config["SQLALCHEMY_DATABASE_URI"] = _db_url
 app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
     "pool_recycle": 280,
     "pool_pre_ping": True
@@ -1265,11 +1283,20 @@ DEFAULT_ITEMS = [
 
 
 def seed_defaults():
-    # admin
+    # admin — gera senha aleatória segura ao criar pela primeira vez
     if not User.query.filter_by(username="admin").first():
+        import secrets as _sec
+        _admin_pwd = _sec.token_urlsafe(16)
         u = User(username="admin", role="admin")
-        u.set_password("admin")
+        u.set_password(_admin_pwd)
         db.session.add(u)
+        print("="*60)
+        print("🔐 ADMIN CRIADO COM SENHA ALEATÓRIA")
+        print(f"   Usuário: admin")
+        print(f"   Senha:   {_admin_pwd}")
+        print("   ⚠️  ANOTE ESTA SENHA! Ela não será exibida novamente.")
+        print("   Altere-a após o primeiro login.")
+        print("="*60)
 
     # sistema config inicial
     if SystemConfig.query.count() == 0:
@@ -1554,15 +1581,84 @@ def save_photos(files):
     return saved
 
 
+# ----------------- RATE LIMITING (PROTEÇÃO BRUTE-FORCE) -----------------
+import time as _time
+from collections import defaultdict as _defaultdict
+
+# Armazena tentativas de login: {ip: [(timestamp, ...)]}
+_login_attempts = _defaultdict(list)
+_LOGIN_MAX_ATTEMPTS = 5       # máximo de tentativas
+_LOGIN_WINDOW_SECONDS = 60    # janela de tempo (1 minuto)
+_LOGIN_LOCKOUT_SECONDS = 300  # tempo de bloqueio após exceder (5 minutos)
+
+def _check_rate_limit(ip):
+    """Retorna (permitido: bool, segundos_restantes: int)."""
+    now = _time.time()
+    attempts = _login_attempts[ip]
+    
+    # Remove tentativas expiradas (fora da janela de lockout)
+    _login_attempts[ip] = [t for t in attempts if now - t < _LOGIN_LOCKOUT_SECONDS]
+    attempts = _login_attempts[ip]
+    
+    # Conta tentativas dentro da janela curta
+    recent = [t for t in attempts if now - t < _LOGIN_WINDOW_SECONDS]
+    
+    if len(recent) >= _LOGIN_MAX_ATTEMPTS:
+        oldest = min(recent)
+        remaining = int(_LOGIN_LOCKOUT_SECONDS - (now - oldest))
+        return False, max(remaining, 1)
+    
+    return True, 0
+
+def _record_attempt(ip):
+    """Registra uma tentativa de login falhada."""
+    _login_attempts[ip].append(_time.time())
+
+def _clear_attempts(ip):
+    """Limpa tentativas após login bem-sucedido."""
+    _login_attempts.pop(ip, None)
+
+# Limpeza periódica de IPs antigos (a cada 100 requisições de login)
+_login_request_count = 0
+
+def _cleanup_old_attempts():
+    """Remove IPs sem tentativas recentes para evitar vazamento de memória."""
+    global _login_request_count
+    _login_request_count += 1
+    if _login_request_count % 100 != 0:
+        return
+    now = _time.time()
+    stale_ips = [ip for ip, times in _login_attempts.items() 
+                 if not times or now - max(times) > _LOGIN_LOCKOUT_SECONDS]
+    for ip in stale_ips:
+        del _login_attempts[ip]
+
+
 # ----------------- LOGIN -----------------
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
+        client_ip = request.remote_addr or "unknown"
+        
+        # 🛡️ Rate Limiting — proteção contra brute-force
+        _cleanup_old_attempts()
+        allowed, wait_seconds = _check_rate_limit(client_ip)
+        if not allowed:
+            minutes = wait_seconds // 60
+            seconds = wait_seconds % 60
+            if minutes > 0:
+                flash(f"Muitas tentativas de login. Aguarde {minutes}min {seconds}s.", "login_error")
+            else:
+                flash(f"Muitas tentativas de login. Aguarde {seconds} segundos.", "login_error")
+            registrar_log(f"Rate limit atingido para IP: {client_ip}")
+            return render_template("login.html")
+        
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "").strip()
 
         u = User.query.filter_by(username=username).first()
         if u and u.check_password(password):
+            _clear_attempts(client_ip)  # Login OK → limpa histórico
             login_user(u)
             registrar_log(f"Login efetuado: {u.username}")
 
@@ -1573,7 +1669,14 @@ def login():
                 return redirect(url_for("manutencao_os"))
             return redirect(url_for("checklist_mobile"))
 
-        flash("Usuário ou senha inválidos.", "login_error")
+        # Login falhou → registra tentativa
+        _record_attempt(client_ip)
+        remaining_attempts = _LOGIN_MAX_ATTEMPTS - len([t for t in _login_attempts[client_ip] if _time.time() - t < _LOGIN_WINDOW_SECONDS])
+        if remaining_attempts <= 2 and remaining_attempts > 0:
+            flash(f"Usuário ou senha inválidos. Restam {remaining_attempts} tentativa(s).", "login_error")
+        else:
+            flash("Usuário ou senha inválidos.", "login_error")
+        registrar_log(f"Tentativa de login falhada para '{username}' de IP: {client_ip}")
 
     return render_template("login.html")
 
@@ -9081,6 +9184,41 @@ def api_treinamentos_conteudo(course_id):
         
         attempts_count = len(a.attempts)
         
+        last_attempt = None
+        if attempts_count > 0:
+            att = a.attempts[0]
+            try:
+                answers = json.loads(att.answers_json) if att.answers_json else {}
+            except Exception:
+                answers = {}
+                
+            corrections = []
+            for q in c.questions:
+                user_ans = (answers.get(str(q.id)) or "").lower().strip()
+                correct_ans = (q.correct_option or "").lower().strip()
+                is_correct = user_ans == correct_ans
+                corrections.append({
+                    "question": q.question_text,
+                    "user_answer": user_ans,
+                    "correct_answer": correct_ans,
+                    "is_correct": is_correct,
+                    "options": {
+                        "a": q.option_a,
+                        "b": q.option_b,
+                        "c": q.option_c,
+                        "d": q.option_d
+                    }
+                })
+            last_attempt = {
+                "passed": att.score >= (c.passing_grade or 70),
+                "score": att.score,
+                "correct": att.correct_answers,
+                "total": att.total_questions,
+                "passing_grade": c.passing_grade or 70,
+                "attempts_count": attempts_count,
+                "corrections": corrections
+            }
+            
         return jsonify({
             "course_id": c.id,
             "title": c.title,
@@ -9088,6 +9226,7 @@ def api_treinamentos_conteudo(course_id):
             "allow_retake": c.allow_retake,
             "attempts_count": attempts_count,
             "course_type": c.course_type or 'lms',
+            "last_attempt": last_attempt,
             "modules": modules,
             "questions": questions
         })

@@ -391,16 +391,22 @@ async function openCourse(courseId) {
         courseData = await res.json();
     } catch(e) { return alert('Erro ao carregar treinamento.'); }
 
+    // Enforce retake restriction globally at the entry point of the training
+    if (!courseData.allow_retake && courseData.attempts_count > 0) {
+        if (courseData.last_attempt) {
+            showResult(courseData.last_attempt);
+        } else {
+            alert('Este treinamento não permite refazer a avaliação.');
+        }
+        return;
+    }
+
     if (courseData.course_type === 'rpg_crisis') {
         openRPG();
         return;
     }
 
     if (courseData.modules.length === 0) {
-        if (!courseData.allow_retake && courseData.attempts_count > 0) {
-            alert('Este treinamento não permite refazer a avaliação.');
-            return;
-        }
         startExam(courseId);
         return;
     }
@@ -476,7 +482,11 @@ function readerNav(dir) {
         closeReader();
         if (courseData.questions.length > 0) {
             if (!courseData.allow_retake && courseData.attempts_count > 0) {
-                alert('Este treinamento não permite refazer a avaliação.');
+                if (courseData.last_attempt) {
+                    showResult(courseData.last_attempt);
+                } else {
+                    alert('Este treinamento não permite refazer a avaliação.');
+                }
                 return;
             }
             startExam(currentCourseId);
@@ -618,8 +628,8 @@ function rpgSubmitChoice() {
             icon.className = "w-10 h-10 rounded-xl bg-red-500 text-white flex items-center justify-center shrink-0 font-black";
             icon.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-lg"></i>`;
             title.className = "text-sm font-black uppercase tracking-widest text-red-400";
-            title.textContent = "Ação de Alto Risco!";
-            text.textContent = `A resposta correta seria a alternativa ${q.correct_option.toUpperCase()}. Lembre-se sempre dos procedimentos de segurança.`;
+            title.textContent = "Resposta Incorreta";
+            text.textContent = `A alternativa correta seria a letra ${q.correct_option.toUpperCase()}. Revise os procedimentos e tente novamente na próxima fase.`;
         }
 
         ['a', 'b', 'c', 'd'].forEach(l => {
