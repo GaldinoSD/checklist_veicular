@@ -310,6 +310,45 @@
             </div>
         </div>
 
+        <!-- Power BI Dashboard -->
+        <div id="pane-powerbi" class="tab-pane hidden w-full">
+            <div class="mb-6 flex justify-between items-center">
+                <div>
+                    <h3 class="text-xl font-black text-slate-800 dark:text-white tracking-tight">Dashboard de Gestão e Operações</h3>
+                    <p class="text-xs text-slate-500 mt-1">Indicadores e gráficos integrados diretamente do Power BI.</p>
+                </div>
+                <div class="flex items-center gap-3">
+                    <button onclick="togglePowerBiFullscreen()" class="px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-black uppercase tracking-widest flex items-center gap-2 shadow-lg shadow-purple-500/20 transition-all active:scale-95">
+                        <i class="fa-solid fa-expand text-xs"></i> <span>Tela Cheia</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Dashboard Frame Container -->
+            <div class="relative card-premium overflow-hidden border border-slate-900/10 dark:border-white/10 shadow-2xl bg-white dark:bg-slate-900 w-full" id="powerbi-container">
+                <!-- Loading smooth overlay -->
+                <div id="powerbi-loading" class="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm transition-all duration-300">
+                    <div class="animate-spin inline-block w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full mb-3"></div>
+                    <p class="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Carregando Dashboard...</p>
+                </div>
+                
+                <!-- Responsiveness Advice Overlay for Small Devices -->
+                <div class="md:hidden p-4 bg-amber-500/10 border-b border-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center gap-3 text-xs font-bold">
+                    <i class="fa-solid fa-mobile-screen-button text-base animate-pulse"></i>
+                    <span>Dica: Para melhor visualização no celular, vire o aparelho deitado ou use o modo Tela Cheia!</span>
+                </div>
+
+                <!-- Iframe Wrapper -->
+                <div class="w-full aspect-[16/9] min-h-[500px] md:min-h-[650px] relative">
+                    <iframe id="powerbi-iframe" 
+                            src="{{ powerbi_url }}" 
+                            frameborder="0" 
+                            allowFullScreen="true" 
+                            class="absolute inset-0 w-full h-full border-0"></iframe>
+                </div>
+            </div>
+        </div>
+
     </div> <!-- Fim gestao-content -->
 </div>
 
@@ -1986,7 +2025,8 @@ function switchTab(tabId) {
         'supervisao': { label: 'Supervisão de Campo', sub: 'Auditoria técnica individual e segurança.', icon: 'fa-user-check' },
         'treinamentos': { label: 'Treinamentos', sub: 'Capacitação técnica e registros de curso.', icon: 'fa-graduation-cap' },
         'solicitacoes': { label: 'Solicitações Internas', sub: 'Pedidos de material e ordens administrativas.', icon: 'fa-envelope-open-text' },
-        'relatorios': { label: 'Relatórios Gerenciais', sub: 'Exportação de dados e KPIs consolidados.', icon: 'fa-file-pdf' }
+        'relatorios': { label: 'Relatórios Gerenciais', sub: 'Exportação de dados e KPIs consolidados.', icon: 'fa-file-pdf' },
+        'powerbi': { label: 'Dashboard Power BI', sub: 'Visão de performance operacional, indicadores de campo e frota.', icon: 'fa-chart-pie' }
     };
 
     const meta = tabMeta[tabId];
@@ -2027,6 +2067,7 @@ function loadTabData(tabId) {
     if(tabId === 'solicitacoes') loadItems('solicitacoes');
     if(tabId === 'treinamentos') loadLMSCourses();
     if(tabId === 'relatorios') initRelatoriosTab();
+    if(tabId === 'powerbi') initPowerBITab();
 }
 
 async function loadItems(slug) {
@@ -5840,6 +5881,30 @@ async function gerarRelatorioPDF() {
     } catch (e) {
         console.error(e);
         alert('Erro ao processar solicitação de relatório.');
+    }
+}
+
+function initPowerBITab() {
+    const iframe = document.getElementById('powerbi-iframe');
+    const spinner = document.getElementById('powerbi-loading');
+    if (iframe && spinner) {
+        spinner.classList.remove('hidden');
+        iframe.onload = function() {
+            spinner.classList.add('hidden');
+        };
+    }
+}
+
+function togglePowerBiFullscreen() {
+    const container = document.getElementById('powerbi-container');
+    if (!container) return;
+    
+    if (!document.fullscreenElement) {
+        container.requestFullscreen().catch(err => {
+            alert(`Erro ao tentar ativar tela cheia: ${err.message}`);
+        });
+    } else {
+        document.exitFullscreen();
     }
 }
 

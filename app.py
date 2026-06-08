@@ -1065,6 +1065,7 @@ class SystemConfig(db.Model):
     pdf_logo = db.Column(db.String(255))
     pdf_footer = db.Column(db.Text)
     login_primary_color = db.Column(db.String(50), default="#10b981")
+    powerbi_url = db.Column(db.String(500))
 
 
 # --------------------------------------------------------
@@ -1172,6 +1173,7 @@ def ensure_min_schema():
         text('ALTER TABLE system_config ADD COLUMN IF NOT EXISTS sidebar_logo VARCHAR(255)'),
         text('ALTER TABLE system_config ADD COLUMN IF NOT EXISTS pdf_logo VARCHAR(255)'),
         text('ALTER TABLE system_config ADD COLUMN IF NOT EXISTS pdf_footer TEXT'),
+        text('ALTER TABLE system_config ADD COLUMN IF NOT EXISTS powerbi_url VARCHAR(500)'),
         # campos em announcement
         text('ALTER TABLE announcement ADD COLUMN IF NOT EXISTS target_role VARCHAR(50)'),
         text('ALTER TABLE announcement ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES "user"(id) ON DELETE CASCADE'),
@@ -1808,7 +1810,7 @@ def api_frota_stats():
     checklists_today = Checklist.query.filter(Checklist.date >= start_7d, Checklist.date <= now).count()
     open_os = AvariaOS.query.filter_by(status="aberta").count()
 
-    # 4. Histórico de KM Rodados Reais Diários (Entrada km - Saída km correspondente)
+    # 4. Histórico de KM Rodados Reais Diários (Movimentação manual + Telemetria GPS + Odometer checklists)
     km_labels = []
     km_values = []
     
@@ -1818,10 +1820,10 @@ def api_frota_stats():
     for i in range(max_days, -1, -1):
         day = (now - timedelta(days=i)).date()
         
-        # Faz join de Entrada com Saída correspondente do dia para calcular KM percorrido real
+        # 4.1 Movimentações Manuais
         from sqlalchemy.orm import aliased
         SaidaAlias = aliased(VehicleMov)
-        km_day = db.session.query(
+        km_mov = db.session.query(
             db.func.sum(VehicleMov.km - SaidaAlias.km)
         ).join(
             SaidaAlias, VehicleMov.saida_id == SaidaAlias.id
@@ -1829,6 +1831,59 @@ def api_frota_stats():
             VehicleMov.tipo == "entrada",
             db.func.date(VehicleMov.data_hora) == day
         ).scalar() or 0
+        
+        # 4.2 Telemetria GPS (se houver logs no dia)
+        gps_distance = 0.0
+        vehicle_ids = [r[0] for r in db.session.query(GPSLog.vehicle_id).filter(
+            db.func.date(GPSLog.timestamp) == day,
+            GPSLog.vehicle_id != None
+        ).distinct().all()]
+        
+        for v_id in vehicle_ids:
+            logs = GPSLog.query.filter(
+                GPSLog.vehicle_id == v_id,
+                db.func.date(GPSLog.timestamp) == day,
+                GPSLog.lat != None,
+                GPSLog.lon != None
+            ).order_by(GPSLog.timestamp.asc()).all()
+            
+            if len(logs) > 1:
+                v_dist = 0.0
+                for j in range(len(logs) - 1):
+                    v_dist += haversine_distance(logs[j].lat, logs[j].lon, logs[j+1].lat, logs[j+1].lon)
+                gps_distance += v_dist
+        
+        km_gps = gps_distance / 1000.0
+        
+        # 4.3 Odômetro do checklist (para veículos sem telemetria GPS neste dia)
+        km_checklist = 0
+        veiculos_com_gps = set(vehicle_ids)
+        
+        day_checklists = Checklist.query.filter(
+            db.func.date(Checklist.date) == day
+        ).all()
+        
+        from collections import defaultdict
+        checklists_by_vehicle = defaultdict(list)
+        for c in day_checklists:
+            if c.vehicle_id and c.vehicle_id not in veiculos_com_gps:
+                checklists_by_vehicle[c.vehicle_id].append(c)
+                
+        for v_id, c_list in checklists_by_vehicle.items():
+            c_list.sort(key=lambda x: x.date, reverse=True)
+            latest_today_km = c_list[0].km or 0
+            
+            last_before = Checklist.query.filter(
+                Checklist.vehicle_id == v_id,
+                db.func.date(Checklist.date) < day
+            ).order_by(Checklist.date.desc()).first()
+            
+            if last_before:
+                diff = latest_today_km - (last_before.km or 0)
+                if diff > 0:
+                    km_checklist += diff
+        
+        km_day = km_mov + km_gps + km_checklist
         
         km_labels.append(day.strftime("%d/%m"))
         km_values.append(int(km_day))
@@ -2118,7 +2173,7 @@ def get_default_perms(role):
         "perm_gestao_encerramento", "perm_gestao_rfo", "perm_gestao_tarefas",
         "perm_gestao_geradores", "perm_gestao_rota_exata", "perm_gestao_supervisao",
         "perm_gestao_treinamentos", "perm_gestao_solicitacoes", "perm_gestao_relatorios",
-        "perm_whatsapp_evolution", "perm_whatsapp_conversas", "perm_gestao_mapas"
+        "perm_whatsapp_evolution", "perm_whatsapp_conversas", "perm_gestao_mapas", "perm_gestao_powerbi"
     ]
     perms = {}
     if role == "tech":
@@ -2214,7 +2269,7 @@ def users_permissions(uid):
         "perm_gestao_geradores", "perm_gestao_rota_exata", "perm_gestao_supervisao",
         "perm_gestao_treinamentos", "perm_gestao_solicitacoes", "perm_gestao_relatorios",
         "perm_whatsapp_evolution", "perm_whatsapp_conversas",
-        "perm_config_ferramentas", "perm_controle_ferramentas", "perm_controle_ferramentas_atual", "perm_gestao_mapas"
+        "perm_config_ferramentas", "perm_controle_ferramentas", "perm_controle_ferramentas_atual", "perm_gestao_mapas", "perm_gestao_powerbi"
     ]
     
     perms_data = request.form.to_dict()
@@ -3397,7 +3452,15 @@ def gestao_tecnica():
     # Reconhecer todos os colaboradores para gestão técnica
     tecnicos = User.query.filter(User.username != 'admin').all()
     tecnicos_js_data = [{"id": t.id, "username": t.username} for t in tecnicos]
-    return render_template("gestao_tecnica.html", tecnicos=tecnicos, tecnicos_js_data=tecnicos_js_data)
+    config = SystemConfig.query.first()
+    powerbi_url = None
+    if config:
+        powerbi_url = config.powerbi_url
+        
+    if not powerbi_url:
+        import os
+        powerbi_url = os.environ.get("POWERBI_URL", "https://app.powerbi.com/view?r=eyJrIjoiNDNlNWFiYTgtMjFiNC00OTI5LTk5MGItNDg4OTFlNjBhMjg5IiwidCI6IjU3NGMzZTU2LTQ5MjQtNDAwNC1hZDFhLWQ4NDI3ZTdkYjI0MSJ9")
+    return render_template("gestao_tecnica.html", tecnicos=tecnicos, tecnicos_js_data=tecnicos_js_data, powerbi_url=powerbi_url)
 
 
 # --- AUXILIARES E USUÁRIOS ---
@@ -6972,6 +7035,9 @@ def config_layout():
         # Processar pdf_footer
         config.pdf_footer = request.form.get("pdf_footer", "").strip() or None
 
+        # Processar powerbi_url
+        config.powerbi_url = request.form.get("powerbi_url", "").strip() or None
+
         # Processar login_primary_color
         color = request.form.get("login_primary_color", "").strip()
         if color:
@@ -7023,7 +7089,7 @@ def reset_layout_field(field):
         flash("Nenhuma configuração encontrada.", "error")
         return redirect(url_for("config_layout"))
 
-    allowed_fields = {"login_bg_desktop", "login_bg_mobile", "login_logo", "sidebar_logo", "pdf_logo", "pdf_footer", "login_primary_color"}
+    allowed_fields = {"login_bg_desktop", "login_bg_mobile", "login_logo", "sidebar_logo", "pdf_logo", "pdf_footer", "login_primary_color", "powerbi_url"}
     if field not in allowed_fields:
         flash("Campo inválido.", "error")
         return redirect(url_for("config_layout"))
@@ -7039,9 +7105,9 @@ def reset_layout_field(field):
         return redirect(url_for("config_layout"))
 
     val = getattr(config, field)
-    if val or (field == "pdf_footer" and config.pdf_footer is not None):
+    if val or (field == "pdf_footer" and config.pdf_footer is not None) or (field == "powerbi_url" and config.powerbi_url is not None):
         # Se for um arquivo de imagem, exclui fisicamente
-        if field != "pdf_footer":
+        if field not in {"pdf_footer", "powerbi_url"}:
             try:
                 p = LAYOUT_UPLOAD_DIR / val
                 if p.exists():
