@@ -1,0 +1,789 @@
+{% extends 'layout.html' %}
+{% set page_title = "Nova Vistoria" %}
+{% block content %}
+
+<div class="bg-white/70 border border-slate-900/10 rounded-2xl shadow p-6 backdrop-blur
+            dark:bg-white/5 dark:border-white/10">
+
+  <h1 class="text-2xl font-bold text-slate-900 dark:text-white">Nova vistoria</h1>
+  <p class="text-sm text-slate-600 mt-1 dark:text-gray-300">Vistoria de lataria (amassados, riscos, etc.)</p>
+
+  <form method="post" enctype="multipart/form-data" class="mt-6 space-y-6">
+
+    <!-- Dados principais -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div class="flex flex-col text-slate-600 text-xs dark:text-gray-300 col-span-1 md:col-span-2">
+        <label for="vehicle_id">Veículo</label>
+        <div class="flex items-center gap-2">
+          <select id="vehicle_id" name="vehicle_id" required
+                  class="flex-1 bg-white border border-slate-900/10 text-slate-900 px-3 py-2 rounded-md
+                         focus:outline-none focus:ring-2 focus:ring-blue-500/40
+                         dark:bg-gray-900 dark:border-gray-700 dark:text-gray-200">
+            <option value="">Selecione</option>
+            {% for ve in veiculos %}
+              <option value="{{ ve.id }}" data-plate="{{ ve.plate }}" data-km="{{ ve.km or 0 }}">{{ ve.plate }}</option>
+            {% endfor %}
+          </select>
+          <button type="button" onclick="startPlateOCR()" onkeydown="if(event.key==='Enter'||event.key===' ') startPlateOCR()"
+                  class="px-3 py-2 bg-slate-900/5 hover:bg-slate-900/10 dark:bg-white/5 dark:hover:bg-white/10 text-slate-800 dark:text-white border border-slate-900/10 dark:border-white/10 rounded-md font-semibold text-xs uppercase tracking-widest transition-all active:scale-95 flex items-center gap-1.5"
+                  aria-label="Escanear placa do veículo">
+              <i class="fa-solid fa-camera text-xs text-blue-500"></i> Escanear
+          </button>
+        </div>
+      </div>
+
+      <div class="flex flex-col text-slate-600 text-xs dark:text-gray-300">
+        <label for="km">KM</label>
+        <input id="km" name="km" type="number" min="0"
+               placeholder="SerÃ¡ preenchido ao selecionar o veÃ­culo"
+               class="bg-white border border-slate-900/10 text-slate-900 px-3 py-2 rounded-md
+                      focus:outline-none focus:ring-2 focus:ring-blue-500/40
+                      dark:bg-gray-900 dark:border-gray-700 dark:text-gray-200">
+      </div>
+
+      <div class="flex flex-col text-slate-600 text-xs dark:text-gray-300">
+        <label for="turno">Turno</label>
+        <select id="turno" name="turno"
+                class="bg-white border border-slate-900/10 text-slate-900 px-3 py-2 rounded-md
+                       focus:outline-none focus:ring-2 focus:ring-blue-500/40
+                       dark:bg-gray-900 dark:border-gray-700 dark:text-gray-200">
+          <option value="inicio">InÃ­cio do expediente</option>
+          <option value="durante">Durante expediente</option>
+          <option value="fim" selected>Fim do expediente</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="flex flex-col text-slate-600 text-xs dark:text-gray-300">
+        <label for="local">Local (opcional)</label>
+        <input id="local" name="local" type="text"
+               class="bg-white border border-slate-900/10 text-slate-900 px-3 py-2 rounded-md
+                      focus:outline-none focus:ring-2 focus:ring-blue-500/40
+                      dark:bg-gray-900 dark:border-gray-700 dark:text-gray-200"
+               placeholder="Ex: Base / PÃ¡tio / Rua">
+      </div>
+
+      <!-- Status geral automÃ¡tico -->
+      <div class="flex flex-col text-slate-600 text-xs dark:text-gray-300">
+        <label>Status geral (automÃ¡tico)</label>
+
+        <div id="statusBadge"
+             class="mt-0.5 inline-flex items-center gap-2 px-3 py-2 rounded-md border
+                    bg-emerald-600/10 border-emerald-600/20 text-emerald-700 text-sm w-fit
+                    dark:bg-green-900/40 dark:border-green-700/40 dark:text-green-200">
+          <span class="text-base">â</span>
+          <span id="statusText" class="font-medium">OK</span>
+        </div>
+
+        <input type="hidden" id="status_geral" name="status_geral" value="ok">
+
+        <p class="text-[11px] text-slate-500 mt-1 dark:text-gray-400">
+          Atualiza automaticamente conforme os itens marcados como âAvariaâ.
+        </p>
+      </div>
+    </div>
+
+    <!-- Itens -->
+    {% set itens = [
+      ("para_choque_dianteiro", "Para-choque dianteiro"),
+      ("para_choque_traseiro",  "Para-choque traseiro"),
+      ("lateral_esquerda",      "Lateral esquerda"),
+      ("lateral_direita",       "Lateral direita"),
+      ("capo",                  "CapÃ´"),
+      ("teto",                  "Teto"),
+      ("porta_malas",           "Porta-malas"),
+      ("retrovisores",          "Retrovisores"),
+      ("farois_lanternas",      "FarÃ³is / Lanternas"),
+      ("vidros_parabrisa",      "Vidros / Para-brisa"),
+      ("pneus",                 "Pneus"),
+      ("calotas",               "Calotas"),
+    ] %}
+
+  <style>
+    /* Estilos do mapa 2D interativo */
+    svg [data-part] {
+      transition: fill 0.2s, stroke 0.2s;
+    }
+    svg [data-part]:hover {
+      fill-opacity: 0.4;
+      cursor: pointer;
+    }
+    .part-ok {
+      fill: rgba(16, 185, 129, 0.08) !important;
+      stroke: rgba(16, 185, 129, 0.4) !important;
+    }
+    .part-avaria {
+      fill: rgba(245, 158, 11, 0.25) !important;
+      stroke: #f59e0b !important;
+    }
+  </style>
+
+  <div class="bg-white/70 border border-slate-900/10 rounded-2xl shadow overflow-hidden backdrop-blur
+              dark:bg-white/5 dark:border-white/10">
+    <div class="p-5 border-b border-slate-900/10 dark:border-white/10">
+      <h3 class="text-lg font-semibold text-slate-900 dark:text-white">Itens da vistoria</h3>
+      <p class="text-xs text-slate-500 mt-1 dark:text-gray-400">
+        VocÃª pode clicar nas partes do **veÃ­culo 2D** para selecionar avarias ou usar os menus ao lado.
+      </p>
+    </div>
+
+    <div class="p-5 grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+      <!-- Coluna Esquerda: Mapa 2D de SeleÃ§Ã£o -->
+      <div class="lg:col-span-1 bg-slate-50/70 border border-slate-900/10 rounded-2xl p-4 flex flex-col items-center justify-center
+                  dark:bg-black/10 dark:border-white/10">
+        <p class="text-[11px] text-slate-500 mb-4 text-center dark:text-gray-400">
+          Selecione as partes danificadas diretamente no veÃ        <svg viewBox="0 0 200 400" class="w-full max-w-[200px] mx-auto select-none">
+          <!-- Pneus/Rodas (Ficam por baixo do chassi) -->
+          <!-- Dianteiro Esquerdo -->
+          <rect data-part="pneus" data-sub="de" x="15" y="80" width="22" height="46" rx="6" fill="#1E293B" stroke="#475569" stroke-width="1.5" class="transition duration-200 part-ok" />
+          <!-- Dianteiro Direito -->
+          <rect data-part="pneus" data-sub="dd" x="163" y="80" width="22" height="46" rx="6" fill="#1E293B" stroke="#475569" stroke-width="1.5" class="transition duration-200 part-ok" />
+          <!-- Traseiro Esquerdo -->
+          <rect data-part="pneus" data-sub="te" x="15" y="274" width="22" height="46" rx="6" fill="#1E293B" stroke="#475569" stroke-width="1.5" class="transition duration-200 part-ok" />
+          <!-- Traseiro Direito -->
+          <rect data-part="pneus" data-sub="td" x="163" y="274" width="22" height="46" rx="6" fill="#1E293B" stroke="#475569" stroke-width="1.5" class="transition duration-200 part-ok" />
+
+          <!-- Calotas (Centro dos pneus) -->
+          <circle data-part="calotas" data-sub="de" cx="26" cy="103" r="7" fill="#94A3B8" stroke="#cbd5e1" stroke-width="1" class="transition duration-200 part-ok" />
+          <circle data-part="calotas" data-sub="dd" cx="174" cy="103" r="7" fill="#94A3B8" stroke="#cbd5e1" stroke-width="1" class="transition duration-200 part-ok" />
+          <circle data-part="calotas" data-sub="te" cx="26" cy="297" r="7" fill="#94A3B8" stroke="#cbd5e1" stroke-width="1" class="transition duration-200 part-ok" />
+          <circle data-part="calotas" data-sub="td" cx="174" cy="297" r="7" fill="#94A3B8" stroke="#cbd5e1" stroke-width="1" class="transition duration-200 part-ok" />
+
+          <!-- Laterais (AtrÃ¡s do chassi) -->
+          <!-- Lateral Esquerda -->
+          <path data-part="lateral_esquerda" d="M35 75 C30 150 30 250 35 325" fill="none" stroke="#64748B" stroke-width="6" stroke-linecap="round" class="transition duration-200 part-ok" />
+          <!-- Lateral Direita -->
+          <path data-part="lateral_direita" d="M165 75 C170 150 170 250 165 325" fill="none" stroke="#64748B" stroke-width="6" stroke-linecap="round" class="transition duration-200 part-ok" />
+
+          <!-- Chassi / Corpo Principal (Base de fundo) -->
+          <path d="M35 75 C35 55 50 45 100 45 C150 45 165 55 165 75 L165 325 C165 345 150 355 100 355 C50 355 35 345 35 325 Z" fill="#E2E8F0" stroke="#475569" stroke-width="2" />
+
+          <!-- Partes da Carroceria -->
+          <!-- CapÃ´ -->
+          <path data-part="capo" d="M37 75 C37 57 50 47 100 47 C150 47 163 57 163 75 L163 130 L37 130 Z" fill="#F1F5F9" stroke="#94A3B8" stroke-width="1.5" class="transition duration-200 part-ok" />
+          
+          <!-- Teto -->
+          <rect data-part="teto" x="37" y="145" width="126" height="125" rx="8" fill="#F1F5F9" stroke="#94A3B8" stroke-width="1.5" class="transition duration-200 part-ok" />
+          
+          <!-- Porta Malas -->
+          <path data-part="porta_malas" d="M37 285 L163 285 L163 325 C163 343 150 353 100 353 C50 353 37 343 37 325 Z" fill="#F1F5F9" stroke="#94A3B8" stroke-width="1.5" class="transition duration-200 part-ok" />
+
+          <!-- Para-choques -->
+          <!-- Dianteiro -->
+          <path data-part="para_choque_dianteiro" d="M45 46 C60 41 140 41 155 46" fill="none" stroke="#334155" stroke-width="7" stroke-linecap="round" class="transition duration-200 part-ok" />
+          <!-- Traseiro -->
+          <path data-part="para_choque_traseiro" d="M45 354 C60 359 140 359 155 354" fill="none" stroke="#334155" stroke-width="7" stroke-linecap="round" class="transition duration-200 part-ok" />
+
+          <!-- Vidros / Parabrisa -->
+          <!-- Parabrisa Dianteiro -->
+          <path data-part="vidros_parabrisa" data-sub="diant" d="M44 140 L156 140 L146 125 L54 125 Z" fill="#38BDF8" fill-opacity="0.6" stroke="#0284C7" stroke-width="1" class="transition duration-200 part-ok" />
+          <!-- Vidro Traseiro -->
+          <path data-part="vidros_parabrisa" data-sub="tras" d="M44 275 L156 275 L148 285 L52 285 Z" fill="#38BDF8" fill-opacity="0.6" stroke="#0284C7" stroke-width="1" class="transition duration-200 part-ok" />
+          <!-- Vidros Laterais -->
+          <rect data-part="vidros_parabrisa" data-sub="vlde" x="34" y="148" width="4" height="56" rx="1" fill="#38BDF8" fill-opacity="0.6" stroke="#0284C7" stroke-width="1" class="transition duration-200 part-ok" />
+          <rect data-part="vidros_parabrisa" data-sub="vldd" x="162" y="148" width="4" height="56" rx="1" fill="#38BDF8" fill-opacity="0.6" stroke="#0284C7" stroke-width="1" class="transition duration-200 part-ok" />
+          <rect data-part="vidros_parabrisa" data-sub="vlte" x="34" y="211" width="4" height="56" rx="1" fill="#38BDF8" fill-opacity="0.6" stroke="#0284C7" stroke-width="1" class="transition duration-200 part-ok" />
+          <rect data-part="vidros_parabrisa" data-sub="vltd" x="162" y="211" width="4" height="56" rx="1" fill="#38BDF8" fill-opacity="0.6" stroke="#0284C7" stroke-width="1" class="transition duration-200 part-ok" />
+
+          <!-- FarÃ³is e Lanternas -->
+          <!-- Farol Esquerdo -->
+          <path data-part="farois_lanternas" data-sub="fe" d="M38 65 Q48 65 48 55" fill="none" stroke="#FDE047" stroke-width="4" stroke-linecap="round" class="transition duration-200 part-ok" />
+          <!-- Farol Direito -->
+          <path data-part="farois_lanternas" data-sub="fd" d="M162 65 Q152 65 152 55" fill="none" stroke="#FDE047" stroke-width="4" stroke-linecap="round" class="transition duration-200 part-ok" />
+          <!-- Lanterna Traseira Esquerda -->
+          <path data-part="farois_lanternas" data-sub="le" d="M38 345 Q48 345 48 351" fill="none" stroke="#EF4444" stroke-width="4" stroke-linecap="round" class="transition duration-200 part-ok" />
+          <!-- Lanterna Traseira Direita -->
+          <path data-part="farois_lanternas" data-sub="ld" d="M162 345 Q152 345 152 351" fill="none" stroke="#EF4444" stroke-width="4" stroke-linecap="round" class="transition duration-200 part-ok" />
+
+          <!-- Retrovisores (Fora do chassi) -->
+          <!-- Esquerdo -->
+          <path data-part="retrovisores" data-sub="esq" d="M28 135 C20 135 20 145 28 145" fill="none" stroke="#475569" stroke-width="4" stroke-linecap="round" class="transition duration-200 part-ok" />
+          <!-- Direito -->
+          <path data-part="retrovisores" data-sub="dir" d="M172 135 C180 135 180 145 172 145" fill="none" stroke="#475569" stroke-width="4" stroke-linecap="round" class="transition duration-200 part-ok" />
+        </svg>t-ok" />
+        </svg>
+      </div>
+
+      <!-- Coluna Direita: Campos do FormulÃ¡rio -->
+      <div class="lg:col-span-2 grid grid-cols-1 md:grid-cols-1 gap-4">
+        {% for key, label in itens %}
+          <div id="card_{{ key }}" class="p-4 rounded-xl border border-slate-900/10 bg-slate-50/70 h-full transition duration-200
+                      dark:border-white/10 dark:bg-black/10">
+
+            <div class="flex items-center justify-between gap-3">
+              <div>
+                <p class="font-semibold text-slate-900 dark:text-white">{{ label }}</p>
+                <p class="text-xs text-slate-500 dark:text-gray-400">Status do item</p>
+              </div>
+
+              <div class="flex items-center gap-2">
+                <select name="{{ key }}" data-item-status="{{ key }}"
+                        class="bg-white border border-slate-900/10 text-slate-900 px-3 py-2 rounded-md text-sm
+                               focus:outline-none focus:ring-2 focus:ring-blue-500/40
+                               dark:bg-gray-900 dark:border-gray-700 dark:text-gray-200">
+                  <option value="ok" selected>OK</option>
+                  <option value="avaria">Avaria</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Campos extras (somente quando avaria) -->
+            <div id="wrap_{{ key }}" class="mt-4 hidden">
+              {% if key in ["pneus", "calotas", "vidros_parabrisa", "farois_lanternas", "retrovisores"] %}
+              <div class="mb-4">
+                  <label class="text-xs text-slate-600 font-semibold dark:text-gray-300 block mb-1.5">Lado / PosiÃ§Ã£o Danificada</label>
+                  <div class="flex flex-wrap gap-2" data-sub-container="{{ key }}">
+                      {% if key in ["pneus", "calotas"] %}
+                          <label class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-900/10 dark:border-white/10 bg-slate-50 dark:bg-black/10 text-slate-700 dark:text-slate-350 text-xs font-semibold cursor-pointer hover:bg-slate-100 dark:hover:bg-black/20 transition-all">
+                              <input aria-label="input" type="checkbox" value="de" data-part-sub="{{ key }}" class="rounded text-blue-600 focus:ring-blue-500/40 w-3.5 h-3.5"> DE
+                          </label>
+                          <label class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-900/10 dark:border-white/10 bg-slate-50 dark:bg-black/10 text-slate-700 dark:text-slate-350 text-xs font-semibold cursor-pointer hover:bg-slate-100 dark:hover:bg-black/20 transition-all">
+                              <input aria-label="input" type="checkbox" value="dd" data-part-sub="{{ key }}" class="rounded text-blue-600 focus:ring-blue-500/40 w-3.5 h-3.5"> DD
+                          </label>
+                          <label class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-900/10 dark:border-white/10 bg-slate-50 dark:bg-black/10 text-slate-700 dark:text-slate-350 text-xs font-semibold cursor-pointer hover:bg-slate-100 dark:hover:bg-black/20 transition-all">
+                              <input aria-label="input" type="checkbox" value="te" data-part-sub="{{ key }}" class="rounded text-blue-600 focus:ring-blue-500/40 w-3.5 h-3.5"> TE
+                          </label>
+                          <label class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-900/10 dark:border-white/10 bg-slate-50 dark:bg-black/10 text-slate-700 dark:text-slate-350 text-xs font-semibold cursor-pointer hover:bg-slate-100 dark:hover:bg-black/20 transition-all">
+                              <input aria-label="input" type="checkbox" value="td" data-part-sub="{{ key }}" class="rounded text-blue-600 focus:ring-blue-500/40 w-3.5 h-3.5"> TD
+                          </label>
+                      {% elif key == "vidros_parabrisa" %}
+                          <label class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-900/10 dark:border-white/10 bg-slate-50 dark:bg-black/10 text-slate-700 dark:text-slate-350 text-xs font-semibold cursor-pointer hover:bg-slate-100 dark:hover:bg-black/20 transition-all">
+                              <input aria-label="input" type="checkbox" value="diant" data-part-sub="{{ key }}" class="rounded text-blue-600 focus:ring-blue-500/40 w-3.5 h-3.5"> Dianteiro
+                          </label>
+                          <label class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-900/10 dark:border-white/10 bg-slate-50 dark:bg-black/10 text-slate-700 dark:text-slate-350 text-xs font-semibold cursor-pointer hover:bg-slate-100 dark:hover:bg-black/20 transition-all">
+                              <input aria-label="input" type="checkbox" value="tras" data-part-sub="{{ key }}" class="rounded text-blue-600 focus:ring-blue-500/40 w-3.5 h-3.5"> Traseiro
+                          </label>
+                          <label class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-900/10 dark:border-white/10 bg-slate-50 dark:bg-black/10 text-slate-700 dark:text-slate-350 text-xs font-semibold cursor-pointer hover:bg-slate-100 dark:hover:bg-black/20 transition-all">
+                              <input aria-label="input" type="checkbox" value="vlde" data-part-sub="{{ key }}" class="rounded text-blue-600 focus:ring-blue-500/40 w-3.5 h-3.5"> Vidro Lat. Diant. Esq.
+                          </label>
+                          <label class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-900/10 dark:border-white/10 bg-slate-50 dark:bg-black/10 text-slate-700 dark:text-slate-350 text-xs font-semibold cursor-pointer hover:bg-slate-100 dark:hover:bg-black/20 transition-all">
+                              <input aria-label="input" type="checkbox" value="vldd" data-part-sub="{{ key }}" class="rounded text-blue-600 focus:ring-blue-500/40 w-3.5 h-3.5"> Vidro Lat. Diant. Dir.
+                          </label>
+                          <label class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-900/10 dark:border-white/10 bg-slate-50 dark:bg-black/10 text-slate-700 dark:text-slate-350 text-xs font-semibold cursor-pointer hover:bg-slate-100 dark:hover:bg-black/20 transition-all">
+                              <input aria-label="input" type="checkbox" value="vlte" data-part-sub="{{ key }}" class="rounded text-blue-600 focus:ring-blue-500/40 w-3.5 h-3.5"> Vidro Lat. Tras. Esq.
+                          </label>
+                          <label class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-900/10 dark:border-white/10 bg-slate-50 dark:bg-black/10 text-slate-700 dark:text-slate-350 text-xs font-semibold cursor-pointer hover:bg-slate-100 dark:hover:bg-black/20 transition-all">
+                              <input aria-label="input" type="checkbox" value="vltd" data-part-sub="{{ key }}" class="rounded text-blue-600 focus:ring-blue-500/40 w-3.5 h-3.5"> Vidro Lat. Tras. Dir.
+                          </label>
+                      {% elif key == "farois_lanternas" %}
+                          <label class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-900/10 dark:border-white/10 bg-slate-50 dark:bg-black/10 text-slate-700 dark:text-slate-350 text-xs font-semibold cursor-pointer hover:bg-slate-100 dark:hover:bg-black/20 transition-all">
+                              <input aria-label="input" type="checkbox" value="fe" data-part-sub="{{ key }}" class="rounded text-blue-600 focus:ring-blue-500/40 w-3.5 h-3.5"> Farol Esq
+                          </label>
+                          <label class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-900/10 dark:border-white/10 bg-slate-50 dark:bg-black/10 text-slate-700 dark:text-slate-350 text-xs font-semibold cursor-pointer hover:bg-slate-100 dark:hover:bg-black/20 transition-all">
+                              <input aria-label="input" type="checkbox" value="fd" data-part-sub="{{ key }}" class="rounded text-blue-600 focus:ring-blue-500/40 w-3.5 h-3.5"> Farol Dir
+                          </label>
+                          <label class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-900/10 dark:border-white/10 bg-slate-50 dark:bg-black/10 text-slate-700 dark:text-slate-350 text-xs font-semibold cursor-pointer hover:bg-slate-100 dark:hover:bg-black/20 transition-all">
+                              <input aria-label="input" type="checkbox" value="le" data-part-sub="{{ key }}" class="rounded text-blue-600 focus:ring-blue-500/40 w-3.5 h-3.5"> Lanterna Esq
+                          </label>
+                          <label class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-900/10 dark:border-white/10 bg-slate-50 dark:bg-black/10 text-slate-700 dark:text-slate-350 text-xs font-semibold cursor-pointer hover:bg-slate-100 dark:hover:bg-black/20 transition-all">
+                              <input aria-label="input" type="checkbox" value="ld" data-part-sub="{{ key }}" class="rounded text-blue-600 focus:ring-blue-500/40 w-3.5 h-3.5"> Lanterna Dir
+                          </label>
+                      {% elif key == "retrovisores" %}
+                          <label class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-900/10 dark:border-white/10 bg-slate-50 dark:bg-black/10 text-slate-700 dark:text-slate-350 text-xs font-semibold cursor-pointer hover:bg-slate-100 dark:hover:bg-black/20 transition-all">
+                              <input aria-label="input" type="checkbox" value="esq" data-part-sub="{{ key }}" class="rounded text-blue-600 focus:ring-blue-500/40 w-3.5 h-3.5"> Esquerdo
+                          </label>
+                          <label class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-900/10 dark:border-white/10 bg-slate-50 dark:bg-black/10 text-slate-700 dark:text-slate-350 text-xs font-semibold cursor-pointer hover:bg-slate-100 dark:hover:bg-black/20 transition-all">
+                              <input aria-label="input" type="checkbox" value="dir" data-part-sub="{{ key }}" class="rounded text-blue-600 focus:ring-blue-500/40 w-3.5 h-3.5"> Direito
+                          </label>
+                      {% endif %}
+                  </div>
+              </div>
+              {% endif %}
+              <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+                <div class="flex flex-col text-slate-600 text-xs dark:text-gray-300">
+                  <label for="obs_{{ key }}">ObservaÃ§Ã£o do item</label>
+                  <input id="obs_{{ key }}" name="obs_{{ key }}" type="text"
+                         class="bg-white border border-slate-900/10 text-slate-900 px-3 py-2 rounded-md
+                                focus:outline-none focus:ring-2 focus:ring-blue-500/40
+                                dark:bg-gray-900 dark:border-gray-700 dark:text-gray-200"
+                         placeholder="Ex: amassado no canto, risco na pintura...">
+                </div>
+
+                <div class="flex flex-col text-slate-600 text-xs dark:text-gray-300">
+                  <label for="foto_{{ key }}">Fotos do item</label>
+
+                  <!-- â MULTIPLE + name com [] -->
+                  <input id="foto_{{ key }}" name="foto_{{ key }}[]" type="file"
+                         accept=".jpg,.jpeg,.png,.webp"
+                         multiple
+                         class="bg-white border border-slate-900/10 text-slate-900 px-3 py-2 rounded-md
+                                file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0
+                                file:bg-slate-900/10 file:text-slate-700
+                                dark:bg-gray-900 dark:border-gray-700 dark:text-gray-200
+                                dark:file:bg-white/10 dark:file:text-gray-200">
+
+                  <p class="text-[11px] text-slate-500 mt-1 dark:text-gray-400">
+                    VocÃª pode selecionar vÃ¡rias fotos de uma vez.
+                  </p>
+                </div>
+
+              </div>
+            </div>
+
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+    <!-- ObservaÃ§Ãµes gerais -->
+    <div class="flex flex-col text-slate-600 text-xs dark:text-gray-300">
+      <label for="observacoes">ObservaÃ§Ãµes gerais (opcional)</label>
+      <textarea id="observacoes" name="observacoes" rows="3"
+                class="bg-white border border-slate-900/10 text-slate-900 px-3 py-2 rounded-md
+                       focus:outline-none focus:ring-2 focus:ring-blue-500/40
+                       dark:bg-gray-900 dark:border-gray-700 dark:text-gray-200"
+                placeholder="Detalhes gerais da vistoria..."></textarea>
+    </div>
+
+    <div class="flex items-center justify-end gap-2">
+      <a href="{{ url_for('vistorias_list') }}"
+         class="px-4 py-2 bg-slate-600 hover:bg-slate-500 text-white rounded-lg text-sm
+                dark:bg-gray-600 dark:hover:bg-gray-500">
+        Cancelar
+      </a>
+      <button class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm">
+        Salvar vistoria
+      </button>
+    </div>
+
+  </form>
+</div>
+
+<script>
+(function(){
+  // Preenche KM ao selecionar veÃ­culo
+  const sel = document.getElementById("vehicle_id");
+  const km = document.getElementById("km");
+  if(sel && km){
+    sel.addEventListener("change", () => {
+      const opt = sel.options[sel.selectedIndex];
+      const vkm = opt?.getAttribute("data-km");
+      if(vkm !== null && vkm !== undefined){
+        km.value = vkm;
+      }
+    });
+  }
+
+  const statusHidden = document.getElementById("status_geral");
+  const badge = document.getElementById("statusBadge");
+  const statusText = document.getElementById("statusText");
+  const selects = Array.from(document.querySelectorAll("[data-item-status]"));
+
+  function setBadgeOk(){
+    if(!badge || !statusText) return;
+    badge.className =
+      "mt-0.5 inline-flex items-center gap-2 px-3 py-2 rounded-md border text-sm w-fit " +
+      "bg-emerald-600/10 border-emerald-600/20 text-emerald-700 " +
+      "dark:bg-green-900/40 dark:border-green-700/40 dark:text-green-200";
+    badge.querySelector("span").textContent = "â";
+    statusText.textContent = "OK";
+  }
+
+  function setBadgeAvarias(){
+    if(!badge || !statusText) return;
+    badge.className =
+      "mt-0.5 inline-flex items-center gap-2 px-3 py-2 rounded-md border text-sm w-fit " +
+      "bg-amber-500/10 border-amber-500/20 text-amber-700 " +
+      "dark:bg-yellow-900/40 dark:border-yellow-700/40 dark:text-yellow-200";
+    badge.querySelector("span").textContent = "â ï¸";
+    statusText.textContent = "Com avarias";
+  }
+
+  function updateStatusGeral(){
+    const temAvaria = selects.some(s => s.value === "avaria");
+    if(statusHidden) statusHidden.value = temAvaria ? "avarias" : "ok";
+    temAvaria ? setBadgeAvarias() : setBadgeOk();
+  }
+
+  // Sincronizar os checkboxes de sub-partes com o SVG do veÃ­culo
+  document.querySelectorAll("input[data-part-sub]").forEach(cb => {
+    cb.addEventListener("change", () => {
+      const key = cb.getAttribute("data-part-sub");
+      const sub = cb.value;
+      const select = document.querySelector(`select[data-item-status="${key}"]`);
+      
+      // Atualiza o SVG correspondente
+      const partEl = document.querySelector(`svg [data-part="${key}"][data-sub="${sub}"]`);
+      if (partEl) {
+        if (cb.checked) {
+          partEl.classList.add("part-avaria");
+          partEl.classList.remove("part-ok");
+        } else {
+          partEl.classList.add("part-ok");
+          partEl.classList.remove("part-avaria");
+        }
+      }
+      
+      // Se algum checkbox daquela parte estiver marcado, o status vira "avaria"
+      const anyChecked = Array.from(document.querySelectorAll(`input[data-part-sub="${key}"]:checked`)).length > 0;
+      if (select) {
+        const prevVal = select.value;
+        select.value = anyChecked ? "avaria" : "ok";
+        if (prevVal !== select.value) {
+          // Atualiza exibiÃ§Ã£o dos wraps de foto/obs
+          const wrap = document.getElementById("wrap_" + key);
+          if (wrap) wrap.classList.toggle("hidden", select.value !== "avaria");
+          updateStatusGeral();
+        }
+      }
+    });
+  });
+
+  // Mostra/oculta observaÃ§Ã£o + fotos por item quando status = avaria
+  selects.forEach(s => {
+    function apply(){
+      const key = s.getAttribute("data-item-status");
+      const wrap = document.getElementById("wrap_" + key);
+      if(wrap){
+        wrap.classList.toggle("hidden", s.value !== "avaria");
+      }
+
+      // Fazer a cor do SVG refletir alteraÃ§Ãµes no dropdown de status
+      const svgParts = document.querySelectorAll(`svg [data-part="${key}"]`);
+      if (s.value === "avaria") {
+        const checkboxes = document.querySelectorAll(`input[data-part-sub="${key}"]`);
+        if (checkboxes.length > 0) {
+          // Apenas atualiza o SVG com base nos checkboxes marcados
+          checkboxes.forEach(cb => {
+            const sub = cb.value;
+            const partEl = document.querySelector(`svg [data-part="${key}"][data-sub="${sub}"]`);
+            if (partEl) {
+              if (cb.checked) {
+                partEl.classList.add("part-avaria");
+                partEl.classList.remove("part-ok");
+              } else {
+                partEl.classList.add("part-ok");
+                partEl.classList.remove("part-avaria");
+              }
+            }
+          });
+        } else {
+          // Itens sem sub-partes
+          svgParts.forEach(part => {
+            part.classList.add("part-avaria");
+            part.classList.remove("part-ok");
+          });
+        }
+      } else {
+        // Desmarca todos os checkboxes se mudou para OK
+        const checkboxes = document.querySelectorAll(`input[data-part-sub="${key}"]`);
+        checkboxes.forEach(cb => {
+          cb.checked = false;
+        });
+        svgParts.forEach(part => {
+          part.classList.add("part-ok");
+          part.classList.remove("part-avaria");
+        });
+      }
+
+      updateStatusGeral();
+    }
+    s.addEventListener("change", apply);
+    apply();
+  });
+
+  // Clique no mapa 2D do veÃ­culo alterna status e foca no card
+  document.querySelectorAll("svg [data-part]").forEach(part => {
+    part.addEventListener("click", () => {
+      const key = part.getAttribute("data-part");
+      const sub = part.getAttribute("data-sub");
+      const s = document.querySelector(`select[data-item-status="${key}"]`);
+      
+      if (s) {
+        if (sub) {
+          // Tem sub-partes: alterna o checkbox especÃ­fico
+          const cb = document.querySelector(`input[data-part-sub="${key}"][value="${sub}"]`);
+          if (cb) {
+            cb.checked = !cb.checked;
+            cb.dispatchEvent(new Event("change"));
+          }
+        } else {
+          // Sem sub-partes: alterna o status do select inteiro
+          s.value = s.value === "ok" ? "avaria" : "ok";
+          s.dispatchEvent(new Event("change"));
+        }
+
+        // Se marcou como avaria, faz scroll suave atÃ© o card e dÃ¡ um destaque
+        if (s.value === "avaria") {
+          const card = document.getElementById(`card_${key}`);
+          if (card) {
+            card.scrollIntoView({ behavior: "smooth", block: "center" });
+            // Adiciona uma animaÃ§Ã£o temporÃ¡ria de foco/piscar
+            card.classList.add("ring-2", "ring-amber-500", "scale-[1.02]");
+            setTimeout(() => {
+              card.classList.remove("ring-2", "ring-amber-500", "scale-[1.02]");
+            }, 1500);
+          }
+        }
+      }
+    });
+  });
+
+  // Interceptar submit do formulÃ¡rio para salvar metadados nas observaÃ§Ãµes
+  const form = document.querySelector("form");
+  if (form) {
+    form.addEventListener("submit", (e) => {
+      ["pneus", "calotas", "vidros_parabrisa", "farois_lanternas", "retrovisores"].forEach(key => {
+        const select = form.querySelector(`select[name="${key}"]`);
+        const obsInput = form.querySelector(`input[name="obs_${key}"]`);
+        if (select && obsInput) {
+          if (select.value === "avaria") {
+            const checkedSubs = Array.from(form.querySelectorAll(`input[data-part-sub="${key}"]:checked`)).map(cb => cb.value);
+            if (checkedSubs.length > 0) {
+              const originalVal = obsInput.value.replace(/^\[parts:[^\]]+\]\s*/, "");
+              obsInput.value = `[parts:${checkedSubs.join(",")}] ${originalVal}`.trim();
+            } else {
+              obsInput.value = obsInput.value.replace(/^\[parts:[^\]]+\]\s*/, "");
+            }
+          } else {
+            obsInput.value = obsInput.value.replace(/^\[parts:[^\]]+\]\s*/, "");
+          }
+        }
+      });
+    });
+  }
+
+  updateStatusGeral();
+})();
+</script>
+
+<!-- LEITOR PLACA OCR CDN -->
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+
+<!-- ===================================
+     ✅ DIALOG SCANNER DE PLACA (LIVE CAMERA)
+     =================================== -->
+<dialog id="ocrScannerModal" class="hidden bg-black backdrop:bg-black/80 outline-none border-none p-0 w-screen h-screen max-w-full max-h-full overflow-hidden flex flex-col fixed inset-0 z-[99999]">
+    <!-- Top Header -->
+    <div class="absolute top-0 inset-x-0 p-6 z-20 flex items-center justify-between bg-gradient-to-b from-black/80 to-transparent">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center text-blue-400">
+                <i class="fa-solid fa-camera-rotate text-lg"></i>
+            </div>
+            <div>
+                <h3 class="text-base font-black text-white">Leitor de Placas</h3>
+                <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Aponte a câmera para a placa do veículo</p>
+            </div>
+        </div>
+        <button type="button" onclick="closeOCRScanner()" class="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-all active:scale-95" aria-label="Fechar leitor de placa">
+            <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+    </div>
+
+    <!-- Live Video Viewport -->
+    <div class="flex-1 w-full h-full relative flex items-center justify-center">
+        <video id="ocr-video" class="w-full h-full object-cover" autoplay playsinline muted></video>
+        
+        <!-- Bounding Box Overlay -->
+        <div class="absolute inset-0 pointer-events-none flex items-center justify-center">
+            <!-- Camada escura externa -->
+            <div class="absolute inset-0 bg-black/40"></div>
+            
+            <!-- Recorte Central (Bounding Box Area) -->
+            <div class="w-[80%] max-w-[400px] h-[120px] rounded-3xl border-4 border-dashed border-blue-500 relative flex items-center justify-center shadow-[0_0_0_9999px_rgba(0,0,0,0.6)]">
+                <!-- Borda animada / Linha de scanner -->
+                <div class="absolute inset-x-0 h-0.5 bg-gradient-to-r from-transparent via-blue-400 to-transparent animate-pulse"></div>
+                
+                <span id="ocr-status" class="absolute -bottom-8 left-1/2 -translate-x-1/2 text-[9px] font-black text-blue-400 uppercase tracking-widest bg-blue-500/10 px-3 py-1 rounded-full whitespace-nowrap">Inicializando Leitor...</span>
+            </div>
+        </div>
+    </div>
+</dialog>
+
+<script>
+let ocrWorker = null;
+let isScanning = false;
+let videoStream = null;
+
+async function initOCRWorker() {
+    if (!ocrWorker) {
+        document.getElementById('ocr-status').innerText = 'Carregando IA...';
+        ocrWorker = await Tesseract.createWorker('eng');
+        await ocrWorker.setParameters({
+            tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+        });
+    }
+}
+
+async function startPlateOCR() {
+    const scannerDialog = document.getElementById('ocrScannerModal');
+    scannerDialog.classList.remove('hidden');
+    scannerDialog.showModal();
+    document.getElementById('ocr-status').innerText = 'Iniciando câmera...';
+    
+    const video = document.getElementById('ocr-video');
+    try {
+        videoStream = await navigator.mediaDevices.getUserMedia({
+            video: { 
+                facingMode: 'environment',
+                width: { ideal: 1280 },
+                height: { ideal: 720 }
+            }
+        });
+        video.srcObject = videoStream;
+        video.setAttribute('playsinline', true);
+        video.play();
+        
+        isScanning = true;
+        
+        await initOCRWorker();
+        document.getElementById('ocr-status').innerText = 'Enquadre a placa';
+        scanLoop();
+        
+    } catch (err) {
+        console.error("Erro ao abrir câmera:", err);
+        alert("Não foi possível acessar a câmera traseira do celular.");
+        closeOCRScanner();
+    }
+}
+
+function closeOCRScanner() {
+    isScanning = false;
+    if (videoStream) {
+        videoStream.getTracks().forEach(track => track.stop());
+        videoStream = null;
+    }
+    const scannerDialog = document.getElementById('ocrScannerModal');
+    if (scannerDialog.open) {
+        scannerDialog.close();
+    }
+    scannerDialog.classList.add('hidden');
+}
+
+function levenshteinDistance(a, b) {
+    const matrix = [];
+    for (let i = 0; i <= b.length; i++) matrix[i] = [i];
+    for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
+    for (let i = 1; i <= b.length; i++) {
+        for (let j = 1; j <= a.length; j++) {
+            if (b.charAt(i - 1) === a.charAt(j - 1)) {
+                matrix[i][j] = matrix[i - 1][j - 1];
+            } else {
+                matrix[i][j] = Math.min(
+                    matrix[i - 1][j - 1] + 1,
+                    Math.min(
+                        matrix[i][j - 1] + 1,
+                        matrix[i - 1][j] + 1
+                    )
+                );
+            }
+        }
+    }
+    return matrix[b.length][a.length];
+}
+
+async function scanLoop() {
+    if (!isScanning) return;
+    
+    const video = document.getElementById('ocr-video');
+    if (video && video.readyState === video.HAVE_ENOUGH_DATA) {
+        const videoWidth = video.videoWidth;
+        const videoHeight = video.videoHeight;
+        
+        const rectWidth = videoWidth * 0.5;
+        const rectHeight = videoHeight * 0.2;
+        const rectX = (videoWidth - rectWidth) / 2;
+        const rectY = (videoHeight - rectHeight) / 2;
+        
+        const scaleFactor = 3;
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = rectWidth * scaleFactor;
+        canvas.height = rectHeight * scaleFactor;
+        
+        ctx.drawImage(video, rectX, rectY, rectWidth, rectHeight, 0, 0, canvas.width, canvas.height);
+        
+        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const pixels = imgData.data;
+        for (let i = 0; i < pixels.length; i += 4) {
+            const r = pixels[i];
+            const g = pixels[i+1];
+            const b = pixels[i+2];
+            const gray = 0.299 * r + 0.587 * g + 0.114 * b;
+            
+            let newVal = (gray - 128) * 2.0 + 128;
+            newVal = Math.max(0, Math.min(255, newVal));
+            
+            pixels[i] = newVal;
+            pixels[i+1] = newVal;
+            pixels[i+2] = newVal;
+        }
+        ctx.putImageData(imgData, 0, 0);
+        
+        try {
+            document.getElementById('ocr-status').innerText = 'Lendo placa...';
+            const { data: { text } } = await ocrWorker.recognize(canvas);
+            console.log("OCR Lido:", text);
+            
+            const cleanedText = text.toUpperCase().replace(/[^A-Z0-9]/g, '');
+            
+            const selectElement = document.getElementById('vehicle_id');
+            let bestMatch = null;
+            let bestDistance = 999;
+            
+            if (selectElement) {
+                for (let option of selectElement.options) {
+                    const plate = option.getAttribute('data-plate');
+                    if (plate) {
+                        const cleanPlate = plate.toUpperCase().replace(/[^A-Z0-9]/g, '');
+                        
+                        if (cleanedText.includes(cleanPlate)) {
+                            bestMatch = option;
+                            bestDistance = 0;
+                            break;
+                        }
+                        
+                        if (cleanedText.length >= 7) {
+                            for (let start = 0; start <= cleanedText.length - 7; start++) {
+                                const segment = cleanedText.substring(start, start + 7);
+                                const dist = levenshteinDistance(segment, cleanPlate);
+                                if (dist < bestDistance) {
+                                    bestDistance = dist;
+                                    bestMatch = option;
+                                }
+                            }
+                        } else if (cleanedText.length > 4) {
+                            const dist = levenshteinDistance(cleanedText, cleanPlate);
+                            if (dist < bestDistance) {
+                                    bestDistance = dist;
+                                    bestMatch = option;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            if (bestMatch && bestDistance <= 2) {
+                const plateMatched = bestMatch.getAttribute('data-plate');
+                console.log(`Veículo identificado via Levenshtein (distância: ${bestDistance}): ${plateMatched}`);
+                selectElement.value = bestMatch.value;
+                selectElement.dispatchEvent(new Event('change'));
+                
+                if (typeof showToast === "function") {
+                    showToast(`Veículo identificado: ${plateMatched}!`, "success");
+                } else {
+                    alert(`Veículo identificado: ${plateMatched}!`);
+                }
+                closeOCRScanner();
+                return;
+            }
+        } catch (err) {
+            console.error("Erro no processamento de frame OCR:", err);
+        }
+    }
+    
+    if (isScanning) {
+        document.getElementById('ocr-status').innerText = 'Enquadre a placa';
+        setTimeout(scanLoop, 800);
+    }
+}
+
+document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeOCRScanner();
+});
+</script>
+
+{% endblock %}

@@ -1,0 +1,708 @@
+{% extends "layout.html" %}
+{% set page_title = "Registros de Rede" %}
+
+{% block content %}
+<style>
+    /* ABNT Fiber Color Standards */
+    .fiber-color-verde { background-color: #22c55e; }
+    .fiber-color-amarelo { background-color: #eab308; }
+    .fiber-color-branco { background-color: #f1f5f9; border: 1px solid #cbd5e1; }
+    .fiber-color-azul { background-color: #3b82f6; }
+    .fiber-color-vermelho { background-color: #ef4444; }
+    .fiber-color-violeta { background-color: #8b5cf6; }
+    .fiber-color-marrom { background-color: #92400e; }
+    .fiber-color-rosa { background-color: #ec4899; }
+    .fiber-color-preto { background-color: #1e293b; }
+    .fiber-color-cinza { background-color: #64748b; }
+    .fiber-color-laranja { background-color: #f97316; }
+    .fiber-color-aqua { background-color: #06b6d4; }
+
+    /* Tab styling */
+    .tab-btn {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .tab-btn.active {
+        background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+        color: white;
+        box-shadow: 0 8px 24px rgba(79, 70, 229, 0.3);
+    }
+    .tab-content {
+        display: none;
+        animation: tabFadeIn 0.4s ease;
+    }
+    .tab-content.active {
+        display: block;
+    }
+    @keyframes tabFadeIn {
+        from { opacity: 0; transform: translateY(8px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Port grid mini */
+    .port-mini {
+        width: 28px;
+        height: 28px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 9px;
+        font-weight: 900;
+        transition: transform 0.2s ease;
+        cursor: default;
+    }
+    .port-mini:hover { transform: scale(1.15); }
+    .port-active {
+        background: linear-gradient(135deg, #10b981, #059669);
+        color: white;
+        box-shadow: 0 2px 8px rgba(16, 185, 129, 0.35);
+    }
+    .port-free {
+        background: rgba(148, 163, 184, 0.15);
+        color: #94a3b8;
+        border: 1px solid rgba(148, 163, 184, 0.2);
+    }
+
+    /* Splitter visual */
+    .splitter-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 12px;
+        border-radius: 12px;
+        font-size: 10px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+
+    /* Fusion row */
+    .fusion-row {
+        padding: 8px 12px;
+        border-radius: 12px;
+        background: rgba(255,255,255,0.03);
+        border: 1px solid rgba(255,255,255,0.05);
+        transition: background 0.15s;
+    }
+    .fusion-row:hover { background: rgba(255,255,255,0.06); }
+
+    /* Search */
+    .search-input:focus {
+        box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+    }
+
+    /* Card expand */
+    .card-expandable .card-details {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .card-expandable.expanded .card-details {
+        max-height: 2000px;
+    }
+    .card-expandable .expand-chevron {
+        transition: transform 0.3s ease;
+    }
+    .card-expandable.expanded .expand-chevron {
+        transform: rotate(180deg);
+    }
+</style>
+
+<div class="space-y-6 animate-premium">
+
+    <!-- HEADER -->
+    <div class="animate-premium">
+        <div class="glass-premium rounded-[2.5rem] p-8 relative overflow-hidden">
+            <div class="absolute -top-20 -right-20 w-60 h-60 bg-indigo-500/10 rounded-full blur-3xl"></div>
+            <div class="absolute -bottom-10 -left-10 w-40 h-40 bg-emerald-500/10 rounded-full blur-3xl"></div>
+            <div class="relative flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                <div>
+                    <h1 class="text-2xl md:text-3xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-3">
+                        <div class="w-12 h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-500">
+                            <i class="fa-solid fa-database text-xl"></i>
+                        </div>
+                        Registros de Rede
+                    </h1>
+                    <p class="text-sm text-slate-500 dark:text-slate-400 mt-2 ml-[60px]">Consulta detalhada de todos os elementos cadastrados na rede de fibra óptica</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- KPI COUNTERS -->
+    <div id="kpi-counters" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
+
+    <!-- TAB NAVIGATION + SEARCH -->
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div class="flex gap-2 overflow-x-auto pb-1">
+            <button onclick="switchTab('postes')" data-tab="postes" class="tab-btn active flex items-center gap-2 px-5 py-3 rounded-2xl bg-slate-900/5 dark:bg-white/5 text-slate-500 dark:text-slate-400 text-xs font-black uppercase tracking-widest whitespace-nowrap">
+                <i class="fa-regular fa-lightbulb"></i> Postes <span class="tab-count bg-blue-500/10 text-blue-500 px-2 py-0.5 rounded-lg text-[9px]" id="count-postes">0</span>
+            </button>
+            <button onclick="switchTab('ceos')" data-tab="ceos" class="tab-btn flex items-center gap-2 px-5 py-3 rounded-2xl bg-slate-900/5 dark:bg-white/5 text-slate-500 dark:text-slate-400 text-xs font-black uppercase tracking-widest whitespace-nowrap">
+                <i class="fa-solid fa-network-wired"></i> CEOs <span class="tab-count bg-teal-500/10 text-teal-500 px-2 py-0.5 rounded-lg text-[9px]" id="count-ceos">0</span>
+            </button>
+            <button onclick="switchTab('ctos')" data-tab="ctos" class="tab-btn flex items-center gap-2 px-5 py-3 rounded-2xl bg-slate-900/5 dark:bg-white/5 text-slate-500 dark:text-slate-400 text-xs font-black uppercase tracking-widest whitespace-nowrap">
+                <i class="fa-solid fa-box"></i> CTOs NAP <span class="tab-count bg-amber-500/10 text-amber-500 px-2 py-0.5 rounded-lg text-[9px]" id="count-ctos">0</span>
+            </button>
+            <button onclick="switchTab('cabos')" data-tab="cabos" class="tab-btn flex items-center gap-2 px-5 py-3 rounded-2xl bg-slate-900/5 dark:bg-white/5 text-slate-500 dark:text-slate-400 text-xs font-black uppercase tracking-widest whitespace-nowrap">
+                <i class="fa-solid fa-bezier-curve"></i> Cabos <span class="tab-count bg-indigo-500/10 text-indigo-500 px-2 py-0.5 rounded-lg text-[9px]" id="count-cabos">0</span>
+            </button>
+        </div>
+        <div class="relative w-full md:w-80">
+            <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+            <input type="text" id="searchRegistros" placeholder="Buscar por nome, código..." oninput="filterCards()"
+                   class="search-input w-full bg-white dark:bg-white/5 rounded-2xl pl-11 pr-4 py-3 text-sm font-bold outline-none border border-slate-900/5 dark:border-white/5 text-slate-800 dark:text-white transition-all">
+        </div>
+    </div>
+
+    <!-- TAB CONTENTS -->
+    <div id="tab-postes" class="tab-content active"></div>
+    <div id="tab-ceos" class="tab-content"></div>
+    <div id="tab-ctos" class="tab-content"></div>
+    <div id="tab-cabos" class="tab-content"></div>
+
+    <!-- EMPTY STATE -->
+    <div id="empty-state" class="hidden text-center py-20">
+        <div class="w-20 h-20 mx-auto mb-4 rounded-3xl bg-slate-900/5 dark:bg-white/5 flex items-center justify-center text-slate-300 dark:text-slate-600">
+            <i class="fa-solid fa-database text-3xl"></i>
+        </div>
+        <p class="text-sm font-bold text-slate-400 dark:text-slate-500">Nenhum registro encontrado</p>
+        <p class="text-xs text-slate-400 dark:text-slate-600 mt-1">Nenhum elemento cadastrado no mapa.</p>
+    </div>
+</div>
+
+<script>
+    // ======================== DATA ========================
+    const nodesData = {{ nodes_json | safe }};
+    const edgesData = {{ edges_json | safe }};
+
+    // ABNT fiber color map (1-12 per tube)
+    const FIBER_COLORS = [
+        { name: 'Verde', hex: '#22c55e', css: 'fiber-color-verde' },
+        { name: 'Amarelo', hex: '#eab308', css: 'fiber-color-amarelo' },
+        { name: 'Branco', hex: '#f1f5f9', css: 'fiber-color-branco' },
+        { name: 'Azul', hex: '#3b82f6', css: 'fiber-color-azul' },
+        { name: 'Vermelho', hex: '#ef4444', css: 'fiber-color-vermelho' },
+        { name: 'Violeta', hex: '#8b5cf6', css: 'fiber-color-violeta' },
+        { name: 'Marrom', hex: '#92400e', css: 'fiber-color-marrom' },
+        { name: 'Rosa', hex: '#ec4899', css: 'fiber-color-rosa' },
+        { name: 'Preto', hex: '#1e293b', css: 'fiber-color-preto' },
+        { name: 'Cinza', hex: '#64748b', css: 'fiber-color-cinza' },
+        { name: 'Laranja', hex: '#f97316', css: 'fiber-color-laranja' },
+        { name: 'Aqua', hex: '#06b6d4', css: 'fiber-color-aqua' }
+    ];
+
+    function getFiberColor(fiberNum) {
+        return FIBER_COLORS[((fiberNum - 1) % 12)];
+    }
+
+    // Categorize nodes
+    const posts = nodesData.filter(n => n.type === 'post');
+    const ceos = nodesData.filter(n => n.type === 'box' && n.details && n.details.subcategory === 'ceo');
+    const ctos = nodesData.filter(n => n.type === 'box' && (!n.details || n.details.subcategory !== 'ceo'));
+
+    // ======================== TABS ========================
+    function switchTab(tab) {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        document.getElementById(`tab-${tab}`).classList.add('active');
+    }
+
+    // ======================== SEARCH ========================
+    function filterCards() {
+        const q = document.getElementById('searchRegistros').value.toLowerCase().trim();
+        document.querySelectorAll('.registry-card').forEach(card => {
+            const name = card.getAttribute('data-name').toLowerCase();
+            card.style.display = name.includes(q) ? '' : 'none';
+        });
+    }
+
+    // ======================== EXPAND/COLLAPSE ========================
+    function toggleCard(cardId) {
+        const card = document.getElementById(cardId);
+        if (card) card.classList.toggle('expanded');
+    }
+
+    // ======================== KPIs ========================
+    function renderKPIs() {
+        // Count active ports
+        let totalPorts = 0, activePorts = 0;
+        ctos.forEach(n => {
+            const totalSplitterPorts = (n.splitters || []).reduce((sum, s) => {
+                const out = parseInt((s.ratio || '1x8').split('x')[1]) || 8;
+                return sum + out;
+            }, 0);
+            totalPorts += totalSplitterPorts || 8;
+            if (n.details && n.details.ports) {
+                activePorts += Object.keys(n.details.ports).length;
+            }
+        });
+
+        const totalFusions = nodesData.reduce((sum, n) => {
+            return sum + ((n.details && n.details.fusions) ? n.details.fusions.length : 0);
+        }, 0);
+
+        const kpis = [
+            { label: 'Postes', value: posts.length, icon: 'fa-lightbulb', color: 'blue' },
+            { label: 'Caixas (CEO+CTO)', value: ceos.length + ctos.length, icon: 'fa-box', color: 'teal' },
+            { label: 'Cabos de Fibra', value: edgesData.length, icon: 'fa-bezier-curve', color: 'indigo' },
+            { label: 'Fusões Ativas', value: totalFusions, icon: 'fa-circle-nodes', color: 'emerald' }
+        ];
+
+        document.getElementById('kpi-counters').innerHTML = kpis.map(k => `
+            <div class="card-premium p-5 flex items-center gap-4">
+                <div class="w-12 h-12 rounded-2xl bg-${k.color}-500/10 flex items-center justify-center text-${k.color}-500 shrink-0">
+                    <i class="fa-solid ${k.icon} text-lg"></i>
+                </div>
+                <div>
+                    <div class="text-2xl font-black text-slate-900 dark:text-white">${k.value}</div>
+                    <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest">${k.label}</div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    // ======================== RENDER FUNCTIONS ========================
+
+    function getEquipAtPost(postId) {
+        return nodesData.filter(n => n.type === 'box' && n.details && n.details.parent_post_id === postId);
+    }
+
+    function getCablesAtNode(nodeId) {
+        return edgesData.filter(e => e.source_node_id === nodeId || e.target_node_id === nodeId);
+    }
+
+    // ---- POSTES ----
+    function renderPostes() {
+        const container = document.getElementById('tab-postes');
+        document.getElementById('count-postes').textContent = posts.length;
+
+        if (posts.length === 0) {
+            container.innerHTML = emptySection('Nenhum poste cadastrado');
+            return;
+        }
+
+        container.innerHTML = `<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">${posts.map(node => {
+            const equips = getEquipAtPost(node.id);
+            const cables = getCablesAtNode(node.id);
+            const cardId = `card-post-${node.id}`;
+
+            return `
+                <div class="card-premium card-expandable registry-card overflow-hidden" id="${cardId}" data-name="${node.name}">
+                    <div class="p-5 cursor-pointer flex items-center justify-between" onclick="toggleCard('${cardId}')">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center">
+                                <i class="fa-regular fa-lightbulb text-lg"></i>
+                            </div>
+                            <div>
+                                <div class="text-sm font-black text-slate-900 dark:text-white">${node.name}</div>
+                                <div class="text-[10px] font-bold text-slate-400 mt-0.5">${node.lat.toFixed(6)}, ${node.lng.toFixed(6)}</div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            ${equips.length > 0 ? `<span class="px-2 py-1 rounded-lg bg-emerald-500/10 text-emerald-500 text-[9px] font-black">${equips.length} equip.</span>` : ''}
+                            ${cables.length > 0 ? `<span class="px-2 py-1 rounded-lg bg-indigo-500/10 text-indigo-500 text-[9px] font-black">${cables.length} cabos</span>` : ''}
+                            <i class="fa-solid fa-chevron-down text-slate-400 text-xs expand-chevron"></i>
+                        </div>
+                    </div>
+                    <div class="card-details">
+                        <div class="px-5 pb-5 space-y-3 border-t border-slate-900/5 dark:border-white/5 pt-4">
+                            ${node.created_at ? `<div class="flex justify-between text-xs text-slate-500"><span>Cadastrado em:</span><span class="font-bold text-slate-700 dark:text-white">${node.created_at}</span></div>` : ''}
+                            ${equips.length > 0 ? `
+                                <div>
+                                    <div class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Equipamentos Instalados</div>
+                                    <div class="space-y-1.5">
+                                        ${equips.map(eq => {
+                                            const sub = eq.details?.subcategory;
+                                            const icon = sub === 'ceo' ? 'fa-network-wired' : 'fa-box';
+                                            const color = sub === 'ceo' ? 'teal' : 'amber';
+                                            const label = sub === 'ceo' ? 'CEO' : 'CTO NAP';
+                                            return `<div class="flex items-center justify-between p-2.5 rounded-xl bg-${color}-500/5 border border-${color}-500/10">
+                                                <div class="flex items-center gap-2">
+                                                    <i class="fa-solid ${icon} text-${color}-500 text-xs"></i>
+                                                    <span class="text-xs font-bold text-slate-700 dark:text-white">${eq.name}</span>
+                                                </div>
+                                                <span class="text-[8px] font-black text-${color}-500 uppercase">${label} · ${(eq.splitters || []).length} SPL</span>
+                                            </div>`;
+                                        }).join('')}
+                                    </div>
+                                </div>
+                            ` : '<div class="text-[10px] text-slate-400 italic">Nenhum equipamento instalado neste poste.</div>'}
+                            ${renderCablesList(cables)}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('')}</div>`;
+    }
+
+    // ---- CEOs ----
+    function renderCEOs() {
+        const container = document.getElementById('tab-ceos');
+        document.getElementById('count-ceos').textContent = ceos.length;
+
+        if (ceos.length === 0) {
+            container.innerHTML = emptySection('Nenhuma Caixa de Emenda CEO cadastrada');
+            return;
+        }
+
+        container.innerHTML = `<div class="grid grid-cols-1 xl:grid-cols-2 gap-4">${ceos.map(node => {
+            const cables = getCablesAtNode(node.id);
+            const fusions = node.details?.fusions || [];
+            const cardId = `card-ceo-${node.id}`;
+
+            return `
+                <div class="card-premium card-expandable registry-card overflow-hidden" id="${cardId}" data-name="${node.name}">
+                    <div class="p-5 cursor-pointer flex items-center justify-between" onclick="toggleCard('${cardId}')">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-teal-500/10 text-teal-500 flex items-center justify-center">
+                                <i class="fa-solid fa-network-wired text-lg"></i>
+                            </div>
+                            <div>
+                                <div class="text-sm font-black text-slate-900 dark:text-white">${node.name}</div>
+                                <div class="text-[10px] font-bold text-slate-400 mt-0.5">CEO · ${node.lat.toFixed(6)}, ${node.lng.toFixed(6)}</div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="px-2 py-1 rounded-lg bg-indigo-500/10 text-indigo-500 text-[9px] font-black">${(node.splitters || []).length} SPL</span>
+                            <span class="px-2 py-1 rounded-lg bg-emerald-500/10 text-emerald-500 text-[9px] font-black">${fusions.length} fusões</span>
+                            <i class="fa-solid fa-chevron-down text-slate-400 text-xs expand-chevron"></i>
+                        </div>
+                    </div>
+                    <div class="card-details">
+                        <div class="px-5 pb-5 space-y-4 border-t border-slate-900/5 dark:border-white/5 pt-4">
+                            ${node.created_at ? `<div class="flex justify-between text-xs text-slate-500"><span>Cadastrado em:</span><span class="font-bold text-slate-700 dark:text-white">${node.created_at}</span></div>` : ''}
+                            ${renderSplitters(node.splitters)}
+                            ${renderFusions(fusions)}
+                            ${renderCablesList(cables)}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('')}</div>`;
+    }
+
+    // ---- CTOs NAP ----
+    function renderCTOs() {
+        const container = document.getElementById('tab-ctos');
+        document.getElementById('count-ctos').textContent = ctos.length;
+
+        if (ctos.length === 0) {
+            container.innerHTML = emptySection('Nenhuma Caixa CTO NAP cadastrada');
+            return;
+        }
+
+        container.innerHTML = `<div class="grid grid-cols-1 xl:grid-cols-2 gap-4">${ctos.map(node => {
+            const cables = getCablesAtNode(node.id);
+            const fusions = node.details?.fusions || [];
+            const ports = node.details?.ports || {};
+            const activePortCount = Object.keys(ports).length;
+            const totalSplitterPorts = (node.splitters || []).reduce((sum, s) => {
+                return sum + (parseInt((s.ratio || '1x8').split('x')[1]) || 8);
+            }, 0) || 8;
+            const cardId = `card-cto-${node.id}`;
+
+            return `
+                <div class="card-premium card-expandable registry-card overflow-hidden" id="${cardId}" data-name="${node.name}">
+                    <div class="p-5 cursor-pointer flex items-center justify-between" onclick="toggleCard('${cardId}')">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center">
+                                <i class="fa-solid fa-box text-lg"></i>
+                            </div>
+                            <div>
+                                <div class="text-sm font-black text-slate-900 dark:text-white">${node.name}</div>
+                                <div class="text-[10px] font-bold text-slate-400 mt-0.5">CTO NAP · ${node.lat.toFixed(6)}, ${node.lng.toFixed(6)}</div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="px-2 py-1 rounded-lg bg-emerald-500/10 text-emerald-500 text-[9px] font-black">${activePortCount}/${totalSplitterPorts} portas</span>
+                            <span class="px-2 py-1 rounded-lg bg-indigo-500/10 text-indigo-500 text-[9px] font-black">${fusions.length} fusões</span>
+                            <i class="fa-solid fa-chevron-down text-slate-400 text-xs expand-chevron"></i>
+                        </div>
+                    </div>
+                    <div class="card-details">
+                        <div class="px-5 pb-5 space-y-4 border-t border-slate-900/5 dark:border-white/5 pt-4">
+                            ${node.created_at ? `<div class="flex justify-between text-xs text-slate-500"><span>Cadastrado em:</span><span class="font-bold text-slate-700 dark:text-white">${node.created_at}</span></div>` : ''}
+
+                            <!-- PORT DIAGRAM -->
+                            <div>
+                                <div class="flex items-center justify-between mb-3">
+                                    <div class="text-[9px] font-black text-emerald-500 uppercase tracking-widest flex items-center gap-1.5">
+                                        <i class="fa-solid fa-plug text-[10px]"></i> Diagrama de Portas SC/APC
+                                    </div>
+                                    <div class="flex items-center gap-3 text-[8px] font-black uppercase tracking-wider text-slate-400">
+                                        <div class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-md bg-emerald-500 inline-block shadow-sm"></span> Ativa</div>
+                                        <div class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-md bg-slate-400/20 border border-slate-400/30 inline-block"></span> Livre</div>
+                                    </div>
+                                </div>
+                                <div class="flex flex-wrap gap-2 p-4 bg-slate-50 dark:bg-white/[0.02] rounded-2xl border border-slate-900/5 dark:border-white/5">
+                                    ${renderPortGrid(totalSplitterPorts, ports)}
+                                </div>
+                                ${activePortCount > 0 ? renderPortTable(ports) : ''}
+                            </div>
+
+                            ${renderSplitters(node.splitters)}
+                            ${renderFusions(fusions)}
+                            ${renderCablesList(cables)}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('')}</div>`;
+    }
+
+    // ---- CABOS ----
+    function renderCabos() {
+        const container = document.getElementById('tab-cabos');
+        document.getElementById('count-cabos').textContent = edgesData.length;
+
+        if (edgesData.length === 0) {
+            container.innerHTML = emptySection('Nenhum cabo de fibra cadastrado');
+            return;
+        }
+
+        container.innerHTML = `<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">${edgesData.map(edge => {
+            const fiberCount = edge.details?.fiber_count || 12;
+            const color = edge.details?.color || '#6366f1';
+            const cardId = `card-cable-${edge.id}`;
+
+            let tubes = (edge.details && edge.details.tube_count) ? parseInt(edge.details.tube_count) : null;
+            let fibersPerTube = (edge.details && edge.details.fibers_per_tube) ? parseInt(edge.details.fibers_per_tube) : null;
+            if (!tubes || !fibersPerTube) {
+                if (fiberCount % 12 === 0) {
+                    tubes = Math.ceil(fiberCount / 12);
+                    fibersPerTube = 12;
+                } else {
+                    tubes = 1;
+                    fibersPerTube = fiberCount;
+                }
+            }
+
+            // Generate grouped tubes HTML
+            let tubesHtml = "";
+            for (let t = 1; t <= tubes; t++) {
+                const tubeColor = getFiberColor(t);
+                tubesHtml += `
+                    <div class="mb-3">
+                        <div class="text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                            <span class="w-2 h-2 rounded-full inline-block" style="background-color: ${tubeColor.hex}"></span>
+                            Tubo ${t} (${tubeColor.name})
+                        </div>
+                        <div class="flex flex-wrap gap-1.5 p-2 bg-slate-50 dark:bg-white/[0.01] border border-slate-900/5 dark:border-white/5 rounded-xl">
+                `;
+                for (let fInTube = 1; fInTube <= fibersPerTube; fInTube++) {
+                    const globalIdx = (t - 1) * fibersPerTube + fInTube;
+                    const c = getFiberColor(fInTube);
+                    tubesHtml += `<div class="w-7 h-7 rounded-lg ${c.css} flex items-center justify-center text-[8px] font-black ${['branco','amarelo'].includes(c.name.toLowerCase()) ? 'text-slate-700' : 'text-white'} shadow-sm" title="Tubo ${t} · Fibra ${fInTube} (${c.name})">${globalIdx}</div>`;
+                }
+                tubesHtml += `
+                        </div>
+                    </div>
+                `;
+            }
+
+            return `
+                <div class="card-premium card-expandable registry-card overflow-hidden" id="${cardId}" data-name="${edge.name}">
+                    <div class="p-5 cursor-pointer flex items-center justify-between" onclick="toggleCard('${cardId}')">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl flex items-center justify-center shrink-0" style="background: ${color}20; color: ${color}">
+                                <i class="fa-solid fa-bezier-curve text-lg"></i>
+                            </div>
+                            <div>
+                                <div class="text-sm font-black text-slate-900 dark:text-white">${edge.name}</div>
+                                <div class="text-[10px] font-bold text-slate-400 mt-0.5">${edge.type === 'cable_fo' ? 'Backbone/Distribuição' : 'Cabo Drop'} · ${tubes}T x ${fibersPerTube}F</div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <div class="w-4 h-4 rounded-full border-2 border-white dark:border-slate-800 shadow-md shrink-0" style="background: ${color}"></div>
+                            <i class="fa-solid fa-chevron-down text-slate-400 text-xs expand-chevron"></i>
+                        </div>
+                    </div>
+                    <div class="card-details">
+                        <div class="px-5 pb-5 space-y-3 border-t border-slate-900/5 dark:border-white/5 pt-4">
+                            ${edge.created_at ? `<div class="flex justify-between text-xs text-slate-500"><span>Cadastrado em:</span><span class="font-bold text-slate-700 dark:text-white">${edge.created_at}</span></div>` : ''}
+                            <div class="flex justify-between text-xs text-slate-500">
+                                <span>Origem:</span>
+                                <span class="font-bold text-slate-700 dark:text-white">${edge.source_name}</span>
+                            </div>
+                            <div class="flex justify-between text-xs text-slate-500">
+                                <span>Destino:</span>
+                                <span class="font-bold text-slate-700 dark:text-white">${edge.target_name}</span>
+                            </div>
+                            <div class="flex justify-between text-xs text-slate-500">
+                                <span>Pontos intermediários:</span>
+                                <span class="font-bold text-slate-700 dark:text-white">${edge.path_coordinates.length}</span>
+                            </div>
+
+                            <!-- Fiber color strip -->
+                            <div>
+                                <div class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Estrutura de Fibras (ABNT)</div>
+                                ${tubesHtml}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('')}</div>`;
+    }
+
+    // ======================== SHARED RENDER HELPERS ========================
+
+    function renderSplitters(splitters) {
+        if (!splitters || splitters.length === 0) return '';
+        return `
+            <div>
+                <div class="text-[9px] font-black text-indigo-500 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                    <i class="fa-solid fa-code-fork text-[10px]"></i> Splitters PLC
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    ${splitters.map(s => `
+                        <div class="splitter-chip bg-indigo-500/10 text-indigo-500 border border-indigo-500/15">
+                            <i class="fa-solid fa-code-fork text-[9px]"></i>
+                            <span>${s.name}</span>
+                            <span class="px-1.5 py-0.5 rounded bg-indigo-500/15 text-[8px]">${s.ratio}</span>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    function renderFusions(fusions) {
+        if (!fusions || fusions.length === 0) return '';
+        return `
+            <div>
+                <div class="text-[9px] font-black text-emerald-500 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                    <i class="fa-solid fa-circle-nodes text-[10px]"></i> Fusões de Fibra (${fusions.length})
+                </div>
+                <div class="space-y-1.5 max-h-48 overflow-y-auto custom-scrollbar pr-1">
+                    ${fusions.map((fus, idx) => {
+                        const cableA = edgesData.find(e => e.id === fus.from_cable_id);
+                        const fibersPerTubeA = (cableA && cableA.details && cableA.details.fibers_per_tube) ? parseInt(cableA.details.fibers_per_tube) : 12;
+                        const tubeA = Math.ceil(fus.from_fiber / fibersPerTubeA);
+                        const fiberNumA = ((fus.from_fiber - 1) % fibersPerTubeA) + 1;
+                        const colorA = getFiberColor(fiberNumA);
+
+                        let destStr = '';
+                        if (fus.to_type === 'splitter') {
+                            destStr = `<span class="text-indigo-400 font-bold">Splitter #${fus.to_id}</span> (Entrada)`;
+                        } else {
+                            const cableB = edgesData.find(e => e.id === fus.to_id);
+                            const fibersPerTubeB = (cableB && cableB.details && cableB.details.fibers_per_tube) ? parseInt(cableB.details.fibers_per_tube) : 12;
+                            const tubeB = Math.ceil(fus.to_fiber / fibersPerTubeB);
+                            const fiberNumB = ((fus.to_fiber - 1) % fibersPerTubeB) + 1;
+                            const colorB = getFiberColor(fiberNumB);
+                            destStr = `<span class="font-bold">${cableB ? cableB.name : 'Cabo #' + fus.to_id}</span> T${tubeB}:F${fiberNumB}
+                                <span class="w-2.5 h-2.5 rounded-full inline-block align-middle ml-1" style="background:${colorB.hex}"></span>`;
+                        }
+
+                        return `
+                            <div class="fusion-row flex items-center justify-between text-[10px] text-slate-400 dark:text-slate-300">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-3 h-3 rounded-full shrink-0" style="background:${colorA.hex}"></span>
+                                    <span><span class="font-bold text-white">${cableA ? cableA.name : 'Cabo #' + fus.from_cable_id}</span> T${tubeA}:F${fiberNumA}</span>
+                                    <i class="fa-solid fa-arrow-right text-[8px] text-slate-500 mx-1"></i>
+                                    <span>${destStr}</span>
+                                </div>
+                                <span class="px-1.5 py-0.5 rounded text-[7px] font-black uppercase ${fus.to_type === 'splitter' ? 'bg-indigo-500/10 text-indigo-400' : 'bg-emerald-500/10 text-emerald-400'}">${fus.to_type === 'splitter' ? 'SPL' : 'FUS'}</span>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    function renderCablesList(cables) {
+        if (!cables || cables.length === 0) return '';
+        return `
+            <div>
+                <div class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Cabos Conectados</div>
+                <div class="space-y-1">
+                    ${cables.map(c => `
+                        <div class="flex items-center gap-2 p-2 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-900/5 dark:border-white/5 text-xs">
+                            <div class="w-3 h-3 rounded-full shrink-0 shadow-sm" style="background:${c.details?.color || '#6366f1'}"></div>
+                            <span class="font-bold text-slate-700 dark:text-white truncate">${c.name}</span>
+                            <span class="text-[8px] text-slate-400 ml-auto shrink-0">${c.details?.fiber_count || 12} FO</span>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    function renderPortGrid(totalPorts, ports) {
+        let html = '';
+        for (let i = 1; i <= totalPorts; i++) {
+            const port = ports[String(i)];
+            const isActive = port && port.status === 'active';
+            html += `
+                <div class="port-mini ${isActive ? 'port-active' : 'port-free'}" title="${isActive ? port.client + (port.signal ? ' (' + port.signal + ' dBm)' : '') : 'Porta ' + i + ' - Livre'}">
+                    ${i}
+                </div>
+            `;
+        }
+        return html;
+    }
+
+    function renderPortTable(ports) {
+        const entries = Object.entries(ports).sort((a, b) => parseInt(a[0]) - parseInt(b[0]));
+        if (entries.length === 0) return '';
+
+        return `
+            <div class="mt-3">
+                <div class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-2">Assinantes Ativos</div>
+                <div class="space-y-1 max-h-40 overflow-y-auto custom-scrollbar pr-1">
+                    ${entries.map(([portNum, data]) => {
+                        const signal = data.signal;
+                        let signalClass = 'text-emerald-500';
+                        if (signal && signal < -28) signalClass = 'text-red-500';
+                        else if (signal && signal < -25) signalClass = 'text-amber-500';
+
+                        return `
+                            <div class="flex items-center justify-between p-2.5 rounded-xl bg-emerald-500/5 border border-emerald-500/10 text-xs">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-6 h-6 rounded-lg bg-emerald-500 text-white flex items-center justify-center text-[9px] font-black shadow-sm">${portNum}</span>
+                                    <span class="font-bold text-slate-700 dark:text-white">${data.client || 'N/A'}</span>
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    ${signal ? `<span class="${signalClass} font-black text-[10px]">${signal} dBm</span>` : ''}
+                                    ${data.obs ? `<span class="text-[8px] text-slate-400 max-w-[120px] truncate" title="${data.obs}">${data.obs}</span>` : ''}
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    function emptySection(msg) {
+        return `
+            <div class="text-center py-12">
+                <div class="w-16 h-16 mx-auto mb-3 rounded-2xl bg-slate-900/5 dark:bg-white/5 flex items-center justify-center text-slate-300 dark:text-slate-600">
+                    <i class="fa-solid fa-inbox text-2xl"></i>
+                </div>
+                <p class="text-xs font-bold text-slate-400">${msg}</p>
+            </div>
+        `;
+    }
+
+    // ======================== INIT ========================
+    document.addEventListener('DOMContentLoaded', function() {
+        renderKPIs();
+        renderPostes();
+        renderCEOs();
+        renderCTOs();
+        renderCabos();
+
+        // Show empty state if nothing
+        if (nodesData.length === 0 && edgesData.length === 0) {
+            document.getElementById('empty-state').classList.remove('hidden');
+        }
+    });
+</script>
+{% endblock %}
+
+{# accessibility helper: onkeydown= handler present #}

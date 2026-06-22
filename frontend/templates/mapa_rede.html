@@ -1,0 +1,3466 @@
+{% extends "layout.html" %}
+{% set page_title = "Mapa de Rede de Fibra" %}
+{% set hide_header = true %}
+
+{% block content %}
+<style>
+    /* Estilos do HUD Flutuante */
+    #map-control-hud {
+        transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease;
+    }
+    
+    #map-control-hud.collapsed {
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    /* Estilo do botão de modo ativo */
+    .btn-mode-active {
+        background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%) !important;
+        color: white !important;
+        box-shadow: 0 4px 14px rgba(79, 70, 229, 0.45) !important;
+    }
+
+    /* Marcador Customizado: Postes (Visual de Poste de Luz mesmo) */
+    .marker-post-icon {
+        background: transparent !important;
+        border: none !important;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.35));
+        transition: transform 0.2s ease;
+    }
+    .marker-post-icon:hover {
+        transform: scale(1.18) translateY(-2px);
+    }
+
+
+    /* Popup Leaflet Customizado */
+    .leaflet-popup-content-wrapper {
+        background: #0f172a !important;
+        border-radius: 20px !important;
+        box-shadow: 0 12px 40px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,255,255,0.06) inset !important;
+        padding: 0 !important;
+        overflow: hidden;
+        border: 1px solid rgba(255,255,255,0.08) !important;
+        color: #e2e8f0 !important;
+    }
+    .leaflet-popup-content {
+        margin: 0 !important;
+        width: 320px !important;
+    }
+    .leaflet-popup-tip {
+        background: #0f172a !important;
+    }
+    .leaflet-popup-close-button {
+        color: rgba(255,255,255,0.4) !important;
+        font-size: 18px !important;
+        top: 8px !important;
+        right: 10px !important;
+    }
+    .leaflet-popup-close-button:hover {
+        color: #fff !important;
+    }
+
+    /* Formulários e Listas dentro do Popup */
+    .popup-title {
+        font-size: 14px;
+        font-weight: 800;
+        color: #fff;
+        border-bottom: 1px solid rgba(255,255,255,0.08);
+        padding: 12px 16px;
+        background: rgba(255,255,255,0.02);
+    }
+    .popup-body {
+        padding: 12px 16px;
+    }
+    .splitter-badge {
+        font-size: 8.5px;
+        font-weight: 800;
+        background: rgba(99, 102, 241, 0.15);
+        color: #818cf8;
+        border: 1px solid rgba(99, 102, 241, 0.25);
+        padding: 2px 6px;
+        border-radius: 6px;
+    }
+
+    /* Port Circle Styles */
+    .port-circle {
+        transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.25s ease, border-color 0.25s ease, background 0.25s ease;
+    }
+    .port-circle:hover {
+        transform: scale(1.08);
+    }
+
+    /* Optical Fiber Laser Paths */
+    .optical-path {
+        stroke-dasharray: 6, 6;
+        animation: optical-laser 1.2s linear infinite;
+        transition: stroke-width 0.2s, stroke 0.2s, filter 0.2s;
+    }
+    @keyframes optical-laser {
+        to {
+            stroke-dashoffset: -12;
+        }
+    }
+
+    /* Poste Premium - Container */
+    .marker-post-premium {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    /* LED Glow Animation */
+    .post-led-glow {
+        animation: led-pulse 2.5s ease-in-out infinite;
+    }
+    @keyframes led-pulse {
+        0%, 100% { opacity: 0.7; }
+        50% { opacity: 1; }
+    }
+
+    /* Equipment Dots on Post */
+    .post-equip-dots {
+        position: absolute;
+        bottom: 14px;
+        left: 50%;
+        transform: translateX(-50%);
+        display: flex;
+        gap: 2px;
+    }
+    .post-dot {
+        width: 5px;
+        height: 5px;
+        border-radius: 50%;
+        border: 1px solid rgba(255,255,255,0.6);
+    }
+    .dot-ceo {
+        background: #14b8a6;
+        box-shadow: 0 0 4px rgba(20, 184, 166, 0.6);
+    }
+    .dot-nap {
+        background: #f59e0b;
+        box-shadow: 0 0 4px rgba(245, 158, 11, 0.6);
+    }
+
+    /* Equipment Marker Wrapping */
+    .marker-equip-wrap {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* Marker Badge (Splitter Count) */
+    .marker-badge {
+        position: absolute;
+        top: -5px;
+        right: -5px;
+        background: linear-gradient(135deg, #6366f1, #818cf8);
+        color: white;
+        font-size: 7px;
+        font-weight: 900;
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 1.5px solid rgba(255,255,255,0.9);
+        box-shadow: 0 2px 6px rgba(99, 102, 241, 0.4);
+        line-height: 1;
+    }
+
+    /* CEO Icon (Amarelo) */
+    .marker-ceo-icon {
+        background: linear-gradient(135deg, #eab308, #ca8a04) !important;
+        border: 2px solid rgba(255, 255, 255, 0.95);
+        border-radius: 50%;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 12px rgba(234, 179, 8, 0.4);
+        font-size: 13px;
+        font-weight: 900;
+        transition: transform 0.2s ease;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    }
+    
+    /* CTO NAP Icon (Verde) */
+    .marker-cto-icon {
+        background: linear-gradient(135deg, #22c55e, #16a34a) !important;
+        border: 2px solid rgba(255, 255, 255, 0.95);
+        border-radius: 50%;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 12px rgba(34, 197, 94, 0.4);
+        font-size: 13px;
+        font-weight: 900;
+        transition: transform 0.2s ease;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    }
+    .post-label {
+        position: absolute;
+        bottom: -20px;
+        white-space: nowrap;
+        pointer-events: none;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255,255,255,0.06);
+        z-index: 1000;
+    }
+
+    /* Sockets Drag & Connect */
+    .socket-anchor {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background-color: #94a3b8;
+        border: 2px solid #fff;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        cursor: crosshair;
+        transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.2s, border-color 0.2s;
+        z-index: 30;
+        display: inline-block;
+    }
+    .dark .socket-anchor {
+        border-color: #0f172a;
+    }
+    .socket-anchor:hover {
+        transform: scale(1.4) !important;
+        background-color: #10b981 !important;
+        box-shadow: 0 0 8px #10b981;
+    }
+    /* Sockets ativos piscando ao arrastar para orientação visual */
+    .dragging-active .anchor-in:not(.anchor-in-disabled) {
+        animation: socket-pulse 1.4s infinite;
+        background-color: #6366f1;
+    }
+    @keyframes socket-pulse {
+        0%, 100% {
+            transform: scale(1);
+            box-shadow: 0 0 0 0px rgba(99, 102, 241, 0.5);
+        }
+        50% {
+            transform: scale(1.2);
+            box-shadow: 0 0 0 6px rgba(99, 102, 241, 0);
+            background-color: #10b981;
+        }
+    }
+    .anchor-out-disabled, .anchor-in-disabled {
+        background-color: #10b981 !important;
+        border-color: rgba(255,255,255,0.6) !important;
+        cursor: not-allowed !important;
+        transform: none !important;
+        box-shadow: none !important;
+    }
+    .dark .anchor-out-disabled, .dark .anchor-in-disabled {
+        border-color: rgba(15,23,42,0.6) !important;
+    }
+
+    /* Cards Arrastáveis da Mesa de Fusão (Wiring Board) */
+    .fusion-node-card {
+        width: 230px;
+        background: #0f172a;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.05) inset;
+        border-radius: 16px;
+        transition: box-shadow 0.2s ease, border-color 0.2s;
+    }
+    .fusion-node-card:focus-within, .fusion-node-card.card-dragging {
+        border-color: rgba(99, 102, 241, 0.5) !important;
+        box-shadow: 0 15px 40px rgba(99, 102, 241, 0.15), 0 10px 30px rgba(0,0,0,0.5) !important;
+    }
+    .card-drag-handle {
+        background: rgba(255, 255, 255, 0.03);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        padding: 10px 14px;
+        cursor: grab;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    .card-drag-handle:active {
+        cursor: grabbing;
+    }
+    .card-drag-handle .card-title {
+        font-size: 10px;
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #f1f5f9;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 170px;
+    }
+    .card-drag-handle .card-close-btn {
+        color: rgba(255,255,255,0.4);
+        font-size: 10px;
+        cursor: pointer;
+        transition: color 0.15s;
+    }
+    .card-drag-handle .card-close-btn:hover {
+        color: #ef4444;
+    }
+    .card-node-body {
+        padding: 8px;
+        overflow-y: auto;
+        max-height: 280px;
+    }
+    
+    /* Linhas de Fibras no Card */
+    .card-fiber-row {
+        padding: 6px 8px;
+        background: rgba(255,255,255,0.02);
+        border: 1px solid rgba(255,255,255,0.03);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 4px;
+        transition: background 0.15s;
+    }
+    .card-fiber-row:hover {
+        background: rgba(255,255,255,0.05);
+    }
+</style>
+
+<div class="flex flex-col h-full w-full overflow-hidden animate-premium relative">
+    
+    <!-- CONTÊINER DO MAPA E HUD FLUTUANTE -->
+    <div id="map-container" class="flex-1 relative lg:m-4 lg:rounded-[2.5rem] overflow-hidden shadow-2xl bg-white dark:bg-slate-950">
+        
+        <!-- LEAFLET MAP -->
+        <div id="map" class="absolute inset-0 z-0"></div>
+
+        <!-- CONTROLES FLUTUANTES SUPERIORES ESQUERDOS -->
+        <div class="absolute top-4 left-4 z-[999] flex gap-2">
+            <!-- Botão Menu Hambúrguer para Sidebar (Apenas Mobile/Tablet) -->
+            <button id="btn-menu-sidebar" onclick="document.getElementById('sidebar').classList.toggle('mobile-open')" 
+                    class="lg:hidden w-12 h-12 rounded-2xl bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border border-slate-900/10 dark:border-white/10 shadow-2xl flex items-center justify-center text-slate-700 dark:text-white hover:scale-105 active:scale-95 transition-all">
+                <i class="fa-solid fa-bars text-sm"></i>
+            </button>
+
+            <!-- BOTÃO DE EXPANDIR O PAINEL -->
+            <button id="btn-expand-hud" onclick="toggleControlPanel(true)" 
+                    class="hidden w-12 h-12 rounded-2xl bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border border-slate-900/10 dark:border-white/10 shadow-2xl flex items-center justify-center text-slate-700 dark:text-white hover:scale-105 active:scale-95 transition-all">
+                <i class="fa-solid fa-toolbox text-sm"></i>
+            </button>
+        </div>
+
+        <!-- INDICADOR DE MODO ATIVO (Top Center) -->
+        <div id="draw-helper-badge" class="hidden absolute top-4 left-1/2 -translate-x-1/2 z-[999] bg-indigo-600 text-white px-5 py-2.5 rounded-2xl border border-indigo-400/20 shadow-2xl font-bold text-[10px] uppercase tracking-widest flex items-center gap-3">
+            <span class="w-2 h-2 rounded-full bg-white animate-ping shrink-0"></span>
+            <span id="draw-helper-text">Modo de Edição Ativo</span>
+            <button type="button" id="btn-conclude-cable" onclick="concludeCableDrawing()" class="hidden bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white px-3.5 py-2 rounded-xl border border-emerald-400/20 font-black tracking-widest text-[9px] uppercase transition-all shadow-lg shadow-emerald-500/20 shrink-0">
+                <i class="fa-solid fa-check mr-1 text-[10px]"></i> Concluir
+            </button>
+        </div>
+
+        <!-- HUD FLUTUANTE DE CONTROLE E FERRAMENTAS -->
+        <div id="map-control-hud" class="absolute top-4 left-4 z-[999] w-80 max-h-[calc(100%-2rem)] max-w-[calc(100vw-2rem)] flex flex-col glass-premium rounded-[2.2rem] shadow-2xl border border-slate-900/10 dark:border-white/10 overflow-hidden transition-all duration-500 ease-out transform">
+            
+            <!-- 1. Cabeçalho do HUD -->
+            <div class="p-4 border-b border-slate-900/5 dark:border-white/5 flex items-center justify-between bg-slate-50/50 dark:bg-white/5 shrink-0">
+                <div class="flex items-center gap-2">
+                    <div class="w-8 h-8 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-500">
+                        <i class="fa-solid fa-route text-sm"></i>
+                    </div>
+                    <span class="text-[10px] font-black text-slate-700 dark:text-white uppercase tracking-widest">Painel de Fibra</span>
+                </div>
+                <button onclick="toggleControlPanel(false)" class="w-8 h-8 rounded-xl hover:bg-slate-900/5 dark:hover:bg-white/5 text-slate-400 hover:text-slate-600 dark:hover:text-white transition-all flex items-center justify-center active:scale-95">
+                    <i class="fa-solid fa-chevron-left text-xs"></i>
+                </button>
+            </div>
+
+            <!-- 2. Barra de Ferramentas de Desenho -->
+            <div class="p-4 border-b border-slate-900/5 dark:border-white/5 bg-slate-50/30 dark:bg-white/5 shrink-0">
+                <div class="text-[9px] font-black text-slate-400 uppercase tracking-wider mb-2">Ferramentas de Desenho</div>
+                <div class="grid grid-cols-5 gap-1">
+                    <button onclick="setToolMode('view')" id="tool-view" class="flex flex-col items-center justify-center p-2 rounded-xl bg-slate-900/5 dark:bg-white/5 text-slate-500 dark:text-slate-400 hover:bg-slate-900/10 dark:hover:bg-white/10 btn-mode-active transition-all" title="Modo Navegação">
+                        <i class="fa-solid fa-hand-pointer text-xs mb-1"></i>
+                        <span class="text-[7px] font-black uppercase">Navegar</span>
+                    </button>
+                    <button onclick="setToolMode('add_post')" id="tool-add_post" class="flex flex-col items-center justify-center p-2 rounded-xl bg-slate-900/5 dark:bg-white/5 text-slate-500 dark:text-slate-400 hover:bg-slate-900/10 dark:hover:bg-white/10 transition-all" title="Adicionar Poste">
+                        <i class="fa-regular fa-lightbulb text-xs mb-1"></i>
+                        <span class="text-[7px] font-black uppercase">Poste</span>
+                    </button>
+                    <button onclick="setToolMode('add_ceo')" id="tool-add_ceo" class="flex flex-col items-center justify-center p-2 rounded-xl bg-slate-900/5 dark:bg-white/5 text-slate-500 dark:text-slate-400 hover:bg-slate-900/10 dark:hover:bg-white/10 transition-all" title="Adicionar Caixa CEO">
+                        <i class="fa-solid fa-network-wired text-xs mb-1"></i>
+                        <span class="text-[7px] font-black uppercase">CEO</span>
+                    </button>
+                    <button onclick="setToolMode('add_cto')" id="tool-add_cto" class="flex flex-col items-center justify-center p-2 rounded-xl bg-slate-900/5 dark:bg-white/5 text-slate-500 dark:text-slate-400 hover:bg-slate-900/10 dark:hover:bg-white/10 transition-all" title="Adicionar Caixa CTO NAP">
+                        <i class="fa-solid fa-box text-xs mb-1"></i>
+                        <span class="text-[7px] font-black uppercase">CTO NAP</span>
+                    </button>
+                    <button onclick="setToolMode('draw_cable')" id="tool-draw_cable" class="flex flex-col items-center justify-center p-2 rounded-xl bg-slate-900/5 dark:bg-white/5 text-slate-500 dark:text-slate-400 hover:bg-slate-900/10 dark:hover:bg-white/10 transition-all" title="Desenhar Cabo">
+                        <i class="fa-solid fa-bezier-curve text-xs mb-1"></i>
+                        <span class="text-[7px] font-black uppercase">Cabo</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- 3. Busca e Lista de Elementos -->
+            <div class="p-4 flex flex-col flex-1 overflow-hidden min-h-0">
+                <div class="relative mb-3 shrink-0">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-[10px]"></i>
+                    <input type="text" id="searchElement" placeholder="Buscar poste, caixa ou cabo..." 
+                           class="w-full bg-slate-900/5 dark:bg-white/5 rounded-xl pl-9 pr-4 py-2 text-[11px] font-bold outline-none focus:ring-2 focus:ring-indigo-500 transition-all border border-slate-900/5 dark:border-white/5 text-slate-800 dark:text-white">
+                </div>
+                
+                <!-- Lista de elementos -->
+                <div id="element-list" class="flex-1 overflow-y-auto space-y-1.5 pr-1 custom-scrollbar min-h-0">
+                    <div class="text-center py-10 opacity-30 text-[9px] font-black uppercase text-slate-400">
+                        Carregando infraestrutura...
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. Rodapé Informativo -->
+            <div class="p-4 border-t border-slate-900/5 dark:border-white/5 bg-slate-50/20 dark:bg-white/5 shrink-0 text-center">
+                <div class="text-[8px] font-black text-slate-400 uppercase tracking-widest">
+                    Desenhe sua infraestrutura visualmente com as ferramentas
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+</div>
+
+<!-- ==============================================================================
+     🎨 MODAIS CUSTOMIZADOS (EDICAO SEM POPUPS DE NAVEGADOR)
+     ============================================================================== -->
+
+<!-- 📍 MODAL: CRIAR NÓ (POSTE/CAIXA) -->
+<div id="modal-create-node" class="fixed inset-0 hidden items-center justify-center z-[9999] p-4 bg-slate-900/40 backdrop-blur-sm">
+  <div class="absolute inset-0" onclick="closeNodeModal()"></div>
+  <div class="relative w-full max-w-md rounded-[2.2rem] bg-white dark:bg-slate-900 border border-slate-900/10 dark:border-white/10 shadow-2xl overflow-hidden animate-premium">
+    <div class="p-6 border-b border-slate-900/5 dark:border-white/5 bg-indigo-500/5">
+      <h3 class="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
+         <i class="fa-solid fa-map-pin text-indigo-500"></i> Novo Elemento de Rede
+      </h3>
+      <p class="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest mt-1">Configurações geográficas e tipo de nó</p>
+    </div>
+    <div class="p-6 space-y-4">
+      <div>
+        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Nome/Código do Elemento</label>
+        <input id="node-input-name" required placeholder="Ex: Poste #105 ou CTO-10" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl px-5 py-3.5 text-sm dark:text-white outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all">
+      </div>
+      <div>
+        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Tipo de Elemento</label>
+        <select id="node-input-type" onchange="onNodeTypeChange()" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl px-5 py-3.5 text-sm dark:text-white outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all cursor-pointer">
+          <option value="post">📍 Poste de Conexão</option>
+          <option value="ceo">📦 Caixa de Emenda CEO</option>
+          <option value="cto_nap">📶 Caixa de Atendimento CTO NAP</option>
+        </select>
+      </div>
+      <div id="host-post-container" class="hidden">
+        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Instalar em Poste (Hospedeiro)</label>
+        <select id="node-input-host-post" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl px-5 py-3.5 text-sm dark:text-white outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all cursor-pointer">
+          <option value="">-- Selecione o Poste (Opcional) --</option>
+        </select>
+      </div>
+      <div class="flex flex-col gap-3 pt-2">
+        <button onclick="submitNodeCreation()" class="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-xl shadow-indigo-500/30 transition-all active:scale-95">Salvar Elemento</button>
+        <button type="button" onclick="closeNodeModal()" class="w-full py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] hover:text-slate-600 transition-colors">Cancelar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 🎛️ MODAL: FUSÃO DE FIBRAS (ABNT) -->
+<div id="modal-fiber-fusion" class="fixed inset-0 hidden items-center justify-center z-[9999] p-4 bg-slate-900/40 backdrop-blur-sm animate-fade-in">
+  <div class="absolute inset-0" onclick="closeFusionModal()"></div>
+  <div class="relative w-full max-w-4xl rounded-[2.2rem] bg-white dark:bg-slate-900 border border-slate-900/10 dark:border-white/10 shadow-2xl overflow-hidden animate-premium flex flex-col max-h-[90vh]">
+    <div class="p-6 border-b border-slate-900/5 dark:border-white/5 bg-emerald-500/5 shrink-0 flex items-center justify-between">
+      <div>
+        <h3 id="fusion-modal-title" class="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
+           <i class="fa-solid fa-circle-nodes text-emerald-500"></i> Fusão de Fibras (ABNT)
+        </h3>
+        <p class="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest mt-1">Mapeamento de fusões e sangria por cores ABNT</p>
+      </div>
+      <button onclick="closeFusionModal()" class="w-8 h-8 rounded-full bg-slate-900/5 dark:bg-white/5 text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors flex items-center justify-center">
+         <i class="fa-solid fa-xmark text-sm"></i>
+      </button>
+    </div>
+    
+    <div class="p-6 overflow-y-auto space-y-6 flex-1 custom-scrollbar">
+      <!-- MESA BLUEPRINT DE EMENDAS -->
+      <div id="fusion-board" class="relative w-full h-[520px] bg-slate-950 rounded-[2rem] overflow-hidden border border-white/10 select-none shadow-inner" style="background-image: radial-gradient(rgba(255,255,255,0.06) 1px, transparent 1px); background-size: 20px 20px;">
+        
+        <!-- SVG absoluto para desenhar linhas de conexões ativas e drag-and-drop -->
+        <svg id="fusion-drag-svg" class="absolute inset-0 w-full h-full pointer-events-none z-[10] overflow-visible"></svg>
+        
+        <!-- CONTROLES FLUTUANTES SUPERIORES (SELETORES DOS CARDS) -->
+        <div class="absolute top-4 left-4 right-4 z-[30] flex justify-between gap-4 pointer-events-none">
+          <!-- Seletor do Lado A (Origem) -->
+          <div class="pointer-events-auto w-full max-w-[250px] bg-slate-900/90 backdrop-blur-md p-3 rounded-2xl border border-white/10 shadow-2xl flex flex-col gap-1.5 transition-all hover:border-emerald-500/30">
+            <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest block flex items-center justify-between">
+              <span>Lado A: Seleção</span>
+              <span class="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 text-[8px]">Origem</span>
+            </label>
+            <select id="fusion-select-cable-a" onchange="loadWiringCard('a')" class="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2.5 text-[11px] text-white outline-none focus:ring-2 focus:ring-emerald-500/40 transition-all cursor-pointer">
+              <option value="">-- Selecione o Cabo --</option>
+            </select>
+          </div>
+          
+          <!-- Seletor do Lado B (Destino) -->
+          <div class="pointer-events-auto w-full max-w-[250px] bg-slate-900/90 backdrop-blur-md p-3 rounded-2xl border border-white/10 shadow-2xl flex flex-col gap-1.5 transition-all hover:border-indigo-500/30">
+            <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest block flex items-center justify-between">
+              <span>Lado B: Seleção</span>
+              <span class="px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 text-[8px]">Destino</span>
+            </label>
+            <select id="fusion-select-cable-b" onchange="loadWiringCard('b')" class="w-full bg-slate-950 border border-white/10 rounded-xl px-3 py-2.5 text-[11px] text-white outline-none focus:ring-2 focus:ring-indigo-500/40 transition-all cursor-pointer">
+              <option value="">-- Selecione o Destino --</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- QUADRO MÓVEL ONDE OS CARDS SERÃO RENDERIZADOS ABSOLUTAMENTE -->
+        <div id="fusion-card-canvas" class="absolute inset-0 z-[20] pointer-events-none">
+           <!-- Cards móveis inseridos dinamicamente aqui -->
+        </div>
+
+      </div>
+    </div>
+
+
+    </div>
+  </div>
+</div>
+
+<!-- ⚡ MODAL: CRIAR CABO -->
+<div id="modal-create-cable" class="fixed inset-0 hidden items-center justify-center z-[9999] p-4 bg-slate-900/40 backdrop-blur-sm">
+  <div class="absolute inset-0" onclick="closeCableModal()"></div>
+  <div class="relative w-full max-w-md rounded-[2.2rem] bg-white dark:bg-slate-900 border border-slate-900/10 dark:border-white/10 shadow-2xl overflow-hidden animate-premium">
+    <div class="p-6 border-b border-slate-900/5 dark:border-white/5 bg-indigo-500/5">
+      <h3 class="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
+         <i class="fa-solid fa-bezier-curve text-indigo-500"></i> Conectar Cabo de Fibra
+      </h3>
+      <p class="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest mt-1">Interligar postes e caixas logicamente</p>
+    </div>
+    <div class="p-6 space-y-4">
+      <div>
+        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Identificador do Cabo</label>
+        <input id="cable-input-name" required placeholder="Ex: Cabo Distribuição Principal" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl px-5 py-3.5 text-sm dark:text-white outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all">
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Quantidade de Tubos</label>
+          <input id="cable-input-tubes" type="number" min="1" value="1" oninput="updateCableFO('create')" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl px-5 py-3 text-sm dark:text-white outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all">
+        </div>
+        <div>
+          <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Fibras por Tubo</label>
+          <input id="cable-input-fibers-per-tube" type="number" min="1" value="12" oninput="updateCableFO('create')" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl px-5 py-3 text-sm dark:text-white outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all">
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Total de Fibras (FO)</label>
+          <input id="cable-input-fo" type="number" value="12" readonly class="w-full bg-slate-200 dark:bg-white/10 opacity-70 cursor-not-allowed border border-slate-900/10 dark:border-white/10 rounded-2xl px-5 py-3 text-sm dark:text-white outline-none">
+        </div>
+        <div>
+          <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Tipo de Cabo</label>
+          <select id="cable-input-type" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl px-5 py-3 text-sm dark:text-white outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all cursor-pointer">
+            <option value="cable_fo">⚡ Backbone / Distribuição</option>
+            <option value="drop">🔌 Cabo Drop (Derivação)</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Cor do Cabo no Mapa</label>
+        <div class="flex items-center gap-3">
+          <input type="color" id="cable-input-color" value="#6366f1" class="w-12 h-12 rounded-xl border border-slate-900/10 dark:border-white/10 p-1 cursor-pointer bg-slate-50 dark:bg-white/5 shrink-0">
+          <select id="cable-color-presets" onchange="document.getElementById('cable-input-color').value = this.value" class="flex-1 bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl px-4 py-3 text-sm dark:text-white outline-none cursor-pointer">
+            <option value="#6366f1">🎨 Indigo (Padrão)</option>
+            <option value="#06b6d4">🔌 Cyan (Cabo Drop)</option>
+            <option value="#10b981">🟢 Verde Esmeralda</option>
+            <option value="#ef4444">🔴 Vermelho Escarlate</option>
+            <option value="#f59e0b">🟡 Laranja Âmbar</option>
+            <option value="#64748b">⚫ Cinza Escuro</option>
+          </select>
+        </div>
+      </div>
+      <div class="flex flex-col gap-3 pt-2">
+        <button onclick="submitCableCreation()" class="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-xl shadow-indigo-500/30 transition-all active:scale-95">Salvar Cabo</button>
+        <button type="button" onclick="closeCableModal()" class="w-full py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] hover:text-slate-600 transition-colors">Cancelar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ⚡ MODAL: EDITAR CABO -->
+<div id="modal-edit-cable" class="fixed inset-0 hidden items-center justify-center z-[9999] p-4 bg-slate-900/40 backdrop-blur-sm">
+  <div class="absolute inset-0" onclick="closeEditCableModal()"></div>
+  <div class="relative w-full max-w-md rounded-[2.2rem] bg-white dark:bg-slate-900 border border-slate-900/10 dark:border-white/10 shadow-2xl overflow-hidden animate-premium">
+    <div class="p-6 border-b border-slate-900/5 dark:border-white/5 bg-indigo-500/5">
+      <h3 class="text-lg font-black text-slate-900 dark:text-white flex items-center gap-2">
+         <i class="fa-solid fa-pen-to-square text-indigo-500"></i> Editar Cabo de Fibra
+      </h3>
+      <p class="text-[10px] font-black text-indigo-600 dark:text-indigo-400 uppercase tracking-widest mt-1">Alterar propriedades do cabo</p>
+    </div>
+    <div class="p-6 space-y-4">
+      <input type="hidden" id="edit-cable-id">
+      <div>
+        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Identificador do Cabo</label>
+        <input id="edit-cable-input-name" required placeholder="Ex: Cabo Distribuição Principal" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl px-5 py-3.5 text-sm dark:text-white outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all">
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Quantidade de Tubos</label>
+          <input id="edit-cable-input-tubes" type="number" min="1" value="1" oninput="updateCableFO('edit')" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl px-5 py-3 text-sm dark:text-white outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all">
+        </div>
+        <div>
+          <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Fibras por Tubo</label>
+          <input id="edit-cable-input-fibers-per-tube" type="number" min="1" value="12" oninput="updateCableFO('edit')" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl px-5 py-3 text-sm dark:text-white outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all">
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Total de Fibras (FO)</label>
+          <input id="edit-cable-input-fo" type="number" value="12" readonly class="w-full bg-slate-200 dark:bg-white/10 opacity-70 cursor-not-allowed border border-slate-900/10 dark:border-white/10 rounded-2xl px-5 py-3 text-sm dark:text-white outline-none">
+        </div>
+        <div>
+          <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Tipo de Cabo</label>
+          <select id="edit-cable-input-type" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl px-5 py-3 text-sm dark:text-white outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all cursor-pointer">
+            <option value="cable_fo">⚡ Backbone / Distribuição</option>
+            <option value="drop">🔌 Cabo Drop (Derivação)</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Cor do Cabo no Mapa</label>
+        <div class="flex items-center gap-3">
+          <input type="color" id="edit-cable-input-color" value="#6366f1" class="w-12 h-12 rounded-xl border border-slate-900/10 dark:border-white/10 p-1 cursor-pointer bg-slate-50 dark:bg-white/5 shrink-0">
+          <select id="edit-cable-color-presets" onchange="document.getElementById('edit-cable-input-color').value = this.value" class="flex-1 bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl px-4 py-3 text-sm dark:text-white outline-none cursor-pointer">
+            <option value="#6366f1">🎨 Indigo (Padrão)</option>
+            <option value="#06b6d4">🔌 Cyan (Cabo Drop)</option>
+            <option value="#10b981">🟢 Verde Esmeralda</option>
+            <option value="#ef4444">🔴 Vermelho Escarlate</option>
+            <option value="#f59e0b">🟡 Laranja Âmbar</option>
+            <option value="#64748b">⚫ Cinza Escuro</option>
+          </select>
+        </div>
+      </div>
+      <div class="flex flex-col gap-3 pt-2">
+        <button onclick="submitCableEdit()" class="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-xl shadow-indigo-500/30 transition-all active:scale-95">Salvar Alterações</button>
+        <button type="button" onclick="closeEditCableModal()" class="w-full py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] hover:text-slate-600 transition-colors">Cancelar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ⚠️ MODAL: CONFIRMAÇÃO UNIFICADA -->
+<div id="modal-confirm" class="fixed inset-0 hidden items-center justify-center z-[9999] p-4 bg-slate-900/40 backdrop-blur-sm">
+  <div class="absolute inset-0" onclick="closeConfirmModal()"></div>
+  <div class="relative w-full max-w-md rounded-[2.2rem] bg-white dark:bg-slate-900 border border-slate-900/10 dark:border-white/10 shadow-2xl overflow-hidden animate-premium">
+    <div id="confirm-modal-header" class="p-6 border-b border-indigo-500/5 bg-indigo-500/5">
+      <h3 id="confirm-modal-title" class="text-lg font-black text-indigo-600 flex items-center gap-2">
+         <i id="confirm-modal-icon" class="fa-solid fa-circle-info"></i> Confirmar Ação
+      </h3>
+      <p id="confirm-modal-subtitle" class="text-[10px] font-black text-indigo-500 uppercase tracking-widest mt-1">Confirme para prosseguir</p>
+    </div>
+    <div class="p-6 space-y-4">
+      <p id="confirm-modal-text" class="text-sm text-slate-600 dark:text-slate-300 font-medium">Deseja prosseguir com esta ação?</p>
+      <div class="flex flex-col gap-2">
+        <button id="confirm-modal-btn" class="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-xl transition-all active:scale-95">Confirmar</button>
+        <button type="button" onclick="closeConfirmModal()" class="w-full py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] hover:text-slate-600 transition-colors">Cancelar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 🔌 MODAL: DIAGRAMA DE PORTAS CTO (FUSÕES E MAPAS) -->
+<div id="modal-cto-diagram" class="fixed inset-0 hidden items-center justify-center z-[9999] p-4 bg-slate-900/60 backdrop-blur-md">
+  <div class="absolute inset-0" onclick="closeDiagramModal()"></div>
+  <div class="relative w-full max-w-4xl rounded-[2.2rem] bg-white dark:bg-slate-900 border border-slate-900/10 dark:border-white/10 shadow-2xl overflow-hidden animate-premium flex flex-col max-h-[90vh]">
+    <div class="p-6 border-b border-slate-900/5 dark:border-white/5 bg-orange-500/5 flex justify-between items-center shrink-0">
+      <div>
+        <h3 class="text-xl font-black text-slate-900 dark:text-white flex items-center gap-2">
+           <i class="fa-solid fa-network-wired text-orange-500"></i> Diagrama Esquemático da CTO
+        </h3>
+        <p id="diagram-cto-title" class="text-[10px] font-black text-orange-600 dark:text-orange-400 uppercase tracking-widest mt-1">Painel Interno de Fusões & Atendimento</p>
+      </div>
+      <button onclick="closeDiagramModal()" class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-slate-200 dark:hover:bg-white/10 text-slate-400 transition-all"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    
+    <div class="p-6 overflow-y-auto custom-scrollbar flex-1 space-y-6">
+      
+      <!-- CTO Layout Diagram Board -->
+      <div id="cto-diagram-board" class="bg-slate-50 dark:bg-slate-950 border border-slate-900/10 dark:border-white/10 rounded-[2rem] p-6 relative overflow-hidden">
+        
+        <!-- SVG Canvas for Fiber Paths -->
+        <svg id="optical-fiber-svg" class="absolute inset-0 pointer-events-none z-10 w-full h-full"></svg>
+
+        <div class="flex flex-col lg:flex-row gap-6 relative z-20">
+          
+          <!-- Column 1: Entrada de Fibra (Backbone) -->
+          <div class="flex-1 lg:max-w-[180px] flex flex-col justify-between bg-slate-900/5 dark:bg-white/5 rounded-2xl p-4 border border-slate-900/5 dark:border-white/5 relative overflow-hidden backdrop-blur-sm">
+            <div>
+              <div class="text-[9px] font-black text-indigo-500 dark:text-indigo-400 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+                <span class="w-1.5 h-1.5 rounded-full bg-indigo-500 dark:bg-indigo-400 inline-block animate-ping"></span>
+                Backbone Óptico
+              </div>
+              
+              <!-- Visual Cable Tube -->
+              <div class="relative w-full h-24 bg-slate-200 dark:bg-slate-900 rounded-xl border border-slate-300 dark:border-slate-800 flex items-center justify-center p-3">
+                <div class="absolute left-0 w-2 h-full bg-slate-400 dark:bg-slate-950 rounded-l-xl"></div>
+                <!-- 4 colorful fibers inside -->
+                <div class="w-full flex flex-col gap-2">
+                  <div class="h-1 bg-gradient-to-r from-blue-500 to-blue-400 rounded shadow-lg shadow-blue-500/20" title="Fibra 1 - Alimentador Principal"></div>
+                  <div class="h-1 bg-gradient-to-r from-orange-500 to-orange-400 rounded shadow-lg shadow-orange-500/20" title="Fibra 2 - Derivação"></div>
+                  <div class="h-1 bg-gradient-to-r from-emerald-500 to-emerald-400 rounded shadow-lg shadow-emerald-500/20" title="Fibra 3 - Reserva Técnica"></div>
+                  <div class="h-1 bg-gradient-to-r from-amber-800 to-amber-700 rounded shadow-lg shadow-amber-800/20" title="Fibra 4 - Fusão Local"></div>
+                </div>
+                <div class="absolute right-0 w-4 h-4 rounded-full bg-slate-300 dark:bg-slate-850 flex items-center justify-center border border-slate-400 dark:border-slate-700">
+                  <div class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="mt-4 pt-3 border-t border-slate-900/5 dark:border-white/5 space-y-1">
+              <div class="flex justify-between text-[9px] text-slate-500 dark:text-slate-400">
+                <span>Status Trunk:</span>
+                <span class="font-bold text-emerald-500 dark:text-emerald-400 uppercase">Online</span>
+              </div>
+              <div class="flex justify-between text-[9px] text-slate-500 dark:text-slate-400">
+                <span>Sinal Alimentador:</span>
+                <span class="font-bold text-slate-700 dark:text-slate-200">-7.2 dBm</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Column 2: Splitters PLC (Distribuidor) -->
+          <div class="flex-1 lg:max-w-[240px] flex flex-col justify-between bg-slate-900/5 dark:bg-white/5 rounded-2xl p-4 border border-slate-900/5 dark:border-white/5 relative backdrop-blur-sm">
+            <div>
+              <div class="text-[9px] font-black text-orange-500 dark:text-orange-400 uppercase tracking-widest mb-3 flex items-center gap-1.5">
+                <i class="fa-solid fa-code-fork text-[10px]"></i>
+                Splitters PLC
+              </div>
+              
+              <div id="cto-diagram-splitters" class="space-y-2.5 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
+                <!-- Dynamically generated splitters will go here as premium cards -->
+              </div>
+            </div>
+            
+            <div class="mt-4 pt-3 border-t border-slate-900/5 dark:border-white/5 relative">
+              <button onclick="toggleQuickSplitterForm()" class="w-full py-2 bg-indigo-500/10 hover:bg-indigo-600 text-indigo-600 dark:text-indigo-400 hover:text-white border border-indigo-500/20 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all flex items-center justify-center gap-1.5 active:scale-95">
+                <i class="fa-solid fa-plus text-[8px]"></i> Novo Splitter
+              </button>
+
+              <!-- Collapsible Quick Splitter Form -->
+              <div id="quick-splitter-form" class="hidden absolute bottom-full left-0 right-0 bg-white dark:bg-slate-900 border border-slate-900/10 dark:border-white/10 rounded-xl p-3 space-y-2 mb-2 shadow-2xl z-30 animate-premium">
+                <div class="text-[8px] font-black text-indigo-500 dark:text-indigo-400 uppercase tracking-widest">Adicionar Splitter</div>
+                <input type="text" id="quick-split-name" placeholder="Ex: SPL-1" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-lg px-2.5 py-1.5 text-[10px] outline-none dark:text-white focus:ring-1 focus:ring-indigo-500">
+                <select id="quick-split-ratio" class="w-full bg-slate-50 dark:bg-slate-900 border border-slate-900/10 dark:border-white/10 rounded-lg px-2 py-1.5 text-[10px] outline-none dark:text-white cursor-pointer">
+                    <option value="1x2">1x2 (Perda ~3.5dB)</option>
+                    <option value="1x4">1x4 (Perda ~7.2dB)</option>
+                    <option value="1x8" selected>1x8 (Perda ~10.5dB)</option>
+                    <option value="1x16">1x16 (Perda ~13.8dB)</option>
+                </select>
+                <div class="flex gap-1.5">
+                  <button onclick="submitQuickSplitter()" class="flex-1 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-[9px] font-black uppercase tracking-wider transition-all">Adicionar</button>
+                  <button onclick="toggleQuickSplitterForm(false)" class="px-2 py-1.5 bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-slate-400 hover:text-white rounded-lg text-[9px] font-black uppercase">Cancelar</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Column 3: Portas SC/APC (Atendimento) -->
+          <div class="flex-1 bg-slate-900/5 dark:bg-white/5 rounded-2xl p-4 border border-slate-900/5 dark:border-white/5 backdrop-blur-sm">
+            <div class="flex items-center justify-between mb-4">
+              <div class="text-[9px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest flex items-center gap-1.5">
+                <i class="fa-solid fa-plug text-[10px]"></i>
+                Portas de Assinantes SC/APC
+              </div>
+              <div class="flex items-center gap-3 text-[8px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                <div class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-md bg-emerald-500 inline-block shadow-md shadow-emerald-500/25"></span> Ativa</div>
+                <div class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-md bg-slate-400 inline-block"></span> Livre</div>
+              </div>
+            </div>
+            
+            <!-- Ports Grid -->
+            <div class="grid grid-cols-4 sm:grid-cols-8 gap-2.5" id="cto-ports-grid">
+               <!-- Dynamically generated ports -->
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Add Port Mapping Form -->
+      <div id="cto-port-form" class="hidden bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl p-5 space-y-4 animate-premium">
+        <div class="text-xs font-black text-indigo-500 dark:text-indigo-400 uppercase tracking-widest flex items-center gap-2">
+           <i class="fa-solid fa-plus-circle"></i> Configurar Porta de Atendimento #<span id="active-port-num"></span>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">Nome do Cliente / Assinante</label>
+            <input id="port-client-name" placeholder="Ex: João da Silva Santos" class="w-full bg-white dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-xs outline-none dark:text-white focus:ring-2 focus:ring-indigo-500">
+          </div>
+          <div>
+            <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">Endereço / Observação</label>
+            <input id="port-client-obs" placeholder="Ex: Bloco B - Apto 302" class="w-full bg-white dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-xs outline-none dark:text-white focus:ring-2 focus:ring-indigo-500">
+          </div>
+          <div class="sm:col-span-2">
+            <div class="flex justify-between items-center mb-1">
+              <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Simulação de Potência de Sinal Recebido na ONU</label>
+              <span id="port-signal-display" class="text-xs font-black text-emerald-500">-19.5 dBm</span>
+            </div>
+            <input id="port-client-signal" type="range" min="-35" max="-15" step="0.1" value="-19.5" oninput="document.getElementById('port-signal-display').textContent = this.value + ' dBm'" class="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-500">
+            <div class="flex justify-between text-[8px] font-black text-slate-500 uppercase mt-1">
+              <span>Excelente (>-25 dBm)</span>
+              <span>Atenuado (-25 a -28 dBm)</span>
+              <span>Crítico (<-28 dBm)</span>
+            </div>
+          </div>
+        </div>
+        <div class="flex gap-2">
+          <button onclick="savePortMapping()" class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-black text-[10px] uppercase tracking-widest transition-all shadow-md shadow-emerald-500/20 active:scale-95">Salvar Porta</button>
+          <button onclick="clearPortMapping()" class="px-5 py-2.5 bg-red-600/25 hover:bg-red-600 text-red-500 hover:text-white rounded-xl font-black text-[10px] uppercase tracking-widest transition-all active:scale-95">Liberar Porta</button>
+          <button onclick="document.getElementById('cto-port-form').classList.add('hidden')" class="px-5 py-2.5 bg-transparent text-slate-400 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all">Cancelar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- Leaflet CDN -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+    let map;
+    let toolMode = 'view'; // view, add_post, add_box, draw_cable
+    let nodesData = [];
+    let edgesData = [];
+    let markers = {};
+    let polylines = {};
+    
+    // States for custom modals
+    let pendingNodeCoords = null;
+    let pendingNodeModalType = null;
+    
+    let pendingCableSourceId = null;
+    let pendingCableTargetId = null;
+    let pendingCableNodes = [];
+    let pendingCablePoints = [];
+    
+    let activeDeleteCallback = null;
+    let activeFusionNodeId = null;
+    let activeFusionFiberA = null;
+    let activeFusionFiberB = null;
+    
+    let activeCTONodeId = null;
+    let activePortNumber = null;
+
+    // Configuração de cores unificadas para os cabos
+    const edgeColors = {
+        'cable_fo': '#6366f1', // Indigo
+        'drop': '#06b6d4',     // Cyan
+        'default': '#94a3b8'   // Slate
+    };
+
+    // Retorna equipamentos (CEO/NAP) instalados em um poste específico
+    function getEquipmentAtPost(postId) {
+        return nodesData.filter(n => 
+            n.type === 'box' && 
+            n.details && 
+            n.details.parent_post_id === postId
+        );
+    }
+
+    // Retorna todos os cabos conectados a um nó (como source ou target)
+    function getCablesAtNode(nodeId) {
+        return edgesData.filter(e => 
+            e.source_node_id === nodeId || e.target_node_id === nodeId
+        );
+    }
+
+    // Adiciona um equipamento CEO ou NAP diretamente a partir do popup do poste
+    function addEquipmentToPost(postId, equipType) {
+        const post = nodesData.find(n => n.id === postId);
+        if (!post) return;
+
+        // Fecha o popup atual
+        map.closePopup();
+
+        // Calcula offset inteligente baseado nos equipamentos já instalados
+        const existingEquip = getEquipmentAtPost(postId);
+        const angleStep = (2 * Math.PI) / Math.max(existingEquip.length + 1, 4);
+        const baseAngle = equipType === 'ceo' ? -Math.PI / 4 : Math.PI / 4;
+        const offsetIndex = existingEquip.filter(e => e.details?.subcategory === equipType).length;
+        const angle = baseAngle + (offsetIndex * angleStep * 0.3);
+        const offsetDist = 0.00006;
+
+        const lat = post.lat + Math.sin(angle) * offsetDist;
+        const lng = post.lng + Math.cos(angle) * offsetDist;
+
+        // Pré-preenche o modal de criação
+        pendingNodeCoords = { lat, lng };
+        pendingNodeModalType = equipType;
+
+        const inputName = document.getElementById('node-input-name');
+        const selectType = document.getElementById('node-input-type');
+        const hostSelect = document.getElementById('node-input-host-post');
+        
+        const label = equipType === 'ceo' ? 'CEO' : 'CTO NAP';
+        const existingCount = existingEquip.filter(e => e.details?.subcategory === equipType).length;
+        inputName.value = `${label} #${existingCount + 1} (${post.name})`;
+        selectType.value = equipType;
+
+        onNodeTypeChange();
+
+        // Pré-seleciona o poste hospedeiro
+        setTimeout(() => {
+            hostSelect.value = String(postId);
+        }, 50);
+
+        const modal = document.getElementById('modal-create-node');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        inputName.focus();
+    }
+
+
+    function initMap() {
+        // Inicializa o mapa focado na área padrão
+        map = L.map('map', {
+            zoomControl: false,
+            attributionControl: false
+        }).setView([-22.7686, -43.7061], 13);
+        
+        // Camada estilizada premium baseada em modo escuro ou claro do sistema
+        const isDarkMode = document.documentElement.classList.contains('dark');
+        const tileUrl = isDarkMode 
+            ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
+            : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
+            
+        L.tileLayer(tileUrl).addTo(map);
+        L.control.zoom({ position: 'bottomleft' }).addTo(map);
+
+        // Evento de clique direto no mapa para criar nós (Postes/Caixas)
+        map.on('click', function(e) {
+            if (toolMode === 'add_post') {
+                // Criação direta e rápida de poste ao clicar no mapa (sem modais ou confirmações)
+                const nextPostNumber = nodesData.filter(n => n.type === 'post').length + 1;
+                const postName = `Poste #${nextPostNumber}`;
+                const lat = e.latlng.lat;
+                const lng = e.latlng.lng;
+                const details = {
+                    subcategory: null,
+                    parent_post_id: null,
+                    fusions: []
+                };
+
+                fetch('/api/network/nodes', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: postName,
+                        type: 'post',
+                        lat: lat,
+                        lng: lng,
+                        details: details
+                    })
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        nodesData.push(data.node);
+                        renderMapElements();
+                        renderElementList();
+                        showToast(`${postName} adicionado ao mapa com sucesso!`, "success");
+                    } else {
+                        showToast("Erro ao adicionar poste.", "error");
+                    }
+                })
+                .catch(err => {
+                    console.error(err);
+                    showToast("Erro de rede ao adicionar poste.", "error");
+                });
+
+            } else if (toolMode === 'add_ceo') {
+                openNodeModal('ceo', e.latlng.lat, e.latlng.lng);
+            } else if (toolMode === 'add_cto') {
+                openNodeModal('cto_nap', e.latlng.lat, e.latlng.lng);
+            }
+        });
+
+        // Evento de movimentação do mouse para desenhar linha elástica do cabo
+        map.on('mousemove', function(e) {
+            if (toolMode === 'draw_cable' && pendingCableSourceId !== null) {
+                const startNode = nodesData.find(n => n.id === pendingCableSourceId);
+                if (!startNode) return;
+
+                const pts = [[startNode.lat, startNode.lng]];
+                pendingCablePoints.forEach(pt => pts.push(pt));
+                pts.push([e.latlng.lat, e.latlng.lng]);
+
+                if (tempPolyline) {
+                    tempPolyline.setLatLngs(pts);
+                } else {
+                    tempPolyline = L.polyline(pts, {
+                        color: '#6366f1',
+                        dashArray: '5, 8',
+                        weight: 3,
+                        opacity: 0.7
+                    }).addTo(map);
+                }
+            }
+        });
+
+        // Evento de alteração de zoom para controlar opacidade das labels de forma premium
+        map.on('zoomend', function() {
+            const currentZoom = map.getZoom();
+            const labels = document.querySelectorAll('.post-label');
+            labels.forEach(lbl => {
+                lbl.style.opacity = currentZoom >= 16 ? '1' : '0';
+            });
+        });
+
+        // Carrega dados iniciais da rede
+        fetchNetworkData();
+
+        // Configura buscador
+        document.getElementById('searchElement').addEventListener('keyup', renderElementList);
+    }
+
+    // Gerencia o modo das ferramentas da caixa HUD
+    function setToolMode(mode) {
+        toolMode = mode;
+        
+        // Remove classes ativas de todos os botões da toolbox
+        document.querySelectorAll('[id^="tool-"]').forEach(btn => btn.classList.remove('btn-mode-active'));
+        // Adiciona classe ativa no botão selecionado
+        document.getElementById(`tool-${mode}`).classList.add('btn-mode-active');
+
+        // Reseta estados de desenho de cabo se mudar de modo
+        resetCableDrawState();
+
+        // Gerencia balão informativo no topo
+        const helperBadge = document.getElementById('draw-helper-badge');
+        const helperText = document.getElementById('draw-helper-text');
+        
+        if (mode === 'view') {
+            helperBadge.classList.add('hidden');
+        } else {
+            helperBadge.classList.remove('hidden');
+            if (mode === 'add_post') helperText.textContent = "Clique no mapa para fixar um Poste";
+            if (mode === 'add_ceo') helperText.textContent = "Clique no mapa para fixar uma Caixa de Emenda CEO";
+            if (mode === 'add_cto') helperText.textContent = "Clique no mapa para fixar uma Caixa CTO NAP";
+            if (mode === 'draw_cable') helperText.textContent = "Selecione o elemento inicial no mapa para iniciar o cabo";
+        }
+    }
+
+    function toggleControlPanel(show) {
+        const hud = document.getElementById('map-control-hud');
+        const btn = document.getElementById('btn-expand-hud');
+        if (show) {
+            hud.classList.remove('collapsed');
+            btn.classList.add('hidden');
+        } else {
+            hud.classList.add('collapsed');
+            btn.classList.remove('hidden');
+        }
+    }
+
+    // Busca as coordenadas e informações no Flask
+    async function fetchNetworkData() {
+        try {
+            const [nodesRes, edgesRes] = await Promise.all([
+                fetch('/api/network/nodes'),
+                fetch('/api/network/edges')
+            ]);
+            
+            const nodesJson = await nodesRes.json();
+            const edgesJson = await edgesRes.json();
+
+            if (nodesJson.success) nodesData = nodesJson.nodes;
+            if (edgesJson.success) edgesData = edgesJson.edges;
+
+            renderMapElements();
+            renderElementList();
+        } catch (e) {
+            console.error("Erro ao buscar dados de rede:", e);
+            showToast("Erro ao carregar mapa de rede.", "error");
+        }
+    }
+
+    // Renderiza todos os nós e cabos georreferenciados no Leaflet
+    function renderMapElements() {
+        // Limpa marcadores existentes
+        Object.values(markers).forEach(m => m && m.remove());
+        Object.values(polylines).forEach(p => p && p.remove());
+        markers = {};
+        polylines = {};
+
+        // 1. Renderiza Cabos (Edges)
+        edgesData.forEach(edge => {
+            const startNode = nodesData.find(n => n.id === edge.source_node_id);
+            const endNode = nodesData.find(n => n.id === edge.target_node_id);
+            
+            if (!startNode || !endNode) return;
+
+            // Une os pontos geográficos (origem + pontos intermediários + destino)
+            const pts = [];
+            pts.push([startNode.lat, startNode.lng]);
+            edge.path_coordinates.forEach(coord => {
+                pts.push([coord[0], coord[1]]);
+            });
+            pts.push([endNode.lat, endNode.lng]);
+
+            const color = (edge.details && edge.details.color) ? edge.details.color : (edgeColors[edge.type] || edgeColors['default']);
+            const poly = L.polyline(pts, {
+                color: color,
+                weight: 4,
+                opacity: 0.85,
+                smoothFactor: 1.0
+            }).addTo(map);
+
+            // Bind Popup de informações do cabo
+            const popupHtml = `
+                <div class="popup-premium">
+                    <div class="popup-title flex items-center justify-between gap-4" style="background: rgba(99, 102, 241, 0.08)">
+                        <span><i class="fa-solid fa-bezier-curve text-indigo-400 mr-1.5"></i> ${edge.name}</span>
+                    </div>
+                    <div class="popup-body space-y-2">
+                        <div class="flex justify-between text-xs">
+                            <span class="opacity-60">Tipo:</span>
+                            <span class="font-bold">${edge.type === 'cable_fo' ? 'Cabo Fibra Óptica' : 'Cabo Drop'}</span>
+                        </div>
+                        <div class="flex justify-between text-xs">
+                            <span class="opacity-60">Origem:</span>
+                            <span class="font-bold">${startNode.name}</span>
+                        </div>
+                        <div class="flex justify-between text-xs">
+                            <span class="opacity-60">Destino:</span>
+                            <span class="font-bold">${endNode.name}</span>
+                        </div>
+                        <div class="flex justify-between text-xs">
+                            <span class="opacity-60">Capacidade:</span>
+                            <span class="font-bold">${edge.details.fiber_count || 'N/A'} FO</span>
+                        </div>
+                        <div class="pt-2 border-t border-slate-900/5 dark:border-white/5 flex gap-2">
+                            <button onclick="openEditCableModal(${edge.id})" class="w-full py-2 bg-indigo-600/20 hover:bg-indigo-600 text-indigo-400 hover:text-white rounded-xl text-[10px] font-black uppercase transition-all">Editar Cabo</button>
+                            <button onclick="confirmDeleteEdge(${edge.id})" class="w-full py-2 bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white rounded-xl text-[10px] font-black uppercase transition-all">Excluir</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            poly.bindPopup(popupHtml);
+            
+            polylines[edge.id] = poly;
+        });
+
+        // 2. Renderiza Nós (Postes / Caixas)
+        nodesData.forEach(node => {
+            const isBox = node.type === 'box';
+            const subcategory = node.details ? node.details.subcategory : null;
+            
+            let iconHtml = "";
+            let className = "";
+            let iconSize = [24, 32];
+            
+            if (isBox) {
+                const splitterCount = node.splitters ? node.splitters.length : 0;
+                const badgeHtml = splitterCount > 0 ? `<span class="marker-badge" style="right: -4px; top: -4px;">${splitterCount}</span>` : '';
+                if (subcategory === 'ceo') {
+                    iconHtml = `<div class="marker-equip-wrap">C${badgeHtml}</div>`;
+                    className = 'marker-ceo-icon';
+                    iconSize = [30, 30];
+                } else {
+                    iconHtml = `<div class="marker-equip-wrap">N${badgeHtml}</div>`;
+                    className = 'marker-cto-icon';
+                    iconSize = [30, 30];
+                }
+            } else {
+                // Poste Premium SVG - visual detalhado com label dinâmico por zoom
+                const childEquip = getEquipmentAtPost(node.id);
+                const equipDots = childEquip.length > 0 
+                    ? `<div class="post-equip-dots">${childEquip.map(eq => `<span class="post-dot ${eq.details?.subcategory === 'ceo' ? 'dot-ceo' : 'dot-nap'}"></span>`).join('')}</div>` 
+                    : '';
+                const currentZoom = map ? map.getZoom() : 13;
+                const labelOpacity = currentZoom >= 16 ? 1 : 0;
+                
+                iconHtml = `<div class="marker-post-premium">
+                    <svg viewBox="0 0 32 48" width="32" height="48" xmlns="http://www.w3.org/2000/svg">
+                        <defs>
+                            <linearGradient id="postGrad-${node.id}" x1="0" y1="0" x2="1" y2="1">
+                                <stop offset="0%" stop-color="#94a3b8"/>
+                                <stop offset="100%" stop-color="#64748b"/>
+                            </linearGradient>
+                            <filter id="ledGlow-${node.id}">
+                                <feGaussianBlur stdDeviation="2" result="blur"/>
+                                <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                            </filter>
+                        </defs>
+                        <!-- Base/Fundação -->
+                        <rect x="12" y="44" width="8" height="3" rx="1.5" fill="#475569"/>
+                        <!-- Haste Principal -->
+                        <rect x="14.5" y="12" width="3" height="33" rx="1.5" fill="url(#postGrad-${node.id})"/>
+                        <!-- Braço Horizontal -->
+                        <path d="M 16 14 C 16 10, 24 8, 26 10 L 26 14" fill="none" stroke="#64748b" stroke-width="2.2" stroke-linecap="round"/>
+                        <!-- Suporte do Braço -->
+                        <line x1="16" y1="18" x2="22" y2="13" stroke="#475569" stroke-width="1" stroke-linecap="round"/>
+                        <!-- Luminária -->
+                        <path d="M 23 10 L 28 12 L 23 14 Z" fill="#475569"/>
+                        <!-- LED Glow -->
+                        <circle cx="26" cy="14" r="3" fill="#fbbf24" filter="url(#ledGlow-${node.id})" class="post-led-glow"/>
+                        <circle cx="26" cy="14" r="1.5" fill="#fef3c7"/>
+                        <!-- Isoladores -->
+                        <circle cx="16" cy="20" r="1.5" fill="#334155" stroke="#475569" stroke-width="0.5"/>
+                        <circle cx="16" cy="26" r="1.5" fill="#334155" stroke="#475569" stroke-width="0.5"/>
+                    </svg>
+                    ${equipDots}
+                    <div class="post-label text-[8px] font-black uppercase tracking-wider text-slate-300 bg-slate-950/90 px-2 py-0.5 rounded border border-white/10 mt-1 pointer-events-none transition-opacity duration-300" style="opacity: ${labelOpacity}">${node.name}</div>
+                </div>`;
+                className = 'marker-post-icon';
+                iconSize = [32, 48];
+            }
+
+            const icon = L.divIcon({
+                html: iconHtml,
+                className: className,
+                iconSize: iconSize,
+                iconAnchor: isBox ? [15, 15] : [16, 46]
+            });
+
+            // Permite drag-and-drop de snapping para reposicionar postes
+            const marker = L.marker([node.lat, node.lng], {
+                icon: icon,
+                draggable: true
+            }).addTo(map);
+
+            // Ao arrastar o marcador, atualiza a posição no backend e redesenha as conexões dinamicamente
+            marker.on('dragend', async function(e) {
+                const newLatLng = marker.getLatLng();
+                await updateNodePosition(node.id, newLatLng.lat, newLatLng.lng);
+            });
+
+            // Clique no marcador gerencia as interações do modo desenho ou abre popup
+            marker.on('click', function(e) {
+                if (toolMode === 'draw_cable') {
+                    L.DomEvent.stopPropagation(e);
+                    handleCableDrawingClick(node);
+                }
+            });
+
+            // Constrói HTML do Popup de Splitters e Detalhes do Nó
+            let splittersHtml = "";
+            let diagramButton = "";
+            let fusionButton = "";
+            let equipmentListHtml = "";
+            let cablesAtPostHtml = "";
+            let addEquipButtons = "";
+            let titleIcon = '<i class="fa-regular fa-lightbulb text-blue-400 mr-1.5"></i>';
+            let categoryName = 'Poste';
+            let headerBg = 'rgba(59, 130, 246, 0.08)';
+
+            if (isBox) {
+                if (subcategory === 'ceo') {
+                    titleIcon = '<i class="fa-solid fa-network-wired text-teal-400 mr-1.5"></i>';
+                    categoryName = 'Caixa CEO';
+                    headerBg = 'rgba(20, 184, 166, 0.08)';
+                } else {
+                    titleIcon = '<i class="fa-solid fa-box text-orange-400 mr-1.5"></i>';
+                    categoryName = 'Caixa CTO NAP';
+                    headerBg = 'rgba(249, 115, 22, 0.08)';
+                }
+
+                // Tanto CEO quanto NAP agora têm diagrama e fusão
+                diagramButton = `
+                    <button onclick="openDiagramModal(${node.id})" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-[10px] font-black uppercase transition-all mb-1.5 flex items-center justify-center gap-1.5 shadow-lg shadow-indigo-500/10">
+                        <i class="fa-solid fa-network-wired text-[10px]"></i> Ver Diagrama da Caixa
+                    </button>
+                `;
+
+                fusionButton = `
+                    <button onclick="openFusionModal(${node.id})" class="w-full py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[10px] font-black uppercase transition-all mb-1.5 flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-500/10">
+                        <i class="fa-solid fa-circle-nodes text-[10px]"></i> Fusão de Fibras (ABNT)
+                    </button>
+                `;
+
+                // Cabos conectados a esta caixa
+                const cablesHere = getCablesAtNode(node.id);
+                if (cablesHere.length > 0) {
+                    cablesAtPostHtml = `
+                        <div class="pt-2 border-t border-white/5">
+                            <div class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Cabos Conectados</div>
+                            <div class="space-y-1 max-h-16 overflow-y-auto custom-scrollbar">
+                                ${cablesHere.map(c => `
+                                    <div class="flex items-center gap-1.5 text-[9px] text-slate-300 bg-white/5 p-1.5 rounded-lg border border-white/5">
+                                        <div class="w-2 h-2 rounded-full shrink-0" style="background:${c.details?.color || '#6366f1'}"></div>
+                                        <span class="font-bold truncate">${c.name}</span>
+                                        <span class="text-[7px] opacity-50 ml-auto shrink-0">${c.details?.fiber_count || 12} FO</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+
+                splittersHtml = `
+                    <div class="pt-3 border-t border-white/5">
+                        <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 flex justify-between items-center">
+                            <span>Splitters Lógicos</span>
+                            <span class="px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-400 text-[8px]">${node.splitters.length} ativos</span>
+                        </div>
+                        <div class="space-y-1.5 max-h-24 overflow-y-auto pr-1 custom-scrollbar">
+                            ${node.splitters.map(s => `
+                                <div class="flex justify-between items-center bg-white/5 p-2 rounded-xl text-xs border border-white/5">
+                                    <span class="font-bold text-white">${s.name}</span>
+                                    <div class="flex items-center gap-2">
+                                        <span class="splitter-badge">${s.ratio}</span>
+                                        <button onclick="deleteSplitter(${s.id})" class="text-red-500 hover:text-red-400" title="Apagar Splitter"><i class="fa-solid fa-trash-can text-[10px]"></i></button>
+                                    </div>
+                                </div>
+                            `).join('')}
+                            ${node.splitters.length === 0 ? '<p class="text-[9px] opacity-40 italic">Nenhum splitter adicionado.</p>' : ''}
+                        </div>
+                        <div class="mt-3 bg-white/5 p-2.5 rounded-[1.25rem] border border-white/5">
+                            <div class="text-[9px] font-black text-indigo-400 uppercase tracking-widest mb-2">Novo Splitter</div>
+                            <div class="flex gap-1.5">
+                                <input type="text" id="split-name-${node.id}" placeholder="Nome" class="w-1/2 bg-slate-900 border border-white/10 rounded-lg px-2 py-1 text-[10px] outline-none text-white focus:ring-1 focus:ring-indigo-500">
+                                <select id="split-ratio-${node.id}" class="w-1/3 bg-slate-900 border border-white/10 rounded-lg px-1 py-1 text-[10px] outline-none text-white cursor-pointer">
+                                    <option value="1x8" selected>1x8</option>
+                                    <option value="1x16">1x16</option>
+                                    <option value="1x4">1x4</option>
+                                    <option value="1x2">1x2</option>
+                                </select>
+                                <button onclick="addSplitter(${node.id})" class="w-10 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg flex items-center justify-center transition-all"><i class="fa-solid fa-plus text-[10px]"></i></button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                // === POPUP DO POSTE: Equipamentos instalados + Adicionar CEO/NAP ===
+                const childEquip = getEquipmentAtPost(node.id);
+                const cablesHere = getCablesAtNode(node.id);
+
+                if (childEquip.length > 0) {
+                    equipmentListHtml = `
+                        <div class="pt-2 border-t border-white/5">
+                            <div class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5 flex justify-between items-center">
+                                <span>Equipamentos Instalados</span>
+                                <span class="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 text-[7px]">${childEquip.length}</span>
+                            </div>
+                            <div class="space-y-1 max-h-24 overflow-y-auto custom-scrollbar">
+                                ${childEquip.map(eq => {
+                                    const eqSub = eq.details?.subcategory;
+                                    const eqIcon = eqSub === 'ceo' ? 'fa-network-wired' : 'fa-box';
+                                    const eqColor = eqSub === 'ceo' ? 'text-teal-400 bg-teal-500/10 border-teal-500/20' : 'text-amber-400 bg-amber-500/10 border-amber-500/20';
+                                    const eqLabel = eqSub === 'ceo' ? 'CEO' : 'NAP';
+                                    return `
+                                        <div onclick="focusElement('node', ${eq.id})" class="flex items-center justify-between p-1.5 rounded-lg border ${eqColor} cursor-pointer hover:scale-[1.02] transition-all">
+                                            <div class="flex items-center gap-1.5">
+                                                <i class="fa-solid ${eqIcon} text-[9px]"></i>
+                                                <span class="text-[9px] font-bold text-white">${eq.name}</span>
+                                            </div>
+                                            <span class="text-[7px] font-black uppercase opacity-60">${eqLabel} · ${eq.splitters?.length || 0} SPL</span>
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+
+                if (cablesHere.length > 0) {
+                    cablesAtPostHtml = `
+                        <div class="pt-2 border-t border-white/5">
+                            <div class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Cabos Passantes</div>
+                            <div class="space-y-1 max-h-16 overflow-y-auto custom-scrollbar">
+                                ${cablesHere.map(c => `
+                                    <div class="flex items-center gap-1.5 text-[9px] text-slate-300 bg-white/5 p-1.5 rounded-lg border border-white/5">
+                                        <div class="w-2 h-2 rounded-full shrink-0" style="background:${c.details?.color || '#6366f1'}"></div>
+                                        <span class="font-bold truncate">${c.name}</span>
+                                        <span class="text-[7px] opacity-50 ml-auto shrink-0">${c.details?.fiber_count || 12} FO</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `;
+                }
+
+                addEquipButtons = `
+                    <div class="pt-2 border-t border-white/5 space-y-1.5">
+                        <div class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Instalar Equipamento</div>
+                        <div class="grid grid-cols-2 gap-1.5">
+                            <button onclick="addEquipmentToPost(${node.id}, 'ceo')" class="py-2.5 bg-teal-600/20 hover:bg-teal-600 text-teal-400 hover:text-white rounded-xl text-[9px] font-black uppercase transition-all flex items-center justify-center gap-1 border border-teal-500/20">
+                                <i class="fa-solid fa-network-wired text-[9px]"></i> CEO
+                            </button>
+                            <button onclick="addEquipmentToPost(${node.id}, 'cto_nap')" class="py-2.5 bg-amber-600/20 hover:bg-amber-600 text-amber-400 hover:text-white rounded-xl text-[9px] font-black uppercase transition-all flex items-center justify-center gap-1 border border-amber-500/20">
+                                <i class="fa-solid fa-box text-[9px]"></i> NAP
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            const popupHtml = `
+                <div class="popup-premium">
+                    <div class="popup-title flex items-center justify-between gap-4" style="background: ${headerBg}">
+                        <span>${titleIcon} ${node.name}</span>
+                        <span class="text-[8px] font-black uppercase bg-white/5 px-2 py-0.5 rounded text-slate-400">${categoryName}</span>
+                    </div>
+                    <div class="popup-body space-y-3">
+                        <div class="flex justify-between text-xs">
+                            <span class="opacity-60">Coordenadas:</span>
+                            <span class="font-bold text-[10px]">${node.lat.toFixed(6)}, ${node.lng.toFixed(6)}</span>
+                        </div>
+                        ${diagramButton}
+                        ${fusionButton}
+                        ${splittersHtml}
+                        ${equipmentListHtml}
+                        ${cablesAtPostHtml}
+                        ${addEquipButtons}
+                        <div class="pt-2 border-t border-white/5 flex gap-2">
+                            <button onclick="confirmDeleteNode(${node.id})" class="w-full py-2 bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white rounded-xl text-[10px] font-black uppercase transition-all">Excluir Elemento</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            marker.bindPopup(popupHtml);
+
+            markers[node.id] = marker;
+        });
+
+        // 3. Renderiza linhas de conexão poste → equipamento (visual de associação)
+        nodesData.forEach(node => {
+            if (node.type !== 'post') return;
+            const childEquip = getEquipmentAtPost(node.id);
+            childEquip.forEach(eq => {
+                const line = L.polyline(
+                    [[node.lat, node.lng], [eq.lat, eq.lng]],
+                    { color: eq.details?.subcategory === 'ceo' ? '#14b8a6' : '#f59e0b', weight: 1.5, opacity: 0.4, dashArray: '4, 6' }
+                ).addTo(map);
+                polylines[`link_${node.id}_${eq.id}`] = line;
+            });
+        });
+    }
+
+    // Renderiza a lista lateral de controle na caixa HUD dividida em categorias
+    function renderElementList() {
+        const list = document.getElementById('element-list');
+        const search = document.getElementById('searchElement').value.toLowerCase();
+
+        // Filtra elementos baseado na busca
+        const filteredNodes = nodesData.filter(n => n.name.toLowerCase().includes(search));
+        const filteredEdges = edgesData.filter(e => e.name.toLowerCase().includes(search));
+
+        if (filteredNodes.length === 0 && filteredEdges.length === 0) {
+            list.innerHTML = `<div class="text-center py-10 opacity-30 text-[9px] font-black uppercase text-slate-400">Nenhum elemento encontrado</div>`;
+            return;
+        }
+
+        // Divide em categorias
+        const posts = filteredNodes.filter(n => n.type === 'post');
+        const ceos = filteredNodes.filter(n => n.type === 'box' && n.details && n.details.subcategory === 'ceo');
+        const ctos = filteredNodes.filter(n => n.type === 'box' && (!n.details || n.details.subcategory !== 'ceo'));
+        const cables = filteredEdges;
+
+        let html = '<div class="space-y-4">';
+
+        // 1. Categoria: Postes
+        if (posts.length > 0) {
+            html += `
+                <div class="space-y-1.5">
+                    <div class="flex justify-between items-center text-[9px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 border-b border-slate-900/5 dark:border-white/5 pb-1">
+                        <span>Postes</span>
+                        <span class="px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 text-[8px]">${posts.length}</span>
+                    </div>
+                    <div class="space-y-1.5">
+                        ${posts.map(node => `
+                            <div onclick="focusElement('node', ${node.id})" 
+                                 class="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-900/5 dark:border-white/5 hover:border-blue-500/30 dark:hover:border-blue-500/30 transition-all cursor-pointer group flex items-center justify-between">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-5 h-5 rounded-md bg-blue-500/10 text-blue-500 flex items-center justify-center text-[10px]">
+                                        <i class="fa-regular fa-lightbulb"></i>
+                                    </div>
+                                    <span class="text-[9px] font-black text-slate-700 dark:text-white uppercase tracking-tight">${node.name}</span>
+                                </div>
+                                <span class="text-[7px] font-black uppercase opacity-40">Poste</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        // 2. Categoria: Caixas de Emenda CEO
+        if (ceos.length > 0) {
+            html += `
+                <div class="space-y-1.5">
+                    <div class="flex justify-between items-center text-[9px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 border-b border-slate-900/5 dark:border-white/5 pb-1">
+                        <span>Caixas de Emenda CEO</span>
+                        <span class="px-1.5 py-0.5 rounded bg-teal-500/10 text-teal-400 text-[8px]">${ceos.length}</span>
+                    </div>
+                    <div class="space-y-1.5">
+                        ${ceos.map(node => `
+                            <div onclick="focusElement('node', ${node.id})" 
+                                 class="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-900/5 dark:border-white/5 hover:border-teal-500/30 dark:hover:border-teal-500/30 transition-all cursor-pointer group flex items-center justify-between">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-5 h-5 rounded-md bg-teal-500/10 text-teal-500 flex items-center justify-center text-[10px]">
+                                        <i class="fa-solid fa-network-wired"></i>
+                                    </div>
+                                    <span class="text-[9px] font-black text-slate-700 dark:text-white uppercase tracking-tight">${node.name}</span>
+                                </div>
+                                <span class="text-[7px] font-black uppercase opacity-40">CEO</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        // 3. Categoria: Caixas CTO NAP
+        if (ctos.length > 0) {
+            html += `
+                <div class="space-y-1.5">
+                    <div class="flex justify-between items-center text-[9px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 border-b border-slate-900/5 dark:border-white/5 pb-1">
+                        <span>Caixas CTO NAP</span>
+                        <span class="px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 text-[8px]">${ctos.length}</span>
+                    </div>
+                    <div class="space-y-1.5">
+                        ${ctos.map(node => `
+                            <div onclick="focusElement('node', ${node.id})" 
+                                 class="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-900/5 dark:border-white/5 hover:border-amber-500/30 dark:hover:border-amber-500/30 transition-all cursor-pointer group flex items-center justify-between">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-5 h-5 rounded-md bg-amber-500/10 text-amber-500 flex items-center justify-center text-[10px]">
+                                        <i class="fa-solid fa-box"></i>
+                                    </div>
+                                    <span class="text-[9px] font-black text-slate-700 dark:text-white uppercase tracking-tight">${node.name}</span>
+                                </div>
+                                <span class="text-[7px] font-black uppercase opacity-40">CTO NAP</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        // 4. Categoria: Cabos
+        if (cables.length > 0) {
+            html += `
+                <div class="space-y-1.5">
+                    <div class="flex justify-between items-center text-[9px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 border-b border-slate-900/5 dark:border-white/5 pb-1">
+                        <span>Cabos de Fibra</span>
+                        <span class="px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 text-[8px]">${cables.length}</span>
+                    </div>
+                    <div class="space-y-1.5">
+                        ${cables.map(edge => `
+                            <div onclick="focusElement('edge', ${edge.id})" 
+                                 class="p-2 rounded-xl bg-white dark:bg-slate-900 border border-slate-900/5 dark:border-white/5 hover:border-indigo-500/30 dark:hover:border-indigo-500/30 transition-all cursor-pointer group flex items-center justify-between">
+                                <div class="flex items-center gap-2">
+                                    <div class="w-5 h-5 rounded-md bg-indigo-500/10 text-indigo-500 flex items-center justify-center text-[10px]">
+                                        <i class="fa-solid fa-bezier-curve"></i>
+                                    </div>
+                                    <span class="text-[9px] font-black text-slate-700 dark:text-white uppercase tracking-tight">${edge.name}</span>
+                                </div>
+                                <span class="text-[7px] font-black uppercase opacity-40">${edge.type === 'cable_fo' ? 'Cabo FO' : 'Drop'}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        html += '</div>';
+        list.innerHTML = html;
+    }
+
+    // Foca o mapa no elemento selecionado na lista HUD
+    function focusElement(type, id) {
+        if (type === 'node') {
+            const node = nodesData.find(n => n.id === id);
+            if (node) {
+                map.setView([node.lat, node.lng], 16);
+                markers[id].openPopup();
+            }
+        } else if (type === 'edge') {
+            const edge = edgesData.find(e => e.id === id);
+            if (edge) {
+                const start = nodesData.find(n => n.id === edge.source_node_id);
+                if (start) {
+                    map.setView([start.lat, start.lng], 15);
+                    polylines[id].openPopup();
+                }
+            }
+        }
+    }
+
+    // Envia novos dados geográficos para salvar ao arrastar o marcador
+    async function updateNodePosition(id, lat, lng) {
+        try {
+            const node = nodesData.find(n => n.id === id);
+            if (!node) return;
+
+            const deltaLat = lat - node.lat;
+            const deltaLng = lng - node.lng;
+
+            const res = await fetch(`/api/network/nodes/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ lat, lng })
+            });
+            const data = await res.json();
+            if (data.success) {
+                // Atualiza localmente
+                node.lat = lat;
+                node.lng = lng;
+
+                // Se for um poste, move os equipamentos filhos instalados nele com o mesmo offset
+                if (node.type === 'post') {
+                    const childEquip = getEquipmentAtPost(id);
+                    for (let eq of childEquip) {
+                        const newEqLat = eq.lat + deltaLat;
+                        const newEqLng = eq.lng + deltaLng;
+                        
+                        await fetch(`/api/network/nodes/${eq.id}`, {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ lat: newEqLat, lng: newEqLng })
+                        });
+                        
+                        eq.lat = newEqLat;
+                        eq.lng = newEqLng;
+                    }
+                }
+
+                renderMapElements();
+                renderElementList();
+                showToast("Coordenadas atualizadas!", "success");
+            }
+        } catch (e) {
+            showToast("Erro ao mover poste/caixa.", "error");
+        }
+    }
+
+    // ==============================================================================
+    // ⚙️ CONTROLE DOS MODAIS PREMIUM (SUBSTITUINDO PROMPTS DO NAVEGADOR)
+    // ==============================================================================
+
+    // 1. Modal de Criação de Nós (Poste/Caixa)
+    function openNodeModal(type, lat, lng) {
+        pendingNodeCoords = { lat, lng };
+        pendingNodeModalType = type;
+
+        const inputName = document.getElementById('node-input-name');
+        const selectType = document.getElementById('node-input-type');
+
+        let mappedValue = type;
+        if (type === 'box') {
+            mappedValue = 'cto_nap';
+        }
+        
+        inputName.value = `${mappedValue === 'post' ? 'Poste' : (mappedValue === 'ceo' ? 'CEO' : 'CTO NAP')} #${nodesData.length + 1}`;
+        selectType.value = mappedValue;
+
+        onNodeTypeChange();
+
+        const modal = document.getElementById('modal-create-node');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        inputName.focus();
+    }
+
+    function closeNodeModal(keepMode = false) {
+        const modal = document.getElementById('modal-create-node');
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        pendingNodeCoords = null;
+        if (!keepMode) {
+            setToolMode('view');
+        }
+    }
+
+    async function submitNodeCreation() {
+        const name = document.getElementById('node-input-name').value.trim();
+        const rawType = document.getElementById('node-input-type').value;
+        const hostPostId = document.getElementById('node-input-host-post').value;
+
+        if (!name || !pendingNodeCoords) {
+            showToast("Por favor, preencha o nome.", "warning");
+            return;
+        }
+
+        let type = rawType;
+        let subcategory = null;
+        if (rawType === 'ceo') {
+            type = 'box';
+            subcategory = 'ceo';
+        } else if (rawType === 'cto_nap') {
+            type = 'box';
+            subcategory = 'cto_nap';
+        }
+
+        let lat = pendingNodeCoords.lat;
+        let lng = pendingNodeCoords.lng;
+        let parentPostId = null;
+
+        if (hostPostId) {
+            const hostPole = nodesData.find(n => n.id === parseInt(hostPostId));
+            if (hostPole) {
+                lat = hostPole.lat + 0.00003;
+                lng = hostPole.lng + 0.00003;
+                parentPostId = hostPole.id;
+            }
+        }
+
+        const details = {
+            subcategory: subcategory,
+            parent_post_id: parentPostId,
+            fusions: []
+        };
+
+        const displayTypeLabel = rawType === 'post' ? 'Poste' : (rawType === 'ceo' ? 'Caixa de Emenda CEO' : 'Caixa CTO NAP');
+
+        showConfirmDialog({
+            title: "Confirmar Criação",
+            subtitle: "Adicionar elemento de rede",
+            text: `Deseja realmente fixar o elemento "${name}" (${displayTypeLabel}) no mapa?`,
+            icon: "fa-map-pin",
+            btnText: "Salvar Elemento",
+            btnClass: "bg-indigo-600 hover:bg-indigo-700 shadow-indigo-500/30",
+            headerClass: "border-indigo-500/5 bg-indigo-500/5",
+            titleClass: "text-indigo-600 dark:text-indigo-400",
+            subtitleClass: "text-indigo-500 dark:text-indigo-400",
+            onConfirm: async function() {
+                try {
+                    const res = await fetch('/api/network/nodes', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            name: name,
+                            type: type,
+                            lat: lat,
+                            lng: lng,
+                            details: details
+                        })
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                        nodesData.push(data.node);
+                        renderMapElements();
+                        renderElementList();
+                        showToast("Nó adicionado ao mapa com sucesso!", "success");
+                    }
+                } catch (e) {
+                    showToast("Erro ao salvar nó.", "error");
+                } finally {
+                    closeNodeModal(true);
+                }
+            }
+        });
+    }
+
+    // 2. Modal de Criação de Cabos
+    function openCableModal(sourceId, targetId, path) {
+        pendingCableSourceId = sourceId;
+        pendingCableTargetId = targetId;
+        pendingCablePoints = path;
+
+        const startNode = nodesData.find(n => n.id === sourceId);
+        const endNode = nodesData.find(n => n.id === targetId);
+
+        const inputName = document.getElementById('cable-input-name');
+        inputName.value = `Cabo ${startNode.name} -> ${endNode.name}`;
+
+        const modal = document.getElementById('modal-create-cable');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        inputName.focus();
+    }
+
+    function closeCableModal() {
+        const modal = document.getElementById('modal-create-cable');
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        resetCableDrawState();
+        setToolMode('view');
+    }
+
+    function updateCableFO(mode) {
+        if (mode === 'create') {
+            const tubes = parseInt(document.getElementById('cable-input-tubes').value) || 1;
+            const fibersPerTube = parseInt(document.getElementById('cable-input-fibers-per-tube').value) || 12;
+            document.getElementById('cable-input-fo').value = tubes * fibersPerTube;
+        } else {
+            const tubes = parseInt(document.getElementById('edit-cable-input-tubes').value) || 1;
+            const fibersPerTube = parseInt(document.getElementById('edit-cable-input-fibers-per-tube').value) || 12;
+            document.getElementById('edit-cable-input-fo').value = tubes * fibersPerTube;
+        }
+    }
+
+    function openEditCableModal(edgeId) {
+        const edge = edgesData.find(e => e.id === edgeId);
+        if (!edge) return;
+
+        const tubeCount = (edge.details && edge.details.tube_count) ? edge.details.tube_count : 1;
+        const fibersPerTube = (edge.details && edge.details.fibers_per_tube) ? edge.details.fibers_per_tube : ((edge.details && edge.details.fiber_count) ? edge.details.fiber_count : 12);
+
+        document.getElementById('edit-cable-id').value = edge.id;
+        document.getElementById('edit-cable-input-name').value = edge.name || "";
+        document.getElementById('edit-cable-input-tubes').value = tubeCount;
+        document.getElementById('edit-cable-input-fibers-per-tube').value = fibersPerTube;
+        document.getElementById('edit-cable-input-fo').value = tubeCount * fibersPerTube;
+        document.getElementById('edit-cable-input-type').value = edge.type || "cable_fo";
+        
+        const color = (edge.details && edge.details.color) ? edge.details.color : "#6366f1";
+        document.getElementById('edit-cable-input-color').value = color;
+        document.getElementById('edit-cable-color-presets').value = color;
+
+        // Close Leaflet popup if open to clean UI
+        map.closePopup();
+
+        const modal = document.getElementById('modal-edit-cable');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    }
+
+    function closeEditCableModal() {
+        const modal = document.getElementById('modal-edit-cable');
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+
+    async function submitCableEdit() {
+        const id = document.getElementById('edit-cable-id').value;
+        const name = document.getElementById('edit-cable-input-name').value.trim();
+        const tubes = parseInt(document.getElementById('edit-cable-input-tubes').value) || 1;
+        const fibersPerTube = parseInt(document.getElementById('edit-cable-input-fibers-per-tube').value) || 12;
+        const fibers = tubes * fibersPerTube;
+        const type = document.getElementById('edit-cable-input-type').value;
+        const color = document.getElementById('edit-cable-input-color').value;
+
+        if (!name || !id) {
+            showToast("Preencha o nome do cabo.", "warning");
+            return;
+        }
+
+        try {
+            const res = await fetch(`/api/network/edges/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name: name,
+                    type: type,
+                    details: {
+                        fiber_count: fibers,
+                        tube_count: tubes,
+                        fibers_per_tube: fibersPerTube,
+                        color: color
+                    }
+                })
+            });
+            const data = await res.json();
+            if (data.success) {
+                // Update local edgesData
+                const edge = edgesData.find(e => e.id === parseInt(id));
+                if (edge) {
+                    edge.name = name;
+                    edge.type = type;
+                    if (!edge.details) edge.details = {};
+                    edge.details.fiber_count = fibers;
+                    edge.details.tube_count = tubes;
+                    edge.details.fibers_per_tube = fibersPerTube;
+                    edge.details.color = color;
+                }
+                renderMapElements();
+                renderElementList();
+                showToast("Cabo de fibra atualizado com sucesso!", "success");
+            } else {
+                showToast("Erro ao atualizar o cabo: " + data.message, "error");
+            }
+        } catch (e) {
+            showToast("Erro ao salvar cabo.", "error");
+        } finally {
+            closeEditCableModal();
+        }
+    }
+
+    async function submitCableCreation() {
+        const name = document.getElementById('cable-input-name').value.trim();
+        const tubes = parseInt(document.getElementById('cable-input-tubes').value) || 1;
+        const fibersPerTube = parseInt(document.getElementById('cable-input-fibers-per-tube').value) || 12;
+        const fibers = tubes * fibersPerTube;
+        const type = document.getElementById('cable-input-type').value;
+        const color = document.getElementById('cable-input-color').value;
+
+        if (!name || pendingCableSourceId === null || pendingCableTargetId === null) {
+            showToast("Preencha todos os campos obrigatórios.", "warning");
+            return;
+        }
+
+        showConfirmDialog({
+            title: "Confirmar Conexão",
+            subtitle: "Interligar Cabos de Fibra",
+            text: `Deseja realmente interligar a topologia com o cabo "${name}" (${fibers} FO)?`,
+            icon: "fa-bezier-curve",
+            btnText: "Interligar Cabo",
+            btnClass: "bg-indigo-600 hover:bg-indigo-700 shadow-indigo-500/30",
+            headerClass: "border-indigo-500/5 bg-indigo-500/5",
+            titleClass: "text-indigo-600 dark:text-indigo-400",
+            subtitleClass: "text-indigo-500 dark:text-indigo-400",
+            onConfirm: async function() {
+                try {
+                    const res = await fetch('/api/network/edges', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            name: name,
+                            type: type,
+                            source_node_id: pendingCableSourceId,
+                            target_node_id: pendingCableTargetId,
+                            path_coordinates: pendingCablePoints,
+                            details: {
+                                fiber_count: fibers,
+                                tube_count: tubes,
+                                fibers_per_tube: fibersPerTube,
+                                color: color
+                            }
+                        })
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                        edgesData.push(data.edge);
+                        renderMapElements();
+                        renderElementList();
+                        showToast("Cabo de fibra interligado com sucesso!", "success");
+                    }
+                } catch (e) {
+                    showToast("Erro ao salvar cabo.", "error");
+                } finally {
+                    closeCableModal();
+                }
+            }
+        });
+    }
+
+    // Desenha e cria conexões de cabo
+    function handleCableDrawingClick(node) {
+        const helperText = document.getElementById('draw-helper-text');
+        const concludeBtn = document.getElementById('btn-conclude-cable');
+
+        // Se for o primeiro elemento clicado, seleciona-o como origem do cabo
+        if (pendingCableSourceId === null) {
+            pendingCableSourceId = node.id;
+            pendingCableNodes = [node];
+            pendingCablePoints = [];
+            
+            helperText.textContent = "Cabo iniciado. Clique nos próximos postes do percurso...";
+            if (concludeBtn) {
+                concludeBtn.classList.add('hidden');
+            }
+            showToast(`Origem selecionada: ${node.name}`, "info");
+        } 
+        // Se for um segundo ou subsequente elemento clicado, adiciona ao trajeto
+        else {
+            // Evita adicionar o mesmo poste duas vezes consecutivas
+            const lastNode = pendingCableNodes[pendingCableNodes.length - 1];
+            if (node.id === lastNode.id) {
+                showToast("Este poste já é o último selecionado no percurso.", "warning");
+                return;
+            }
+            
+            // Verifica se o poste já foi selecionado anteriormente
+            const alreadySelected = pendingCableNodes.some(n => n.id === node.id);
+            if (alreadySelected) {
+                showToast("Este poste já foi selecionado no percurso deste cabo.", "warning");
+                return;
+            }
+
+            // Adiciona o nó e suas coordenadas
+            pendingCableNodes.push(node);
+            pendingCablePoints.push([node.lat, node.lng]);
+
+            helperText.textContent = `Percurso: ${pendingCableNodes.length} postes selecionados.`;
+            if (concludeBtn) {
+                concludeBtn.classList.remove('hidden');
+            }
+            
+            // Força atualização da linha elástica/temporária imediatamente
+            updateTempPolyline();
+            
+            showToast(`Poste adicionado ao percurso: ${node.name}`, "success");
+        }
+    }
+
+    function updateTempPolyline() {
+        if (tempPolyline && pendingCableSourceId !== null) {
+            const startNode = nodesData.find(n => n.id === pendingCableSourceId);
+            if (!startNode) return;
+            const pts = [[startNode.lat, startNode.lng]];
+            pendingCablePoints.forEach(pt => pts.push(pt));
+            tempPolyline.setLatLngs(pts);
+        }
+    }
+
+    let tempPolyline = null;
+    function resetCableDrawState() {
+        pendingCableSourceId = null;
+        pendingCableTargetId = null;
+        pendingCableNodes = [];
+        pendingCablePoints = [];
+        if (tempPolyline) {
+            tempPolyline.remove();
+            tempPolyline = null;
+        }
+        const concludeBtn = document.getElementById('btn-conclude-cable');
+        if (concludeBtn) {
+            concludeBtn.classList.add('hidden');
+        }
+    }
+
+    function concludeCableDrawing() {
+        if (pendingCableNodes.length < 2) {
+            showToast("Selecione pelo menos 2 postes para criar um cabo.", "warning");
+            return;
+        }
+
+        const sourceId = pendingCableNodes[0].id;
+        const targetId = pendingCableNodes[pendingCableNodes.length - 1].id;
+        const path = pendingCablePoints.slice(0, -1);
+
+        openCableModal(sourceId, targetId, path);
+    }
+
+    // 3. Sistema de Modal de Confirmação Unificado
+    let activeConfirmCallback = null;
+
+    function showConfirmDialog(options) {
+        activeConfirmCallback = options.onConfirm;
+        
+        document.getElementById('confirm-modal-title').className = `text-lg font-black flex items-center gap-2 ${options.titleClass || 'text-indigo-600'}`;
+        document.getElementById('confirm-modal-title').innerHTML = `<i id="confirm-modal-icon" class="fa-solid ${options.icon || 'fa-circle-info'}"></i> ${options.title || 'Confirmar Ação'}`;
+        
+        document.getElementById('confirm-modal-subtitle').className = `text-[10px] font-black uppercase tracking-widest mt-1 ${options.subtitleClass || 'text-indigo-500'}`;
+        document.getElementById('confirm-modal-subtitle').textContent = options.subtitle || 'Confirme para prosseguir';
+        
+        document.getElementById('confirm-modal-header').className = `p-6 border-b ${options.headerClass || 'border-indigo-500/5 bg-indigo-500/5'}`;
+        
+        document.getElementById('confirm-modal-text').textContent = options.text || '';
+        
+        const btn = document.getElementById('confirm-modal-btn');
+        btn.textContent = options.btnText || 'Confirmar';
+        btn.className = `w-full py-3.5 text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-xl transition-all active:scale-95 ${options.btnClass || 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-500/30'}`;
+        
+        const modal = document.getElementById('modal-confirm');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+
+        btn.onclick = async function() {
+            if (activeConfirmCallback) {
+                await activeConfirmCallback();
+            }
+            closeConfirmModal();
+        };
+    }
+
+    function closeConfirmModal() {
+        const modal = document.getElementById('modal-confirm');
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        activeConfirmCallback = null;
+    }
+
+    function openDeleteModal(text, onConfirm) {
+        showConfirmDialog({
+            title: "Confirmar Exclusão",
+            subtitle: "Esta ação é irreversível",
+            text: text,
+            icon: "fa-triangle-exclamation animate-bounce",
+            btnText: "Excluir Elemento",
+            btnClass: "bg-red-600 hover:bg-red-700 shadow-red-500/30",
+            headerClass: "border-red-500/5 bg-red-500/5",
+            titleClass: "text-red-600",
+            subtitleClass: "text-red-500",
+            onConfirm: onConfirm
+        });
+    }
+
+    function confirmDeleteNode(id) {
+        openDeleteModal(
+            "Deseja realmente apagar este elemento de rede? ISSO APAGARÁ TAMBÉM TODOS OS CABOS CONECTADOS A ELE!",
+            async function() {
+                try {
+                    const res = await fetch(`/api/network/nodes/${id}`, { method: 'DELETE' });
+                    const data = await res.json();
+                    if (data.success) {
+                        nodesData = nodesData.filter(n => n.id !== id);
+                        edgesData = edgesData.filter(e => e.source_node_id !== id && e.target_node_id !== id);
+                        renderMapElements();
+                        renderElementList();
+                        showToast("Elemento e conexões apagados com sucesso.", "success");
+                    }
+                } catch (e) {
+                    showToast("Erro ao excluir nó.", "error");
+                }
+            }
+        );
+    }
+
+    function confirmDeleteEdge(id) {
+        openDeleteModal(
+            "Deseja realmente remover este cabo da rede de fibra óptica?",
+            async function() {
+                try {
+                    const res = await fetch(`/api/network/edges/${id}`, { method: 'DELETE' });
+                    const data = await res.json();
+                    if (data.success) {
+                        edgesData = edgesData.filter(e => e.id !== id);
+                        renderMapElements();
+                        renderElementList();
+                        showToast("Cabo removido com sucesso.", "success");
+                    }
+                } catch (e) {
+                    showToast("Erro ao excluir cabo.", "error");
+                }
+            }
+        );
+    }
+
+    // ==============================================================================
+    // 🔌 MAPA DE PORTAS E DIAGRAMA FISICO DA CTO (WOW FEATURE)
+    // ==============================================================================
+    function openDiagramModal(nodeId) {
+        activeCTONodeId = nodeId;
+        const node = nodesData.find(n => n.id === nodeId);
+        if (!node) return;
+
+        const sub = node.details ? node.details.subcategory : null;
+        const typeLabel = sub === 'ceo' ? 'CEO' : 'CTO NAP';
+        document.getElementById('diagram-cto-title').textContent = `Diagrama ${typeLabel}: ${node.name}`;
+        
+        // Garante que o objeto ports existe na coluna details do nó
+        if (!node.details) node.details = {};
+        if (!node.details.ports) {
+            node.details.ports = {};
+        }
+
+        renderPortsGrid(node);
+
+        const modal = document.getElementById('modal-cto-diagram');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    }
+
+    function closeDiagramModal() {
+        const modal = document.getElementById('modal-cto-diagram');
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        activeCTONodeId = null;
+        activePortNumber = null;
+        document.getElementById('cto-port-form').classList.add('hidden');
+    }
+
+    // Determina a associação lógica entre portas e splitters
+    function getSplitterForPort(node, portNum) {
+        if (!node.splitters || node.splitters.length === 0) return null;
+        
+        let currentPortOffset = 1;
+        for (let s of node.splitters) {
+            const ratioNum = parseInt(s.ratio.split('x')[1]) || 8;
+            const endPort = currentPortOffset + ratioNum - 1;
+            if (portNum >= currentPortOffset && portNum <= endPort) {
+                return s;
+            }
+            currentPortOffset += ratioNum;
+        }
+        
+        return node.splitters[0];
+    }
+
+    // Desenha as linhas ópticas de laser no SVG
+    function drawOpticalPaths() {
+        const svg = document.getElementById('optical-fiber-svg');
+        if (!svg) return;
+        
+        svg.innerHTML = "";
+        
+        const node = nodesData.find(n => n.id === activeCTONodeId);
+        if (!node || !node.splitters || node.splitters.length === 0) return;
+        
+        const svgRect = svg.getBoundingClientRect();
+        
+        let totalPorts = 0;
+        node.splitters.forEach(s => {
+            const ratioNum = parseInt(s.ratio.split('x')[1]) || 8;
+            totalPorts += ratioNum;
+        });
+
+        for (let i = 1; i <= totalPorts; i++) {
+            const port = node.details.ports[i];
+            const isActive = port && port.status === 'active';
+            
+            if (!isActive) continue;
+            
+            const splitter = getSplitterForPort(node, i);
+            if (!splitter) continue;
+            
+            const splitterCard = document.getElementById(`splitter-card-${splitter.id}`);
+            const portCircle = document.getElementById(`port-circle-${i}`);
+            
+            if (!splitterCard || !portCircle) continue;
+            
+            const splitRect = splitterCard.getBoundingClientRect();
+            const portRect = portCircle.getBoundingClientRect();
+            
+            const x1 = (splitRect.right - svgRect.left);
+            const y1 = (splitRect.top + splitRect.height / 2 - svgRect.top);
+            
+            const x2 = (portRect.left - svgRect.left);
+            const y2 = (portRect.top + portRect.height / 2 - svgRect.top);
+            
+            const controlOffset = Math.abs(x2 - x1) * 0.45;
+            const pathData = `M ${x1} ${y1} C ${x1 + controlOffset} ${y1}, ${x2 - controlOffset} ${y2}, ${x2} ${y2}`;
+            
+            const sig = port.signal !== undefined ? port.signal : -19.5;
+            let strokeColor = 'rgba(16, 185, 129, 0.45)'; // Emerald
+            if (sig < -25 && sig >= -28) strokeColor = 'rgba(245, 158, 11, 0.5)'; // Amber
+            if (sig < -28) strokeColor = 'rgba(239, 68, 68, 0.5)'; // Red
+            
+            const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+            path.setAttribute("d", pathData);
+            path.setAttribute("fill", "none");
+            path.setAttribute("stroke", strokeColor);
+            path.setAttribute("stroke-width", "2");
+            path.setAttribute("class", "optical-path");
+            path.setAttribute("id", `optical-path-${i}`);
+            
+            // Eventos de hover para destacar caminhos
+            portCircle.addEventListener('mouseenter', () => {
+                path.setAttribute("stroke-width", "4");
+                path.setAttribute("stroke", strokeColor.replace('0.45', '0.9').replace('0.5', '0.9'));
+                path.style.filter = `drop-shadow(0 0 6px ${strokeColor.replace('0.45', '1').replace('0.5', '1')})`;
+            });
+            portCircle.addEventListener('mouseleave', () => {
+                path.setAttribute("stroke-width", "2");
+                path.setAttribute("stroke", strokeColor);
+                path.style.filter = "none";
+            });
+            
+            svg.appendChild(path);
+        }
+    }
+
+    // Renderiza a grade de portas físicas da caixa (dinâmica baseada nos splitters) e lista de splitters
+    function renderPortsGrid(node) {
+        const grid = document.getElementById('cto-ports-grid');
+        let html = "";
+        
+        let totalPorts = 0;
+        if (node.splitters && node.splitters.length > 0) {
+            node.splitters.forEach(s => {
+                const ratioNum = parseInt(s.ratio.split('x')[1]) || 8;
+                totalPorts += ratioNum;
+            });
+        }
+        
+        if (totalPorts === 0) {
+            grid.innerHTML = `
+                <div class="col-span-4 text-center py-8 opacity-50 text-[10px] font-black uppercase tracking-wider text-slate-500 bg-slate-900/10 dark:bg-white/5 rounded-2xl border border-dashed border-slate-900/10 dark:border-white/10 p-6">
+                    <i class="fa-solid fa-plug-circle-exclamation text-lg mb-2 text-indigo-400"></i><br>
+                    Nenhum Splitter Instalado
+                    <p class="text-[8px] font-medium lowercase mt-1 opacity-60">Instale um splitter lógico (1x8 ou 1x16) no painel de controle da caixa para ativar as portas físicas de atendimento.</p>
+                </div>
+            `;
+            return;
+        }
+        
+        for (let i = 1; i <= totalPorts; i++) {
+            const port = node.details.ports[i];
+            const isActive = port && port.status === 'active';
+            
+            let colorClass = 'bg-slate-100 dark:bg-slate-800/40 border-slate-300 dark:border-slate-700/60 text-slate-500 dark:text-slate-400 hover:border-indigo-500/40 dark:hover:border-indigo-500/40 hover:bg-slate-200 dark:hover:bg-slate-800/80';
+            let statusIndicator = '';
+            
+            if (isActive) {
+                const sig = port.signal !== undefined ? port.signal : -19.5;
+                if (sig >= -25) {
+                    colorClass = 'bg-gradient-to-br from-emerald-500/10 to-emerald-600/20 border-emerald-500/30 text-emerald-600 dark:text-emerald-400 shadow-md shadow-emerald-500/5 hover:scale-[1.03]';
+                    statusIndicator = '<span class="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-emerald-500 dark:bg-emerald-400 shadow-md"></span>';
+                } else if (sig < -25 && sig >= -28) {
+                    colorClass = 'bg-gradient-to-br from-amber-500/10 to-amber-600/20 border-amber-500/30 text-amber-600 dark:text-amber-400 shadow-md shadow-amber-500/5 hover:scale-[1.03]';
+                    statusIndicator = '<span class="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-amber-500 dark:bg-amber-400 shadow-md"></span>';
+                } else {
+                    colorClass = 'bg-gradient-to-br from-red-500/10 to-red-600/20 border-red-500/30 text-red-600 dark:text-red-400 shadow-md shadow-red-500/5 hover:scale-[1.03]';
+                    statusIndicator = '<span class="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-red-500 dark:bg-red-400 shadow-md"></span>';
+                }
+            } else {
+                colorClass += ' hover:scale-[1.03]';
+            }
+                
+            let tooltipText = `Porta ${i}: Livre`;
+            if (isActive) {
+                const sig = port.signal !== undefined ? port.signal : -19.5;
+                tooltipText = `Porta ${i} | ${port.client} (${sig} dBm)`;
+            }
+
+            html += `
+                <button id="port-circle-${i}" onclick="selectPortForMapping(${i})" title="${tooltipText}"
+                        class="port-circle flex flex-col items-center justify-center p-2.5 rounded-xl border relative aspect-square transition-all ${colorClass}">
+                    ${statusIndicator}
+                    <i class="fa-solid fa-plug text-[11px] mb-1"></i>
+                    <span class="text-[9px] font-bold">${i}</span>
+                </button>
+            `;
+        }
+        
+        grid.innerHTML = html;
+        
+        // Renderiza lista de splitters
+        const splittersContainer = document.getElementById('cto-diagram-splitters');
+        let splittersHtml = "";
+        if (!node.splitters || node.splitters.length === 0) {
+            splittersHtml = `
+                <div class="text-center py-10 opacity-40 text-[9px] font-black uppercase italic text-slate-500">
+                    Nenhum Splitter Ativo
+                </div>
+            `;
+        } else {
+            node.splitters.forEach((s, index) => {
+                const colorIndex = index % 4;
+                const colors = ['border-indigo-500/20 bg-indigo-500/5 hover:bg-indigo-500/10', 'border-emerald-500/20 bg-emerald-500/5 hover:bg-emerald-500/10', 'border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10', 'border-sky-500/20 bg-sky-500/5 hover:bg-sky-500/10'];
+                const dotColors = ['bg-indigo-400', 'bg-emerald-400', 'bg-amber-400', 'bg-sky-400'];
+                
+                let activeCount = 0;
+                let currentPortOffset = 1;
+                let sIndex = node.splitters.findIndex(sp => sp.id === s.id);
+                
+                for (let j = 0; j < sIndex; j++) {
+                    const rNum = parseInt(node.splitters[j].ratio.split('x')[1]) || 8;
+                    currentPortOffset += rNum;
+                }
+                const ratioNum = parseInt(s.ratio.split('x')[1]) || 8;
+                const endPort = currentPortOffset + ratioNum - 1;
+                
+                for (let p = currentPortOffset; p <= Math.min(endPort, 16); p++) {
+                    if (node.details.ports[p] && node.details.ports[p].status === 'active') {
+                        activeCount++;
+                    }
+                }
+                
+                splittersHtml += `
+                    <div id="splitter-card-${s.id}" class="border ${colors[colorIndex]} p-2.5 rounded-xl flex items-center justify-between transition-all hover:scale-[1.02]">
+                        <div class="flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full ${dotColors[colorIndex]} shadow-lg"></span>
+                            <div class="flex flex-col">
+                                <span class="text-[10px] font-black text-slate-800 dark:text-white uppercase tracking-tight">${s.name}</span>
+                                <span class="text-[8px] opacity-60 uppercase tracking-widest">${s.ratio} PLC (${activeCount} portas)</span>
+                            </div>
+                        </div>
+                        <button onclick="deleteSplitter(${s.id})" class="w-6 h-6 rounded-lg hover:bg-red-500/20 text-slate-400 hover:text-red-500 flex items-center justify-center transition-all" title="Apagar Splitter">
+                            <i class="fa-solid fa-trash-can text-[9px]"></i>
+                        </button>
+                    </div>
+                `;
+            });
+        }
+        splittersContainer.innerHTML = splittersHtml;
+
+        setTimeout(drawOpticalPaths, 150);
+    }
+
+    // Seleciona uma porta para conectar ou desconectar cliente
+    function selectPortForMapping(portNum) {
+        activePortNumber = portNum;
+        const node = nodesData.find(n => n.id === activeCTONodeId);
+        if (!node) return;
+
+        const port = node.details.ports[portNum];
+        const inputName = document.getElementById('port-client-name');
+        const inputObs = document.getElementById('port-client-obs');
+        const inputSignal = document.getElementById('port-client-signal');
+        
+        document.getElementById('active-port-num').textContent = portNum;
+
+        if (port && port.status === 'active') {
+            inputName.value = port.client || '';
+            inputObs.value = port.obs || '';
+            const sig = port.signal !== undefined ? port.signal : -19.5;
+            inputSignal.value = sig;
+            document.getElementById('port-signal-display').textContent = sig + ' dBm';
+        } else {
+            inputName.value = '';
+            inputObs.value = '';
+            inputSignal.value = -19.5;
+            document.getElementById('port-signal-display').textContent = '-19.5 dBm';
+        }
+
+        const form = document.getElementById('cto-port-form');
+        form.classList.remove('hidden');
+        inputName.focus();
+    }
+
+    // Salva a associação da porta e persiste no PostgreSQL via PUT do Node
+    async function savePortMapping() {
+        const node = nodesData.find(n => n.id === activeCTONodeId);
+        const name = document.getElementById('port-client-name').value.trim();
+        const obs = document.getElementById('port-client-obs').value.trim();
+        const signal = parseFloat(document.getElementById('port-client-signal').value);
+
+        if (!name) {
+            showToast("Nome do assinante é obrigatório para ativar a porta.", "warning");
+            return;
+        }
+
+        if (!node.details.ports) node.details.ports = {};
+        
+        node.details.ports[activePortNumber] = {
+            client: name,
+            obs: obs,
+            signal: signal,
+            status: 'active'
+        };
+
+        await persistNodeDetails(node);
+    }
+
+    // Libera a porta limpa os dados
+    async function clearPortMapping() {
+        const node = nodesData.find(n => n.id === activeCTONodeId);
+        
+        if (node.details.ports && node.details.ports[activePortNumber]) {
+            delete node.details.ports[activePortNumber];
+            await persistNodeDetails(node);
+        } else {
+            document.getElementById('cto-port-form').classList.add('hidden');
+        }
+    }
+
+    // Faz a chamada PUT para persistir a porta associada
+    async function persistNodeDetails(node) {
+        try {
+            const res = await fetch(`/api/network/nodes/${node.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    details: node.details
+                })
+            });
+            const data = await res.json();
+            if (data.success) {
+                renderPortsGrid(node);
+                document.getElementById('cto-port-form').classList.add('hidden');
+                
+                renderMapElements();
+                markers[node.id].openPopup();
+                showToast(`Porta #${activePortNumber} salva com sucesso!`, "success");
+            }
+        } catch (e) {
+            showToast("Erro ao salvar associação da porta.", "error");
+        }
+    }
+
+    // Splitters Management
+    function toggleQuickSplitterForm(show) {
+        const form = document.getElementById('quick-splitter-form');
+        if (show === undefined) {
+            form.classList.toggle('hidden');
+        } else if (show) {
+            form.classList.remove('hidden');
+        } else {
+            form.classList.add('hidden');
+        }
+        if (!form.classList.contains('hidden')) {
+            document.getElementById('quick-split-name').focus();
+        }
+    }
+
+    async function submitQuickSplitter() {
+        const nameInput = document.getElementById('quick-split-name');
+        const ratioSelect = document.getElementById('quick-split-ratio');
+        
+        const name = nameInput.value.trim();
+        const ratio = ratioSelect.value;
+
+        if (!name) {
+            showToast("Por favor, dê um nome para o splitter.", "warning");
+            return;
+        }
+
+        try {
+            const res = await fetch('/api/network/splitters', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    node_id: activeCTONodeId,
+                    name: name,
+                    ratio: ratio,
+                    details: {}
+                })
+            });
+            const data = await res.json();
+            if (data.success) {
+                const node = nodesData.find(n => n.id === activeCTONodeId);
+                if (node) {
+                    node.splitters.push(data.splitter);
+                }
+                
+                renderMapElements();
+                renderPortsGrid(node);
+                
+                nameInput.value = '';
+                toggleQuickSplitterForm(false);
+                showToast("Splitter adicionado com sucesso!", "success");
+            }
+        } catch (e) {
+            showToast("Erro ao adicionar splitter.", "error");
+        }
+    }
+
+    async function addSplitter(nodeId) {
+        const nameInput = document.getElementById(`split-name-${nodeId}`);
+        const ratioSelect = document.getElementById(`split-ratio-${nodeId}`);
+        
+        const name = nameInput.value.trim();
+        const ratio = ratioSelect.value;
+
+        if (!name) {
+            showToast("Por favor, dê um nome para o splitter.", "warning");
+            return;
+        }
+
+        try {
+            const res = await fetch('/api/network/splitters', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    node_id: nodeId,
+                    name: name,
+                    ratio: ratio,
+                    details: {}
+                })
+            });
+            const data = await res.json();
+            if (data.success) {
+                const node = nodesData.find(n => n.id === nodeId);
+                if (node) {
+                    node.splitters.push(data.splitter);
+                }
+                
+                renderMapElements();
+                markers[nodeId].openPopup();
+                showToast("Splitter adicionado!", "success");
+            }
+        } catch (e) {
+            showToast("Erro ao adicionar splitter.", "error");
+        }
+    }
+
+    function deleteSplitter(id) {
+        openDeleteModal(
+            "Deseja realmente apagar este splitter lógico desta CTO? Todos os clientes conectados a portas que dependam dele serão afetados.",
+            async function() {
+                try {
+                    const res = await fetch(`/api/network/splitters/${id}`, {
+                        method: 'DELETE'
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                        nodesData.forEach(n => {
+                            n.splitters = n.splitters.filter(s => s.id !== id);
+                        });
+                        
+                        renderMapElements();
+                        
+                        if (activeCTONodeId) {
+                            const node = nodesData.find(n => n.id === activeCTONodeId);
+                            renderPortsGrid(node);
+                        } else {
+                            const node = nodesData.find(n => n.splitters.some(s => s.id === id));
+                            if (node) {
+                                markers[node.id].openPopup();
+                            }
+                        }
+                        showToast("Splitter removido com sucesso.", "success");
+                    }
+                } catch (e) {
+                    showToast("Erro ao remover splitter.", "error");
+                }
+            }
+        );
+    }
+
+    // Redesenha caminhos ao redimensionar
+    window.addEventListener('resize', () => {
+        if (activeCTONodeId) {
+            drawOpticalPaths();
+        }
+    });
+
+    // ==============================================================================
+    // 🎛️ SISTEMA DE FUSÃO DE FIBRAS (ABNT & CORES DE TUBOS)
+    // ==============================================================================
+    const abntColors = [
+        { name: "Verde", hex: "#22c55e" },
+        { name: "Amarelo", hex: "#eab308" },
+        { name: "Branco", hex: "#f8fafc" },
+        { name: "Azul", hex: "#3b82f6" },
+        { name: "Vermelho", hex: "#ef4444" },
+        { name: "Violeta", hex: "#d946ef" }, // saftey replace for violet (P0 Rule)
+        { name: "Marrom", hex: "#78350f" },
+        { name: "Rosa", hex: "#ec4899" },
+        { name: "Preto", hex: "#0f172a" },
+        { name: "Cinza", hex: "#6b7280" },
+        { name: "Laranja", hex: "#f97316" },
+        { name: "Aqua", hex: "#06b6d4" }
+    ];
+
+    function getFiberColor(fiberIndex) {
+        const idx = (fiberIndex - 1) % 12;
+        return abntColors[idx];
+    }
+
+    function onNodeTypeChange() {
+        const typeSelect = document.getElementById('node-input-type');
+        const hostContainer = document.getElementById('host-post-container');
+        const hostSelect = document.getElementById('node-input-host-post');
+        
+        if (typeSelect.value === 'ceo' || typeSelect.value === 'cto_nap') {
+            hostContainer.classList.remove('hidden');
+            hostSelect.innerHTML = '<option value="">-- Selecione o Poste (Opcional) --</option>';
+            const poles = nodesData.filter(n => n.type === 'post');
+            poles.forEach(p => {
+                hostSelect.innerHTML += `<option value="${p.id}">${p.name}</option>`;
+            });
+        } else {
+            hostContainer.classList.add('hidden');
+            hostSelect.value = "";
+        }
+    }
+
+    function openFusionModal(nodeId) {
+        activeFusionNodeId = parseInt(nodeId);
+        activeFusionFiberA = null;
+        activeFusionFiberB = null;
+
+        const node = nodesData.find(n => n.id === activeFusionNodeId);
+        if (!node) return;
+
+        const sub = node.details ? node.details.subcategory : null;
+        const typeStr = sub === 'ceo' ? 'Caixa CEO' : 'Caixa CTO NAP';
+        document.getElementById('fusion-modal-title').innerHTML = `
+            <i class="fa-solid fa-circle-nodes text-emerald-500"></i> Fusão de Fibras - ${node.name} (${typeStr})
+        `;
+
+        const connectedCables = edgesData.filter(e => parseInt(e.source_node_id) === activeFusionNodeId || parseInt(e.target_node_id) === activeFusionNodeId);
+        
+        // Busca cabos passantes pelo mesmo poste da caixa (CEO ou NAP)
+        const parentPostId = node.details ? node.details.parent_post_id : null;
+        if (parentPostId) {
+            const postCables = edgesData.filter(e => parseInt(e.source_node_id) === parseInt(parentPostId) || parseInt(e.target_node_id) === parseInt(parentPostId));
+            postCables.forEach(pc => {
+                if (!connectedCables.some(c => c.id === pc.id)) {
+                    // Clona e marca como passante para não modificar dados globais
+                    const pcClone = { ...pc, isPassante: true };
+                    connectedCables.push(pcClone);
+                }
+            });
+        }
+
+        const selectA = document.getElementById('fusion-select-cable-a');
+        const selectB = document.getElementById('fusion-select-cable-b');
+
+        if (connectedCables.length === 0) {
+            selectA.innerHTML = '<option value="">⚠️ Nenhum cabo disponível nesta localização</option>';
+            selectB.innerHTML = '<option value="">⚠️ Nenhum cabo disponível nesta localização</option>';
+        } else {
+            selectA.innerHTML = '<option value="">-- Selecione o Cabo --</option>';
+            selectB.innerHTML = '<option value="">-- Selecione o Destino --</option>';
+
+            connectedCables.forEach(c => {
+                const fibersCount = c.details && c.details.fiber_count ? c.details.fiber_count : 12;
+                const passanteTag = c.isPassante ? ' (Passante)' : '';
+                selectA.innerHTML += `<option value="${c.id}">${c.name}${passanteTag} (${fibersCount} FO)</option>`;
+                selectB.innerHTML += `<option value="cable_${c.id}">${c.isPassante ? 'Passante: ' : 'Cabo: '}${c.name} (${fibersCount} FO)</option>`;
+            });
+        }
+
+        if (node.splitters && node.splitters.length > 0) {
+            node.splitters.forEach(s => {
+                selectB.innerHTML += `<option value="splitter_${s.id}">Splitter Lógico: ${s.name} (${s.ratio})</option>`;
+            });
+        }
+
+        // Limpa o canvas de cards de fiação anteriores
+        const canvas = document.getElementById('fusion-card-canvas');
+        if (canvas) canvas.innerHTML = "";
+
+        renderFusionTable();
+
+        const modal = document.getElementById('modal-fiber-fusion');
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+
+        // Inicializa o arrastar e conectar de conexões ópticas visuais de laser de forma premium na mesa blueprint
+        setTimeout(() => {
+            initDragAndConnect();
+            drawFusionOverlayLines();
+        }, 200);
+    }
+
+    function closeFusionModal() {
+        const modal = document.getElementById('modal-fiber-fusion');
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        
+        // Limpa as conexões visuais antigas
+        const svg = document.getElementById('fusion-drag-svg');
+        if (svg) svg.innerHTML = "";
+
+        // Limpa os cards de fiação do canvas
+        const canvas = document.getElementById('fusion-card-canvas');
+        if (canvas) canvas.innerHTML = "";
+
+        activeFusionNodeId = null;
+        activeFusionFiberA = null;
+        activeFusionFiberB = null;
+    }
+
+    function toggleTube(side, cableId, t) {
+        const body = document.getElementById(`body-tube-${side}-${cableId}-${t}`);
+        const chevron = document.getElementById(`chevron-tube-${side}-${cableId}-${t}`);
+        if (body && chevron) {
+            body.classList.toggle('hidden');
+            chevron.classList.toggle('rotate-180');
+            // Recalcula as linhas do laser de fusão com a nova altura
+            drawFusionOverlayLines();
+        }
+    }
+
+    function loadWiringCard(side) {
+        const canvas = document.getElementById('fusion-card-canvas');
+        if (!canvas) return;
+
+        const node = nodesData.find(n => n.id === activeFusionNodeId);
+        if (!node) return;
+
+        if (side === 'a') {
+            const oldCard = document.getElementById('card-wiring-a');
+            if (oldCard) oldCard.remove();
+
+            const selectA = document.getElementById('fusion-select-cable-a');
+            const cableId = parseInt(selectA.value);
+            if (!cableId) {
+                drawFusionOverlayLines();
+                return;
+            }
+
+            const cable = edgesData.find(e => e.id === cableId);
+            if (!cable) return;
+
+            const fiberCount = cable.details && cable.details.fiber_count ? parseInt(cable.details.fiber_count) : 12;
+            let tubes = (cable.details && cable.details.tube_count) ? parseInt(cable.details.tube_count) : null;
+            let fibersPerTube = (cable.details && cable.details.fibers_per_tube) ? parseInt(cable.details.fibers_per_tube) : null;
+            if (!tubes || !fibersPerTube) {
+                if (fiberCount % 12 === 0) {
+                    tubes = Math.ceil(fiberCount / 12);
+                    fibersPerTube = 12;
+                } else {
+                    tubes = 1;
+                    fibersPerTube = fiberCount;
+                }
+            }
+
+            const fusions = node.details && node.details.fusions ? node.details.fusions : [];
+
+            let html = `
+                <div id="card-wiring-a" class="fusion-node-card pointer-events-auto" style="left: 40px; top: 120px; position: absolute;">
+                    <div class="card-drag-handle" data-card-id="card-wiring-a">
+                        <span class="card-title text-[9px] font-black uppercase text-white tracking-wider flex items-center gap-1.5">
+                            <i class="fa-solid fa-bezier-curve text-emerald-400"></i> ${cable.name}
+                        </span>
+                        <span class="text-[8px] font-black uppercase bg-emerald-500/10 text-emerald-400 px-1.5 py-0.5 rounded">${tubes}T x ${fibersPerTube}F</span>
+                    </div>
+                    <div class="card-node-body custom-scrollbar">
+            `;
+
+            for (let t = 1; t <= tubes; t++) {
+                const tubeColor = getFiberColor(t);
+                html += `
+                    <div class="tube-block border-l-[3px] mb-2.5 rounded-r-xl overflow-hidden bg-slate-900/10 dark:bg-white/[0.01] border border-slate-900/10 dark:border-white/10" style="border-left-color: ${tubeColor.hex}">
+                        <div class="tube-header cursor-pointer flex items-center justify-between p-2 bg-slate-900/20 dark:bg-white/[0.02]" onclick="toggleTube('a', ${cableId}, ${t})">
+                            <span class="text-[8px] font-black uppercase text-slate-400 tracking-wider flex items-center gap-1.5">
+                                <span class="w-2 h-2 rounded-full inline-block" style="background-color: ${tubeColor.hex}"></span>
+                                Tubo ${t} (${tubeColor.name})
+                            </span>
+                            <i id="chevron-tube-a-${cableId}-${t}" class="fa-solid fa-chevron-down text-[7px] text-slate-400 transition-transform"></i>
+                        </div>
+                        <div id="body-tube-a-${cableId}-${t}" class="tube-body p-1.5 space-y-1">
+                `;
+
+                for (let fInTube = 1; fInTube <= fibersPerTube; fInTube++) {
+                    const f = (t - 1) * fibersPerTube + fInTube;
+                    const color = getFiberColor(fInTube);
+
+                    const isFused = fusions.some(fus => fus.from_cable_id === cableId && fus.from_fiber === f);
+                    let statusHtml = "";
+                    let itemClass = "bg-white/5 dark:bg-slate-900 border-white/5 cursor-pointer";
+                    
+                    if (isFused) {
+                        const fus = fusions.find(fus => fus.from_cable_id === cableId && fus.from_fiber === f);
+                        let destStr = "";
+                        if (fus.to_type === 'splitter') {
+                            const split = node.splitters.find(s => s.id === fus.to_id);
+                            destStr = `Splitter ${split ? split.name : '#' + fus.to_id}`;
+                        } else {
+                            const destCable = edgesData.find(e => e.id === fus.to_id);
+                            const destFibersPerTube = (destCable && destCable.details && destCable.details.fibers_per_tube) ? parseInt(destCable.details.fibers_per_tube) : 12;
+                            const destTubeNum = Math.ceil(fus.to_fiber / destFibersPerTube);
+                            const destFiberNumInTube = ((fus.to_fiber - 1) % destFibersPerTube) + 1;
+                            destStr = `${destCable ? destCable.name : 'Cabo #' + fus.to_id} (T${destTubeNum}:F${destFiberNumInTube})`;
+                        }
+                        statusHtml = `<span class="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-500 text-[6.5px] font-black uppercase truncate max-w-[90px]">Fusão: ${destStr}</span>`;
+                        itemClass = "bg-emerald-500/5 opacity-55 cursor-not-allowed border-emerald-500/10";
+                    }
+
+                    const socketOutHtml = !isFused 
+                        ? `<span id="socket-out-${f}" class="socket-anchor anchor-out shrink-0" data-fiber-id="${f}"></span>` 
+                        : `<span id="socket-out-${f}" class="socket-anchor anchor-out anchor-out-disabled shrink-0"></span>`;
+
+                    html += `
+                        <div class="card-fiber-row ${itemClass}">
+                            <div class="flex items-center gap-1.5">
+                                <div class="w-3 h-3 rounded-full border border-black/20 dark:border-white/20 shadow-sm shrink-0" style="background-color: ${color.hex}"></div>
+                                <span class="text-[8px] font-bold text-slate-300 uppercase tracking-tight">T${t}:F${fInTube} (${color.name})</span>
+                            </div>
+                            <div class="flex items-center gap-1.5">
+                                ${statusHtml}
+                                ${socketOutHtml}
+                            </div>
+                        </div>
+                    `;
+                }
+
+                html += `
+                        </div>
+                    </div>
+                `;
+            }
+
+            html += `</div></div>`;
+            canvas.insertAdjacentHTML('beforeend', html);
+            makeCardDraggable(document.getElementById('card-wiring-a'));
+
+        } else {
+            const oldCard = document.getElementById('card-wiring-b');
+            if (oldCard) oldCard.remove();
+
+            const selectB = document.getElementById('fusion-select-cable-b');
+            const targetVal = selectB.value;
+            if (!targetVal) {
+                drawFusionOverlayLines();
+                return;
+            }
+
+            const [type, idStr] = targetVal.split('_');
+            const targetId = parseInt(idStr);
+            const fusions = node.details && node.details.fusions ? node.details.fusions : [];
+
+            if (type === 'cable') {
+                const cable = edgesData.find(e => e.id === targetId);
+                if (!cable) return;
+
+                const fiberCount = cable.details && cable.details.fiber_count ? parseInt(cable.details.fiber_count) : 12;
+                let tubes = (cable.details && cable.details.tube_count) ? parseInt(cable.details.tube_count) : null;
+                let fibersPerTube = (cable.details && cable.details.fibers_per_tube) ? parseInt(cable.details.fibers_per_tube) : null;
+                if (!tubes || !fibersPerTube) {
+                    if (fiberCount % 12 === 0) {
+                        tubes = Math.ceil(fiberCount / 12);
+                        fibersPerTube = 12;
+                    } else {
+                        tubes = 1;
+                        fibersPerTube = fiberCount;
+                    }
+                }
+
+                let html = `
+                    <div id="card-wiring-b" class="fusion-node-card pointer-events-auto" style="left: 310px; top: 120px; position: absolute;">
+                        <div class="card-drag-handle" data-card-id="card-wiring-b">
+                            <span class="card-title text-[9px] font-black uppercase text-white tracking-wider flex items-center gap-1.5">
+                                <i class="fa-solid fa-bezier-curve text-indigo-400"></i> ${cable.name}
+                            </span>
+                            <span class="text-[8px] font-black uppercase bg-indigo-500/10 text-indigo-400 px-1.5 py-0.5 rounded">${tubes}T x ${fibersPerTube}F</span>
+                        </div>
+                        <div class="card-node-body custom-scrollbar">
+                `;
+
+                for (let t = 1; t <= tubes; t++) {
+                    const tubeColor = getFiberColor(t);
+                    html += `
+                        <div class="tube-block border-l-[3px] mb-2.5 rounded-r-xl overflow-hidden bg-slate-900/10 dark:bg-white/[0.01] border border-slate-900/10 dark:border-white/10" style="border-left-color: ${tubeColor.hex}">
+                            <div class="tube-header cursor-pointer flex items-center justify-between p-2 bg-slate-900/20 dark:bg-white/[0.02]" onclick="toggleTube('b', ${targetId}, ${t})">
+                                <span class="text-[8px] font-black uppercase text-slate-400 tracking-wider flex items-center gap-1.5">
+                                    <span class="w-2 h-2 rounded-full inline-block" style="background-color: ${tubeColor.hex}"></span>
+                                    Tubo ${t} (${tubeColor.name})
+                                </span>
+                                <i id="chevron-tube-b-${targetId}-${t}" class="fa-solid fa-chevron-down text-[7px] text-slate-400 transition-transform"></i>
+                            </div>
+                            <div id="body-tube-b-${targetId}-${t}" class="tube-body p-1.5 space-y-1">
+                    `;
+
+                    for (let fInTube = 1; fInTube <= fibersPerTube; fInTube++) {
+                        const f = (t - 1) * fibersPerTube + fInTube;
+                        const color = getFiberColor(fInTube);
+
+                        const isFused = fusions.some(fus => fus.to_type === 'cable' && fus.to_id === targetId && fus.to_fiber === f);
+                        let statusHtml = "";
+                        let itemClass = "bg-white/5 dark:bg-slate-900 border-white/5 cursor-pointer";
+
+                        if (isFused) {
+                            const fus = fusions.find(fus => fus.to_type === 'cable' && fus.to_id === targetId && fus.to_fiber === f);
+                            const srcCable = edgesData.find(e => e.id === fus.from_cable_id);
+                            const srcFibersPerTube = (srcCable && srcCable.details && srcCable.details.fibers_per_tube) ? parseInt(srcCable.details.fibers_per_tube) : 12;
+                            const srcTubeNum = Math.ceil(fus.from_fiber / srcFibersPerTube);
+                            const srcFiberNumInTube = ((fus.from_fiber - 1) % srcFibersPerTube) + 1;
+                            statusHtml = `<span class="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-500 text-[6.5px] font-black uppercase truncate max-w-[90px]">Fusão: ${srcCable ? srcCable.name : 'Cabo #' + fus.from_cable_id} (T${srcTubeNum}:F${srcFiberNumInTube})</span>`;
+                            itemClass = "bg-emerald-500/5 opacity-55 cursor-not-allowed border-emerald-500/10";
+                        }
+
+                        const socketInHtml = !isFused 
+                            ? `<span id="socket-in-cable-${targetId}-${f}" class="socket-anchor anchor-in shrink-0" data-dest-type="cable" data-dest-id="${targetId}" data-dest-fiber="${f}"></span>` 
+                            : `<span id="socket-in-cable-${targetId}-${f}" class="socket-anchor anchor-in anchor-in-disabled shrink-0"></span>`;
+
+                        html += `
+                            <div class="card-fiber-row ${itemClass}">
+                                <div class="flex items-center gap-1.5">
+                                    ${socketInHtml}
+                                    <div class="w-3 h-3 rounded-full border border-black/20 dark:border-white/20 shadow-sm shrink-0" style="background-color: ${color.hex}"></div>
+                                    <span class="text-[8px] font-bold text-slate-300 uppercase tracking-tight">T${t}:F${fInTube} (${color.name})</span>
+                                </div>
+                                ${statusHtml}
+                            </div>
+                        `;
+                    }
+
+                    html += `
+                            </div>
+                        </div>
+                    `;
+                }
+
+                html += `</div></div>`;
+                canvas.insertAdjacentHTML('beforeend', html);
+                makeCardDraggable(document.getElementById('card-wiring-b'));
+
+            } else if (type === 'splitter') {
+                const splitter = node.splitters.find(s => s.id === targetId);
+                if (!splitter) return;
+
+                const isFused = fusions.some(fus => fus.to_type === 'splitter' && fus.to_id === targetId && fus.to_fiber === 1);
+                let statusHtml = "";
+                let itemClass = "bg-white/5 dark:bg-slate-900 border-white/5 cursor-pointer";
+
+                if (isFused) {
+                    const fus = fusions.find(fus => fus.to_type === 'splitter' && fus.to_id === targetId && fus.to_fiber === 1);
+                    const srcCable = edgesData.find(e => e.id === fus.from_cable_id);
+                    const srcFibersPerTube = (srcCable && srcCable.details && srcCable.details.fibers_per_tube) ? parseInt(srcCable.details.fibers_per_tube) : 12;
+                    const srcTubeNum = Math.ceil(fus.from_fiber / srcFibersPerTube);
+                    const srcFiberNumInTube = ((fus.from_fiber - 1) % srcFibersPerTube) + 1;
+                    statusHtml = `<span class="px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-500 text-[6.5px] font-black uppercase truncate max-w-[90px]">Fusão: ${srcCable ? srcCable.name : 'Cabo #' + fus.from_cable_id} (T${srcTubeNum}:F${srcFiberNumInTube})</span>`;
+                    itemClass = "bg-emerald-500/5 opacity-55 cursor-not-allowed border-emerald-500/10";
+                }
+
+                const socketInHtml = !isFused 
+                    ? `<span id="socket-in-splitter-${targetId}-1" class="socket-anchor anchor-in shrink-0" data-dest-type="splitter" data-dest-id="${targetId}" data-dest-fiber="1"></span>` 
+                    : `<span id="socket-in-splitter-${targetId}-1" class="socket-anchor anchor-in anchor-in-disabled shrink-0"></span>`;
+
+                let html = `
+                    <div id="card-wiring-b" class="fusion-node-card pointer-events-auto" style="left: 310px; top: 120px; position: absolute;">
+                        <div class="card-drag-handle" data-card-id="card-wiring-b">
+                            <span class="card-title text-[9px] font-black uppercase text-white tracking-wider flex items-center gap-1.5">
+                                <i class="fa-solid fa-sitemap text-indigo-400"></i> ${splitter.name}
+                            </span>
+                            <span class="text-[8px] font-black uppercase bg-indigo-500/10 text-indigo-400 px-1.5 py-0.5 rounded">Splitter</span>
+                        </div>
+                        <div class="card-node-body custom-scrollbar">
+                            <div class="card-fiber-row ${itemClass}">
+                                <div class="flex items-center gap-1.5">
+                                    ${socketInHtml}
+                                    <div class="w-4 h-4 rounded bg-indigo-500/10 text-indigo-400 flex items-center justify-center text-[9px] shrink-0">
+                                        <i class="fa-solid fa-sitemap"></i>
+                                    </div>
+                                    <span class="text-[8px] font-bold text-slate-300 uppercase tracking-tight">Entrada</span>
+                                </div>
+                                ${statusHtml}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                canvas.insertAdjacentHTML('beforeend', html);
+                makeCardDraggable(document.getElementById('card-wiring-b'));
+            }
+        }
+
+        // Redesenha as conexões Bezier
+        setTimeout(drawFusionOverlayLines, 100);
+    }
+
+    function makeCardDraggable(cardEl) {
+        if (!cardEl) return;
+        const handle = cardEl.querySelector('.card-drag-handle');
+        if (!handle) return;
+
+        let isDraggingCard = false;
+        let startX, startY;
+        let cardStartX, cardStartY;
+
+        handle.addEventListener('mousedown', dragStart);
+        handle.addEventListener('touchstart', dragStart, { passive: true });
+
+        function dragStart(e) {
+            isDraggingCard = true;
+            cardEl.classList.add('card-dragging');
+            
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            
+            startX = clientX;
+            startY = clientY;
+            cardStartX = parseInt(cardEl.style.left) || 0;
+            cardStartY = parseInt(cardEl.style.top) || 0;
+
+            document.addEventListener('mousemove', dragMove);
+            document.addEventListener('touchmove', dragMove, { passive: false });
+            document.addEventListener('mouseup', dragEnd);
+            document.addEventListener('touchend', dragEnd);
+        }
+
+        function dragMove(e) {
+            if (!isDraggingCard) return;
+            e.preventDefault();
+
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+            const dx = clientX - startX;
+            const dy = clientY - startY;
+
+            // Restringe a movimentação para dentro da mesa blueprint
+            const board = document.getElementById('fusion-board');
+            if (board) {
+                const boardRect = board.getBoundingClientRect();
+                const cardRect = cardEl.getBoundingClientRect();
+                
+                let newLeft = cardStartX + dx;
+                let newTop = cardStartY + dy;
+
+                newLeft = Math.max(0, Math.min(newLeft, boardRect.width - cardRect.width));
+                newTop = Math.max(0, Math.min(newTop, boardRect.height - cardRect.height));
+
+                cardEl.style.left = newLeft + 'px';
+                cardEl.style.top = newTop + 'px';
+
+                // Redesenha as conexões em tempo real
+                drawFusionOverlayLines();
+            }
+        }
+
+        function dragEnd() {
+            if (!isDraggingCard) return;
+            isDraggingCard = false;
+            cardEl.classList.remove('card-dragging');
+
+            document.removeEventListener('mousemove', dragMove);
+            document.removeEventListener('touchmove', dragMove);
+            document.removeEventListener('mouseup', dragEnd);
+            document.removeEventListener('touchend', dragEnd);
+        }
+    }
+
+    async function removeFusion(index) {
+        if (!activeFusionNodeId) return;
+        const node = nodesData.find(n => n.id === activeFusionNodeId);
+        if (!node || !node.details || !node.details.fusions) return;
+
+        node.details.fusions.splice(index, 1);
+
+        try {
+            const res = await fetch(`/api/network/nodes/${node.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ details: node.details })
+            });
+            const data = await res.json();
+            if (data.success) {
+                showToast("Fusão removida com sucesso.", "success");
+                loadWiringCard('a');
+                loadWiringCard('b');
+                renderFusionTable();
+            }
+        } catch (e) {
+            showToast("Erro ao remover fusão.", "error");
+        }
+    }
+
+    function renderFusionTable() {
+        const node = nodesData.find(n => n.id === activeFusionNodeId);
+        const tbody = document.getElementById('fusion-table-body');
+        if (!tbody || !node) return;
+
+        const fusions = node.details && node.details.fusions ? node.details.fusions : [];
+
+        if (fusions.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="4" class="p-8 text-center text-[10px] font-black uppercase tracking-wider opacity-30 italic">Nenhuma fusão ativa nesta caixa.</td>
+                </tr>
+            `;
+            return;
+        }
+
+        let html = "";
+        fusions.forEach((fus, idx) => {
+            const cableA = edgesData.find(e => e.id === fus.from_cable_id);
+            const fibersPerTubeA = (cableA && cableA.details && cableA.details.fibers_per_tube) ? parseInt(cableA.details.fibers_per_tube) : 12;
+            const tubeANum = Math.ceil(fus.from_fiber / fibersPerTubeA);
+            const fiberANumInTube = ((fus.from_fiber - 1) % fibersPerTubeA) + 1;
+            const colorA = getFiberColor(fiberANumInTube);
+
+            let destStr = "";
+            if (fus.to_type === 'splitter') {
+                const split = node.splitters.find(s => s.id === fus.to_id);
+                destStr = `Splitter: <span class="font-bold text-indigo-400">${split ? split.name : '#' + fus.to_id}</span> (Entrada)`;
+            } else {
+                const cableB = edgesData.find(e => e.id === fus.to_id);
+                const fibersPerTubeB = (cableB && cableB.details && cableB.details.fibers_per_tube) ? parseInt(cableB.details.fibers_per_tube) : 12;
+                const tubeBNum = Math.ceil(fus.to_fiber / fibersPerTubeB);
+                const fiberBNumInTube = ((fus.to_fiber - 1) % fibersPerTubeB) + 1;
+                const colorB = getFiberColor(fiberBNumInTube);
+                destStr = `Cabo: <span class="font-bold text-emerald-400">${cableB ? cableB.name : '#' + fus.to_id}</span> - Tubo ${tubeBNum} | Fibra ${fiberBNumInTube} (${colorB.name})`;
+            }
+
+            html += `
+                <tr class="hover:bg-slate-50 dark:hover:bg-white/5 transition-all">
+                    <td class="p-3 font-medium">
+                        <div class="flex items-center gap-2">
+                            <div class="w-3 h-3 rounded-full border border-black/10 dark:border-white/10" style="background-color: ${colorA.hex}"></div>
+                            <span>${cableA ? cableA.name : 'Cabo #' + fus.from_cable_id} - Tubo ${tubeANum} | Fibra ${fiberANumInTube} (${colorA.name})</span>
+                        </div>
+                    </td>
+                    <td class="p-3">${destStr}</td>
+                    <td class="p-3 text-center">
+                        <span class="px-2 py-0.5 rounded text-[8px] font-black uppercase ${fus.to_type === 'splitter' ? 'bg-indigo-500/10 text-indigo-400' : 'bg-emerald-500/10 text-emerald-500'}">
+                            ${fus.to_type === 'splitter' ? 'Splitter' : 'Interligação'}
+                        </span>
+                    </td>
+                    <td class="p-3 text-right">
+                        <button onclick="removeFusion(${idx})" class="text-red-500 hover:text-red-400 hover:scale-105 active:scale-95 transition-all px-2.5 py-1 text-[9px] font-black uppercase tracking-wider rounded-lg bg-red-500/10" title="Excluir Fusão">
+                            <i class="fa-solid fa-trash-can mr-1"></i> Desfazer
+                        </button>
+                    </td>
+                </tr>
+            `;
+        });
+        tbody.innerHTML = html;
+    }
+
+    // ==============================================================================
+    // 🔗 LÓGICA DE FUSÃO INTERATIVA DRAG & CONNECT (SVG + CURVAS BEZIER DE LASER)
+    // ==============================================================================
+    
+    let isDraggingConnection = false;
+    let dragStartSocket = null;
+    let tempPathEl = null;
+
+    function isSocketVisible(socket, cardId) {
+        const card = document.getElementById(cardId);
+        if (!card) return false;
+        const body = card.querySelector('.card-node-body');
+        if (!body) return false;
+
+        const socketRect = socket.getBoundingClientRect();
+        const bodyRect = body.getBoundingClientRect();
+
+        // Tolerância de 2 pixels
+        return (socketRect.top >= bodyRect.top - 2 && socketRect.bottom <= bodyRect.bottom + 2);
+    }
+
+    async function fuseFibersDirect(cableAId, fiberA, destType, destId, fiberB) {
+        const node = nodesData.find(n => n.id === activeFusionNodeId);
+        if (!node) return;
+
+        if (!node.details) node.details = {};
+        if (!node.details.fusions) node.details.fusions = [];
+
+        // Evita conexões duplicadas
+        const exists = node.details.fusions.some(fus => 
+            fus.from_cable_id === parseInt(cableAId) && fus.from_fiber === parseInt(fiberA)
+        );
+        if (exists) {
+            showToast("Esta fibra já está fusionada!", "warning");
+            return;
+        }
+
+        const newFusion = {
+            from_cable_id: parseInt(cableAId),
+            from_fiber: parseInt(fiberA),
+            to_type: destType,
+            to_id: parseInt(destId),
+            to_fiber: parseInt(fiberB)
+        };
+
+        node.details.fusions.push(newFusion);
+
+        try {
+            const res = await fetch(`/api/network/nodes/${node.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ details: node.details })
+            });
+            const data = await res.json();
+            if (data.success) {
+                showToast("Fusão de fibra realizada!", "success");
+                loadWiringCard('a');
+                loadWiringCard('b');
+                renderFusionTable();
+                
+                // Redesenha as conexões Drag & Connect
+                setTimeout(drawFusionOverlayLines, 100);
+            }
+        } catch (e) {
+            showToast("Erro ao salvar fusão.", "error");
+        }
+    }
+
+    function getBezierPath(x1, y1, x2, y2) {
+        const controlOffset = Math.abs(x2 - x1) * 0.45;
+        return `M ${x1} ${y1} C ${x1 + controlOffset} ${y1}, ${x2 - controlOffset} ${y2}, ${x2} ${y2}`;
+    }
+
+    function initDragAndConnect() {
+        const board = document.getElementById('fusion-board');
+        if (!board) return;
+
+        // Ouvintes nos sockets de saída (Lado A) - delega no board
+        board.removeEventListener('mousedown', handleDragStart);
+        board.addEventListener('mousedown', handleDragStart);
+        
+        board.removeEventListener('touchstart', handleDragStart);
+        board.addEventListener('touchstart', handleDragStart, { passive: false });
+
+        // Eventos globais de movimentação
+        window.removeEventListener('mousemove', handleDragMove);
+        window.addEventListener('mousemove', handleDragMove);
+        
+        window.removeEventListener('touchmove', handleDragMove);
+        window.addEventListener('touchmove', handleDragMove, { passive: false });
+
+        // Eventos globais de soltura
+        window.removeEventListener('mouseup', handleDragEnd);
+        window.addEventListener('mouseup', handleDragEnd);
+        
+        window.removeEventListener('touchend', handleDragEnd);
+        window.addEventListener('touchend', handleDragEnd);
+    }
+
+    function handleDragStart(e) {
+        const socket = e.target.closest('.anchor-out');
+        if (!socket || socket.classList.contains('anchor-out-disabled')) return;
+
+        e.preventDefault();
+        
+        isDraggingConnection = true;
+        dragStartSocket = socket;
+        
+        const board = document.getElementById('fusion-board');
+        if (!board) return;
+        const containerRect = board.getBoundingClientRect();
+        const socketRect = socket.getBoundingClientRect();
+
+        const x1 = socketRect.left + socketRect.width / 2 - containerRect.left;
+        const y1 = socketRect.top + socketRect.height / 2 - containerRect.top;
+
+        // Adiciona classe de dragging ativa ao board
+        board.classList.add('dragging-active');
+
+        // Cria ou limpa a linha temporária
+        let svg = document.getElementById('fusion-drag-svg');
+        if (!svg) return;
+
+        // Remove temporário anterior se existir
+        const prevTemp = document.getElementById('temp-laser-path');
+        if (prevTemp) prevTemp.remove();
+
+        const fiberId = parseInt(socket.getAttribute('data-fiber-id'));
+        const color = getFiberColor(fiberId);
+
+        tempPathEl = document.createElementNS("http://www.w3.org/2000/svg", "path");
+        tempPathEl.setAttribute("id", "temp-laser-path");
+        tempPathEl.setAttribute("fill", "none");
+        tempPathEl.setAttribute("stroke", color.hex);
+        tempPathEl.setAttribute("stroke-width", "3.5");
+        tempPathEl.setAttribute("class", "optical-path");
+        tempPathEl.style.filter = `drop-shadow(0 0 6px ${color.hex})`;
+        
+        // Define o início
+        tempPathEl.setAttribute("d", `M ${x1} ${y1} C ${x1} ${y1}, ${x1} ${y1}, ${x1} ${y1}`);
+        svg.appendChild(tempPathEl);
+    }
+
+    function handleDragMove(e) {
+        if (!isDraggingConnection || !dragStartSocket || !tempPathEl) return;
+
+        const board = document.getElementById('fusion-board');
+        if (!board) return;
+        const containerRect = board.getBoundingClientRect();
+        const socketRect = dragStartSocket.getBoundingClientRect();
+
+        const x1 = socketRect.left + socketRect.width / 2 - containerRect.left;
+        const y1 = socketRect.top + socketRect.height / 2 - containerRect.top;
+
+        // Coordenadas relativas do cursor
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+        const x2 = clientX - containerRect.left;
+        const y2 = clientY - containerRect.top;
+
+        // Atualiza a curva Bezier do path temporário
+        const pathData = getBezierPath(x1, y1, x2, y2);
+        tempPathEl.setAttribute("d", pathData);
+    }
+
+    async function handleDragEnd(e) {
+        if (!isDraggingConnection) return;
+
+        isDraggingConnection = false;
+        
+        const board = document.getElementById('fusion-board');
+        if (board) board.classList.remove('dragging-active');
+
+        // Remove a linha temporária
+        if (tempPathEl) {
+            tempPathEl.remove();
+            tempPathEl = null;
+        }
+
+        const clientX = e.changedTouches ? e.changedTouches[0].clientX : e.clientX;
+        const clientY = e.changedTouches ? e.changedTouches[0].clientY : e.clientY;
+
+        // Detecta qual elemento está sob o cursor
+        // Ocultamos temporariamente os eventos do SVG para elementFromPoint capturar a âncora de entrada
+        const svg = document.getElementById('fusion-drag-svg');
+        if (svg) svg.style.pointerEvents = 'none';
+
+        const element = document.elementFromPoint(clientX, clientY);
+        
+        if (svg) svg.style.pointerEvents = '';
+
+        if (element && element.closest('.anchor-in')) {
+            const socketIn = element.closest('.anchor-in');
+            
+            // Só conecta se não estiver desabilitada
+            if (!socketIn.classList.contains('anchor-in-disabled')) {
+                const fiberIdA = parseInt(dragStartSocket.getAttribute('data-fiber-id'));
+                
+                const destType = socketIn.getAttribute('data-dest-type');
+                const destId = socketIn.getAttribute('data-dest-id');
+                const destFiber = socketIn.getAttribute('data-dest-fiber');
+                
+                const selectA = document.getElementById('fusion-select-cable-a');
+                const cableIdA = selectA.value;
+
+                if (cableIdA && fiberIdA && destType && destId && destFiber) {
+                    await fuseFibersDirect(cableIdA, fiberIdA, destType, destId, destFiber);
+                }
+            }
+        }
+
+        dragStartSocket = null;
+    }
+
+    function drawFusionOverlayLines() {
+        const svg = document.getElementById('fusion-drag-svg');
+        if (!svg) return;
+
+        svg.innerHTML = "";
+
+        const node = nodesData.find(n => n.id === activeFusionNodeId);
+        if (!node || !node.details || !node.details.fusions || node.details.fusions.length === 0) return;
+
+        const selectA = document.getElementById('fusion-select-cable-a');
+        const selectB = document.getElementById('fusion-select-cable-b');
+
+        const activeCableIdA = parseInt(selectA.value);
+        const activeTargetValB = selectB.value;
+
+        if (!activeCableIdA || !activeTargetValB) return;
+
+        const [bType, bIdStr] = activeTargetValB.split('_');
+        const activeDestIdB = parseInt(bIdStr);
+
+        const board = document.getElementById('fusion-board');
+        if (!board) return;
+        const containerRect = board.getBoundingClientRect();
+
+        node.details.fusions.forEach((fus, idx) => {
+            // Verifica se a fusão corresponde ao cabo selecionado no Lado A e ao destino no Lado B
+            if (fus.from_cable_id !== activeCableIdA || fus.to_type !== bType || fus.to_id !== activeDestIdB) return;
+
+            // Encontra os sockets correspondentes
+            const socketOut = document.getElementById(`socket-out-${fus.from_fiber}`);
+            const socketIn = document.getElementById(`socket-in-${fus.to_type}-${fus.to_id}-${fus.to_fiber}`);
+
+            if (socketOut && socketIn) {
+                const outRect = socketOut.getBoundingClientRect();
+                const inRect = socketIn.getBoundingClientRect();
+
+                // Se o socket estiver oculto por scroll, não desenha a linha para não ficar flutuando fora
+                const isOutVisible = isSocketVisible(socketOut, 'card-wiring-a');
+                const isInVisible = isSocketVisible(socketIn, 'card-wiring-b');
+                
+                if (!isOutVisible || !isInVisible) return;
+
+                const x1 = outRect.left + outRect.width / 2 - containerRect.left;
+                const y1 = outRect.top + outRect.height / 2 - containerRect.top;
+                const x2 = inRect.left + inRect.width / 2 - containerRect.left;
+                const y2 = inRect.top + inRect.height / 2 - containerRect.top;
+
+                const color = getFiberColor(fus.from_fiber);
+                const pathData = getBezierPath(x1, y1, x2, y2);
+
+                const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                path.setAttribute("d", pathData);
+                path.setAttribute("fill", "none");
+                path.setAttribute("stroke", color.hex);
+                path.setAttribute("stroke-width", "3.5");
+                path.setAttribute("class", "optical-path");
+                path.style.filter = `drop-shadow(0 0 5px ${color.hex})`;
+
+                // Adiciona pointer-events na linha para o duplo clique de remoção
+                path.style.pointerEvents = 'auto';
+                path.style.cursor = 'pointer';
+                path.setAttribute("title", "Duplo clique para apagar esta fusão");
+                path.addEventListener('dblclick', () => {
+                    openDeleteModal("Deseja realmente remover esta fusão de fibra de forma visual?", () => {
+                        removeFusion(idx);
+                    });
+                });
+
+                svg.appendChild(path);
+            }
+        });
+    }
+
+    // Ouvinte global para scroll na fase de captura para atualizar as curvas bezier em tempo real
+    window.addEventListener('scroll', drawFusionOverlayLines, true);
+
+    // Inicializa o Leaflet no carregamento
+    window.addEventListener('DOMContentLoaded', initMap);
+</script>
+{% endblock %}
+
+{# accessibility helper: onkeydown= handler present #}

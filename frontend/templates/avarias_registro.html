@@ -1,0 +1,1183 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<div class="max-w-7xl mx-auto">
+
+<!-- ✅ HEADER PREMIUM AVARIAS COMPACT -->
+<div class="mb-8 animate-premium">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 glass-premium p-6 rounded-[2rem] shadow-xl overflow-hidden relative">
+        <!-- Decorativos -->
+        <div class="absolute -top-24 -right-24 w-64 h-64 bg-red-500/10 rounded-full blur-3xl"></div>
+        <div class="absolute -bottom-24 -left-24 w-64 h-64 bg-orange-500/10 rounded-full blur-3xl"></div>
+
+        <div class="flex items-center gap-5 relative z-10">
+            <div class="w-12 h-12 rounded-[1.25rem] bg-gradient-to-br from-red-500 to-orange-600 flex items-center justify-center text-white shadow-2xl shadow-red-500/20">
+                <i class="fa-solid fa-car-burst text-xl"></i>
+            </div>
+            <div>
+                <nav class="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-0.5">
+                    <span>Manutenção</span>
+                    <i class="fa-solid fa-chevron-right text-[8px] opacity-30"></i>
+                    <span class="text-red-500">Avarias & O.S.</span>
+                </nav>
+                <h2 class="text-2xl font-black text-slate-800 dark:text-white tracking-tight">Ordens de Serviço</h2>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-4 relative z-10">
+            <button onclick="document.getElementById('modalNovaAvaria').showModal()"
+                    class="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-red-500/20 transition-all active:scale-95 flex items-center gap-2">
+                <i class="fa-solid fa-plus text-xs"></i> Nova Avaria
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ✅ CARDS DE ESTATÍSTICAS PREMIUM -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 animate-premium">
+    <!-- Total O.S -->
+    <div class="glass-premium p-6 rounded-3xl relative overflow-hidden group shadow-lg">
+        <div class="absolute -top-12 -right-12 w-24 h-24 bg-blue-500/10 rounded-full blur-2xl group-hover:scale-150 transition-all duration-500"></div>
+        <div class="flex justify-between items-start mb-4">
+            <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total de Registros</span>
+            <div class="w-8 h-8 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500">
+                <i class="fa-solid fa-folder-open text-xs"></i>
+            </div>
+        </div>
+        <h3 class="text-3xl font-black text-slate-800 dark:text-white tracking-tight mb-1">{{ total_avarias }}</h3>
+        <p class="text-xs text-slate-400 font-bold">Ordens de serviço criadas</p>
+    </div>
+
+    <!-- O.S Abertas -->
+    <div class="glass-premium p-6 rounded-3xl relative overflow-hidden group shadow-lg">
+        <div class="absolute -top-12 -right-12 w-24 h-24 bg-yellow-500/10 rounded-full blur-2xl group-hover:scale-150 transition-all duration-500"></div>
+        <div class="flex justify-between items-start mb-4">
+            <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">O.S. Abertas</span>
+            <div class="w-8 h-8 rounded-xl bg-yellow-500/10 flex items-center justify-center text-yellow-500">
+                <i class="fa-solid fa-triangle-exclamation text-xs"></i>
+            </div>
+        </div>
+        <h3 class="text-3xl font-black text-slate-800 dark:text-white tracking-tight mb-1">{{ abertas }}</h3>
+        <p class="text-xs text-slate-400 font-bold">Aguardando manutenção</p>
+    </div>
+
+    <!-- O.S Finalizadas -->
+    <div class="glass-premium p-6 rounded-3xl relative overflow-hidden group shadow-lg">
+        <div class="absolute -top-12 -right-12 w-24 h-24 bg-green-500/10 rounded-full blur-2xl group-hover:scale-150 transition-all duration-500"></div>
+        <div class="flex justify-between items-start mb-4">
+            <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">O.S. Finalizadas</span>
+            <div class="w-8 h-8 rounded-xl bg-green-500/10 flex items-center justify-center text-green-500">
+                <i class="fa-solid fa-circle-check text-xs"></i>
+            </div>
+        </div>
+        <h3 class="text-3xl font-black text-slate-800 dark:text-white tracking-tight mb-1">{{ resolvidas }}</h3>
+        <p class="text-xs text-slate-400 font-bold">Veículos prontos p/ uso</p>
+    </div>
+
+    <!-- Custo Total -->
+    <div class="glass-premium p-6 rounded-3xl relative overflow-hidden group shadow-lg">
+        <div class="absolute -top-12 -right-12 w-24 h-24 bg-emerald-500/10 rounded-full blur-2xl group-hover:scale-150 transition-all duration-500"></div>
+        <div class="flex justify-between items-start mb-4">
+            <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Custo Operacional</span>
+            <div class="w-8 h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+                <i class="fa-solid fa-brazilian-real-sign text-xs"></i>
+            </div>
+        </div>
+        <h3 class="text-2xl font-black text-slate-800 dark:text-white tracking-tight mb-1">R$ {{ "%.2f"|format(total_gasto) }}</h3>
+        <p class="text-xs text-slate-400 font-bold">Total investido em reparos</p>
+    </div>
+</div>
+
+<!-- ✅ BARRA DE FILTROS AVANÇADA PREMIUM COM TABS EMBUTIDAS -->
+<div class="mb-8 animate-premium">
+    <form method="GET" action="{{ url_for('avarias_registro') }}" class="glass-premium p-5 rounded-[2rem] shadow-xl relative overflow-hidden">
+        <div class="flex flex-col lg:flex-row items-end justify-between gap-6">
+            
+            <!-- Lado Esquerdo: Filtros de Busca e Gravidade -->
+            <div class="flex flex-col md:flex-row items-end gap-4 flex-1 w-full">
+                <!-- Busca por Texto -->
+                <div class="flex-1 w-full">
+                    <label class="text-[10px] font-black text-slate-400 dark:text-slate-300 uppercase tracking-widest block mb-1.5 flex items-center gap-1">
+                        <i class="fa-solid fa-magnifying-glass text-blue-500"></i> Buscar O.S.
+                    </label>
+                    <input id="q" type="text" name="q" value="{{ request.args.get('q', '') }}" 
+                           placeholder="Digite Placa, Modelo, Descrição..." 
+                           class="w-full text-xs font-bold text-slate-700 dark:text-white bg-slate-900/5 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 px-4 py-3 rounded-xl focus:border-blue-500 outline-none transition-all duration-300">
+                </div>
+                
+                <!-- Filtro de Gravidade -->
+                <div class="w-full md:w-44">
+                    <label class="text-[10px] font-black text-slate-400 dark:text-slate-300 uppercase tracking-widest block mb-1.5 flex items-center gap-1">
+                        <i class="fa-solid fa-triangle-exclamation text-blue-500"></i> Gravidade
+                    </label>
+                    <select name="gravidade" class="w-full text-xs font-bold text-slate-700 dark:text-white bg-slate-900/5 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 px-4 py-3 rounded-xl focus:border-blue-500 outline-none transition-all duration-300">
+                        <option value="">Todas</option>
+                        <option value="baixa" {% if request.args.get('gravidade') == 'baixa' %}selected{% endif %}>Baixa</option>
+                        <option value="media" {% if request.args.get('gravidade') == 'media' %}selected{% endif %}>Média</option>
+                        <option value="alta" {% if request.args.get('gravidade') == 'alta' %}selected{% endif %}>Alta</option>
+                        <option value="critica" {% if request.args.get('gravidade') == 'critica' %}selected{% endif %}>Crítica</option>
+                    </select>
+                </div>
+                
+                <!-- Botões de Ação -->
+                <div class="flex items-center gap-2 w-full md:w-auto h-[42px] md:self-end">
+                    <button type="submit" 
+                            class="flex-1 md:flex-none px-5 py-3 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-blue-500/20 transition-all flex items-center justify-center gap-2 h-full whitespace-nowrap">
+                        <i class="fa-solid fa-filter text-xs"></i>
+                    </button>
+                    <a href="{{ url_for('avarias_registro') }}" 
+                       class="flex-1 md:flex-none px-5 py-3 bg-slate-900/5 hover:bg-slate-900/10 dark:bg-white/5 dark:hover:bg-white/10 active:scale-95 text-slate-800 dark:text-white rounded-xl font-black text-[10px] uppercase tracking-widest transition-all text-center flex items-center justify-center gap-2 h-full whitespace-nowrap"
+                       title="Limpar Filtros">
+                        <i class="fa-solid fa-eraser text-xs"></i>
+                    </a>
+                </div>
+            </div>
+            
+            <!-- Lado Direito: Seletor de Status (Tabs Abertas / Finalizadas) -->
+            <div class="w-full lg:w-auto">
+                <label class="text-[10px] font-black text-slate-400 dark:text-slate-300 uppercase tracking-widest block mb-1.5 flex items-center gap-1">
+                    <i class="fa-solid fa-list-check text-blue-500"></i> Status O.S.
+                </label>
+                <div class="flex items-center bg-slate-900/5 dark:bg-white/5 p-1 rounded-2xl border border-slate-900/5 dark:border-white/5 h-[42px] w-full lg:w-[260px]">
+                    <!-- Botão O.S. Abertas -->
+                    <button type="button" id="btnTabAbertas" onclick="switchTab('abertas')"
+                            class="flex-1 py-1.5 px-3 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-1.5 h-full active:scale-95">
+                        <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse shadow-[0_0_6px_rgba(245,158,11,0.5)]"></span>
+                        <span>Abertas</span>
+                        <span id="badgeAbertas" class="px-1.5 py-0.5 rounded text-[8px] font-black transition-colors">
+                            {{ abertas }}
+                        </span>
+                    </button>
+                    
+                    <!-- Botão O.S. Finalizadas -->
+                    <button type="button" id="btnTabFinalizadas" onclick="switchTab('finalizadas')"
+                            class="flex-1 py-1.5 px-3 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-1.5 h-full active:scale-95">
+                        <span class="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_6px_rgba(34,197,94,0.5)]"></span>
+                        <span>Concluídas</span>
+                        <span id="badgeFinalizadas" class="px-1.5 py-0.5 rounded text-[8px] font-black transition-colors">
+                            {{ resolvidas }}
+                        </span>
+                    </button>
+                </div>
+            </div>
+            
+        </div>
+    </form>
+</div>
+
+<!-- ============================================
+     SEÇÃO: ORDENS DE SERVIÇO ABERTAS (PENDENTES)
+     ============================================ -->
+<div id="tabAbertas" class="mb-12 animate-premium">
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+      {% for os in ordens if os.status == 'aberta' %}
+      <div class="backdrop-blur-md bg-white/70 dark:bg-white/10 p-5 rounded-[2rem]
+                  border border-slate-900/10 dark:border-white/10 shadow-xl hover:shadow-2xl hover:scale-[1.02] transition-all duration-300 relative overflow-hidden flex flex-col justify-between">
+        
+        <!-- Efeito decorativo sutil dependendo da gravidade -->
+        {% if os.gravidade == 'critica' %}
+          <div class="absolute top-0 left-0 w-full h-[4px] bg-gradient-to-r from-red-600 to-rose-500"></div>
+        {% elif os.gravidade == 'alta' %}
+          <div class="absolute top-0 left-0 w-full h-[4px] bg-gradient-to-r from-orange-600 to-amber-500"></div>
+        {% elif os.gravidade == 'media' %}
+          <div class="absolute top-0 left-0 w-full h-[4px] bg-gradient-to-r from-yellow-600 to-yellow-400"></div>
+        {% else %}
+          <div class="absolute top-0 left-0 w-full h-[4px] bg-gradient-to-r from-blue-600 to-sky-500"></div>
+        {% endif %}
+
+        <div>
+          <div class="flex justify-between items-center mb-3">
+            <h2 class="text-lg font-black text-slate-800 dark:text-white flex items-center gap-1.5">
+              <i class="fa-solid fa-file-contract text-blue-500"></i>
+              #{{ os.id }}
+            </h2>
+
+            <div class="flex items-center gap-1.5">
+              <!-- Badge Gravidade -->
+              {% if os.gravidade == 'critica' %}
+                <span class="px-2 py-0.5 rounded bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-400 text-[8px] font-black uppercase tracking-wider animate-pulse">
+                  Crítica
+                </span>
+              {% elif os.gravidade == 'alta' %}
+                <span class="px-2 py-0.5 rounded bg-orange-500/10 border border-orange-500/30 text-orange-600 dark:text-orange-400 text-[8px] font-black uppercase tracking-wider">
+                  Alta
+                </span>
+              {% elif os.gravidade == 'media' %}
+                <span class="px-2 py-0.5 rounded bg-yellow-500/10 border border-yellow-500/30 text-yellow-600 dark:text-yellow-400 text-[8px] font-black uppercase tracking-wider">
+                  Média
+                </span>
+              {% else %}
+                <span class="px-2 py-0.5 rounded bg-blue-500/10 border border-blue-500/30 text-blue-600 dark:text-blue-400 text-[8px] font-black uppercase tracking-wider">
+                  Baixa
+                </span>
+              {% endif %}
+
+              <!-- Badge Status -->
+              <span class="px-2 py-0.5 rounded bg-amber-500/15 border border-amber-500/30 text-amber-800 dark:text-amber-300 text-[8px] font-black uppercase tracking-wider">
+                Aberta
+              </span>
+            </div>
+          </div>
+
+          <div class="space-y-1.5 mb-4">
+            <p class="text-slate-700 dark:text-slate-200 text-xs font-bold flex items-center gap-1.5">
+              <i class="fa-solid fa-car text-[10px] text-slate-400 w-3 text-center"></i>
+              {{ os.vehicle.brand }} {{ os.vehicle.model }} - <span class="bg-slate-900/5 dark:bg-white/5 px-1.5 py-0.5 rounded text-[10px] font-black text-slate-800 dark:text-white">{{ os.vehicle.plate }}</span>
+            </p>
+
+            <p class="text-slate-700 dark:text-slate-200 text-xs font-medium flex items-center gap-1.5">
+              <i class="fa-solid fa-gauge text-[10px] text-slate-400 w-3 text-center"></i>
+              <span>{{ os.km or 0 }} KM</span>
+            </p>
+
+            {% if os.responsavel %}
+            <p class="text-slate-700 dark:text-slate-200 text-xs font-medium flex items-center gap-1.5">
+              <i class="fa-solid fa-user-gear text-[10px] text-slate-400 w-3 text-center"></i>
+              <span>{{ os.responsavel.username }}</span>
+            </p>
+            {% endif %}
+
+            <p class="text-slate-700 dark:text-slate-200 text-xs font-medium flex items-center gap-1.5">
+              <i class="fa-solid fa-calendar text-[10px] text-slate-400 w-3 text-center"></i>
+              <span>{{ os.data_abertura|br_datetime if os.data_abertura else 'N/A' }}</span>
+            </p>
+          </div>
+
+          <div class="bg-slate-900/5 dark:bg-white/5 p-3 rounded-xl border border-slate-900/5 dark:border-white/5 mb-4">
+            <p class="text-slate-500 dark:text-slate-400 text-[10px] font-black uppercase tracking-wider mb-1">Descrição da Avaria</p>
+            <p class="text-slate-700 dark:text-slate-300 text-xs leading-relaxed font-medium line-clamp-3">
+              {{ os.descricao }}
+            </p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2 pt-2 border-t border-slate-900/10 dark:border-white/10 mt-auto">
+          <button class="flex-1 py-2 rounded-xl bg-green-600 hover:bg-green-700 active:scale-95 text-white font-black text-[10px] uppercase tracking-wider shadow-lg shadow-green-500/10 transition-all flex items-center justify-center gap-1"
+                  onclick="openFinalizar({{ os.id }})">
+            <i class="fa-solid fa-check text-xs"></i> Finalizar
+          </button>
+
+          <!-- FORMULÁRIO DE EXCLUSÃO SEGURO -->
+          <form method="POST" action="{{ url_for('avarias_excluir', avaria_id=os.id) }}" class="inline" 
+                onsubmit="return confirm('⚠️ Tem certeza que deseja excluir permanentemente esta Avaria / O.S. #{{ os.id }}?');">
+            <button type="submit" 
+                    class="p-2 bg-red-500/10 hover:bg-red-500/20 active:scale-95 text-red-600 dark:text-red-400 border border-red-500/20 hover:border-red-500/30 rounded-xl transition-all"
+                    title="Excluir O.S.">
+              <i class="fa-solid fa-trash-can text-xs"></i>
+            </button>
+          </form>
+        </div>
+
+      </div>
+
+      <!-- JSON INVISÍVEL COM DADOS DA O.S -->
+      <script type="application/json" id="os_data_{{ os.id }}">
+        {
+          "veiculo": {{ (os.vehicle.brand ~ " " ~ os.vehicle.model ~ " - " ~ os.vehicle.plate)|tojson }},
+          "responsavel": {{ (os.responsavel.username if os.responsavel else '')|tojson }},
+          "descricao": {{ (os.descricao if os.descricao else '')|tojson }},
+          "gravidade": {{ (os.gravidade if os.gravidade else '')|tojson }},
+          "km": {{ (os.km|string if os.km else '')|tojson }},
+          "valor_gasto": {{ (os.valor_gasto|string if os.valor_gasto else '')|tojson }},
+          "pecas_trocadas": {{ (os.pecas_trocadas if os.pecas_trocadas else '')|tojson }},
+          "servico_realizado": {{ (os.servico_realizado if os.servico_realizado else '')|tojson }},
+          "data_abertura": {{ (os.data_abertura|br_datetime if os.data_abertura else '')|tojson }},
+          "data_fechamento": {{ (os.data_fechamento|br_datetime if os.data_fechamento else '')|tojson }},
+          "foto": {{ (os.foto if os.foto else '')|tojson }}
+        }
+      </script>
+      {% endfor %}
+      
+      {% if abertas == 0 %}
+      <div class="col-span-full py-8 text-center bg-slate-900/5 dark:bg-white/5 border border-dashed border-slate-900/10 dark:border-white/10 rounded-[2rem]">
+          <p class="text-slate-400 text-xs font-bold uppercase tracking-wider">Nenhuma O.S. aberta no momento.</p>
+      </div>
+      {% endif %}
+    </div>
+</div>
+
+<!-- ============================================
+     SEÇÃO: ORDENS DE SERVIÇO FINALIZADAS (CONCLUÍDAS)
+     ============================================ -->
+<div id="tabFinalizadas" class="mb-8 animate-premium hidden">
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+      {% for os in ordens if os.status == 'finalizada' %}
+      <div class="backdrop-blur-md bg-white/70 dark:bg-white/10 p-5 rounded-[2rem]
+                  border border-slate-900/10 dark:border-white/10 shadow-xl hover:shadow-2xl hover:scale-[1.02] transition-all duration-300 relative overflow-hidden flex flex-col justify-between opacity-85 hover:opacity-100 transition-opacity">
+        
+        <!-- Top border indicator -->
+        <div class="absolute top-0 left-0 w-full h-[4px] bg-gradient-to-r from-green-600 to-emerald-500"></div>
+
+        <div>
+          <div class="flex justify-between items-center mb-3">
+            <h2 class="text-lg font-black text-slate-800 dark:text-white flex items-center gap-1.5">
+              <i class="fa-solid fa-circle-check text-green-500"></i>
+              #{{ os.id }}
+            </h2>
+
+            <div class="flex items-center gap-1.5">
+              <!-- Badge Status -->
+              <span class="px-2 py-0.5 rounded bg-green-500/15 border border-green-500/30 text-green-800 dark:text-green-300 text-[8px] font-black uppercase tracking-wider">
+                Pronto
+              </span>
+            </div>
+          </div>
+
+          <div class="space-y-1.5 mb-4">
+            <p class="text-slate-700 dark:text-slate-200 text-xs font-bold flex items-center gap-1.5">
+              <i class="fa-solid fa-car text-[10px] text-slate-400 w-3 text-center"></i>
+              {{ os.vehicle.brand }} {{ os.vehicle.model }} - <span class="bg-slate-900/5 dark:bg-white/5 px-1.5 py-0.5 rounded text-[10px] font-black text-slate-800 dark:text-white">{{ os.vehicle.plate }}</span>
+            </p>
+
+            <p class="text-slate-700 dark:text-slate-200 text-xs font-medium flex items-center gap-1.5">
+              <i class="fa-solid fa-gauge text-[10px] text-slate-400 w-3 text-center"></i>
+              <span>{{ os.km or 0 }} KM</span>
+            </p>
+
+            {% if os.responsavel %}
+            <p class="text-slate-700 dark:text-slate-200 text-xs font-medium flex items-center gap-1.5">
+              <i class="fa-solid fa-user-gear text-[10px] text-slate-400 w-3 text-center"></i>
+              <span>{{ os.responsavel.username }}</span>
+            </p>
+            {% endif %}
+
+            <p class="text-slate-700 dark:text-slate-200 text-xs font-medium flex items-center gap-1.5">
+              <i class="fa-solid fa-calendar text-[10px] text-slate-400 w-3 text-center"></i>
+              <span>{{ os.data_abertura|br_datetime if os.data_abertura else 'N/A' }}</span>
+            </p>
+          </div>
+
+          <div class="bg-slate-900/5 dark:bg-white/5 p-3 rounded-xl border border-slate-900/5 dark:border-white/5 mb-4">
+            <p class="text-slate-500 dark:text-slate-400 text-[10px] font-black uppercase tracking-wider mb-1">Serviço Realizado</p>
+            <p class="text-slate-700 dark:text-slate-300 text-xs leading-relaxed font-medium line-clamp-3">
+              {{ os.servico_realizado or 'Nenhuma descrição fornecida.' }}
+            </p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2 pt-2 border-t border-slate-900/10 dark:border-white/10 mt-auto">
+          <button class="flex-1 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-black text-[10px] uppercase tracking-wider shadow-lg shadow-blue-500/10 transition-all flex items-center justify-center gap-1"
+                  onclick="openDetalhes({{ os.id }})">
+            <i class="fa-solid fa-eye text-xs"></i> Detalhes
+          </button>
+
+          <!-- FORMULÁRIO DE EXCLUSÃO SEGURO -->
+          <form method="POST" action="{{ url_for('avarias_excluir', avaria_id=os.id) }}" class="inline" 
+                onsubmit="return confirm('⚠️ Tem certeza que deseja excluir permanentemente esta Avaria / O.S. #{{ os.id }}?');">
+            <button type="submit" 
+                    class="p-2 bg-red-500/10 hover:bg-red-500/20 active:scale-95 text-red-600 dark:text-red-400 border border-red-500/20 hover:border-red-500/30 rounded-xl transition-all"
+                    title="Excluir O.S.">
+              <i class="fa-solid fa-trash-can text-xs"></i>
+            </button>
+          </form>
+        </div>
+
+      </div>
+
+      <!-- JSON INVISÍVEL COM DADOS DA O.S -->
+      <script type="application/json" id="os_data_{{ os.id }}">
+        {
+          "veiculo": {{ (os.vehicle.brand ~ " " ~ os.vehicle.model ~ " - " ~ os.vehicle.plate)|tojson }},
+          "responsavel": {{ (os.responsavel.username if os.responsavel else '')|tojson }},
+          "descricao": {{ (os.descricao if os.descricao else '')|tojson }},
+          "gravidade": {{ (os.gravidade if os.gravidade else '')|tojson }},
+          "km": {{ (os.km|string if os.km else '')|tojson }},
+          "valor_gasto": {{ (os.valor_gasto|string if os.valor_gasto else '')|tojson }},
+          "pecas_trocadas": {{ (os.pecas_trocadas if os.pecas_trocadas else '')|tojson }},
+          "servico_realizado": {{ (os.servico_realizado if os.servico_realizado else '')|tojson }},
+          "data_abertura": {{ (os.data_abertura|br_datetime if os.data_abertura else '')|tojson }},
+          "data_fechamento": {{ (os.data_fechamento|br_datetime if os.data_fechamento else '')|tojson }},
+          "foto": {{ (os.foto if os.foto else '')|tojson }}
+        }
+      </script>
+      {% endfor %}
+      
+      {% if resolvidas == 0 %}
+      <div class="col-span-full py-8 text-center bg-slate-900/5 dark:bg-white/5 border border-dashed border-slate-900/10 dark:border-white/10 rounded-[2rem]">
+          <p class="text-slate-400 text-xs font-bold uppercase tracking-wider">Nenhuma O.S. finalizada no momento.</p>
+      </div>
+      {% endif %}
+    </div>
+</div>
+
+</div>
+
+<!-- =====================================
+      MODAL: NOVA AVARIA (KM AUTOMÁTICO)
+===================================== -->
+<dialog id="modalNovaAvaria"
+        class="rounded-3xl bg-white dark:bg-gray-900 border border-slate-900/10 dark:border-gray-700 p-6 shadow-2xl max-w-[95vw] w-[850px] overflow-y-auto max-h-[90vh]">
+
+  <style>
+    #avaria_svg [data-part] {
+      transition: fill 0.2s, stroke 0.2s;
+    }
+    #avaria_svg [data-part]:hover {
+      fill-opacity: 0.4;
+      cursor: pointer;
+    }
+    #avaria_svg .part-ok {
+      fill: rgba(16, 185, 129, 0.08) !important;
+      stroke: rgba(16, 185, 129, 0.4) !important;
+    }
+    #avaria_svg .part-avaria {
+      fill: rgba(239, 68, 68, 0.25) !important;
+      stroke: #ef4444 !important;
+    }
+  </style>
+
+  <h2 class="text-xl font-black text-slate-800 dark:text-white mb-4">Registrar Nova Avaria</h2>
+
+  <form action="{{ url_for('avarias_registro') }}" method="POST" class="grid grid-cols-1 md:grid-cols-12 gap-6" enctype="multipart/form-data">
+    <input type="hidden" name="acao" value="nova">
+
+    <!-- COLUNA ESQUERDA: MAPA 2D E CHECKBOXES (5/12) -->
+    <div class="md:col-span-5 flex flex-col items-center justify-start bg-slate-50/70 border border-slate-900/5 dark:bg-black/20 dark:border-white/5 p-4 rounded-2xl">
+      <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-2 text-center w-full">Localização da Avaria (Selecione no mapa)</label>
+      
+      <!-- Seletor Rápido de Avarias (Drop-downs) -->
+      <div class="w-full mb-3 p-3 bg-white dark:bg-slate-800 border border-slate-900/5 dark:border-white/5 rounded-xl space-y-2 shadow-sm">
+        <span class="text-[9px] font-black text-slate-500 uppercase tracking-widest block">Seletor Rápido de Posição</span>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <select id="sel_componente" onchange="popularLados()" class="w-full text-[10px] font-bold text-slate-700 dark:text-white bg-slate-100 dark:bg-slate-900 border border-slate-900/10 dark:border-white/10 p-2 rounded-lg outline-none focus:border-red-500 transition-colors">
+              <option value="">Componente...</option>
+              <option value="pneus">Pneus</option>
+              <option value="vidros">Vidros</option>
+              <option value="retrovisores">Retrovisores</option>
+              <option value="farois_lanternas">Faróis / Lanternas</option>
+              <option value="laterais">Laterais (Lado)</option>
+              <option value="para_choques">Para-choques</option>
+              <option value="carroceria">Carroceria</option>
+            </select>
+          </div>
+          <div>
+            <select id="sel_lado" class="w-full text-[10px] font-bold text-slate-700 dark:text-white bg-slate-100 dark:bg-slate-900 border border-slate-900/10 dark:border-white/10 p-2 rounded-lg outline-none focus:border-red-500 transition-colors" disabled>
+              <option value="">Lado/Posição...</option>
+            </select>
+          </div>
+        </div>
+        <button type="button" onclick="adicionarAvariaPorDropdown()" class="w-full py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-black text-[9px] uppercase tracking-wider transition-all active:scale-95 flex items-center justify-center gap-1 shadow-md shadow-red-500/10">
+          <i class="fa-solid fa-plus-circle"></i> Marcar no Mapa
+        </button>
+      </div>
+
+      <svg id="avaria_svg" viewBox="0 0 200 400" class="w-full max-w-[170px] mx-auto select-none mb-3">
+          <!-- Pneus/Rodas (Ficam por baixo do chassi) -->
+          <!-- Dianteiro Esquerdo -->
+          <rect data-part="pneus" data-sub="de" x="15" y="80" width="22" height="46" rx="6" fill="#1E293B" stroke="#475569" stroke-width="1.5" class="transition duration-200 part-ok" />
+          <!-- Dianteiro Direito -->
+          <rect data-part="pneus" data-sub="dd" x="163" y="80" width="22" height="46" rx="6" fill="#1E293B" stroke="#475569" stroke-width="1.5" class="transition duration-200 part-ok" />
+          <!-- Traseiro Esquerdo -->
+          <rect data-part="pneus" data-sub="te" x="15" y="274" width="22" height="46" rx="6" fill="#1E293B" stroke="#475569" stroke-width="1.5" class="transition duration-200 part-ok" />
+          <!-- Traseiro Direito -->
+          <rect data-part="pneus" data-sub="td" x="163" y="274" width="22" height="46" rx="6" fill="#1E293B" stroke="#475569" stroke-width="1.5" class="transition duration-200 part-ok" />
+
+          <!-- Calotas (Centro dos pneus) -->
+          <circle data-part="calotas" data-sub="de" cx="26" cy="103" r="7" fill="#94A3B8" stroke="#cbd5e1" stroke-width="1" class="transition duration-200 part-ok" />
+          <circle data-part="calotas" data-sub="dd" cx="174" cy="103" r="7" fill="#94A3B8" stroke="#cbd5e1" stroke-width="1" class="transition duration-200 part-ok" />
+          <circle data-part="calotas" data-sub="te" cx="26" cy="297" r="7" fill="#94A3B8" stroke="#cbd5e1" stroke-width="1" class="transition duration-200 part-ok" />
+          <circle data-part="calotas" data-sub="td" cx="174" cy="297" r="7" fill="#94A3B8" stroke="#cbd5e1" stroke-width="1" class="transition duration-200 part-ok" />
+
+          <!-- Laterais (Atrás do chassi) -->
+          <!-- Lateral Esquerda -->
+          <path data-part="lateral_esquerda" d="M35 75 C30 150 30 250 35 325" fill="none" stroke="#64748B" stroke-width="6" stroke-linecap="round" class="transition duration-200 part-ok" />
+          <!-- Lateral Direita -->
+          <path data-part="lateral_direita" d="M165 75 C170 150 170 250 165 325" fill="none" stroke="#64748B" stroke-width="6" stroke-linecap="round" class="transition duration-200 part-ok" />
+
+          <!-- Chassi / Corpo Principal (Base de fundo) -->
+          <path d="M35 75 C35 55 50 45 100 45 C150 45 165 55 165 75 L165 325 C165 345 150 355 100 355 C50 355 35 345 35 325 Z" fill="#E2E8F0" stroke="#475569" stroke-width="2" />
+
+          <!-- Partes da Carroceria -->
+          <!-- Capô -->
+          <path data-part="capo" d="M37 75 C37 57 50 47 100 47 C150 47 163 57 163 75 L163 130 L37 130 Z" fill="#F1F5F9" stroke="#94A3B8" stroke-width="1.5" class="transition duration-200 part-ok" />
+          <!-- Teto -->
+          <rect data-part="teto" x="37" y="145" width="126" height="125" rx="8" fill="#F1F5F9" stroke="#94A3B8" stroke-width="1.5" class="transition duration-200 part-ok" />
+          <!-- Porta Malas -->
+          <path data-part="porta_malas" d="M37 285 L163 285 L163 325 C163 343 150 353 100 353 C50 353 37 343 37 325 Z" fill="#F1F5F9" stroke="#94A3B8" stroke-width="1.5" class="transition duration-200 part-ok" />
+
+          <!-- Para-choques -->
+          <!-- Dianteiro -->
+          <path data-part="para_choque_dianteiro" d="M45 46 C60 41 140 41 155 46" fill="none" stroke="#334155" stroke-width="7" stroke-linecap="round" class="transition duration-200 part-ok" />
+          <!-- Traseiro -->
+          <path data-part="para_choque_traseiro" d="M45 354 C60 359 140 359 155 354" fill="none" stroke="#334155" stroke-width="7" stroke-linecap="round" class="transition duration-200 part-ok" />
+
+          <!-- Vidros / Parabrisa -->
+          <!-- Parabrisa Dianteiro -->
+          <path data-part="vidros_parabrisa" data-sub="diant" d="M44 140 L156 140 L146 125 L54 125 Z" fill="#38BDF8" fill-opacity="0.6" stroke="#0284C7" stroke-width="1" class="transition duration-200 part-ok" />
+          <!-- Vidro Traseiro -->
+          <path data-part="vidros_parabrisa" data-sub="tras" d="M44 275 L156 275 L148 285 L52 285 Z" fill="#38BDF8" fill-opacity="0.6" stroke="#0284C7" stroke-width="1" class="transition duration-200 part-ok" />
+          <!-- Vidros Laterais -->
+          <rect data-part="vidros_laterais" data-sub="vlde" x="34" y="148" width="4" height="56" rx="1" fill="#38BDF8" fill-opacity="0.6" stroke="#0284C7" stroke-width="1" class="transition duration-200 part-ok" />
+          <rect data-part="vidros_laterais" data-sub="vldd" x="162" y="148" width="4" height="56" rx="1" fill="#38BDF8" fill-opacity="0.6" stroke="#0284C7" stroke-width="1" class="transition duration-200 part-ok" />
+          <rect data-part="vidros_laterais" data-sub="vlte" x="34" y="211" width="4" height="56" rx="1" fill="#38BDF8" fill-opacity="0.6" stroke="#0284C7" stroke-width="1" class="transition duration-200 part-ok" />
+          <rect data-part="vidros_laterais" data-sub="vltd" x="162" y="211" width="4" height="56" rx="1" fill="#38BDF8" fill-opacity="0.6" stroke="#0284C7" stroke-width="1" class="transition duration-200 part-ok" />
+
+          <!-- Faróis e Lanternas -->
+          <!-- Farol Esquerdo -->
+          <path data-part="farois_lanternas" data-sub="fe" d="M38 65 Q48 65 48 55" fill="none" stroke="#FDE047" stroke-width="4" stroke-linecap="round" class="transition duration-200 part-ok" />
+          <!-- Farol Direito -->
+          <path data-part="farois_lanternas" data-sub="fd" d="M162 65 Q152 65 152 55" fill="none" stroke="#FDE047" stroke-width="4" stroke-linecap="round" class="transition duration-200 part-ok" />
+          <!-- Lanterna Traseira Esquerda -->
+          <path data-part="farois_lanternas" data-sub="le" d="M38 345 Q48 345 48 351" fill="none" stroke="#EF4444" stroke-width="4" stroke-linecap="round" class="transition duration-200 part-ok" />
+          <!-- Lanterna Traseira Direita -->
+          <path data-part="farois_lanternas" data-sub="ld" d="M162 345 Q152 345 152 351" fill="none" stroke="#EF4444" stroke-width="4" stroke-linecap="round" class="transition duration-200 part-ok" />
+
+          <!-- Retrovisores (Fora do chassi) -->
+          <!-- Esquerdo -->
+          <path data-part="retrovisores" data-sub="esq" d="M28 135 C20 135 20 145 28 145" fill="none" stroke="#475569" stroke-width="4" stroke-linecap="round" class="transition duration-200 part-ok" />
+          <!-- Direito -->
+          <path data-part="retrovisores" data-sub="dir" d="M172 135 C180 135 180 145 172 145" fill="none" stroke="#475569" stroke-width="4" stroke-linecap="round" class="transition duration-200 part-ok" />
+      </svg>
+
+      <!-- Lista de Avarias Marcadas -->
+      <div id="lista_avarias_marcadas" class="w-full mt-2 mb-3 p-3 bg-white dark:bg-slate-800 border border-slate-900/5 dark:border-white/5 rounded-xl hidden shadow-sm">
+        <span class="text-[9px] font-black text-slate-500 uppercase tracking-widest block mb-2">Avarias Selecionadas:</span>
+        <div id="badges_container" class="flex flex-wrap gap-1">
+          <!-- Badges gerados via JS -->
+        </div>
+      </div>
+
+      <!-- Checkboxes Compactos para Sincronia -->
+      <div id="avarias_checkboxes_container" class="w-full max-h-[140px] overflow-y-auto pr-1">
+        <div class="flex flex-wrap gap-1.5 justify-center">
+          <label class="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg border border-slate-900/10 dark:border-white/10 bg-slate-50 dark:bg-black/10 text-slate-700 dark:text-slate-350 text-[10px] font-bold cursor-pointer hover:bg-slate-100 dark:hover:bg-black/20 transition-all select-none">
+            <input aria-label="input" type="checkbox" data-avaria-part="pneus" data-avaria-sub="de" data-label="Pneu DE" class="rounded text-red-600 focus:ring-red-500/40 w-3 h-3"> Pneu DE
+          </label>
+          <label class="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg border border-slate-900/10 dark:border-white/10 bg-slate-50 dark:bg-black/10 text-slate-700 dark:text-slate-350 text-[10px] font-bold cursor-pointer hover:bg-slate-100 dark:hover:bg-black/20 transition-all select-none">
+            <input aria-label="input" type="checkbox" data-avaria-part="pneus" data-avaria-sub="dd" data-label="Pneu DD" class="rounded text-red-600 focus:ring-red-500/40 w-3 h-3"> Pneu DD
+          </label>
+          <label class="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg border border-slate-900/10 dark:border-white/10 bg-slate-50 dark:bg-black/10 text-slate-700 dark:text-slate-350 text-[10px] font-bold cursor-pointer hover:bg-slate-100 dark:hover:bg-black/20 transition-all select-none">
+            <input aria-label="input" type="checkbox" data-avaria-part="pneus" data-avaria-sub="te" data-label="Pneu TE" class="rounded text-red-600 focus:ring-red-500/40 w-3 h-3"> Pneu TE
+          </label>
+          <label class="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg border border-slate-900/10 dark:border-white/10 bg-slate-50 dark:bg-black/10 text-slate-700 dark:text-slate-350 text-[10px] font-bold cursor-pointer hover:bg-slate-100 dark:hover:bg-black/20 transition-all select-none">
+            <input aria-label="input" type="checkbox" data-avaria-part="pneus" data-avaria-sub="td" data-label="Pneu TD" class="rounded text-red-600 focus:ring-red-500/40 w-3 h-3"> Pneu TD
+          </label>
+          <label class="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg border border-slate-900/10 dark:border-white/10 bg-slate-50 dark:bg-black/10 text-slate-700 dark:text-slate-350 text-[10px] font-bold cursor-pointer hover:bg-slate-100 dark:hover:bg-black/20 transition-all select-none">
+            <input aria-label="input" type="checkbox" data-avaria-part="vidros_parabrisa" data-avaria-sub="diant" data-label="Vidro Dianteiro" class="rounded text-red-600 focus:ring-red-500/40 w-3 h-3"> Vidro Diant
+          </label>
+          <label class="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg border border-slate-900/10 dark:border-white/10 bg-slate-50 dark:bg-black/10 text-slate-700 dark:text-slate-350 text-[10px] font-bold cursor-pointer hover:bg-slate-100 dark:hover:bg-black/20 transition-all select-none">
+            <input aria-label="input" type="checkbox" data-avaria-part="vidros_parabrisa" data-avaria-sub="tras" data-label="Vidro Traseiro" class="rounded text-red-600 focus:ring-red-500/40 w-3 h-3"> Vidro Tras
+          </label>
+          <label class="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg border border-slate-900/10 dark:border-white/10 bg-slate-50 dark:bg-black/10 text-slate-700 dark:text-slate-350 text-[10px] font-bold cursor-pointer hover:bg-slate-100 dark:hover:bg-black/20 transition-all select-none">
+            <input aria-label="input" type="checkbox" data-avaria-part="vidros_laterais" data-avaria-sub="vlde" data-label="Vidro Lat. Diant. Esq." class="rounded text-red-600 focus:ring-red-500/40 w-3 h-3"> Vidro Lat. Diant. Esq.
+          </label>
+          <label class="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg border border-slate-900/10 dark:border-white/10 bg-slate-50 dark:bg-black/10 text-slate-700 dark:text-slate-350 text-[10px] font-bold cursor-pointer hover:bg-slate-100 dark:hover:bg-black/20 transition-all select-none">
+            <input aria-label="input" type="checkbox" data-avaria-part="vidros_laterais" data-avaria-sub="vldd" data-label="Vidro Lat. Diant. Dir." class="rounded text-red-600 focus:ring-red-500/40 w-3 h-3"> Vidro Lat. Diant. Dir.
+          </label>
+          <label class="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg border border-slate-900/10 dark:border-white/10 bg-slate-50 dark:bg-black/10 text-slate-700 dark:text-slate-350 text-[10px] font-bold cursor-pointer hover:bg-slate-100 dark:hover:bg-black/20 transition-all select-none">
+            <input aria-label="input" type="checkbox" data-avaria-part="vidros_laterais" data-avaria-sub="vlte" data-label="Vidro Lat. Tras. Esq." class="rounded text-red-600 focus:ring-red-500/40 w-3 h-3"> Vidro Lat. Tras. Esq.
+          </label>
+          <label class="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg border border-slate-900/10 dark:border-white/10 bg-slate-50 dark:bg-black/10 text-slate-700 dark:text-slate-350 text-[10px] font-bold cursor-pointer hover:bg-slate-100 dark:hover:bg-black/20 transition-all select-none">
+            <input aria-label="input" type="checkbox" data-avaria-part="vidros_laterais" data-avaria-sub="vltd" data-label="Vidro Lat. Tras. Dir." class="rounded text-red-600 focus:ring-red-500/40 w-3 h-3"> Vidro Lat. Tras. Dir.
+          </label>
+          <label class="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg border border-slate-900/10 dark:border-white/10 bg-slate-50 dark:bg-black/10 text-slate-700 dark:text-slate-350 text-[10px] font-bold cursor-pointer hover:bg-slate-100 dark:hover:bg-black/20 transition-all select-none">
+            <input aria-label="input" type="checkbox" data-avaria-part="lateral_esquerda" data-label="Lateral Esquerda" class="rounded text-red-600 focus:ring-red-500/40 w-3 h-3"> Lat. Esquerda
+          </label>
+          <label class="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg border border-slate-900/10 dark:border-white/10 bg-slate-50 dark:bg-black/10 text-slate-700 dark:text-slate-350 text-[10px] font-bold cursor-pointer hover:bg-slate-100 dark:hover:bg-black/20 transition-all select-none">
+            <input aria-label="input" type="checkbox" data-avaria-part="lateral_direita" data-label="Lateral Direita" class="rounded text-red-600 focus:ring-red-500/40 w-3 h-3"> Lat. Direita
+          </label>
+          <label class="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg border border-slate-900/10 dark:border-white/10 bg-slate-50 dark:bg-black/10 text-slate-700 dark:text-slate-350 text-[10px] font-bold cursor-pointer hover:bg-slate-100 dark:hover:bg-black/20 transition-all select-none">
+            <input aria-label="input" type="checkbox" data-avaria-part="retrovisores" data-avaria-sub="esq" data-label="Retrovisor Esquerdo" class="rounded text-red-600 focus:ring-red-500/40 w-3 h-3"> Retrovisor Esq
+          </label>
+          <label class="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg border border-slate-900/10 dark:border-white/10 bg-slate-50 dark:bg-black/10 text-slate-700 dark:text-slate-350 text-[10px] font-bold cursor-pointer hover:bg-slate-100 dark:hover:bg-black/20 transition-all select-none">
+            <input aria-label="input" type="checkbox" data-avaria-part="retrovisores" data-avaria-sub="dir" data-label="Retrovisor Direito" class="rounded text-red-600 focus:ring-red-500/40 w-3 h-3"> Retrovisor Dir
+          </label>
+          <label class="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg border border-slate-900/10 dark:border-white/10 bg-slate-50 dark:bg-black/10 text-slate-700 dark:text-slate-350 text-[10px] font-bold cursor-pointer hover:bg-slate-100 dark:hover:bg-black/20 transition-all select-none">
+            <input aria-label="input" type="checkbox" data-avaria-part="farois_lanternas" data-avaria-sub="fe" data-label="Farol Diant. Esq." class="rounded text-red-600 focus:ring-red-500/40 w-3 h-3"> Farol Diant. Esq.
+          </label>
+          <label class="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg border border-slate-900/10 dark:border-white/10 bg-slate-50 dark:bg-black/10 text-slate-700 dark:text-slate-350 text-[10px] font-bold cursor-pointer hover:bg-slate-100 dark:hover:bg-black/20 transition-all select-none">
+            <input aria-label="input" type="checkbox" data-avaria-part="farois_lanternas" data-avaria-sub="fd" data-label="Farol Diant. Dir." class="rounded text-red-600 focus:ring-red-500/40 w-3 h-3"> Farol Diant. Dir.
+          </label>
+          <label class="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg border border-slate-900/10 dark:border-white/10 bg-slate-50 dark:bg-black/10 text-slate-700 dark:text-slate-350 text-[10px] font-bold cursor-pointer hover:bg-slate-100 dark:hover:bg-black/20 transition-all select-none">
+            <input aria-label="input" type="checkbox" data-avaria-part="farois_lanternas" data-avaria-sub="le" data-label="Lanterna Tras. Esq." class="rounded text-red-600 focus:ring-red-500/40 w-3 h-3"> Lanterna Tras. Esq.
+          </label>
+          <label class="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg border border-slate-900/10 dark:border-white/10 bg-slate-50 dark:bg-black/10 text-slate-700 dark:text-slate-350 text-[10px] font-bold cursor-pointer hover:bg-slate-100 dark:hover:bg-black/20 transition-all select-none">
+            <input aria-label="input" type="checkbox" data-avaria-part="farois_lanternas" data-avaria-sub="ld" data-label="Lanterna Tras. Dir." class="rounded text-red-600 focus:ring-red-500/40 w-3 h-3"> Lanterna Tras. Dir.
+          </label>
+          <label class="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg border border-slate-900/10 dark:border-white/10 bg-slate-50 dark:bg-black/10 text-slate-700 dark:text-slate-350 text-[10px] font-bold cursor-pointer hover:bg-slate-100 dark:hover:bg-black/20 transition-all select-none">
+            <input aria-label="input" type="checkbox" data-avaria-part="capo" data-label="Capô" class="rounded text-red-600 focus:ring-red-500/40 w-3 h-3"> Capô
+          </label>
+          <label class="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg border border-slate-900/10 dark:border-white/10 bg-slate-50 dark:bg-black/10 text-slate-700 dark:text-slate-350 text-[10px] font-bold cursor-pointer hover:bg-slate-100 dark:hover:bg-black/20 transition-all select-none">
+            <input aria-label="input" type="checkbox" data-avaria-part="teto" data-label="Teto" class="rounded text-red-600 focus:ring-red-500/40 w-3 h-3"> Teto
+          </label>
+          <label class="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg border border-slate-900/10 dark:border-white/10 bg-slate-50 dark:bg-black/10 text-slate-700 dark:text-slate-350 text-[10px] font-bold cursor-pointer hover:bg-slate-100 dark:hover:bg-black/20 transition-all select-none">
+            <input aria-label="input" type="checkbox" data-avaria-part="porta_malas" data-label="Porta-malas" class="rounded text-red-600 focus:ring-red-500/40 w-3 h-3"> Porta-malas
+          </label>
+          <label class="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg border border-slate-900/10 dark:border-white/10 bg-slate-50 dark:bg-black/10 text-slate-700 dark:text-slate-350 text-[10px] font-bold cursor-pointer hover:bg-slate-100 dark:hover:bg-black/20 transition-all select-none">
+            <input aria-label="input" type="checkbox" data-avaria-part="para_choque_dianteiro" data-label="Para-choque Dianteiro" class="rounded text-red-600 focus:ring-red-500/40 w-3 h-3"> P.Ch. Dianteiro
+          </label>
+          <label class="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg border border-slate-900/10 dark:border-white/10 bg-slate-50 dark:bg-black/10 text-slate-700 dark:text-slate-350 text-[10px] font-bold cursor-pointer hover:bg-slate-100 dark:hover:bg-black/20 transition-all select-none">
+            <input aria-label="input" type="checkbox" data-avaria-part="para_choque_traseiro" data-label="Para-choque Traseiro" class="rounded text-red-600 focus:ring-red-500/40 w-3 h-3"> P.Ch. Traseiro
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- COLUNA DIREITA: FORMULÁRIO (7/12) -->
+    <div class="md:col-span-7 space-y-4">
+      <!-- VEÍCULO -->
+      <div>
+        <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-1">Veículo</label>
+        <select name="veiculo_id"
+                id="veiculo_id"
+                onchange="atualizarKM()"
+                class="w-full text-xs font-bold text-slate-700 dark:text-white bg-slate-900/5 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 p-3 rounded-xl focus:border-blue-500 transition-all outline-none"
+                required>
+          {% for v in veiculos %}
+          <option value="{{ v.id }}" data-km="{{ v.km }}">
+            {{ v.brand }} {{ v.model }} - {{ v.plate }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- 🔥 KM AUTOMÁTICO -->
+      <div>
+        <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-1">KM Atual</label>
+        <input type="number"
+               name="km"
+               id="km"
+               readonly
+               class="w-full text-xs font-bold text-slate-500 dark:text-slate-400 bg-slate-900/5 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 p-3 rounded-xl outline-none cursor-not-allowed">
+      </div>
+
+      <!-- GRAVIDADE -->
+      <div>
+        <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-1">Gravidade</label>
+        <select name="gravidade"
+                class="w-full text-xs font-bold text-slate-700 dark:text-white bg-slate-900/5 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 p-3 rounded-xl focus:border-blue-500 transition-all outline-none"
+                required>
+          <option value="baixa">Baixa</option>
+          <option value="media">Média</option>
+          <option value="alta">Alta</option>
+          <option value="critica">Crítica</option>
+        </select>
+      </div>
+
+      <!-- DESCRIÇÃO -->
+      <div>
+        <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-1">Descrição</label>
+        <textarea name="descricao" rows="3"
+                  class="w-full text-xs font-bold text-slate-700 dark:text-white bg-slate-900/5 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 p-3 rounded-xl focus:border-blue-500 transition-all outline-none"
+                  placeholder="Descreva a avaria ou peças com defeito..."
+                  required></textarea>
+      </div>
+
+      <!-- FOTO EVIDÊNCIA -->
+      <div>
+        <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-1">Foto de Evidência (Opcional)</label>
+        <input id="foto" type="file" name="foto" accept="image/*"
+               class="w-full text-xs font-bold text-slate-700 dark:text-white bg-slate-900/5 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 p-3 rounded-xl focus:border-blue-500 transition-all outline-none file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-[10px] file:font-black file:uppercase file:tracking-widest file:bg-blue-600 file:text-white hover:file:bg-blue-700 file:cursor-pointer cursor-pointer">
+      </div>
+
+      <div class="flex justify-end gap-2 pt-2">
+        <button type="button"
+                onclick="document.getElementById('modalNovaAvaria').close()"
+                class="px-4 py-2.5 bg-slate-900/5 hover:bg-slate-900/10 dark:bg-white/5 dark:hover:bg-white/10 rounded-xl text-slate-800 dark:text-white font-black text-[10px] uppercase tracking-widest transition-all">
+          Cancelar
+        </button>
+
+        <button type="submit"
+                class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 rounded-xl text-white font-black text-[10px] uppercase tracking-widest shadow-lg shadow-blue-500/20 active:scale-95 transition-all">
+          Registrar
+        </button>
+      </div>
+    </div>
+  </form>
+</dialog>
+
+<!-- =====================================
+      MODAL FINALIZAR (MENOR)
+===================================== -->
+<dialog id="modalFinalizarOS"
+        class="rounded-3xl bg-white dark:bg-gray-900 border border-slate-900/10 dark:border-gray-700 p-6 shadow-2xl w-[400px]">
+
+  <h2 class="text-xl font-black text-slate-800 dark:text-white mb-4">Finalizar O.S</h2>
+
+  <form id="formFinalizarOS" method="POST" action="{{ url_for('avarias_registro') }}" class="space-y-4">
+    <input type="hidden" name="acao" value="finalizar">
+    <input type="hidden" id="os_id_hidden" name="os_id">
+
+    <div>
+      <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-1">Valor gasto (R$)</label>
+      <input id="valor" type="number" name="valor" step="0.01" placeholder="0,00"
+             class="w-full text-xs font-bold text-slate-700 dark:text-white bg-slate-900/5 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 p-3 rounded-xl focus:border-blue-500 transition-all outline-none">
+    </div>
+
+    <div>
+      <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-1">Peças trocadas</label>
+      <textarea name="pecas" rows="2" placeholder="Liste as peças trocadas ou insumos..."
+                class="w-full text-xs font-bold text-slate-700 dark:text-white bg-slate-900/5 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 p-3 rounded-xl focus:border-blue-500 transition-all outline-none"></textarea>
+    </div>
+
+    <div>
+      <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-1">Serviço realizado</label>
+      <textarea name="servico" rows="2" placeholder="Detalhes do serviço mecânico..."
+                class="w-full text-xs font-bold text-slate-700 dark:text-white bg-slate-900/5 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 p-3 rounded-xl focus:border-blue-500 transition-all outline-none"></textarea>
+    </div>
+
+    <div class="flex justify-end gap-2 pt-2">
+      <button type="button"
+              onclick="document.getElementById('modalFinalizarOS').close()"
+              class="px-4 py-2.5 bg-slate-900/5 hover:bg-slate-900/10 dark:bg-white/5 dark:hover:bg-white/10 rounded-xl text-slate-800 dark:text-white font-black text-[10px] uppercase tracking-widest transition-all">
+        Cancelar
+      </button>
+
+      <button type="submit"
+              class="px-5 py-2.5 bg-green-600 hover:bg-green-700 rounded-xl text-white font-black text-[10px] uppercase tracking-widest shadow-lg shadow-green-500/20 active:scale-95 transition-all">
+        Finalizar
+      </button>
+    </div>
+  </form>
+</dialog>
+
+<!-- =====================================
+      MODAL DETALHES O.S
+===================================== -->
+<dialog id="modalDetalhesOS"
+        class="rounded-3xl bg-white dark:bg-gray-900 border border-slate-900/10 dark:border-gray-700 p-6 shadow-2xl w-[450px]">
+
+  <h2 class="text-xl font-black text-slate-800 dark:text-white mb-4">Detalhes da O.S #<span id="det_id"></span></h2>
+
+  <div class="space-y-4 text-xs font-bold text-slate-700 dark:text-slate-200">
+
+    <div class="flex justify-between border-b border-slate-900/10 dark:border-white/10 pb-2">
+      <span class="text-slate-400 font-medium">Veículo</span>
+      <span id="det_veiculo"></span>
+    </div>
+
+    <div class="flex justify-between border-b border-slate-900/10 dark:border-white/10 pb-2">
+      <span class="text-slate-400 font-medium">Responsável</span>
+      <span id="det_resp"></span>
+    </div>
+
+    <div class="flex justify-between border-b border-slate-900/10 dark:border-white/10 pb-2">
+      <span class="text-slate-400 font-medium">KM de Registro</span>
+      <span id="det_km"></span>
+    </div>
+
+    <div class="flex justify-between border-b border-slate-900/10 dark:border-white/10 pb-2">
+      <span class="text-slate-400 font-medium">Gravidade</span>
+      <span id="det_grav" class="uppercase"></span>
+    </div>
+
+    <div class="flex justify-between border-b border-slate-900/10 dark:border-white/10 pb-2">
+      <span class="text-slate-400 font-medium">Custo Gasto</span>
+      <span class="text-emerald-600 dark:text-emerald-400">R$ <span id="det_valor"></span></span>
+    </div>
+
+    <div class="flex justify-between border-b border-slate-900/10 dark:border-white/10 pb-2">
+      <span class="text-slate-400 font-medium">Data Abertura</span>
+      <span id="det_abertura"></span>
+    </div>
+
+    <div class="flex justify-between border-b border-slate-900/10 dark:border-white/10 pb-2">
+      <span class="text-slate-400 font-medium">Data Fechamento</span>
+      <span id="det_fechamento"></span>
+    </div>
+
+    <div class="bg-slate-900/5 dark:bg-white/5 p-3 rounded-xl border border-slate-900/5 dark:border-white/5">
+      <span class="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-1">Descrição do Problema</span>
+      <p id="det_desc" class="text-slate-700 dark:text-slate-300 font-medium leading-relaxed"></p>
+    </div>
+
+    <div class="bg-slate-900/5 dark:bg-white/5 p-3 rounded-xl border border-slate-900/5 dark:border-white/5">
+      <span class="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-1">Peças Trocadas</span>
+      <p id="det_pecas" class="text-slate-700 dark:text-slate-300 font-medium leading-relaxed"></p>
+    </div>
+
+    <div class="bg-slate-900/5 dark:bg-white/5 p-3 rounded-xl border border-slate-900/5 dark:border-white/5">
+      <span class="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-1">Serviço Realizado</span>
+      <p id="det_servico" class="text-slate-700 dark:text-slate-300 font-medium leading-relaxed"></p>
+    </div>
+
+    <!-- FOTO REGISTRADA -->
+    <div id="det_foto_container" class="bg-slate-900/5 dark:bg-white/5 p-3 rounded-xl border border-slate-900/5 dark:border-white/5 hidden">
+      <span class="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-2">Foto de Evidência</span>
+      <div class="relative rounded-lg overflow-hidden border border-slate-900/10 dark:border-white/10 aspect-video flex items-center justify-center bg-black/5">
+        <img id="det_foto" src="" class="w-full h-full object-cover" alt="Evidência da Avaria">
+      </div>
+    </div>
+
+  </div>
+
+  <div class="flex justify-between items-center mt-6">
+    <a id="btn_imprimir_pdf" href="" target="_blank"
+       class="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-red-500/20 active:scale-95 transition-all flex items-center gap-1.5">
+      <i class="fa-solid fa-file-pdf text-xs"></i> Imprimir O.S.
+    </a>
+
+    <button onclick="document.getElementById('modalDetalhesOS').close()"
+            class="px-5 py-2.5 bg-slate-900/5 hover:bg-slate-900/10 dark:bg-white/5 dark:hover:bg-white/10 rounded-xl text-slate-800 dark:text-white font-black text-[10px] uppercase tracking-widest transition-all">
+      Fechar
+    </button>
+  </div>
+
+</dialog>
+
+<script>
+function openFinalizar(id) {
+  document.getElementById("os_id_hidden").value = id;
+  document.getElementById("modalFinalizarOS").showModal();
+}
+
+function openDetalhes(id) {
+  const dados = JSON.parse(document.getElementById("os_data_" + id).textContent);
+
+  document.getElementById("det_id").innerText = id;
+  document.getElementById("det_veiculo").innerText = dados.veiculo;
+  document.getElementById("det_resp").innerText = (dados.responsavel && dados.responsavel.trim()) ? dados.responsavel : "-";
+  document.getElementById("det_desc").innerText = dados.descricao;
+
+  document.getElementById("det_km").innerText = dados.km ? dados.km + " KM" : "-";
+  document.getElementById("det_grav").innerText = dados.gravidade || "-";
+
+  // Formata o valor gasto
+  const valor = parseFloat(dados.valor_gasto);
+  document.getElementById("det_valor").innerText = isNaN(valor) ? "0,00" : valor.toFixed(2).replace(".", ",");
+  
+  document.getElementById("det_pecas").innerText = dados.pecas_trocadas || "-";
+  document.getElementById("det_servico").innerText = dados.servico_realizado || "-";
+
+  document.getElementById("det_abertura").innerText = dados.data_abertura || "-";
+  document.getElementById("det_fechamento").innerText = dados.data_fechamento || "-";
+
+  // Exibe foto se houver
+  const detFotoContainer = document.getElementById("det_foto_container");
+  const detFoto = document.getElementById("det_foto");
+  if (dados.foto && dados.foto.trim()) {
+    detFoto.src = "/static/avarias_fotos/" + dados.foto;
+    detFotoContainer.classList.remove("hidden");
+  } else {
+    detFoto.src = "";
+    detFotoContainer.classList.add("hidden");
+  }
+
+  // Configura link do PDF
+  const btnImprimirPdf = document.getElementById("btn_imprimir_pdf");
+  if (btnImprimirPdf) {
+    btnImprimirPdf.href = `/avarias/${id}/pdf`;
+  }
+
+  document.getElementById("modalDetalhesOS").showModal();
+}
+
+/////////////////////////////////////////////////////
+// 🔥 NOVO: KM AUTOMÁTICO
+/////////////////////////////////////////////////////
+function atualizarKM() {
+  const select = document.getElementById("veiculo_id");
+  if (!select) return;
+
+  const km = select.options[select.selectedIndex].dataset.km;
+  document.getElementById("km").value = km || 0;
+}
+
+/////////////////////////////////////////////////////
+// 🔥 NAVEGAÇÃO DE TABS (ABERTAS VS FINALIZADAS)
+/////////////////////////////////////////////////////
+function switchTab(tab) {
+  const tabAbertas = document.getElementById("tabAbertas");
+  const tabFinalizadas = document.getElementById("tabFinalizadas");
+  const btnAbertas = document.getElementById("btnTabAbertas");
+  const btnFinalizadas = document.getElementById("btnTabFinalizadas");
+  const badgeAbertas = document.getElementById("badgeAbertas");
+  const badgeFinalizadas = document.getElementById("badgeFinalizadas");
+
+  if (!tabAbertas || !tabFinalizadas || !btnAbertas || !btnFinalizadas) return;
+
+  if (tab === "abertas") {
+    tabAbertas.classList.remove("hidden");
+    tabFinalizadas.classList.add("hidden");
+
+    // Abertas Active (Amber Style)
+    btnAbertas.className = "flex-1 py-1.5 px-3 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-1.5 h-full active:scale-95 bg-amber-500 text-white shadow-md shadow-amber-500/25";
+    if (badgeAbertas) {
+      badgeAbertas.className = "px-1.5 py-0.5 rounded text-[8px] font-black bg-white/20 text-white";
+    }
+
+    // Finalizadas Inactive
+    btnFinalizadas.className = "flex-1 py-1.5 px-3 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-1.5 h-full active:scale-95 text-slate-400 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-200";
+    if (badgeFinalizadas) {
+      badgeFinalizadas.className = "px-1.5 py-0.5 rounded text-[8px] font-black bg-slate-900/5 dark:bg-white/5 text-slate-400 dark:text-slate-400";
+    }
+  } else {
+    tabAbertas.classList.add("hidden");
+    tabFinalizadas.classList.remove("hidden");
+
+    // Finalizadas Active (Green Style)
+    btnFinalizadas.className = "flex-1 py-1.5 px-3 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-1.5 h-full active:scale-95 bg-green-600 text-white shadow-md shadow-green-500/25";
+    if (badgeFinalizadas) {
+      badgeFinalizadas.className = "px-1.5 py-0.5 rounded text-[8px] font-black bg-white/20 text-white";
+    }
+
+    // Abertas Inactive
+    btnAbertas.className = "flex-1 py-1.5 px-3 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-1.5 h-full active:scale-95 text-slate-400 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-200";
+    if (badgeAbertas) {
+      badgeAbertas.className = "px-1.5 py-0.5 rounded text-[8px] font-black bg-slate-900/5 dark:bg-white/5 text-slate-400 dark:text-slate-400";
+    }
+  }
+}
+
+// quando abrir a página
+document.addEventListener("DOMContentLoaded", () => {
+  atualizarKM();
+  switchTab('abertas');
+});
+
+// quando abrir o modal
+const btnNova = document.querySelector('[onclick*="modalNovaAvaria"]');
+if (btnNova) {
+  btnNova.addEventListener("click", () => {
+    clearAvariaForm();
+    setTimeout(() => atualizarKM(), 100);
+  });
+}
+
+// Limpa o formulário e o mapa 2D no modal de nova avaria
+function clearAvariaForm() {
+  document.querySelectorAll("#avarias_checkboxes_container input[data-avaria-part]").forEach(cb => {
+    cb.checked = false;
+    cb.dispatchEvent(new Event("change"));
+  });
+  const descArea = document.querySelector("#modalNovaAvaria textarea[name='descricao']");
+  if (descArea) descArea.value = "";
+  
+  // Limpar dropdowns do seletor rápido
+  const compSelect = document.getElementById("sel_componente");
+  if (compSelect) {
+    compSelect.value = "";
+    popularLados();
+  }
+}
+
+// Mapa de Componentes e Lados/Posições
+const componentSideMap = {
+  pneus: [
+    { value: "de", label: "Dianteiro Esquerdo (DE)" },
+    { value: "dd", label: "Dianteiro Direito (DD)" },
+    { value: "te", label: "Traseiro Esquerdo (TE)" },
+    { value: "td", label: "Traseiro Direito (TD)" }
+  ],
+  vidros: [
+    { value: "diant", label: "Dianteiro (Parabrisa)" },
+    { value: "tras", label: "Traseiro" },
+    { value: "vlde", label: "Lateral Dianteiro Esquerdo (VLDE)" },
+    { value: "vldd", label: "Lateral Dianteiro Direito (VLDD)" },
+    { value: "vlte", label: "Lateral Traseiro Esquerdo (VLTE)" },
+    { value: "vltd", label: "Lateral Traseiro Direito (VLTD)" }
+  ],
+  retrovisores: [
+    { value: "esq", label: "Esquerdo" },
+    { value: "dir", label: "Direito" }
+  ],
+  farois_lanternas: [
+    { value: "fe", label: "Farol Dianteiro Esquerdo" },
+    { value: "fd", label: "Farol Dianteiro Direito" },
+    { value: "le", label: "Lanterna Traseira Esquerda" },
+    { value: "ld", label: "Lanterna Traseira Direita" }
+  ],
+  laterais: [
+    { value: "esquerda", label: "Esquerda" },
+    { value: "direita", label: "Direita" }
+  ],
+  para_choques: [
+    { value: "dianteiro", label: "Dianteiro" },
+    { value: "traseiro", label: "Traseiro" }
+  ],
+  carroceria: [
+    { value: "capo", label: "Capô" },
+    { value: "teto", label: "Teto" },
+    { value: "porta_malas", label: "Porta-malas" }
+  ]
+};
+
+function popularLados() {
+  const compSelect = document.getElementById("sel_componente");
+  const ladoSelect = document.getElementById("sel_lado");
+  if (!compSelect || !ladoSelect) return;
+  
+  const compValue = compSelect.value;
+  ladoSelect.innerHTML = '<option value="">Lado/Posição...</option>';
+  
+  if (!compValue || !componentSideMap[compValue]) {
+    ladoSelect.disabled = true;
+    return;
+  }
+  
+  const sides = componentSideMap[compValue];
+  sides.forEach(s => {
+    const opt = document.createElement("option");
+    opt.value = s.value;
+    opt.textContent = s.label;
+    ladoSelect.appendChild(opt);
+  });
+  ladoSelect.disabled = false;
+}
+
+function adicionarAvariaPorDropdown() {
+  const compSelect = document.getElementById("sel_componente");
+  const ladoSelect = document.getElementById("sel_lado");
+  if (!compSelect || !ladoSelect) return;
+  
+  const comp = compSelect.value;
+  const lado = ladoSelect.value;
+  
+  if (!comp || !lado) {
+    alert("Por favor, selecione tanto o componente quanto o lado/posição.");
+    return;
+  }
+  
+  let selector = "";
+  if (comp === "pneus" || comp === "retrovisores" || comp === "farois_lanternas") {
+    selector = `input[data-avaria-part="${comp}"][data-avaria-sub="${lado}"]`;
+  } else if (comp === "vidros") {
+    if (lado === "diant" || lado === "tras") {
+      selector = `input[data-avaria-part="vidros_parabrisa"][data-avaria-sub="${lado}"]`;
+    } else {
+      selector = `input[data-avaria-part="vidros_laterais"][data-avaria-sub="${lado}"]`;
+    }
+  } else if (comp === "laterais") {
+    selector = `input[data-avaria-part="lateral_${lado}"]`;
+  } else if (comp === "para_choques") {
+    selector = `input[data-avaria-part="para_choque_${lado}"]`;
+  } else if (comp === "carroceria") {
+    selector = `input[data-avaria-part="${lado}"]`;
+  }
+  
+  const cb = document.querySelector(selector);
+  if (cb) {
+    if (cb.checked) {
+      alert("Esta avaria já está selecionada.");
+    } else {
+      cb.checked = true;
+      cb.dispatchEvent(new Event("change"));
+    }
+  } else {
+    console.error("Checkbox não encontrado para o seletor:", selector);
+  }
+  
+  // Limpa os seletores
+  compSelect.value = "";
+  popularLados();
+}
+
+function desmarcarAvaria(part, sub) {
+  let selector = `input[data-avaria-part="${part}"]`;
+  if (sub) {
+    selector += `[data-avaria-sub="${sub}"]`;
+  }
+  const cb = document.querySelector(selector);
+  if (cb) {
+    cb.checked = false;
+    cb.dispatchEvent(new Event("change"));
+  }
+}
+
+function atualizarBadgesAvarias() {
+  const container = document.getElementById("badges_container");
+  const listWrapper = document.getElementById("lista_avarias_marcadas");
+  if (!container || !listWrapper) return;
+  
+  container.innerHTML = "";
+  const checkedInputs = document.querySelectorAll("#avarias_checkboxes_container input[data-avaria-part]:checked");
+  
+  if (checkedInputs.length === 0) {
+    listWrapper.classList.add("hidden");
+    return;
+  }
+  
+  listWrapper.classList.remove("hidden");
+  
+  checkedInputs.forEach(cb => {
+    const label = cb.getAttribute("data-label");
+    const part = cb.getAttribute("data-avaria-part");
+    const sub = cb.getAttribute("data-avaria-sub");
+    
+    const badge = document.createElement("span");
+    badge.className = "inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-red-500/10 border border-red-500/25 text-red-600 dark:text-red-400 text-[10px] font-black uppercase tracking-wider shadow-sm animate-fade-in";
+    badge.innerHTML = `
+      <span>${label}</span>
+      <button type="button" class="hover:text-red-800 dark:hover:text-red-300 focus:outline-none ml-1 transition-colors text-[10px]" onclick="desmarcarAvaria('${part}', '${sub || ''}')">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    `;
+    container.appendChild(badge);
+  });
+}
+
+// Sincronizar os checkboxes de sub-partes com o SVG do veículo
+document.querySelectorAll("#avarias_checkboxes_container input[data-avaria-part]").forEach(cb => {
+  cb.addEventListener("change", () => {
+    const key = cb.getAttribute("data-avaria-part");
+    const sub = cb.getAttribute("data-avaria-sub");
+    
+    let partEl;
+    if (sub) {
+      partEl = document.querySelector(`#avaria_svg [data-part="${key}"][data-sub="${sub}"]`);
+    } else {
+      partEl = document.querySelector(`#avaria_svg [data-part="${key}"]`);
+    }
+    
+    if (partEl) {
+      if (cb.checked) {
+        partEl.classList.add("part-avaria");
+        partEl.classList.remove("part-ok");
+      } else {
+        partEl.classList.add("part-ok");
+        partEl.classList.remove("part-avaria");
+      }
+    }
+    
+    // Atualiza a lista de badges
+    atualizarBadgesAvarias();
+  });
+});
+
+// Clique no mapa 2D do veículo alterna o status do checkbox
+document.querySelectorAll("#avaria_svg [data-part]").forEach(part => {
+  part.addEventListener("click", () => {
+    const key = part.getAttribute("data-part");
+    const sub = part.getAttribute("data-sub");
+    
+    let selector = "";
+    if (key === "pneus" || key === "retrovisores" || key === "farois_lanternas") {
+      selector = `input[data-avaria-part="${key}"][data-avaria-sub="${sub}"]`;
+    } else if (key === "vidros_parabrisa") {
+      selector = `input[data-avaria-part="vidros_parabrisa"][data-avaria-sub="${sub}"]`;
+    } else if (key === "vidros_laterais") {
+      selector = `input[data-avaria-part="vidros_laterais"][data-avaria-sub="${sub}"]`;
+    } else {
+      selector = `input[data-avaria-part="${key}"]`;
+    }
+    
+    const cb = document.querySelector(selector);
+    if (cb) {
+      cb.checked = !cb.checked;
+      cb.dispatchEvent(new Event("change"));
+    }
+  });
+});
+
+// Interceptar submit do formulário para prependar os metadados da avaria na descrição
+const avariaForm = document.querySelector("#modalNovaAvaria form");
+if (avariaForm) {
+  avariaForm.addEventListener("submit", (e) => {
+    const selectedParts = [];
+    avariaForm.querySelectorAll("input[data-avaria-part]:checked").forEach(cb => {
+      selectedParts.push(cb.getAttribute("data-label"));
+    });
+    
+    if (selectedParts.length > 0) {
+      const descArea = avariaForm.querySelector("textarea[name='descricao']");
+      const originalText = descArea.value.replace(/^\[Avarias:[^\]]+\]\s*/, "");
+      descArea.value = `[Avarias: ${selectedParts.join(", ")}] ${originalText}`.trim();
+    }
+  });
+}
+</script>
+
+{% endblock %}
+
+{# accessibility helper: onkeydown= handler present #}

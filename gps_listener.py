@@ -2,7 +2,9 @@ import asyncio
 import socket
 import logging
 from datetime import datetime
-from app import app, db, GPSLog, GPSDevice, Vehicle
+from backend import create_app, db
+from backend.models import GPSLog, GPSDevice, Vehicle
+app = create_app()
 
 # Configuração de Logs
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')

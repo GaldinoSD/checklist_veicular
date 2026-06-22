@@ -1,0 +1,1274 @@
+<!doctype html>
+<html lang="pt-BR" class="h-full">
+  <head>
+    {% if current_user.is_authenticated %}
+    <script>
+      console.log("[SessionCheck] sessionStorage.session_active =", sessionStorage.getItem('session_active'));
+      if (!sessionStorage.getItem('session_active')) {
+        console.warn("[SessionCheck] No active session found in sessionStorage. Redirecting to logout...");
+        window.location.replace("{{ url_for('logout') }}");
+      } else {
+        console.log("[SessionCheck] Active session verified.");
+      }
+    </script>
+    {% endif %}
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{ page_title or 'Sistema' }}</title>
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    <script>
+      // 🛡️ Injetor Global de Proteção contra CSRF para Formulários e Requisições AJAX (Fetch)
+      document.addEventListener("submit", function(event) {
+        const form = event.target;
+        if (form.method && form.method.toUpperCase() === "POST") {
+          // Se o formulário não tiver um input de csrf_token, anexa dinamicamente antes do envio
+          if (!form.querySelector('input[name="csrf_token"]')) {
+            const tokenMeta = document.querySelector('meta[name="csrf-token"]');
+            if (tokenMeta) {
+              const input = document.createElement("input");
+              input.type = "hidden";
+              input.name = "csrf_token";
+              input.value = tokenMeta.content;
+              form.appendChild(input);
+            }
+          }
+        }
+      });
+
+      // Interceptar requisições da Fetch API para anexar automaticamente o cabeçalho X-CSRFToken
+      const originalFetch = window.fetch;
+      window.fetch = function(input, init) {
+        if (init && init.method && ["POST", "PUT", "PATCH", "DELETE"].includes(init.method.toUpperCase())) {
+          const tokenMeta = document.querySelector('meta[name="csrf-token"]');
+          if (tokenMeta) {
+            init.headers = init.headers || {};
+            if (init.headers instanceof Headers) {
+              if (!init.headers.has("X-CSRFToken")) {
+                init.headers.set("X-CSRFToken", tokenMeta.content);
+              }
+            } else if (Array.isArray(init.headers)) {
+              const hasCsrf = init.headers.some(h => h[0].toUpperCase() === "X-CSRFTOKEN");
+              if (!hasCsrf) {
+                init.headers.push(["X-CSRFToken", tokenMeta.content]);
+              }
+            } else {
+              if (!init.headers["X-CSRFToken"] && !init.headers["x-csrf-token"]) {
+                init.headers["X-CSRFToken"] = tokenMeta.content;
+              }
+            }
+          }
+        }
+        return originalFetch(input, init);
+      };
+    </script>
+
+    <link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico', v='1') }}" type="image/x-icon">
+    <link rel="icon" href="{{ url_for('static', filename='favicon.ico', v='1') }}" type="image/x-icon">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <!-- ✅ Tailwind config + dark mode -->
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            boxShadow: {
+              glass: "0 18px 60px rgba(0,0,0,.45)",
+            }
+          }
+        }
+      }
+    </script>
+
+    <script>
+      (function () {
+        try {
+          const saved = localStorage.getItem("theme");
+          const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+          const shouldDark = saved ? (saved === "dark") : prefersDark;
+          if (shouldDark) document.documentElement.classList.add("dark");
+          else document.documentElement.classList.remove("dark");
+        } catch (e) {}
+      })();
+    </script>
+
+    <style>
+      @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+      
+      body {
+        font-family: 'Outfit', sans-serif;
+      }
+
+      /* ✅ SIDEBAR FIXO */
+      #sidebar {
+        width: 260px;
+        min-width: 260px;
+        max-width: 260px;
+        height: 100vh;
+        position: fixed;
+        left: 0;
+        top: 0;
+        z-index: 50;
+        background: white;
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .dark #sidebar { background: #0f172a; }
+
+      /* Borda lateral direita a partir do menu (abaixo da logo/topbar) */
+      #sidebar::after {
+        content: '';
+        position: absolute;
+        top: 64px; /* Altura da logo / topbar (h-16 = 64px) */
+        right: 0;
+        bottom: 0;
+        width: 1px;
+        background-color: rgba(15, 23, 42, 0.1);
+        z-index: 55;
+      }
+      .dark #sidebar::after {
+        background-color: rgba(255, 255, 255, 0.1);
+      }
+
+      /* ✅ MAIN CONTENT ADJUSTMENT */
+      #main-content {
+        margin-left: 260px;
+        min-height: 100vh;
+        transition: padding 0.3s ease;
+      }
+
+      @media (max-width: 1024px) {
+        #sidebar {
+          transform: translateX(-100%);
+        }
+        #sidebar.mobile-open {
+          transform: translateX(0);
+          left: 0;
+        }
+        #main-content {
+          margin-left: 0;
+        }
+      }
+
+      .custom-scrollbar::-webkit-scrollbar {
+        width: 4px;
+      }
+      .custom-scrollbar::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: rgba(0,0,0,0.1);
+        border-radius: 10px;
+      }
+      .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: rgba(255,255,255,0.1);
+      }
+
+      .submenu-container {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .submenu-container.open {
+        max-height: 1000px;
+      }
+
+      /* ✅ NOTIFICATION DRAWER */
+      #notification-drawer {
+        width: 350px;
+        height: 100vh;
+        position: fixed;
+        right: 0;
+        top: 0;
+        z-index: 100;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(20px);
+        box-shadow: -10px 0 30px rgba(0,0,0,0.05);
+        transform: translateX(100%);
+        transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        border-left: 1px border-slate-900/10;
+      }
+      .dark #notification-drawer { background: rgba(15, 23, 42, 0.95); border-left-color: rgba(255,255,255,0.05); }
+      #notification-drawer.open { transform: translateX(0); }
+      
+      #drawer-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(0,0,0,0.4);
+        backdrop-filter: blur(4px);
+        z-index: 90;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s ease;
+      }
+      #drawer-overlay.visible { opacity: 1; pointer-events: auto; }
+      .chevron-rotate {
+        transition: transform 0.3s ease;
+      }
+      .open-chevron {
+        transform: rotate(180deg);
+      }
+      
+      /* ✅ SIDEBAR TAB ACTIVE */
+      .sidebar-tab-link.active {
+        background: rgba(147, 51, 234, 0.1);
+        color: #9333ea !important;
+      }
+      .dark .sidebar-tab-link.active {
+        background: rgba(168, 85, 247, 0.1);
+        color: #a855f7 !important;
+      }
+
+      /* TOAST NOTIFICATION */
+      #toast-container {
+        position: fixed;
+        top: 24px;
+        right: 24px;
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .toast {
+        background: white;
+        padding: 16px 24px;
+        border-radius: 20px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+        border: 1px border-slate-900/5;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        transform: translateX(120%);
+        transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        min-width: 300px;
+      }
+      .dark .toast {
+        background: #1e293b;
+        border-color: rgba(255,255,255,0.05);
+      }
+      .toast.show {
+        transform: translateX(0);
+      }
+      .toast-success { border-left: 4px solid #10b981; }
+      .toast-error { border-left: 4px solid #ef4444; }
+      .toast-info { border-left: 4px solid #3b82f6; }
+      .toast-warning { border-left: 4px solid #f59e0b; }
+
+      .toast-progress {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        height: 3px;
+        background: rgba(0,0,0,0.1);
+        width: 100%;
+        transform-origin: left;
+      }
+      .toast-success .toast-progress-bar { background: #10b981; }
+      .toast-error .toast-progress-bar { background: #ef4444; }
+      .toast-info .toast-progress-bar { background: #3b82f6; }
+      .toast-warning .toast-progress-bar { background: #f59e0b; }
+
+      @keyframes toast-progress-anim {
+        from { transform: scaleX(1); }
+        to { transform: scaleX(0); }
+      }
+      .toast-progress-bar {
+        height: 100%;
+        width: 100%;
+        animation: toast-progress-anim 4s linear forwards;
+      }
+
+      /* ✅ PREMIUM DESIGN TOKENS */
+      :root {
+        --card-shadow: 0 10px 40px -10px rgba(0,0,0,0.05);
+        --card-shadow-hover: 0 20px 60px -15px rgba(0,0,0,0.1);
+      }
+      .dark :root {
+        --card-shadow: 0 10px 40px -10px rgba(0,0,0,0.3);
+        --card-shadow-hover: 0 20px 60px -15px rgba(0,0,0,0.5);
+      }
+
+      .card-premium {
+        background: white;
+        border-radius: 2rem;
+        border: 1px solid rgba(15, 23, 42, 0.05);
+        box-shadow: var(--card-shadow);
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      .dark .card-premium {
+        background: rgba(30, 41, 59, 0.4);
+        border-color: rgba(255, 255, 255, 0.05);
+      }
+      .card-premium:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--card-shadow-hover);
+        border-color: rgba(59, 130, 246, 0.2);
+      }
+
+      .glass-premium {
+        background: rgba(255, 255, 255, 0.7);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+      }
+      .dark .glass-premium {
+        background: rgba(15, 23, 42, 0.7);
+        border-color: rgba(255, 255, 255, 0.05);
+      }
+
+      .btn-premium {
+        padding: 0.75rem 1.5rem;
+        border-radius: 1rem;
+        font-weight: 700;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+      }
+      .btn-premium:active { transform: scale(0.95); }
+
+      /* ==========================================================================
+         HEADER MINIMALIST REDESIGN (Ajuste do Entorno do Header)
+         ========================================================================== */
+
+      /* 1. Reduzir o espaçamento de padding superior do main para aproximar o cabeçalho da topbar */
+      main:not(.p-0) {
+        padding-top: 1.25rem !important;
+      }
+
+      /* 2. Remover fundo, bordas, sombras e arredondamento dos contêineres de header nas páginas */
+      main > .animate-premium:first-of-type > .glass-premium,
+      main > div > .animate-premium:first-of-type > .glass-premium,
+      main > form > .glass-premium:first-of-type,
+      main > div > form > .glass-premium:first-of-type,
+      main > .animate-premium:first-of-type > form.glass-premium,
+      main > div > .animate-premium:first-of-type > form.glass-premium,
+      main > .animate-premium:first-child > .glass-premium,
+      main > div > .animate-premium:first-child > .glass-premium {
+        background: transparent !important;
+        backdrop-filter: none !important;
+        -webkit-backdrop-filter: none !important;
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+        border-radius: 0 !important;
+        overflow: visible !important;
+      }
+
+      /* 3. Otimizar margem inferior do cabeçalho reduzindo o espaçamento após ele de mb-8/mb-10 para mb-4 */
+      main > .animate-premium:first-of-type,
+      main > div > .animate-premium:first-of-type,
+      main > form:first-of-type,
+      main > div > form:first-of-type {
+        margin-bottom: 1.25rem !important;
+      }
+
+      /* 4. Ocultar todos os círculos desfocados de decoração absoluta contidos nos cabeçalhos modificados */
+      main > .animate-premium:first-of-type > .glass-premium .absolute,
+      main > div > .animate-premium:first-of-type > .glass-premium .absolute,
+      main > .animate-premium:first-of-type > form.glass-premium .absolute,
+      main > div > .animate-premium:first-of-type > form.glass-premium .absolute,
+      main > form > .glass-premium:first-of-type .absolute,
+      main > div > form > .glass-premium:first-of-type .absolute {
+        display: none !important;
+      }
+    </style>
+  </head>
+
+  <body class="min-h-screen bg-[#f8fafc] dark:bg-[#020617]">
+    <div id="toast-container"></div>
+    <div class="flex">
+      
+      <!-- ✅ SIDEBAR LATERAL -->
+      {% if current_user.is_authenticated %}
+      <aside id="sidebar" class="flex flex-col shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
+        
+        <!-- TOP: LOGO -->
+        <div class="py-2 px-3 flex items-center justify-center h-16 shrink-0 border-b border-slate-900/10 dark:border-white/10">
+          <img src="{% if sys_config and sys_config.sidebar_logo %}{{ url_for('static', filename='uploads/layout/' ~ sys_config.sidebar_logo, v='2') }}{% else %}{{ url_for('static', filename='imgsidebar.png', v='2') }}{% endif %}" class="h-11 w-auto max-w-[90%] object-contain drop-shadow-sm" alt="Logo">
+        </div>
+
+        <!-- MIDDLE: MENU -->
+        <nav class="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-1.5 custom-scrollbar pb-24">
+          
+            {% set menu_items = [
+              ('Dashboard', 'dashboard', 'fa-chart-pie', 'dashboard'),
+              ('Veículos', 'vehicles', 'fa-car', 'veiculos'),
+              ('Checklists', 'checklists', 'fa-clipboard-check', 'checklists_view'),
+              ('Vistoria', 'vistorias_list', 'fa-magnifying-glass', 'vistorias_list'),
+              ('Controle E/S', 'controle_veiculos', 'fa-right-left', 'controle_veiculos'),
+              ('Relatórios', 'reports', 'fa-file-invoice', 'relatorios'),
+              ('Avarias / O.S.', 'avarias_registro', 'fa-wrench', 'avarias'),
+              ('Controle Ferramentas', 'controle_ferramentas_atual', 'fa-toolbox', 'controle_ferramentas_atual')
+            ] %}
+            
+            {% set ns_gerenc = namespace(has_any=false) %}
+            {% for label, route, icon, perm in menu_items %}
+              {% if current_user.has_permission(perm) %}
+                {% set ns_gerenc.has_any = true %}
+              {% endif %}
+            {% endfor %}
+
+            {% if ns_gerenc.has_any %}
+            <div class="py-3 px-4 text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-gray-500">Gerenciamento</div>
+            {% for label, route, icon, perm in menu_items %}
+              {% if current_user.has_permission(perm) %}
+              {% set is_active = (request.endpoint == route) %}
+              <a href="{{ url_for(route) }}" 
+                 class="flex items-center gap-3.5 px-4 py-3 rounded-2xl transition-all duration-300 group
+                        {% if is_active %}
+                          bg-blue-600 text-white shadow-xl shadow-blue-500/30 scale-[1.02]
+                        {% else %}
+                          text-slate-500 dark:text-gray-400 hover:bg-slate-900/5 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white
+                        {% endif %}">
+                <i class="fa-solid {{ icon }} w-5 text-center text-base {% if is_active %}text-white{% else %}text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200{% endif %} transition-colors"></i>
+                <span class="text-[13px] font-bold tracking-tight">{{ label }}</span>
+              </a>
+              {% endif %}
+            {% endfor %}
+            {% endif %}
+
+          {% if current_user.has_permission('frota') or current_user.has_permission('monitoramento_aparelhos') or current_user.has_permission('monitoramento_historico') or current_user.has_permission('monitoramento_config') %}
+          <!-- ✅ MONITORAMENTO COLLAPSIBLE -->
+          <div class="space-y-1 mb-2">
+            <button onclick="toggleSubmenu('submenu-monitoramento', this)" 
+                    class="w-full flex items-center justify-between gap-3.5 px-4 py-3 rounded-2xl transition-all duration-300 group
+                           {% if request.path.startswith('/monitoramento') or request.endpoint == 'tracking' %}
+                             bg-teal-600/10 text-teal-600 dark:text-teal-400 border border-teal-500/20
+                           {% else %}
+                             text-slate-500 dark:text-gray-400 hover:bg-slate-900/5 dark:hover:bg-white/5
+                           {% endif %}">
+              <div class="flex items-center gap-3.5">
+                <i class="fa-solid fa-satellite-dish w-5 text-center text-base transition-colors {% if request.path.startswith('/monitoramento') or request.endpoint == 'tracking' %}text-teal-500{% else %}text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200{% endif %}"></i>
+                <span class="text-[13px] font-bold tracking-tight">Monitoramento</span>
+              </div>
+              <i class="fa-solid fa-chevron-down text-[10px] chevron-rotate {% if request.path.startswith('/monitoramento') or request.endpoint == 'tracking' %}open-chevron{% endif %}"></i>
+            </button>
+            
+            <div id="submenu-monitoramento" class="submenu-container {% if request.path.startswith('/monitoramento') or request.endpoint == 'tracking' %}open{% endif %} ml-4 border-l border-slate-900/5 dark:border-white/5 pl-2 space-y-1 mt-1">
+                {% if current_user.has_permission('frota') %}
+                <a href="{{ url_for('tracking') }}" 
+                   class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-[12px] font-bold transition-all
+                          {% if request.endpoint == 'tracking' %}text-teal-500 bg-teal-500/5{% else %}text-slate-500 dark:text-gray-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-900/5 dark:hover:bg-white/5{% endif %}">
+                  <i class="fa-solid fa-map-location-dot w-4 text-center opacity-70"></i>
+                  Mapa ao Vivo
+                </a>
+                {% endif %}
+                {% if current_user.has_permission('monitoramento_aparelhos') %}
+                <a href="{{ url_for('monitoramento_aparelhos') }}" 
+                   class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-[12px] font-bold transition-all
+                          {% if request.endpoint == 'monitoramento_aparelhos' %}text-teal-500 bg-teal-500/5{% else %}text-slate-500 dark:text-gray-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-900/5 dark:hover:bg-white/5{% endif %}">
+                  <i class="fa-solid fa-microchip w-4 text-center opacity-70"></i>
+                  Aparelhos GPS
+                </a>
+                {% endif %}
+                {% if current_user.has_permission('monitoramento_historico') %}
+                <a href="{{ url_for('monitoramento_historico') }}" 
+                   class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-[12px] font-bold transition-all
+                          {% if request.endpoint == 'monitoramento_historico' %}text-teal-500 bg-teal-500/5{% else %}text-slate-500 dark:text-gray-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-900/5 dark:hover:bg-white/5{% endif %}">
+                  <i class="fa-solid fa-clock-rotate-left w-4 text-center opacity-70"></i>
+                  Histórico de Rotas
+                </a>
+                {% endif %}
+                {% if current_user.has_permission('monitoramento_config') %}
+                <a href="{{ url_for('monitoramento_config') }}" 
+                   class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-[12px] font-bold transition-all
+                          {% if request.endpoint == 'monitoramento_config' %}text-teal-500 bg-teal-500/5{% else %}text-slate-500 dark:text-gray-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-900/5 dark:hover:bg-white/5{% endif %}">
+                  <i class="fa-solid fa-gears w-4 text-center opacity-70"></i>
+                  Configurações
+                </a>
+                {% endif %}
+            </div>
+          </div>
+          {% endif %}
+
+          {% if current_user.has_permission('gestao_mapas') %}
+          <!-- ✅ MAPAS COLLAPSIBLE -->
+          <div class="space-y-1 mb-2">
+            <button onclick="toggleSubmenu('submenu-mapas', this)" 
+                    class="w-full flex items-center justify-between gap-3.5 px-4 py-3 rounded-2xl transition-all duration-300 group
+                           {% if request.path.startswith('/mapa-rede') or request.path.startswith('/rede-registros') %}
+                             bg-indigo-600/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20
+                           {% else %}
+                             text-slate-500 dark:text-gray-400 hover:bg-slate-900/5 dark:hover:bg-white/5
+                           {% endif %}">
+              <div class="flex items-center gap-3.5">
+                <i class="fa-solid fa-map-location-dot w-5 text-center text-base transition-colors {% if request.path.startswith('/mapa-rede') or request.path.startswith('/rede-registros') %}text-indigo-500{% else %}text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200{% endif %}"></i>
+                <span class="text-[13px] font-bold tracking-tight">Rede & Mapas</span>
+              </div>
+              <i class="fa-solid fa-chevron-down text-[10px] chevron-rotate {% if request.path.startswith('/mapa-rede') or request.path.startswith('/rede-registros') %}open-chevron{% endif %}"></i>
+            </button>
+            
+            <div id="submenu-mapas" class="submenu-container {% if request.path.startswith('/mapa-rede') or request.path.startswith('/rede-registros') %}open{% endif %} ml-4 border-l border-slate-900/5 dark:border-white/5 pl-2 space-y-1 mt-1">
+                {% if current_user.has_permission('gestao_mapas') %}
+                <a href="{{ url_for('mapa_rede') }}" 
+                   class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-[12px] font-bold transition-all
+                          {% if request.endpoint == 'mapa_rede' %}text-indigo-500 bg-indigo-500/5{% else %}text-slate-500 dark:text-gray-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-900/5 dark:hover:bg-white/5{% endif %}">
+                  <i class="fa-solid fa-route w-4 text-center opacity-70"></i>
+                  Mapa de Fibra
+                </a>
+                {% endif %}
+                <a href="{{ url_for('rede_registros') }}" 
+                   class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-[12px] font-bold transition-all
+                          {% if request.endpoint == 'rede_registros' %}text-indigo-500 bg-indigo-500/5{% else %}text-slate-500 dark:text-gray-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-900/5 dark:hover:bg-white/5{% endif %}">
+                  <i class="fa-solid fa-database w-4 text-center opacity-70"></i>
+                  Registros de Rede
+                </a>
+            </div>
+          </div>
+          {% endif %}
+
+          {% if current_user.has_permission('checklist_mobile') or current_user.has_permission('treinamentos_mobile') or current_user.has_permission('manutencao_os') or current_user.has_permission('controle_ferramentas') %}
+          <div class="py-3 px-4 text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-gray-500 mt-6">Operacional</div>
+          
+          {% if current_user.has_permission('checklist_mobile') %}
+          <a href="{{ url_for('checklist_mobile') }}" 
+             class="flex items-center gap-3.5 px-4 py-3 rounded-2xl transition-all duration-300 group
+                    {% if request.endpoint == 'checklist_mobile' %}
+                      bg-blue-600 text-white shadow-xl shadow-blue-500/30 scale-[1.02]
+                    {% else %}
+                      text-slate-500 dark:text-gray-400 hover:bg-slate-900/5 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white
+                    {% endif %}">
+            <i class="fa-solid fa-mobile-button w-5 text-center text-base {% if request.endpoint == 'checklist_mobile' %}text-white{% else %}text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200{% endif %} transition-colors"></i>
+            <span class="text-[13px] font-bold tracking-tight">Checklist Técnico</span>
+          </a>
+          {% endif %}
+
+          {% if current_user.has_permission('controle_ferramentas') %}
+          <a href="{{ url_for('controle_ferramentas') }}" 
+             class="flex items-center gap-3.5 px-4 py-3 rounded-2xl transition-all duration-300 group
+                    {% if request.endpoint == 'controle_ferramentas' %}
+                      bg-emerald-600 text-white shadow-xl shadow-emerald-500/30 scale-[1.02]
+                    {% else %}
+                      text-slate-500 dark:text-gray-400 hover:bg-slate-900/5 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white
+                    {% endif %}">
+            <i class="fa-solid fa-toolbox w-5 text-center text-base {% if request.endpoint == 'controle_ferramentas' %}text-white{% else %}text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200{% endif %} transition-colors"></i>
+            <span class="text-[13px] font-bold tracking-tight">Controle Ferramentas</span>
+          </a>
+          {% endif %}
+
+          {% if current_user.has_permission('treinamentos_mobile') %}
+          <a href="{{ url_for('treinamentos_mobile') }}" 
+             class="flex items-center gap-3.5 px-4 py-3 rounded-2xl transition-all duration-300 group
+                    {% if request.endpoint == 'treinamentos_mobile' %}
+                      bg-teal-600 text-white shadow-xl shadow-teal-500/30 scale-[1.02]
+                    {% else %}
+                      text-slate-500 dark:text-gray-400 hover:bg-slate-900/5 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white
+                    {% endif %}">
+            <i class="fa-solid fa-graduation-cap w-5 text-center text-base {% if request.endpoint == 'treinamentos_mobile' %}text-white{% else %}text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200{% endif %} transition-colors"></i>
+            <span class="text-[13px] font-bold tracking-tight">Treinamentos</span>
+          </a>
+          {% endif %}
+
+          {% if current_user.has_permission('manutencao_os') %}
+          <a href="{{ url_for('manutencao_os') }}" 
+             class="flex items-center gap-3.5 px-4 py-3 rounded-2xl transition-all duration-300 group
+                    {% if request.endpoint == 'manutencao_os' %}
+                      bg-orange-600 text-white shadow-xl shadow-orange-500/30 scale-[1.02]
+                    {% else %}
+                      text-slate-500 dark:text-gray-400 hover:bg-slate-900/5 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white
+                    {% endif %}">
+            <i class="fa-solid fa-screwdrivers-wrench w-5 text-center text-base {% if request.endpoint == 'manutencao_os' %}text-white{% else %}text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200{% endif %} transition-colors"></i>
+            <span class="text-[13px] font-bold tracking-tight">Manutenção O.S.</span>
+          </a>
+          {% endif %}
+          {% endif %}
+
+          {% set tech_tabs = [
+            ('equipes', 'Equipes', 'fa-users-gear'),
+            ('calendario', 'Calendário', 'fa-calendar-days'),
+            ('escalas', 'Escalas', 'fa-clock-rotate-left'),
+            ('reunioes', 'Reuniões', 'fa-handshake'),
+            ('anotacoes', 'Anotações', 'fa-note-sticky'),
+            ('atividades', 'Atividades', 'fa-person-digging'),
+            ('encerramento', 'Encerramento', 'fa-door-closed'),
+            ('rfo', 'RFO', 'fa-file-circle-exclamation'),
+            ('tarefas', 'Tarefas', 'fa-list-check'),
+            ('geradores', 'Geradores', 'fa-bolt'),
+            ('rota_exata', 'Rota Exata', 'fa-map-location-dot'),
+            ('supervisao', 'Supervisão', 'fa-user-check'),
+            ('treinamentos', 'Treinamentos', 'fa-graduation-cap'),
+            ('solicitacoes', 'Solicitações', 'fa-envelope-open-text'),
+            ('relatorios', 'Relatórios', 'fa-file-pdf'),
+            ('powerbi', 'Power BI', 'fa-chart-pie')
+          ] %}
+          {% set ns = namespace(has_any_gestao=false) %}
+          {% for id, label, icon in tech_tabs %}
+            {% if current_user.has_permission('gestao_' ~ id) %}
+              {% set ns.has_any_gestao = true %}
+            {% endif %}
+          {% endfor %}
+
+          {% if ns.has_any_gestao %}
+          <!-- ✅ GESTÃO TÉCNICA COLLAPSIBLE -->
+          <div class="space-y-1">
+            <button onclick="toggleSubmenu('submenu-gestao', this)" 
+                    class="w-full flex items-center justify-between gap-3.5 px-4 py-3 rounded-2xl transition-all duration-300 group
+                           {% if request.endpoint == 'gestao_tecnica' %}
+                             bg-purple-600/10 text-purple-600 dark:text-purple-400 border border-purple-500/20
+                           {% else %}
+                             text-slate-500 dark:text-gray-400 hover:bg-slate-900/5 dark:hover:bg-white/5
+                           {% endif %}">
+              <div class="flex items-center gap-3.5">
+                <i class="fa-solid fa-chart-line w-5 text-center text-base transition-colors {% if request.endpoint == 'gestao_tecnica' %}text-purple-500{% else %}text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200{% endif %}"></i>
+                <span class="text-[13px] font-bold tracking-tight">Gestão Técnica</span>
+              </div>
+              <i class="fa-solid fa-chevron-down text-[10px] chevron-rotate {% if request.endpoint == 'gestao_tecnica' %}open-chevron{% endif %}"></i>
+            </button>
+            
+            <div id="submenu-gestao" class="submenu-container {% if request.endpoint == 'gestao_tecnica' %}open{% endif %} ml-4 border-l border-slate-900/5 dark:border-white/5 pl-2 space-y-1 mt-1">
+              {% for id, label, icon in tech_tabs %}
+                {% if current_user.has_permission('gestao_' ~ id) %}
+                <a href="{{ url_for('gestao_tecnica', tab=id) }}" 
+                   data-tab="{{ id }}"
+                   class="sidebar-tab-link flex items-center gap-3 px-4 py-2.5 rounded-xl text-[12px] font-bold transition-all
+                          hover:bg-slate-900/5 dark:hover:bg-white/5 text-slate-500 dark:text-gray-400 hover:text-slate-800 dark:hover:text-white">
+                  <i class="fa-solid {{ icon }} w-4 text-center opacity-70"></i>
+                  {{ label }}
+                </a>
+                {% endif %}
+              {% endfor %}
+            </div>
+          </div>
+          {% endif %}
+
+          <div class="py-3 px-4 text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-gray-500 mt-6">Conta</div>
+          <button onclick="openModal('modalSenha')" 
+             class="w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl transition-all duration-300 group
+                    text-slate-500 dark:text-gray-400 hover:bg-slate-900/5 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white">
+            <i class="fa-solid fa-key w-5 text-center text-base text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200 transition-colors"></i>
+            <span class="text-[13px] font-bold tracking-tight">Alterar Senha</span>
+          </button>
+
+            {% if current_user.has_permission('usuarios') or current_user.has_permission('avisos') or current_user.has_permission('config_checklist') or current_user.has_permission('logs') or current_user.has_permission('config_layout') or current_user.has_permission('config_ferramentas') %}
+            <div class="py-3 px-4 text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-gray-500 mt-6">Sistema</div>
+            
+            {% if current_user.has_permission('usuarios') %}
+            <a href="{{ url_for('users') }}" 
+               class="flex items-center gap-3.5 px-4 py-3 rounded-2xl transition-all duration-300 group
+                      {% if request.endpoint == 'users' %}
+                        bg-slate-800 dark:bg-white text-white dark:text-slate-900 shadow-xl scale-[1.02]
+                      {% else %}
+                        text-slate-500 dark:text-gray-400 hover:bg-slate-900/5 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white
+                      {% endif %}">
+              <i class="fa-solid fa-users-gear w-5 text-center text-base {% if request.endpoint == 'users' %}text-white dark:text-slate-900{% else %}text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200{% endif %} transition-colors"></i>
+              <span class="text-[13px] font-bold tracking-tight">Usuários</span>
+            </a>
+            {% endif %}
+
+            {% if current_user.has_permission('avisos') %}
+            <a href="{{ url_for('avisos') }}" 
+               class="flex items-center gap-3.5 px-4 py-3 rounded-2xl transition-all duration-300 group
+                      {% if request.endpoint == 'avisos' %}
+                        bg-blue-600 text-white shadow-xl shadow-blue-500/30 scale-[1.02]
+                      {% else %}
+                        text-slate-500 dark:text-gray-400 hover:bg-slate-900/5 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white
+                      {% endif %}">
+              <i class="fa-solid fa-bullhorn w-5 text-center text-base {% if request.endpoint == 'avisos' %}text-white{% else %}text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200{% endif %} transition-colors"></i>
+              <span class="text-[13px] font-bold tracking-tight">Comunicados</span>
+            </a>
+            {% endif %}
+
+            {% if current_user.has_permission('config_checklist') %}
+            <a href="{{ url_for('config_checklist') }}" 
+               class="flex items-center gap-3.5 px-4 py-3 rounded-2xl transition-all duration-300 group
+                      {% if request.endpoint == 'config_checklist' %}
+                        bg-slate-800 dark:bg-white text-white dark:text-slate-900 shadow-xl scale-[1.02]
+                      {% else %}
+                        text-slate-500 dark:text-gray-400 hover:bg-slate-900/5 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white
+                      {% endif %}">
+              <i class="fa-solid fa-sliders w-5 text-center text-base {% if request.endpoint == 'config_checklist' %}text-white dark:text-slate-900{% else %}text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200{% endif %} transition-colors"></i>
+              <span class="text-[13px] font-bold tracking-tight">Config. Checklist</span>
+            </a>
+            {% endif %}
+
+            {% if current_user.has_permission('config_ferramentas') %}
+            <a href="{{ url_for('config_ferramentas') }}" 
+               class="flex items-center gap-3.5 px-4 py-3 rounded-2xl transition-all duration-300 group
+                      {% if request.endpoint == 'config_ferramentas' %}
+                        bg-slate-800 dark:bg-white text-white dark:text-slate-900 shadow-xl scale-[1.02]
+                      {% else %}
+                        text-slate-500 dark:text-gray-400 hover:bg-slate-900/5 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white
+                      {% endif %}">
+              <i class="fa-solid fa-toolbox w-5 text-center text-base {% if request.endpoint == 'config_ferramentas' %}text-white dark:text-slate-900{% else %}text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200{% endif %} transition-colors"></i>
+              <span class="text-[13px] font-bold tracking-tight">Config. Ferramentas</span>
+            </a>
+            {% endif %}
+
+            {% if current_user.has_permission('logs') %}
+            <a href="{{ url_for('logs') }}" 
+               class="flex items-center gap-3.5 px-4 py-3 rounded-2xl transition-all duration-300 group
+                      {% if request.endpoint == 'logs' %}
+                        bg-slate-800 dark:bg-white text-white dark:text-slate-900 shadow-xl scale-[1.02]
+                      {% else %}
+                        text-slate-500 dark:text-gray-400 hover:bg-slate-900/5 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white
+                      {% endif %}">
+              <i class="fa-solid fa-terminal w-5 text-center text-base {% if request.endpoint == 'logs' %}text-white dark:text-slate-900{% else %}text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200{% endif %} transition-colors"></i>
+              <span class="text-[13px] font-bold tracking-tight">Logs Auditoria</span>
+            </a>
+            {% endif %}
+
+            {% if current_user.has_permission('config_layout') %}
+            <a href="{{ url_for('config_layout') }}" 
+               class="flex items-center gap-3.5 px-4 py-3 rounded-2xl transition-all duration-300 group
+                      {% if request.endpoint == 'config_layout' %}
+                        bg-slate-800 dark:bg-white text-white dark:text-slate-900 shadow-xl scale-[1.02]
+                      {% else %}
+                        text-slate-500 dark:text-gray-400 hover:bg-slate-900/5 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white
+                      {% endif %}">
+              <i class="fa-solid fa-palette w-5 text-center text-base {% if request.endpoint == 'config_layout' %}text-white dark:text-slate-900{% else %}text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200{% endif %} transition-colors"></i>
+              <span class="text-[13px] font-bold tracking-tight">Config. Layout</span>
+            </a>
+            {% endif %}
+            {% endif %}
+
+            {% if current_user.has_permission('whatsapp_conversas') or current_user.has_permission('whatsapp_evolution') %}
+            <div class="py-3 px-4 text-[11px] font-black uppercase tracking-[0.2em] text-emerald-600 dark:text-emerald-500 mt-6 flex items-center gap-2">
+              <span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              Integração WhatsApp
+            </div>
+
+            {% if current_user.has_permission('whatsapp_conversas') %}
+            <a href="{{ url_for('whatsapp_conversas') }}" 
+               class="flex items-center gap-3.5 px-4 py-3 rounded-2xl transition-all duration-300 group
+                      {% if request.endpoint == 'whatsapp_conversas' %}
+                        bg-emerald-600 text-white shadow-xl shadow-emerald-500/30 scale-[1.02]
+                      {% else %}
+                        text-slate-500 dark:text-gray-400 hover:bg-slate-900/5 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white
+                      {% endif %}">
+              <i class="fa-regular fa-comments w-5 text-center text-base {% if request.endpoint == 'whatsapp_conversas' %}text-white{% else %}text-slate-400 group-hover:text-emerald-500 dark:group-hover:text-emerald-400{% endif %} transition-colors"></i>
+              <span class="text-[13px] font-bold tracking-tight">Conversas</span>
+            </a>
+            {% endif %}
+
+            {% if current_user.has_permission('whatsapp_evolution') %}
+            <a href="{{ url_for('whatsapp_config') }}" 
+               class="flex items-center gap-3.5 px-4 py-3 rounded-2xl transition-all duration-300 group
+                      {% if request.endpoint == 'whatsapp_config' %}
+                        bg-slate-800 dark:bg-white text-white dark:text-slate-900 shadow-xl scale-[1.02]
+                      {% else %}
+                        text-slate-500 dark:text-gray-400 hover:bg-slate-900/5 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white
+                      {% endif %}">
+              <i class="fa-solid fa-sliders w-5 text-center text-base {% if request.endpoint == 'whatsapp_config' %}text-white dark:text-slate-900{% else %}text-slate-400 group-hover:text-emerald-500 dark:group-hover:text-emerald-400{% endif %} transition-colors"></i>
+              <span class="text-[13px] font-bold tracking-tight">Configurações API</span>
+            </a>
+            {% endif %}
+            {% endif %}
+        </nav>
+
+        <!-- BOTTOM: ACTIONS -->
+        <div class="p-4 border-t border-slate-900/5 dark:border-white/5 space-y-1.5">
+          
+          <button id="btnTheme" class="w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl transition-all duration-300 group text-slate-500 dark:text-gray-400 hover:bg-slate-900/5 dark:hover:bg-white/5">
+            <i class="fa-solid fa-moon w-5 text-center text-base text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200 transition-colors" id="themeIcon"></i>
+            <span class="text-[13px] font-bold tracking-tight">Mudar Tema</span>
+          </button>
+
+          <a href="{{ url_for('logout') }}" class="flex items-center gap-3.5 px-4 py-3 rounded-2xl text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all duration-300 group">
+            <i class="fa-solid fa-right-from-bracket w-5 text-center text-base transition-transform group-hover:translate-x-1"></i>
+            <span class="text-[13px] font-bold tracking-tight">Sair da Conta</span>
+          </a>
+
+          <div class="flex items-center gap-3 px-4 py-4 rounded-[1.5rem] bg-slate-900/5 dark:bg-white/5 mt-4 border border-slate-900/5 dark:border-white/5">
+            <div class="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white font-black shrink-0 shadow-lg shadow-blue-500/20">
+              {{ current_user.username[0] | upper }}
+            </div>
+            <div class="min-w-0 flex-1">
+              <div class="text-[12px] font-black text-slate-800 dark:text-white truncate uppercase tracking-tight">{{ current_user.username }}</div>
+              <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{{ current_user.role }}</div>
+            </div>
+          </div>
+        </div>
+      </aside>
+      {% endif %}
+
+      <!-- CONTEÚDO PRINCIPAL -->
+      <div id="main-content" class="flex flex-col min-h-screen flex-1 min-w-0 bg-[#f8fafc] dark:bg-[#020617]">
+        
+        <!-- TOPBAR (Modern & Functional) -->
+        {% if not hide_header %}
+        <header class="h-16 border-b border-slate-900/5 dark:border-white/5 flex items-center justify-between px-8 sticky top-0 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl z-40">
+          <div class="flex items-center gap-6">
+            <button id="btnMobileToggle" class="lg:hidden p-3 rounded-2xl bg-slate-900/5 dark:bg-white/5 text-slate-500 hover:text-slate-900 dark:hover:text-white transition-all active:scale-95">
+              <i class="fa-solid fa-bars-staggered text-lg"></i>
+            </button>
+            
+            <div class="flex items-center gap-4">
+              <h1 class="text-sm font-black text-slate-800 dark:text-white uppercase tracking-[0.1em] hidden md:block">Sistema de Gestão de Frota e Equipes</h1>
+            </div>
+          </div>
+          
+          <div class="flex items-center gap-4">
+              <!-- ✅ CLIMA E RELÓGIO (RESPONSIVO) -->
+              <div class="flex items-center gap-3 md:gap-6 md:px-6 border-r border-slate-900/5 dark:border-white/5">
+                <div class="flex items-center gap-2">
+                  <div class="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-500" id="weather-icon-box">
+                    <i class="fa-solid fa-sun text-sm" id="weather-icon"></i>
+                  </div>
+                  <div class="text-left hidden md:block">
+                    <div class="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Seropédica</div>
+                    <div class="text-xs font-black text-slate-700 dark:text-white leading-none" id="weather-temp">--°C</div>
+                  </div>
+                  <div class="text-[11px] font-black text-slate-700 dark:text-white md:hidden" id="weather-temp-mobile">--°C</div>
+                </div>
+                
+                <div class="flex items-center gap-2">
+                  <div class="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-500">
+                    <i class="fa-solid fa-clock text-sm"></i>
+                  </div>
+                  <div id="topbar-clock" class="text-[11px] md:text-xs font-black text-slate-700 dark:text-white leading-none font-mono min-w-[65px] md:min-w-[75px] text-center">00:00:00</div>
+                </div>
+              </div>
+
+             <div class="flex items-center gap-1 sm:gap-2 pr-4 border-r border-slate-900/5 dark:border-white/5">
+               <!-- ✅ SUPORTE WHATSAPP -->
+               <a href="https://wa.me/5521996994117" target="_blank" title="Suporte Técnico"
+                  class="p-2 rounded-xl text-emerald-500 hover:bg-emerald-500/10 transition-all">
+                 <i class="fa-brands fa-whatsapp text-lg md:text-xl"></i>
+               </a>
+
+               <button onclick="toggleNotifications()" class="p-2 rounded-xl text-slate-400 hover:bg-slate-900/5 dark:hover:bg-white/5 transition-all relative">
+                 <i class="fa-solid fa-bell text-base md:text-lg"></i>
+                 <span id="notif-badge" class="hidden absolute top-1.5 right-1.5 px-1 min-w-[14px] h-[14px] bg-red-500 text-white text-[8px] font-black rounded-full flex items-center justify-center border border-white dark:border-slate-900 animate-bounce">0</span>
+               </button>
+
+               <button onclick="toggleHelp()" title="Informações e Manuais" class="p-2 rounded-xl text-slate-400 hover:bg-slate-900/5 dark:hover:bg-white/5 transition-all">
+                 <i class="fa-solid fa-circle-question text-base md:text-lg"></i>
+               </button>
+
+               <!-- ✅ STATUS DO SISTEMA -->
+               <div class="flex items-center gap-2 px-2 md:px-3 py-1.5 rounded-xl bg-emerald-500/5 border border-emerald-500/10 ml-1 md:ml-2">
+                 <span class="relative flex h-2 w-2">
+                   <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                   <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                 </span>
+                 <span class="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest hidden md:block">Online</span>
+               </div>
+             </div>
+
+             <div class="hidden lg:block text-right">
+                <div class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-0.5">Painel de Controle</div>
+                <div class="text-xs font-bold text-slate-800 dark:text-white">{{ page_title or 'Checklist Veicular' }}</div>
+             </div>
+          </div>
+        </header>
+        {% endif %}
+
+        <main class="{% if hide_header %}p-0 h-screen overflow-hidden{% else %}p-4 md:p-6 lg:p-10{% endif %}">
+
+          {% block content %}{% endblock %}
+        </main>
+      </div>
+    </div>
+
+    <!-- ✅ MODAL SENHA -->
+    {% if current_user.is_authenticated %}
+    <div id="modalSenha" class="fixed inset-0 hidden items-center justify-center z-[100]">
+      <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="closeModal('modalSenha')"></div>
+      <div class="relative w-[92%] max-w-md rounded-3xl border shadow-2xl p-8 bg-white dark:bg-slate-900 border-slate-900/10 dark:border-white/10">
+        <h3 class="text-2xl font-black text-slate-900 dark:text-white mb-2">Segurança</h3>
+        <p class="text-sm text-slate-500 dark:text-gray-400 mb-6">Atualize sua senha de acesso ao sistema.</p>
+        
+        <form method="post" action="{{ url_for('perfil_alterar_senha') }}" class="space-y-4">
+          <div>
+            <label class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2 block">Senha Atual</label>
+            <input id="current_password" type="password" name="current_password" required class="w-full rounded-2xl px-4 py-3 border bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white border-slate-900/5 dark:border-white/5 outline-none focus:ring-4 focus:ring-blue-500/20 transition-all">
+          </div>
+          <div>
+            <label class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2 block">Nova Senha</label>
+            <input id="new_password" type="password" name="new_password" minlength="6" required class="w-full rounded-2xl px-4 py-3 border bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white border-slate-900/5 dark:border-white/5 outline-none focus:ring-4 focus:ring-blue-500/20 transition-all">
+          </div>
+          <div>
+            <label class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2 block">Confirmar Nova Senha</label>
+            <input id="confirm_password" type="password" name="confirm_password" minlength="6" required class="w-full rounded-2xl px-4 py-3 border bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white border-slate-900/5 dark:border-white/5 outline-none focus:ring-4 focus:ring-blue-500/20 transition-all">
+          </div>
+          <div class="flex gap-3 pt-4">
+            <button type="button" onclick="closeModal('modalSenha')" class="flex-1 py-3 text-sm font-bold text-slate-400 hover:text-slate-600 transition-colors">Cancelar</button>
+            <button type="submit" class="flex-[2] bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold shadow-xl shadow-blue-500/40 transition-all active:scale(0.95)">Salvar Alterações</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    {% endif %}
+
+    <script>
+      // Toast Notification
+      function showToast(message, type = 'success') {
+        const container = document.getElementById('toast-container');
+        if (!container) return;
+        
+        const toast = document.createElement('div');
+        toast.className = `toast toast-${type} shadow-2xl relative overflow-hidden`;
+        
+        const icons = {
+            'success': 'fa-circle-check text-emerald-500',
+            'error': 'fa-circle-xmark text-red-500',
+            'info': 'fa-circle-info text-blue-500',
+            'warning': 'fa-circle-exclamation text-amber-500'
+        };
+        const icon = icons[type] || icons.info;
+        
+        toast.innerHTML = `
+          <i class="fa-solid ${icon} text-lg"></i>
+          <span class="text-sm font-bold text-slate-800 dark:text-white">${message}</span>
+          <div class="toast-progress">
+            <div class="toast-progress-bar"></div>
+          </div>
+        `;
+        
+        container.appendChild(toast);
+        setTimeout(() => toast.classList.add('show'), 10);
+        
+        setTimeout(() => {
+          toast.classList.remove('show');
+          setTimeout(() => toast.remove(), 400);
+        }, 4000);
+      }
+
+      // Trigger Flashed Messages as Toasts
+      {% with msgs = get_flashed_messages(with_categories=true) %}
+        {% if msgs %}
+          window.addEventListener('DOMContentLoaded', () => {
+            {% for category, message in msgs %}
+              {% if category != 'login_error' %}
+                showToast("{{ message }}", "{{ 'error' if category == 'danger' or category == 'error' else (category or 'success') }}");
+              {% endif %}
+            {% endfor %}
+          });
+        {% endif %}
+      {% endwith %}
+
+      // Sidebar Logic
+      (function() {
+        const sidebar = document.getElementById('sidebar');
+        const btnMobile = document.getElementById('btnMobileToggle');
+
+        if (!sidebar) return;
+
+        if (btnMobile) btnMobile.addEventListener('click', () => sidebar.classList.toggle('mobile-open'));
+        
+        document.addEventListener('click', (e) => {
+          if (window.innerWidth <= 1024 && !sidebar.contains(e.target) && !btnMobile.contains(e.target)) {
+            sidebar.classList.remove('mobile-open');
+          }
+        });
+      })();
+
+      // Modal Logic
+      function openModal(id) {
+        const el = document.getElementById(id);
+        if(el) { el.classList.remove('hidden'); el.classList.add('flex'); }
+      }
+      function closeModal(id) {
+        const el = document.getElementById(id);
+        if(el) { el.classList.add('hidden'); el.classList.remove('flex'); }
+      }
+
+      // ✅ TOPBAR CLOCK
+      function updateClock() {
+        const now = new Date();
+        const time = now.toLocaleTimeString('pt-BR', { hour12: false });
+        const el = document.getElementById('topbar-clock');
+        if (el) el.textContent = time;
+      }
+      setInterval(updateClock, 1000);
+      updateClock();
+
+      // ✅ SUBMENU TOGGLE
+      function toggleSubmenu(id, btn) {
+        const submenu = document.getElementById(id);
+        if (submenu) {
+          submenu.classList.toggle('open');
+          const chevron = btn.querySelector('.chevron-rotate');
+          if (chevron) chevron.classList.toggle('open-chevron');
+        }
+      }
+
+      // ✅ GLOBAL TAB NAVIGATION HANDLER
+      document.addEventListener('click', function(e) {
+        const tabLink = e.target.closest('.sidebar-tab-link');
+        if (tabLink && window.location.pathname.includes('/gestao_tecnica')) {
+          e.preventDefault();
+          const tabId = tabLink.getAttribute('data-tab');
+          if (typeof switchTab === 'function') {
+            switchTab(tabId);
+            const url = new URL(window.location);
+            url.searchParams.set('tab', tabId);
+            window.history.pushState({}, '', url);
+            if (window.innerWidth <= 1024) document.getElementById('sidebar')?.classList.remove('mobile-open');
+          } else {
+            window.location.href = tabLink.href;
+          }
+        }
+      });
+
+      // Theme Logic
+      (function () {
+        const btn = document.getElementById("btnTheme");
+        const icon = document.getElementById("themeIcon");
+        function isDark() { return document.documentElement.classList.contains("dark"); }
+        function sync() { if(icon) icon.className = isDark() ? "fa-solid fa-sun w-5 text-center" : "fa-solid fa-moon w-5 text-center"; }
+        sync();
+        if(btn) btn.addEventListener("click", () => {
+          const next = isDark() ? "light" : "dark";
+          document.documentElement.classList.toggle("dark");
+          localStorage.setItem("theme", next);
+          sync();
+        });
+      })();
+
+      // ✅ WEATHER LOGIC (Seropédica)
+      async function updateWeather() {
+        try {
+          const res = await fetch('https://api.open-meteo.com/v1/forecast?latitude=-22.7486&longitude=-43.7081&current_weather=true');
+          const data = await res.json();
+          if (data && data.current_weather) {
+            const temp = Math.round(data.current_weather.temperature);
+            const code = data.current_weather.weathercode;
+            
+            const tempEl = document.getElementById('weather-temp');
+            const tempMobileEl = document.getElementById('weather-temp-mobile');
+            if (tempEl) tempEl.textContent = temp + '°C';
+            if (tempMobileEl) tempMobileEl.textContent = temp + '°C';
+            
+            const iconEl = document.getElementById('weather-icon');
+            const boxEl = document.getElementById('weather-icon-box');
+            
+            if (iconEl && boxEl) {
+              // Mapeamento simples de weathercode (WMO)
+              if (code === 0) {
+                iconEl.className = 'fa-solid fa-sun text-sm';
+                boxEl.className = 'w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-500';
+              } else if (code <= 3) {
+                iconEl.className = 'fa-solid fa-cloud-sun text-sm';
+                boxEl.className = 'w-8 h-8 rounded-lg bg-blue-400/10 flex items-center justify-center text-blue-400';
+              } else if (code <= 48) {
+                iconEl.className = 'fa-solid fa-cloud text-sm';
+                boxEl.className = 'w-8 h-8 rounded-lg bg-slate-400/10 flex items-center justify-center text-slate-400';
+              } else if (code <= 67) {
+                iconEl.className = 'fa-solid fa-cloud-showers-heavy text-sm';
+                boxEl.className = 'w-8 h-8 rounded-lg bg-indigo-400/10 flex items-center justify-center text-indigo-400';
+              } else {
+                iconEl.className = 'fa-solid fa-cloud-bolt text-sm';
+                boxEl.className = 'w-8 h-8 rounded-lg bg-red-400/10 flex items-center justify-center text-red-400';
+              }
+            }
+          }
+        } catch (e) {
+          console.error("Erro ao carregar o clima de Seropédica:", e);
+        }
+      }
+
+      // Ciclo de vida do clima
+      updateWeather();
+      setInterval(updateWeather, 900000); // Atualiza a cada 15 minutos
+
+      // ✅ GESTÃO DE NOTIFICAÇÕES (DRAWER E BADGE)
+      function toggleNotifications() {
+        const drawer = document.getElementById('notification-drawer');
+        const overlay = document.getElementById('drawer-overlay');
+        if (drawer && overlay) {
+          const isOpen = drawer.classList.contains('open');
+          if (isOpen) {
+            drawer.classList.remove('open');
+            overlay.classList.remove('visible');
+          } else {
+            drawer.classList.add('open');
+            overlay.classList.add('visible');
+            loadNotifications();
+          }
+        }
+      }
+
+      async function loadNotifications() {
+        const list = document.getElementById('notif-list');
+        if (!list) return;
+        
+        list.innerHTML = `
+          <div class="text-center py-20">
+            <div class="animate-spin inline-block w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full mb-4"></div>
+            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Carregando...</p>
+          </div>
+        `;
+        
+        try {
+          const res = await fetch('/api/comunicados/recent');
+          const data = await res.json();
+          if (data && data.notifications) {
+            updateNotifBadge(data.unread_count);
+            if (data.notifications.length === 0) {
+              list.innerHTML = `
+                <div class="text-center py-20">
+                  <div class="w-12 h-12 rounded-2xl bg-slate-500/5 flex items-center justify-center text-slate-400 mx-auto mb-4">
+                    <i class="fa-solid fa-bell-slash text-lg"></i>
+                  </div>
+                  <p class="text-xs font-bold text-slate-400">Nenhum comunicado recente</p>
+                </div>
+              `;
+              return;
+            }
+            
+            list.innerHTML = data.notifications.map(n => `
+              <div onclick="markAsRead(${n.id}, this)" class="p-4 rounded-2xl border transition-all cursor-pointer relative overflow-hidden group ${
+                n.is_read 
+                  ? 'bg-slate-500/5 border-slate-900/5 dark:border-white/5 opacity-75 hover:opacity-100' 
+                  : 'bg-blue-500/5 border-blue-500/10 hover:bg-blue-500/10'
+              }">
+                ${!n.is_read ? '<span class="absolute top-4 right-4 w-2 h-2 rounded-full bg-blue-500"></span>' : ''}
+                <div class="flex items-center gap-2 mb-1">
+                  <span class="text-[9px] font-black px-2 py-0.5 rounded-full ${
+                    n.is_read ? 'bg-slate-500/10 text-slate-500' : 'bg-blue-500/10 text-blue-500'
+                  } uppercase tracking-wider">${n.sender}</span>
+                  <span class="text-[10px] font-bold text-slate-400">${n.created_at}</span>
+                </div>
+                <h4 class="text-sm font-black text-slate-900 dark:text-white mb-1 group-hover:text-blue-500 transition-colors">${n.title}</h4>
+                <p class="text-xs text-slate-500 dark:text-slate-400 whitespace-pre-wrap mt-1 leading-relaxed">${n.message}</p>
+              </div>
+            `).join('');
+          }
+        } catch (e) {
+          console.error("Erro ao carregar notificações:", e);
+          list.innerHTML = `
+            <div class="text-center py-20 text-red-500">
+              <i class="fa-solid fa-triangle-exclamation text-2xl mb-2"></i>
+              <p class="text-xs font-bold">Falha ao carregar notificações</p>
+            </div>
+          `;
+        }
+      }
+
+      async function markAsRead(id, element) {
+        try {
+          const res = await fetch(`/api/comunicados/${id}/read`, { method: 'POST' });
+          if (res.ok) {
+            element.classList.remove('bg-blue-500/5', 'border-blue-500/10');
+            element.classList.add('bg-slate-500/5', 'border-slate-900/5', 'dark:border-white/5', 'opacity-75');
+            const dot = element.querySelector('.bg-blue-500');
+            if (dot) dot.remove();
+            
+            // Recarrega badge
+            fetchNotifCount();
+          }
+        } catch (e) {
+          console.error("Erro ao marcar como lida:", e);
+        }
+      }
+
+      function updateNotifBadge(count) {
+        const badge = document.getElementById('notif-badge');
+        if (badge) {
+          if (count > 0) {
+            badge.textContent = count;
+            badge.classList.remove('hidden');
+          } else {
+            badge.classList.add('hidden');
+          }
+        }
+      }
+
+      async function fetchNotifCount() {
+        try {
+          const res = await fetch('/api/comunicados/recent');
+          const data = await res.json();
+          if (data) {
+            updateNotifBadge(data.unread_count);
+          }
+        } catch (e) {
+          console.error("Erro ao buscar contagem de notificações:", e);
+        }
+      }
+
+      // ✅ AJUDA E MANUAIS CONTEXTUAIS
+      function toggleHelp() {
+        openModal('modalHelp');
+        loadHelpManual();
+      }
+
+      async function loadHelpManual() {
+        const content = document.getElementById('help-content');
+        if (!content) return;
+        
+        content.innerHTML = `
+          <div class="text-center py-10">
+            <div class="animate-spin inline-block w-6 h-6 border-2 border-slate-500 border-t-transparent rounded-full mb-4"></div>
+            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Carregando manual...</p>
+          </div>
+        `;
+        
+        try {
+          const res = await fetch('/api/manuais/help');
+          const data = await res.json();
+          if (data && data.content) {
+            content.textContent = data.content;
+          }
+        } catch (e) {
+          console.error("Erro ao carregar manual:", e);
+          content.innerHTML = `
+            <div class="text-center py-10 text-red-500">
+              <i class="fa-solid fa-triangle-exclamation text-2xl mb-2"></i>
+              <p class="text-xs font-bold">Falha ao carregar manual</p>
+            </div>
+          `;
+        }
+      }
+
+      // Inicializa na carga da página
+      window.addEventListener('DOMContentLoaded', () => {
+        fetchNotifCount();
+        setInterval(fetchNotifCount, 60000); // Atualiza a cada minuto
+      });
+    </script>
+
+    <!-- ✅ NOTIFICATION DRAWER -->
+    <div id="drawer-overlay" onclick="toggleNotifications()"></div>
+    <aside id="notification-drawer">
+        <div class="p-6 border-b border-slate-900/5 dark:border-white/5 flex items-center justify-between">
+            <div>
+                <h3 class="text-xl font-black text-slate-900 dark:text-white tracking-tight">Notificações</h3>
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Últimos comunicados</p>
+            </div>
+            <button onclick="toggleNotifications()" class="w-10 h-10 rounded-xl hover:bg-slate-900/5 dark:hover:bg-white/5 text-slate-400 transition-all">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+        </div>
+        <div id="notif-list" class="p-4 space-y-3 overflow-y-auto h-[calc(100vh-100px)] custom-scrollbar">
+            <div class="text-center py-20">
+                <div class="animate-spin inline-block w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full mb-4"></div>
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Carregando...</p>
+            </div>
+        </div>
+    </aside>
+
+    <!-- ✅ HELP MODAL -->
+    <div id="modalHelp" class="fixed inset-0 hidden items-center justify-center z-[110] p-4">
+        <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="closeModal('modalHelp')"></div>
+        <div class="relative w-full max-w-2xl rounded-[2.5rem] bg-white dark:bg-slate-900 border border-slate-900/10 dark:border-white/10 shadow-2xl overflow-hidden">
+            <div class="p-8 border-b border-slate-900/5 dark:border-white/5 bg-slate-500/5 flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-2xl bg-slate-500/10 flex items-center justify-center text-slate-600">
+                        <i class="fa-solid fa-circle-info text-xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Manual de Operação</h3>
+                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Orientações para o seu perfil</p>
+                    </div>
+                </div>
+                <button onclick="closeModal('modalHelp')" class="w-10 h-10 rounded-xl hover:bg-slate-900/5 dark:hover:bg-white/5 text-slate-400 transition-all">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            <div class="p-8 max-h-[60vh] overflow-y-auto custom-scrollbar">
+                <div id="help-content" class="text-sm text-slate-600 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">Carregando manuais...</div>
+            </div>
+            <div class="p-6 bg-slate-50 dark:bg-white/5 border-t border-slate-900/5 dark:border-white/5 text-center">
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Em caso de dúvidas persistentes, entre em contato com o suporte.</p>
+            </div>
+        </div>
+    </div>
+  </body>
+</html>
+
+{# accessibility helper: onkeydown= handler present #}

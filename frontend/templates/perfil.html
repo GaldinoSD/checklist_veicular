@@ -1,0 +1,60 @@
+{% extends 'layout.html' %}
+{% set page_title = "Meu Perfil" %}
+{% block content %}
+<!-- ✅ HEADER PREMIUM PERFIL COMPACT -->
+<div class="mb-8 animate-premium">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 glass-premium p-6 rounded-[2rem] shadow-xl overflow-hidden relative">
+        <!-- Decorativos -->
+        <div class="absolute -top-24 -right-24 w-64 h-64 bg-slate-500/10 rounded-full blur-3xl"></div>
+        <div class="absolute -bottom-24 -left-24 w-64 h-64 bg-slate-500/10 rounded-full blur-3xl"></div>
+
+        <div class="flex items-center gap-5 relative z-10">
+            <div class="w-12 h-12 rounded-[1.25rem] bg-gradient-to-br from-slate-500 to-slate-700 flex items-center justify-center text-white shadow-2xl shadow-slate-500/20">
+                <i class="fa-solid fa-user-circle text-xl"></i>
+            </div>
+            <div>
+                <nav class="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-0.5">
+                    <span>Conta</span>
+                    <i class="fa-solid fa-chevron-right text-[8px] opacity-30"></i>
+                    <span class="text-slate-500">Configurações de Acesso</span>
+                </nav>
+                <h2 class="text-2xl font-black text-slate-800 dark:text-white tracking-tight">Meu Perfil</h2>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="max-w-md mx-auto card-premium p-8 space-y-6">
+    <div class="text-center">
+        <div class="w-20 h-20 bg-slate-900/5 dark:bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4 border border-slate-900/5 dark:border-white/10">
+            <i class="fa-solid fa-user text-3xl text-slate-400"></i>
+        </div>
+        <h3 class="text-xl font-black text-slate-800 dark:text-white">{{ user.username }}</h3>
+        <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Colaborador</p>
+    </div>
+
+    <form method="post" class="space-y-5">
+        <div>
+            <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Nova Senha</label>
+            <input id="nova_senha" type="password" name="nova_senha" placeholder="Digite a nova senha"
+                   class="w-full bg-slate-900/5 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 rounded-xl px-4 py-3 text-slate-800 dark:text-white focus:border-blue-500/50 outline-none transition-all font-bold" required>
+        </div>
+
+        <div>
+            <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">Confirmar Senha</label>
+            <input id="confirma" type="password" name="confirma" placeholder="Confirme a nova senha"
+                   class="w-full bg-slate-900/5 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 rounded-xl px-4 py-3 text-slate-800 dark:text-white focus:border-blue-500/50 outline-none transition-all font-bold" required>
+        </div>
+
+        <div class="flex items-center justify-between gap-4 mt-8">
+            <a href="{{ url_for('checklist_mobile') }}"
+               class="px-6 py-3 bg-slate-900/5 hover:bg-slate-900/10 dark:bg-white/5 dark:hover:bg-white/10 text-slate-600 dark:text-slate-400 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all active:scale-95">
+                Voltar
+            </a>
+            <button class="flex-1 px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-emerald-500/20 transition-all active:scale-95">
+                Atualizar Senha
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

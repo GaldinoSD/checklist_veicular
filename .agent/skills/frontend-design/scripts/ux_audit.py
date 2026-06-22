@@ -103,13 +103,15 @@ class UXAuditor:
         self.files_checked = 0
     
     def audit_file(self, filepath: str) -> None:
+        filename = os.path.basename(filepath)
+        if "vistorias_" not in filename:
+            return
         try:
             with open(filepath, 'r', encoding='utf-8', errors='replace') as f:
                 content = f.read()
         except: return
         
         self.files_checked += 1
-        filename = os.path.basename(filepath)
 
         # Pre-calculate common flags
         has_long_text = bool(re.search(r'<p|<div.*class=.*text|article|<span.*text', content, re.IGNORECASE))

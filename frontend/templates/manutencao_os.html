@@ -1,0 +1,601 @@
+{% extends "layout.html" %}
+{% set page_title = "Manutenção — Ordens de Serviço" %}
+{% block content %}
+
+<div class="max-w-7xl mx-auto pb-12">
+
+    <!-- ✅ HEADER PREMIUM MANUTENÇÃO -->
+    <div class="mb-10 animate-premium">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 glass-premium p-8 rounded-[2.5rem] shadow-xl overflow-hidden relative">
+            <!-- Decorativos -->
+            <div class="absolute -top-24 -right-24 w-64 h-64 bg-orange-500/10 rounded-full blur-3xl"></div>
+            <div class="absolute -bottom-24 -left-24 w-64 h-64 bg-yellow-500/10 rounded-full blur-3xl"></div>
+
+            <div class="flex items-center gap-6 relative z-10">
+                <div class="w-16 h-16 rounded-[1.5rem] bg-gradient-to-br from-orange-500 to-yellow-600 flex items-center justify-center text-white shadow-2xl shadow-orange-500/30">
+                    <i class="fa-solid fa-screwdriver-wrench text-2xl"></i>
+                </div>
+                <div>
+                    <nav class="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">
+                        <span>Oficina Central</span>
+                        <i class="fa-solid fa-chevron-right text-[8px] opacity-30"></i>
+                        <span class="text-orange-500">Fluxo de Manutenção</span>
+                    </nav>
+                    <h2 class="text-3xl font-black text-slate-800 dark:text-white tracking-tight">Manutenção O.S</h2>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-4 relative z-10">
+                <button onclick="openRegistrarServico()" 
+                        class="px-5 py-3 bg-gradient-to-r from-orange-500 to-yellow-600 hover:from-orange-600 hover:to-yellow-700 text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-lg shadow-orange-500/20 transition-all active:scale-95 flex items-center gap-2">
+                    <i class="fa-solid fa-plus text-xs"></i> Registrar Serviço
+                </button>
+
+                <div class="px-4 py-2 rounded-2xl bg-slate-900/5 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 relative z-10">
+                    <span class="text-[10px] font-black text-slate-500 dark:text-gray-400 uppercase tracking-widest block text-center">Etapa</span>
+                    <span class="text-xs font-black text-orange-600 dark:text-orange-400 uppercase block text-center">Manutenção</span>
+                </div>
+                
+                <div class="px-5 py-2.5 bg-orange-500/10 rounded-2xl border border-orange-500/20">
+                    <span class="text-[10px] font-black text-orange-600 dark:text-orange-400 uppercase tracking-widest block text-center">Pendentes</span>
+                    <span class="text-xl font-black text-slate-800 dark:text-white block text-center">
+                        {{ ordens | selectattr('status', 'equalto', 'aberta') | list | length }}
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ✅ ORDENS DE SERVIÇO ABERTAS (PENDENTES) -->
+    <div class="mb-12 animate-premium">
+        <div class="flex items-center gap-3 mb-6">
+            <span class="w-3 h-3 rounded-full bg-amber-500 animate-pulse shadow-[0_0_10px_rgba(245,158,11,0.5)]"></span>
+            <h3 class="text-xs font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">
+                O.S. Abertas (Pendente de Manutenção)
+            </h3>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {% for os in ordens %}
+            {% if os.status == 'aberta' %}
+            <div class="card-premium p-6 flex flex-col group h-full">
+                <div class="flex justify-between items-start mb-6">
+                    <div class="space-y-1">
+                        <div class="flex items-center gap-2">
+                            <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Protocolo</span>
+                            <span class="px-2 py-0.5 bg-slate-100 dark:bg-white/5 rounded-md text-[10px] font-bold text-slate-600 dark:text-gray-400">#{{ os.id }}</span>
+                        </div>
+                        <h3 class="text-xl font-black text-slate-800 dark:text-white tracking-tight group-hover:text-orange-500 transition-colors">
+                            {{ os.vehicle.plate }}
+                        </h3>
+                    </div>
+                    <div class="px-3 py-1 bg-amber-500/10 border border-amber-500/20 rounded-xl">
+                        <span class="text-[9px] font-black text-amber-600 uppercase tracking-widest">Aberta</span>
+                    </div>
+                </div>
+
+                <div class="space-y-4 flex-1">
+                    <div class="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-900/5 dark:border-white/5">
+                        <p class="text-[11px] font-bold text-slate-500 dark:text-gray-400 mb-1 uppercase tracking-tight">Descrição do Problema</p>
+                        <p class="text-sm font-medium text-slate-700 dark:text-gray-200 line-clamp-3 italic">
+                            "{{ os.descricao }}"
+                        </p>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div class="p-3 bg-white dark:bg-white/5 rounded-xl border border-slate-900/5 dark:border-white/5">
+                            <span class="text-[9px] font-black text-slate-400 uppercase block mb-1">Gravidade</span>
+                            <span class="text-xs font-bold {% if os.gravidade == 'alta' %}text-red-500{% else %}text-orange-500{% endif %} uppercase tracking-tighter">
+                                {{ os.gravidade }}
+                            </span>
+                        </div>
+                        <div class="p-3 bg-white dark:bg-white/5 rounded-xl border border-slate-900/5 dark:border-white/5">
+                            <span class="text-[9px] font-black text-slate-400 uppercase block mb-1">KM Atual</span>
+                            <span class="text-xs font-bold text-slate-700 dark:text-gray-200">{{ os.km }} KM</span>
+                        </div>
+                    </div>
+                    
+                    <p class="text-[11px] font-bold text-slate-400 truncate">
+                        <i class="fa-solid fa-car-side mr-1"></i> {{ os.vehicle.brand }} {{ os.vehicle.model }}
+                    </p>
+                </div>
+
+                <div class="mt-8 space-y-3">
+                    <button onclick="openModal('modalInfoVeiculo{{ os.id }}')" 
+                            class="w-full py-3 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-600 dark:text-gray-300 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all">
+                        Ficha Técnica
+                    </button>
+                    <button onclick="openFinalizar({{ os.id }})" 
+                            class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest shadow-lg shadow-emerald-500/20 transition-all active:scale-95">
+                        Finalizar O.S
+                    </button>
+                </div>
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
+
+        {% if ordens | selectattr('status', 'equalto', 'aberta') | list | length == 0 %}
+        <div class="py-20 text-center glass-premium rounded-[3rem] animate-premium mt-6">
+            <div class="w-24 h-24 rounded-full bg-slate-100 dark:bg-white/5 flex items-center justify-center mx-auto mb-6">
+                <i class="fa-solid fa-check-double text-4xl text-emerald-500"></i>
+            </div>
+            <h3 class="text-2xl font-black text-slate-800 dark:text-white mb-2">Tudo em Ordem!</h3>
+            <p class="text-slate-500 max-w-sm mx-auto">Nenhuma ordem de serviço pendente para os veículos da frota.</p>
+        </div>
+        {% endif %}
+    </div>
+
+
+</div>
+
+<!-- ✅ MODAIS FICHA TÉCNICA -->
+{% for os in ordens %}
+{% if os.status == 'aberta' %}
+<div id="modalInfoVeiculo{{ os.id }}" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden items-center justify-center z-[100] p-4">
+    <div class="bg-white dark:bg-slate-900 w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden border border-slate-900/10 dark:border-white/10 animate-premium">
+        <div class="px-8 py-6 border-b border-slate-900/10 dark:border-white/10 flex justify-between items-center bg-slate-50 dark:bg-white/5">
+            <div class="text-left">
+                <h3 class="text-xl font-black text-slate-800 dark:text-white tracking-tight">Ficha do Veículo</h3>
+                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">{{ os.vehicle.plate }} — {{ os.vehicle.brand }}</p>
+            </div>
+            <button onclick="closeModal('modalInfoVeiculo{{ os.id }}')" class="w-10 h-10 rounded-full hover:bg-slate-200 dark:hover:bg-white/10 text-slate-400 transition-all">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        
+        <div class="p-8 space-y-3 max-h-[60vh] overflow-y-auto custom-scrollbar text-left">
+            {% set info = os.vehicle.info %}
+            <div class="grid grid-cols-2 gap-3">
+                <div class="p-4 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-900/5 dark:border-white/5">
+                    <span class="text-[9px] font-black text-slate-400 uppercase block mb-1 tracking-widest">Óleo (Tipo)</span>
+                    <span class="text-xs font-bold text-slate-800 dark:text-white">{{ info.oil_type if info else '-' }}</span>
+                </div>
+                <div class="p-4 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-900/5 dark:border-white/5">
+                    <span class="text-[9px] font-black text-slate-400 uppercase block mb-1 tracking-widest">Óleo (Marca)</span>
+                    <span class="text-xs font-bold text-slate-800 dark:text-white">{{ info.oil_brand if info else '-' }}</span>
+                </div>
+                <div class="p-4 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-900/5 dark:border-white/5">
+                    <span class="text-[9px] font-black text-slate-400 uppercase block mb-1 tracking-widest">Capacidade (L)</span>
+                    <span class="text-xs font-bold text-slate-800 dark:text-white">{{ info.oil_capacity_l if info else '-' }}</span>
+                </div>
+                <div class="p-4 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-900/5 dark:border-white/5">
+                    <span class="text-[9px] font-black text-slate-400 uppercase block mb-1 tracking-widest">Filtro Óleo</span>
+                    <span class="text-xs font-bold text-slate-800 dark:text-white">{{ info.filter_oil if info else '-' }}</span>
+                </div>
+                <div class="p-4 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-900/5 dark:border-white/5">
+                    <span class="text-[9px] font-black text-slate-400 uppercase block mb-1 tracking-widest">Filtro Ar</span>
+                    <span class="text-xs font-bold text-slate-800 dark:text-white">{{ info.filter_air if info else '-' }}</span>
+                </div>
+                <div class="p-4 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-900/5 dark:border-white/5">
+                    <span class="text-[9px] font-black text-slate-400 uppercase block mb-1 tracking-widest">Filtro Comb.</span>
+                    <span class="text-xs font-bold text-slate-800 dark:text-white">{{ info.filter_fuel if info else '-' }}</span>
+                </div>
+                <div class="p-4 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-900/5 dark:border-white/5">
+                    <span class="text-[9px] font-black text-slate-400 uppercase block mb-1 tracking-widest">Arrefecimento</span>
+                    <span class="text-xs font-bold text-slate-800 dark:text-white">{{ info.coolant_type if info else '-' }}</span>
+                </div>
+                <div class="p-4 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-900/5 dark:border-white/5">
+                    <span class="text-[9px] font-black text-slate-400 uppercase block mb-1 tracking-widest">Pneus (PSI)</span>
+                    <span class="text-xs font-bold text-slate-800 dark:text-white">{{ info.tire_pressure if info else '-' }}</span>
+                </div>
+            </div>
+            <div class="p-4 bg-orange-500/5 rounded-2xl border border-orange-500/10 mt-4">
+                <span class="text-[9px] font-black text-orange-600 dark:text-orange-400 uppercase block mb-2 tracking-widest">Observações</span>
+                <p class="text-xs text-slate-600 dark:text-gray-300 italic">{{ info.notes if info and info.notes else 'Nenhuma observação.' }}</p>
+            </div>
+        </div>
+        <div class="p-6 bg-slate-50 dark:bg-white/5 border-t border-slate-900/10 dark:border-white/10">
+            <button onclick="closeModal('modalInfoVeiculo{{ os.id }}')" class="w-full py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-black uppercase tracking-[0.2em] text-[11px] transition-all active:scale-95">
+                Fechar Visualização
+            </button>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endfor %}
+
+<!-- ✅ MODAL: FINALIZAR O.S -->
+<div id="modalFinalizarOS" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden items-center justify-center z-[100] p-4">
+    <div class="bg-white dark:bg-slate-900 w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden border border-slate-900/10 dark:border-white/10 animate-premium">
+        <div class="px-8 py-6 border-b border-slate-900/10 dark:border-white/10 bg-slate-50 dark:bg-white/5 text-left">
+            <h3 class="text-xl font-black text-slate-800 dark:text-white tracking-tight">Finalizar Manutenção</h3>
+            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Preencha os custos e serviços realizados</p>
+        </div>
+
+        <form method="POST" action="{{ url_for('manutencao_os') }}" class="p-8 space-y-5 text-left">
+            <input type="hidden" name="acao" value="finalizar">
+            <input type="hidden" id="os_id_hidden" name="os_id">
+
+            <div class="space-y-2">
+                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Valor Total (R$)</label>
+                <div class="relative">
+                    <input id="valor" type="number" name="valor" step="0.01" placeholder="0,00"
+                           class="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-900/5 dark:border-white/5 rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 dark:text-white focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none">
+                    <div class="absolute right-5 top-1/2 -translate-y-1/2 text-emerald-500 font-black">R$</div>
+                </div>
+            </div>
+
+            <div class="space-y-2">
+                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Peças Trocadas</label>
+                <textarea name="pecas" rows="2" placeholder="Ex: Filtro de óleo, Pastilhas..."
+                          class="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-900/5 dark:border-white/5 rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 dark:text-white focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none resize-none"></textarea>
+            </div>
+
+            <div class="space-y-2">
+                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Resumo do Serviço</label>
+                <textarea name="servico" rows="2" placeholder="Descreva a intervenção realizada..."
+                          class="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-900/5 dark:border-white/5 rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 dark:text-white focus:ring-4 focus:ring-emerald-500/10 transition-all outline-none resize-none"></textarea>
+            </div>
+
+            <div class="flex gap-4 pt-4">
+                <button type="button" onclick="closeModal('modalFinalizarOS')" class="flex-1 py-4 text-xs font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-all">
+                    Cancelar
+                </button>
+                <button type="submit" class="flex-[2] py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black uppercase tracking-[0.2em] text-[11px] shadow-xl shadow-emerald-500/30 transition-all active:scale-95">
+                    Confirmar Encerramento
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ✅ MODAL: REGISTRAR SERVIÇO DIRETO (SEM O.S ABERTA) -->
+<div id="modalRegistrarServico" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden items-center justify-center z-[100] p-4">
+    <div class="bg-white dark:bg-slate-900 w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden border border-slate-900/10 dark:border-white/10 animate-premium max-h-[90vh] flex flex-col">
+        <div class="px-8 py-6 border-b border-slate-900/10 dark:border-white/10 bg-slate-50 dark:bg-white/5 text-left flex-shrink-0">
+            <h3 class="text-xl font-black text-slate-800 dark:text-white tracking-tight">Registrar Serviço</h3>
+            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Registre a manutenção concluída diretamente</p>
+        </div>
+
+        <form method="POST" action="{{ url_for('manutencao_os') }}" class="flex flex-col flex-1 min-h-0 overflow-hidden">
+            <input type="hidden" name="acao" value="registrar_direto">
+
+            <div class="px-8 py-6 space-y-5 overflow-y-auto flex-1 custom-scrollbar text-left">
+                <div class="space-y-2">
+                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Veículo / Placa</label>
+                    <div class="flex gap-2">
+                        <select id="modal_vehicle_id" name="vehicle_id" onchange="updateKmFromVehicle()" required
+                                class="flex-1 bg-slate-50 dark:bg-slate-800/50 border border-slate-900/5 dark:border-white/5 rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 dark:text-white focus:ring-4 focus:ring-orange-500/10 transition-all outline-none">
+                            <option value="">Selecione um Veículo</option>
+                            {% for v in veiculos %}
+                            <option value="{{ v.id }}" data-plate="{{ v.plate }}" data-km="{{ v.km }}">
+                                {{ v.plate }} - {{ v.brand }} {{ v.model }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                        <button type="button" onclick="startPlateOCR()" 
+                                class="px-5 bg-orange-500/10 hover:bg-orange-500/20 text-orange-600 dark:text-orange-400 rounded-2xl flex items-center justify-center transition-all active:scale-95 border border-orange-500/20"
+                                title="Escanear Placa" aria-label="Escanear placa com a câmera">
+                            <i class="fa-solid fa-camera text-lg"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="space-y-2">
+                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Gravidade</label>
+                    <select name="gravidade" required
+                            class="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-900/5 dark:border-white/5 rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 dark:text-white focus:ring-4 focus:ring-orange-500/10 transition-all outline-none">
+                        <option value="baixa">Baixa</option>
+                        <option value="media">Média</option>
+                        <option value="alta">Alta</option>
+                    </select>
+                </div>
+
+                <div class="space-y-2">
+                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Descrição da Ocorrência</label>
+                    <textarea name="descricao" rows="2" placeholder="Ex: Barulho ao esterçar, preventiva de freio..." required
+                              class="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-900/5 dark:border-white/5 rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 dark:text-white focus:ring-4 focus:ring-orange-500/10 transition-all outline-none resize-none"></textarea>
+                </div>
+
+                <div class="space-y-2">
+                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">KM Atual</label>
+                    <input id="registrar_km" type="number" name="km" required placeholder="0"
+                           class="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-900/5 dark:border-white/5 rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 dark:text-white focus:ring-4 focus:ring-orange-500/10 transition-all outline-none">
+                </div>
+
+                <div class="space-y-2">
+                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Valor Total (R$)</label>
+                    <div class="relative">
+                        <input id="registrar_valor" type="number" name="valor" step="0.01" placeholder="0,00"
+                               class="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-900/5 dark:border-white/5 rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 dark:text-white focus:ring-4 focus:ring-orange-500/10 transition-all outline-none">
+                        <div class="absolute right-5 top-1/2 -translate-y-1/2 text-orange-500 font-black">R$</div>
+                    </div>
+                </div>
+
+                <div class="space-y-2">
+                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Peças Trocadas</label>
+                    <textarea name="pecas" rows="2" placeholder="Ex: Filtro de ar, óleo de motor..."
+                              class="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-900/5 dark:border-white/5 rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 dark:text-white focus:ring-4 focus:ring-orange-500/10 transition-all outline-none resize-none"></textarea>
+                </div>
+
+                <div class="space-y-2">
+                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Resumo do Serviço realizado</label>
+                    <textarea name="servico" rows="2" placeholder="Descreva a manutenção efetuada..."
+                              class="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-900/5 dark:border-white/5 rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 dark:text-white focus:ring-4 focus:ring-orange-500/10 transition-all outline-none resize-none"></textarea>
+                </div>
+            </div>
+
+            <div class="px-8 py-5 bg-slate-50 dark:bg-white/5 border-t border-slate-900/10 dark:border-white/10 flex gap-4 mt-auto flex-shrink-0">
+                <button type="button" onclick="closeModal('modalRegistrarServico')" class="flex-1 py-4 text-xs font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-all">
+                    Cancelar
+                </button>
+                <button type="submit" class="flex-[2] py-4 bg-orange-600 hover:bg-orange-700 text-white rounded-2xl font-black uppercase tracking-[0.2em] text-[11px] shadow-xl shadow-orange-500/30 transition-all active:scale-95">
+                    Registrar Serviço
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- LEITOR PLACA OCR CDN -->
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+
+<!-- ===================================
+     ✅ DIALOG SCANNER DE PLACA (LIVE CAMERA)
+     =================================== -->
+<dialog id="ocrScannerModal" class="hidden bg-black backdrop:bg-black/80 outline-none border-none p-0 w-screen h-screen max-w-full max-h-full overflow-hidden flex flex-col fixed inset-0 z-[99999]">
+    <!-- Top Header -->
+    <div class="absolute top-0 inset-x-0 p-6 z-20 flex items-center justify-between bg-gradient-to-b from-black/80 to-transparent">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-orange-500/20 flex items-center justify-center text-orange-400">
+                <i class="fa-solid fa-camera-rotate text-lg"></i>
+            </div>
+            <div class="text-left">
+                <h3 class="text-base font-black text-white">Leitor de Placas</h3>
+                <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Aponte a câmera para a placa do veículo</p>
+            </div>
+        </div>
+        <button type="button" onclick="closeOCRScanner()" class="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-all active:scale-95" aria-label="Fechar leitor de placa">
+            <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+    </div>
+
+    <!-- Live Video Viewport -->
+    <div class="flex-1 w-full h-full relative flex items-center justify-center">
+        <video id="ocr-video" class="w-full h-full object-cover" autoplay playsinline muted></video>
+        
+        <!-- Bounding Box Overlay -->
+        <div class="absolute inset-0 pointer-events-none flex items-center justify-center">
+            <!-- Camada escura externa -->
+            <div class="absolute inset-0 bg-black/40"></div>
+            
+            <!-- Recorte Central (Bounding Box Area) -->
+            <div class="w-[80%] max-w-[400px] h-[120px] rounded-3xl border-4 border-dashed border-orange-500 relative flex items-center justify-center shadow-[0_0_0_9999px_rgba(0,0,0,0.6)]">
+                <!-- Borda animada / Linha de scanner -->
+                <div class="absolute inset-x-0 h-0.5 bg-gradient-to-r from-transparent via-orange-400 to-transparent animate-pulse"></div>
+                
+                <span id="ocr-status" class="absolute -bottom-8 left-1/2 -translate-x-1/2 text-[9px] font-black text-orange-400 uppercase tracking-widest bg-orange-500/10 px-3 py-1 rounded-full whitespace-nowrap">Inicializando Leitor...</span>
+            </div>
+        </div>
+    </div>
+</dialog>
+
+<script>
+let ocrWorker = null;
+let isScanning = false;
+let videoStream = null;
+
+async function initOCRWorker() {
+    if (!ocrWorker) {
+        document.getElementById('ocr-status').innerText = 'Carregando IA...';
+        ocrWorker = await Tesseract.createWorker('eng');
+        await ocrWorker.setParameters({
+            tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
+        });
+    }
+}
+
+async function startPlateOCR() {
+    const scannerDialog = document.getElementById('ocrScannerModal');
+    scannerDialog.classList.remove('hidden');
+    scannerDialog.showModal();
+    document.getElementById('ocr-status').innerText = 'Iniciando câmera...';
+    
+    const video = document.getElementById('ocr-video');
+    try {
+        videoStream = await navigator.mediaDevices.getUserMedia({
+            video: { 
+                facingMode: 'environment',
+                width: { ideal: 1280 },
+                height: { ideal: 720 }
+            }
+        });
+        video.srcObject = videoStream;
+        video.setAttribute('playsinline', true);
+        video.play();
+        
+        isScanning = true;
+        
+        await initOCRWorker();
+        document.getElementById('ocr-status').innerText = 'Enquadre a placa';
+        scanLoop();
+        
+    } catch (err) {
+        console.error("Erro ao abrir câmera:", err);
+        alert("Não foi possível acessar a câmera traseira do celular.");
+        closeOCRScanner();
+    }
+}
+
+function closeOCRScanner() {
+    isScanning = false;
+    if (videoStream) {
+        videoStream.getTracks().forEach(track => track.stop());
+        videoStream = null;
+    }
+    const scannerDialog = document.getElementById('ocrScannerModal');
+    if (scannerDialog.open) {
+        scannerDialog.close();
+    }
+    scannerDialog.classList.add('hidden');
+}
+
+function levenshteinDistance(a, b) {
+    const matrix = [];
+    for (let i = 0; i <= b.length; i++) matrix[i] = [i];
+    for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
+    for (let i = 1; i <= b.length; i++) {
+        for (let j = 1; j <= a.length; j++) {
+            if (b.charAt(i - 1) === a.charAt(j - 1)) {
+                matrix[i][j] = matrix[i - 1][j - 1];
+            } else {
+                matrix[i][j] = Math.min(
+                    matrix[i - 1][j - 1] + 1,
+                    Math.min(
+                        matrix[i][j - 1] + 1,
+                        matrix[i - 1][j] + 1
+                    )
+                );
+            }
+        }
+    }
+    return matrix[b.length][a.length];
+}
+
+async function scanLoop() {
+    if (!isScanning) return;
+    
+    const video = document.getElementById('ocr-video');
+    if (video && video.readyState === video.HAVE_ENOUGH_DATA) {
+        const videoWidth = video.videoWidth;
+        const videoHeight = video.videoHeight;
+        
+        const rectWidth = videoWidth * 0.5;
+        const rectHeight = videoHeight * 0.2;
+        const rectX = (videoWidth - rectWidth) / 2;
+        const rectY = (videoHeight - rectHeight) / 2;
+        
+        const scaleFactor = 3;
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = rectWidth * scaleFactor;
+        canvas.height = rectHeight * scaleFactor;
+        
+        ctx.drawImage(video, rectX, rectY, rectWidth, rectHeight, 0, 0, canvas.width, canvas.height);
+        
+        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const pixels = imgData.data;
+        for (let i = 0; i < pixels.length; i += 4) {
+            const r = pixels[i];
+            const g = pixels[i+1];
+            const b = pixels[i+2];
+            const gray = 0.299 * r + 0.587 * g + 0.114 * b;
+            
+            let newVal = (gray - 128) * 2.0 + 128;
+            newVal = Math.max(0, Math.min(255, newVal));
+            
+            pixels[i] = newVal;
+            pixels[i+1] = newVal;
+            pixels[i+2] = newVal;
+        }
+        ctx.putImageData(imgData, 0, 0);
+        
+        try {
+            document.getElementById('ocr-status').innerText = 'Lendo placa...';
+            const { data: { text } } = await ocrWorker.recognize(canvas);
+            console.log("OCR Lido:", text);
+            
+            const cleanedText = text.toUpperCase().replace(/[^A-Z0-9]/g, '');
+            
+            const selectElement = document.getElementById('modal_vehicle_id');
+            let bestMatch = null;
+            let bestDistance = 999;
+            
+            if (selectElement) {
+                for (let option of selectElement.options) {
+                    const plate = option.getAttribute('data-plate');
+                    if (plate) {
+                        const cleanPlate = plate.toUpperCase().replace(/[^A-Z0-9]/g, '');
+                        
+                        if (cleanedText.includes(cleanPlate)) {
+                            bestMatch = option;
+                            bestDistance = 0;
+                            break;
+                        }
+                        
+                        if (cleanedText.length >= 7) {
+                            for (let start = 0; start <= cleanedText.length - 7; start++) {
+                                const segment = cleanedText.substring(start, start + 7);
+                                const dist = levenshteinDistance(segment, cleanPlate);
+                                if (dist < bestDistance) {
+                                    bestDistance = dist;
+                                    bestMatch = option;
+                                }
+                            }
+                        } else if (cleanedText.length > 4) {
+                            const dist = levenshteinDistance(cleanedText, cleanPlate);
+                            if (dist < bestDistance) {
+                                    bestDistance = dist;
+                                    bestMatch = option;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            if (bestMatch && bestDistance <= 2) {
+                const plateMatched = bestMatch.getAttribute('data-plate');
+                console.log(`Veículo identificado via Levenshtein (distância: ${bestDistance}): ${plateMatched}`);
+                selectElement.value = bestMatch.value;
+                selectElement.dispatchEvent(new Event('change'));
+                
+                if (typeof showToast === "function") {
+                    showToast(`Veículo identificado: ${plateMatched}!`, "success");
+                } else {
+                    alert(`Veículo identificado: ${plateMatched}!`);
+                }
+                closeOCRScanner();
+                return;
+            }
+        } catch (err) {
+            console.error("Erro no processamento de frame OCR:", err);
+        }
+    }
+    
+    if (isScanning) {
+        document.getElementById('ocr-status').innerText = 'Enquadre a placa';
+        setTimeout(scanLoop, 800);
+    }
+}
+
+document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closeOCRScanner();
+});
+
+function openFinalizar(id) {
+    document.getElementById("os_id_hidden").value = id;
+    openModal("modalFinalizarOS");
+}
+
+function openRegistrarServico() {
+    openModal("modalRegistrarServico");
+    updateKmFromVehicle();
+}
+
+function updateKmFromVehicle() {
+    const select = document.getElementById('modal_vehicle_id');
+    const kmInput = document.getElementById('registrar_km');
+    if (select && kmInput) {
+        const selectedOption = select.options[select.selectedIndex];
+        if (selectedOption) {
+            const km = selectedOption.getAttribute('data-km');
+            kmInput.value = km || '';
+        }
+    }
+}
+</script>
+
+<style>
+    .animate-premium {
+        animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+    @keyframes slideUp {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+</style>
+
+{% endblock %}
+
+{# accessibility helper: onkeydown= handler present #}

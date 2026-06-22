@@ -1,0 +1,479 @@
+{% extends 'layout.html' %}
+{% set page_title = "Detalhe da vistoria" %}
+{% block content %}
+
+<div class="bg-white/70 border border-slate-900/10 rounded-2xl shadow p-5 backdrop-blur
+            dark:bg-white/5 dark:border-white/10">
+
+  <!-- Cabeçalho -->
+  <div class="flex flex-wrap items-start justify-between gap-3">
+    <div>
+      <h2 class="text-xl font-bold text-slate-900 dark:text-white">Vistoria #{{ v.id }}</h2>
+
+      <p class="text-sm text-slate-600 mt-1 dark:text-gray-300">
+        {{ v.created_at.strftime('%d/%m/%Y %H:%M') }}
+        · Placa: <span class="font-semibold text-slate-900 dark:text-white">{{ v.vehicle.plate }}</span>
+        · KM: <span class="text-slate-900/90 dark:text-gray-200">{{ v.km or '-' }}</span>
+      </p>
+
+      <p class="text-xs text-slate-500 mt-1 dark:text-gray-400">
+        Turno: {{ v.turno }}{% if v.local %} · Local: {{ v.local }}{% endif %}
+      </p>
+    </div>
+
+    <div class="flex items-center gap-2">
+      {% if v.status_geral == 'avarias' %}
+        <span class="px-3 py-2 rounded-xl text-sm
+                     bg-amber-500/10 text-amber-800 border border-amber-500/20
+                     dark:bg-yellow-900/40 dark:text-yellow-200 dark:border-yellow-700/40">
+          ⚠️ Com avarias
+        </span>
+      {% else %}
+        <span class="px-3 py-2 rounded-xl text-sm
+                     bg-emerald-600/10 text-emerald-800 border border-emerald-600/20
+                     dark:bg-green-900/40 dark:text-green-200 dark:border-green-700/40">
+          ✅ OK
+        </span>
+      {% endif %}
+
+      <form action="{{ url_for('vistorias_excluir', vistoria_id=v.id) }}" method="POST" class="inline" onsubmit="return confirm('Deseja realmente excluir esta vistoria e todas as fotos associadas?');">
+        <button type="submit" class="px-3 py-2 rounded-xl text-sm font-bold bg-red-500/10 text-red-600 border border-red-500/20 hover:bg-red-500/20 dark:bg-red-900/40 dark:text-red-200 dark:border-red-700/40 transition active:scale-95 cursor-pointer">
+          <i class="fa-solid fa-trash-can mr-1"></i> Excluir
+        </button>
+      </form>
+    </div>
+  </div>
+
+  {% if v.observacoes %}
+    <div class="mt-4 bg-white/70 border border-slate-900/10 rounded-xl p-4
+                dark:bg-white/5 dark:border-white/10">
+      <p class="text-sm text-slate-700 whitespace-pre-wrap dark:text-gray-200">{{ v.observacoes }}</p>
+    </div>
+  {% endif %}
+
+  <!-- Itens (2 colunas) -->
+  {% set itens = [
+    ('para_choque_dianteiro','Para-choque dianteiro'),
+    ('para_choque_traseiro','Para-choque traseiro'),
+    ('lateral_esquerda','Lateral esquerda'),
+    ('lateral_direita','Lateral direita'),
+    ('capo','Capô'),
+    ('teto','Teto'),
+    ('porta_malas','Porta-malas'),
+    ('retrovisores','Retrovisores'),
+    ('farois_lanternas','Faróis/Lanternas'),
+    ('vidros_parabrisa','Vidros/Para-brisa'),
+    ('pneus','Pneus'),
+    ('calotas','Calotas')
+  ] %}
+
+  <style>
+    /* Estilos do mapa 2D */
+    svg [data-part] {
+      transition: fill 0.2s, stroke 0.2s;
+    }
+    svg [data-part]:hover {
+      filter: brightness(0.9);
+    }
+    .dark svg [data-part]:hover {
+      filter: brightness(1.1);
+    }
+    .part-ok {
+      fill: rgba(16, 185, 129, 0.08) !important;
+      stroke: rgba(16, 185, 129, 0.4) !important;
+    }
+    .part-avaria {
+      fill: rgba(245, 158, 11, 0.25) !important;
+      stroke: #f59e0b !important;
+      cursor: pointer;
+    }
+  </style>
+
+  <div class="mt-6">
+    <h3 class="text-lg font-semibold mb-4 text-slate-900 dark:text-white">Itens avaliados</h3>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+      <!-- Coluna Esquerda: Mapa 2D -->
+      <div class="lg:col-span-1 bg-white/50 border border-slate-900/10 rounded-2xl p-4 flex flex-col items-center justify-center
+                  dark:bg-white/5 dark:border-white/10">
+        <p class="text-xs text-slate-500 mb-4 text-center dark:text-gray-400">
+          Mapa interativo de avarias (clique nas áreas <span class="text-amber-500 font-bold">laranjas</span> para detalhes)
+        </p>
+        
+        <svg viewBox="0 0 200 400" class="w-full max-w-[200px] mx-auto select-none">
+          <!-- Pneus/Rodas (Ficam por baixo do chassi) -->
+          <!-- Dianteiro Esquerdo -->
+          <rect data-part="pneus" data-sub="de" x="15" y="80" width="22" height="46" rx="6" fill="#1E293B" stroke="#475569" stroke-width="1.5" class="transition duration-200 {% if v.pneus == 'avaria' %}part-avaria{% else %}part-ok{% endif %}" />
+          <!-- Dianteiro Direito -->
+          <rect data-part="pneus" data-sub="dd" x="163" y="80" width="22" height="46" rx="6" fill="#1E293B" stroke="#475569" stroke-width="1.5" class="transition duration-200 {% if v.pneus == 'avaria' %}part-avaria{% else %}part-ok{% endif %}" />
+          <!-- Traseiro Esquerdo -->
+          <rect data-part="pneus" data-sub="te" x="15" y="274" width="22" height="46" rx="6" fill="#1E293B" stroke="#475569" stroke-width="1.5" class="transition duration-200 {% if v.pneus == 'avaria' %}part-avaria{% else %}part-ok{% endif %}" />
+          <!-- Traseiro Direito -->
+          <rect data-part="pneus" data-sub="td" x="163" y="274" width="22" height="46" rx="6" fill="#1E293B" stroke="#475569" stroke-width="1.5" class="transition duration-200 {% if v.pneus == 'avaria' %}part-avaria{% else %}part-ok{% endif %}" />
+
+          <!-- Calotas (Centro dos pneus) -->
+          <circle data-part="calotas" data-sub="de" cx="26" cy="103" r="7" fill="#94A3B8" stroke="#cbd5e1" stroke-width="1" class="transition duration-200 {% if v.calotas == 'avaria' %}part-avaria{% else %}part-ok{% endif %}" />
+          <circle data-part="calotas" data-sub="dd" cx="174" cy="103" r="7" fill="#94A3B8" stroke="#cbd5e1" stroke-width="1" class="transition duration-200 {% if v.calotas == 'avaria' %}part-avaria{% else %}part-ok{% endif %}" />
+          <circle data-part="calotas" data-sub="te" cx="26" cy="297" r="7" fill="#94A3B8" stroke="#cbd5e1" stroke-width="1" class="transition duration-200 {% if v.calotas == 'avaria' %}part-avaria{% else %}part-ok{% endif %}" />
+          <circle data-part="calotas" data-sub="td" cx="174" cy="297" r="7" fill="#94A3B8" stroke="#cbd5e1" stroke-width="1" class="transition duration-200 {% if v.calotas == 'avaria' %}part-avaria{% else %}part-ok{% endif %}" />
+
+          <!-- Laterais (Atrás do chassi) -->
+          <!-- Lateral Esquerda -->
+          <path data-part="lateral_esquerda" d="M35 75 C30 150 30 250 35 325" fill="none" stroke="#64748B" stroke-width="6" stroke-linecap="round" class="transition duration-200 {% if v.lateral_esquerda == 'avaria' %}part-avaria{% else %}part-ok{% endif %}" />
+          <!-- Lateral Direita -->
+          <path data-part="lateral_direita" d="M165 75 C170 150 170 250 165 325" fill="none" stroke="#64748B" stroke-width="6" stroke-linecap="round" class="transition duration-200 {% if v.lateral_direita == 'avaria' %}part-avaria{% else %}part-ok{% endif %}" />
+
+          <!-- Chassi / Corpo Principal (Base de fundo) -->
+          <path d="M35 75 C35 55 50 45 100 45 C150 45 165 55 165 75 L165 325 C165 345 150 355 100 355 C50 355 35 345 35 325 Z" fill="#E2E8F0" stroke="#475569" stroke-width="2" />
+
+          <!-- Partes da Carroceria -->
+          <!-- Capô -->
+          <path data-part="capo" d="M37 75 C37 57 50 47 100 47 C150 47 163 57 163 75 L163 130 L37 130 Z" fill="#F1F5F9" stroke="#94A3B8" stroke-width="1.5" class="transition duration-200 {% if v.capo == 'avaria' %}part-avaria{% else %}part-ok{% endif %}" />
+          
+          <!-- Teto -->
+          <rect data-part="teto" x="37" y="145" width="126" height="125" rx="8" fill="#F1F5F9" stroke="#94A3B8" stroke-width="1.5" class="transition duration-200 {% if v.teto == 'avaria' %}part-avaria{% else %}part-ok{% endif %}" />
+          
+          <!-- Porta Malas -->
+          <path data-part="porta_malas" d="M37 285 L163 285 L163 325 C163 343 150 353 100 353 C50 353 37 343 37 325 Z" fill="#F1F5F9" stroke="#94A3B8" stroke-width="1.5" class="transition duration-200 {% if v.porta_malas == 'avaria' %}part-avaria{% else %}part-ok{% endif %}" />
+
+          <!-- Para-choques -->
+          <!-- Dianteiro -->
+          <path data-part="para_choque_dianteiro" d="M45 46 C60 41 140 41 155 46" fill="none" stroke="#334155" stroke-width="7" stroke-linecap="round" class="transition duration-200 {% if v.para_choque_dianteiro == 'avaria' %}part-avaria{% else %}part-ok{% endif %}" />
+          <!-- Traseiro -->
+          <path data-part="para_choque_traseiro" d="M45 354 C60 359 140 359 155 354" fill="none" stroke="#334155" stroke-width="7" stroke-linecap="round" class="transition duration-200 {% if v.para_choque_traseiro == 'avaria' %}part-avaria{% else %}part-ok{% endif %}" />
+
+           <!-- Vidros / Parabrisa -->
+          <!-- Parabrisa Dianteiro -->
+          <path data-part="vidros_parabrisa" data-sub="diant" d="M44 140 L156 140 L146 125 L54 125 Z" fill="#38BDF8" fill-opacity="0.6" stroke="#0284C7" stroke-width="1" class="transition duration-200 {% if v.vidros_parabrisa == 'avaria' %}part-avaria{% else %}part-ok{% endif %}" />
+          <!-- Vidro Traseiro -->
+          <path data-part="vidros_parabrisa" data-sub="tras" d="M44 275 L156 275 L148 285 L52 285 Z" fill="#38BDF8" fill-opacity="0.6" stroke="#0284C7" stroke-width="1" class="transition duration-200 {% if v.vidros_parabrisa == 'avaria' %}part-avaria{% else %}part-ok{% endif %}" />
+          <!-- Vidros Laterais -->
+          <rect data-part="vidros_parabrisa" data-sub="vlde" x="34" y="148" width="4" height="56" rx="1" fill="#38BDF8" fill-opacity="0.6" stroke="#0284C7" stroke-width="1" class="transition duration-200 {% if v.vidros_parabrisa == 'avaria' %}part-avaria{% else %}part-ok{% endif %}" />
+          <rect data-part="vidros_parabrisa" data-sub="vldd" x="162" y="148" width="4" height="56" rx="1" fill="#38BDF8" fill-opacity="0.6" stroke="#0284C7" stroke-width="1" class="transition duration-200 {% if v.vidros_parabrisa == 'avaria' %}part-avaria{% else %}part-ok{% endif %}" />
+          <rect data-part="vidros_parabrisa" data-sub="vlte" x="34" y="211" width="4" height="56" rx="1" fill="#38BDF8" fill-opacity="0.6" stroke="#0284C7" stroke-width="1" class="transition duration-200 {% if v.vidros_parabrisa == 'avaria' %}part-avaria{% else %}part-ok{% endif %}" />
+          <rect data-part="vidros_parabrisa" data-sub="vltd" x="162" y="211" width="4" height="56" rx="1" fill="#38BDF8" fill-opacity="0.6" stroke="#0284C7" stroke-width="1" class="transition duration-200 {% if v.vidros_parabrisa == 'avaria' %}part-avaria{% else %}part-ok{% endif %}" />
+
+          <!-- Faróis e Lanternas -->
+          <!-- Farol Esquerdo -->
+          <path data-part="farois_lanternas" data-sub="fe" d="M38 65 Q48 65 48 55" fill="none" stroke="#FDE047" stroke-width="4" stroke-linecap="round" class="transition duration-200 {% if v.farois_lanternas == 'avaria' %}part-avaria{% else %}part-ok{% endif %}" />
+          <!-- Farol Direito -->
+          <path data-part="farois_lanternas" data-sub="fd" d="M162 65 Q152 65 152 55" fill="none" stroke="#FDE047" stroke-width="4" stroke-linecap="round" class="transition duration-200 {% if v.farois_lanternas == 'avaria' %}part-avaria{% else %}part-ok{% endif %}" />
+          <!-- Lanterna Traseira Esquerda -->
+          <path data-part="farois_lanternas" data-sub="le" d="M38 345 Q48 345 48 351" fill="none" stroke="#EF4444" stroke-width="4" stroke-linecap="round" class="transition duration-200 {% if v.farois_lanternas == 'avaria' %}part-avaria{% else %}part-ok{% endif %}" />
+          <!-- Lanterna Traseira Direita -->
+          <path data-part="farois_lanternas" data-sub="ld" d="M162 345 Q152 345 152 351" fill="none" stroke="#EF4444" stroke-width="4" stroke-linecap="round" class="transition duration-200 {% if v.farois_lanternas == 'avaria' %}part-avaria{% else %}part-ok{% endif %}" />
+
+          <!-- Retrovisores (Fora do chassi) -->
+          <!-- Esquerdo -->
+          <path data-part="retrovisores" data-sub="esq" d="M28 135 C20 135 20 145 28 145" fill="none" stroke="#475569" stroke-width="4" stroke-linecap="round" class="transition duration-200 {% if v.retrovisores == 'avaria' %}part-avaria{% else %}part-ok{% endif %}" />
+          <!-- Direito -->
+          <path data-part="retrovisores" data-sub="dir" d="M172 135 C180 135 180 145 172 145" fill="none" stroke="#475569" stroke-width="4" stroke-linecap="round" class="transition duration-200 {% if v.retrovisores == 'avaria' %}part-avaria{% else %}part-ok{% endif %}" />
+        </svg>
+      </div>
+
+      <!-- Coluna Direita: Lista de Itens -->
+      <div class="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-3">
+        {% for key, label in itens %}
+          {% set val = v|attr(key) %}
+          {% set obs = v|attr('obs_' ~ key) %}
+          {% set fotos_item_objs = fotos_por_item.get(key, []) if fotos_por_item is defined else [] %}
+          {% set fotos_item = fotos_item_objs|map(attribute='filename')|list %}
+
+          <div class="bg-white/70 border border-slate-900/10 rounded-2xl px-4 py-3
+                      dark:bg-white/5 dark:border-white/10">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0">
+                <p class="text-sm font-semibold text-slate-900 truncate dark:text-white">{{ label }}</p>
+                <p class="text-xs text-slate-500 mt-0.5 dark:text-gray-500">
+                  {% if val == 'avaria' %}Detalhes disponíveis{% else %}Sem apontamentos{% endif %}
+                </p>
+              </div>
+
+              <div class="shrink-0 flex items-center gap-2">
+                {% if val == 'avaria' %}
+                  <span class="text-xs px-2 py-1 rounded-lg
+                               bg-amber-500/10 text-amber-800 border border-amber-500/20
+                               dark:bg-yellow-900/40 dark:text-yellow-200 dark:border-yellow-700/40">
+                    ⚠️ Avaria
+                  </span>
+
+                  <!-- ✅ Abre modal (várias fotos) -->
+                  <button type="button"
+                          class="px-3 py-1.5 rounded-lg text-xs
+                                 bg-slate-900/5 border border-slate-900/10 hover:bg-slate-900/10 transition
+                                 dark:bg-white/5 dark:border-white/10 dark:hover:bg-white/10"
+                          data-open-modal="item"
+                          data-key="{{ key }}"
+                          data-label="{{ label|e }}"
+                          data-obs="{{ (obs or '')|e }}"
+                          data-fotos='{{ (fotos_item or [])|tojson }}'>
+                    Ver detalhes
+                  </button>
+                {% else %}
+                  <span class="text-xs px-2 py-1 rounded-lg
+                               bg-emerald-600/10 text-emerald-800 border border-emerald-600/20
+                               dark:bg-green-900/40 dark:text-green-200 dark:border-green-700/40">
+                    ✅ OK
+                  </span>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <!-- (Opcional) Galeria geral -->
+  {% if v.fotos and v.fotos|length > 0 %}
+    <div class="mt-6">
+      <h3 class="text-lg font-semibold mb-3 text-slate-900 dark:text-white">Galeria geral ({{ v.fotos|length }})</h3>
+
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {% for f in v.fotos %}
+          <a href="{{ url_for('static', filename='vistorias_fotos/' ~ f.filename) }}" target="_blank"
+             class="block overflow-hidden rounded-xl border border-slate-900/10 bg-white/70 hover:bg-white transition
+                    dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10">
+            <img src="{{ url_for('static', filename='vistorias_fotos/' ~ f.filename) }}"
+                 class="w-full h-36 object-cover" alt="Foto">
+          </a>
+        {% endfor %}
+      </div>
+    </div>
+  {% endif %}
+
+  <div class="mt-6 flex gap-3">
+    <a href="{{ url_for('vistorias_list') }}"
+       class="px-4 py-2 rounded-lg text-sm text-white
+              bg-slate-600 hover:bg-slate-500
+              dark:bg-gray-600 dark:hover:bg-gray-500">
+      Voltar
+    </a>
+  </div>
+
+</div>
+
+<!-- ===========================
+      ✅ MODAL (Detalhes item)
+=========================== -->
+<div id="itemModal" class="fixed inset-0 z-[60] hidden">
+  <!-- overlay -->
+  <div id="itemModalOverlay" class="absolute inset-0 bg-black/70"></div>
+
+  <!-- modal box -->
+  <div class="relative min-h-screen flex items-center justify-center p-4">
+    <div class="w-full max-w-3xl rounded-2xl border border-slate-900/10 bg-white/90 backdrop-blur-xl shadow-glass overflow-hidden
+                dark:border-white/10 dark:bg-gray-950/90">
+
+      <div class="flex items-start justify-between gap-3 p-4 border-b border-slate-900/10 dark:border-white/10">
+        <div class="min-w-0">
+          <p class="text-xs text-slate-500 dark:text-gray-400">Detalhes do item</p>
+          <h3 id="modalTitle" class="text-lg font-semibold text-slate-900 truncate dark:text-white">—</h3>
+        </div>
+        <button id="itemModalClose"
+                type="button"
+                class="px-3 py-2 rounded-lg text-sm
+                       bg-slate-900/5 border border-slate-900/10 hover:bg-slate-900/10 transition
+                       dark:bg-white/5 dark:border-white/10 dark:hover:bg-white/10"
+                aria-label="Fechar">
+          ✕
+        </button>
+      </div>
+
+      <div class="p-4 space-y-4">
+        <!-- Observação -->
+        <div class="rounded-xl border border-slate-900/10 bg-white/70 p-4
+                    dark:border-white/10 dark:bg-white/5">
+          <p class="text-xs text-slate-700 font-semibold mb-2 dark:text-white/70">Observação</p>
+          <p id="modalObs" class="text-sm text-slate-700 whitespace-pre-wrap dark:text-gray-200">—</p>
+        </div>
+
+        <!-- Fotos (várias) -->
+        <div class="rounded-xl border border-slate-900/10 bg-white/70 p-4
+                    dark:border-white/10 dark:bg-white/5">
+          <p class="text-xs text-slate-700 font-semibold mb-3 dark:text-white/70">Fotos</p>
+
+          <div id="modalFotosEmpty" class="text-sm text-slate-500 dark:text-gray-500">
+            Nenhuma foto neste item.
+          </div>
+
+          <div id="modalFotosGrid" class="hidden grid grid-cols-2 md:grid-cols-3 gap-3"></div>
+        </div>
+
+        <div class="flex justify-end">
+          <button id="itemModalClose2" type="button"
+                  class="px-4 py-2 rounded-lg text-sm text-white transition
+                         bg-slate-600 hover:bg-slate-500
+                         dark:bg-gray-600 dark:hover:bg-gray-500">
+            Fechar
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const modal = document.getElementById("itemModal");
+  const overlay = document.getElementById("itemModalOverlay");
+  const closeBtn = document.getElementById("itemModalClose");
+  const closeBtn2 = document.getElementById("itemModalClose2");
+
+  const titleEl = document.getElementById("modalTitle");
+  const obsEl = document.getElementById("modalObs");
+
+  const emptyEl = document.getElementById("modalFotosEmpty");
+  const gridEl = document.getElementById("modalFotosGrid");
+
+  function safeParseJSON(str){
+    try { return JSON.parse(str); } catch(e){ return []; }
+  }
+
+  const subLabels = {
+    de: "Dianteiro Esquerdo (DE)", dd: "Dianteiro Direito (DD)",
+    te: "Traseiro Esquerdo (TE)", td: "Traseiro Direito (TD)",
+    diant: "Dianteiro", tras: "Traseiro",
+    fe: "Farol Esquerdo", fd: "Farol Direito",
+    le: "Lanterna Esquerda", ld: "Lanterna Direita",
+    esq: "Esquerdo", dir: "Direito",
+    vlde: "Vidro Lateral Diant. Esq.", vldd: "Vidro Lateral Diant. Dir.",
+    vlte: "Vidro Lateral Tras. Esq.", vltd: "Vidro Lateral Tras. Dir."
+  };
+
+  // Ajustar o SVG com base nas sub-partes reais salvas nas observações
+  document.querySelectorAll("[data-open-modal='item']").forEach(btn => {
+    const key = btn.getAttribute("data-key");
+    const rawObs = btn.getAttribute("data-obs") || "";
+    const partsMatch = rawObs.match(/^\[parts:([^\]]+)\]\s*(.*)/);
+    
+    if (partsMatch) {
+      const activeSubs = partsMatch[1].split(",");
+      const cleanObs = partsMatch[2];
+      
+      // Atualizar o atributo para abrir o modal com a observação limpa
+      btn.setAttribute("data-obs", cleanObs);
+      btn.setAttribute("data-active-subs", JSON.stringify(activeSubs));
+      
+      // Limpar todos os elementos desta parte no SVG para part-ok
+      document.querySelectorAll(`svg [data-part="${key}"]`).forEach(part => {
+        part.classList.remove("part-avaria");
+        part.classList.add("part-ok");
+      });
+      
+      // Destacar apenas os sub-elementos corretos
+      activeSubs.forEach(sub => {
+        const partEl = document.querySelector(`svg [data-part="${key}"][data-sub="${sub}"]`);
+        if (partEl) {
+          partEl.classList.remove("part-ok");
+          partEl.classList.add("part-avaria");
+        }
+      });
+    }
+  });
+
+  function openModal({label, obs, fotosJson, activeSubs}){
+    titleEl.textContent = label || "Item";
+    obsEl.textContent = (obs && obs.trim()) ? obs : "Sem observação informada.";
+
+    // Renderizar partes afetadas no modal
+    let subInfoContainer = document.getElementById("modalSubInfoContainer");
+    if (!subInfoContainer) {
+      subInfoContainer = document.createElement("div");
+      subInfoContainer.id = "modalSubInfoContainer";
+      subInfoContainer.className = "rounded-xl border border-slate-900/10 bg-white/70 p-4 dark:border-white/10 dark:bg-white/5 mb-4";
+      obsEl.parentElement.parentNode.insertBefore(subInfoContainer, obsEl.parentElement);
+    }
+    
+    const subs = safeParseJSON(activeSubs || "[]");
+    if (Array.isArray(subs) && subs.length > 0) {
+      subInfoContainer.classList.remove("hidden");
+      const subNames = subs.map(s => subLabels[s] || s).join(", ");
+      subInfoContainer.innerHTML = `
+        <p class="text-xs text-slate-700 font-semibold mb-2 dark:text-white/70">Partes Afetadas</p>
+        <p class="text-sm font-bold text-slate-800 dark:text-slate-200">${subNames}</p>
+      `;
+    } else {
+      subInfoContainer.classList.add("hidden");
+    }
+
+    // limpa grid
+    gridEl.innerHTML = "";
+
+    const fotos = safeParseJSON(fotosJson || "[]");
+
+    if(Array.isArray(fotos) && fotos.length > 0){
+      emptyEl.classList.add("hidden");
+      gridEl.classList.remove("hidden");
+
+      fotos.forEach(filename => {
+        if(!filename) return;
+        const url = "/static/vistorias_fotos/" + String(filename).trim();
+
+        const a = document.createElement("a");
+        a.href = url;
+        a.target = "_blank";
+        a.className =
+          "block overflow-hidden rounded-xl border border-slate-900/10 bg-slate-900/5 hover:bg-slate-900/10 transition " +
+          "dark:border-white/10 dark:bg-black/10 dark:hover:bg-black/20";
+
+        const img = document.createElement("img");
+        img.src = url;
+        img.alt = "Foto do item";
+        img.className = "w-full h-36 object-cover";
+
+        a.appendChild(img);
+        gridEl.appendChild(a);
+      });
+
+    }else{
+      gridEl.classList.add("hidden");
+      emptyEl.classList.remove("hidden");
+    }
+
+    modal.classList.remove("hidden");
+    document.body.classList.add("overflow-hidden");
+  }
+
+  function closeModal(){
+    modal.classList.add("hidden");
+    document.body.classList.remove("overflow-hidden");
+  }
+
+  document.querySelectorAll("[data-open-modal='item']").forEach(btn => {
+    btn.addEventListener("click", () => {
+      openModal({
+        label: btn.getAttribute("data-label") || "",
+        obs: btn.getAttribute("data-obs") || "",
+        fotosJson: btn.getAttribute("data-fotos") || "[]",
+        activeSubs: btn.getAttribute("data-active-subs") || "[]"
+      });
+    });
+  });
+
+  // Clique no mapa 2D dispara modal correspondente
+  document.querySelectorAll("svg [data-part].part-avaria").forEach(part => {
+    part.addEventListener("click", () => {
+      const key = part.getAttribute("data-part");
+      const btn = document.querySelector(`[data-open-modal="item"][data-key="${key}"]`);
+      if (btn) {
+        btn.click();
+      }
+    });
+  });
+
+  [overlay, closeBtn, closeBtn2].forEach(el => {
+    if(!el) return;
+    el.addEventListener("click", closeModal);
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if(e.key === "Escape" && !modal.classList.contains("hidden")){
+      closeModal();
+    }
+  });
+})();
+</script>
+
+{% endblock %}

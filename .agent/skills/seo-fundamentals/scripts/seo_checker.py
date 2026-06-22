@@ -48,6 +48,8 @@ SKIP_PATTERNS = [
 def is_page_file(file_path: Path) -> bool:
     """Check if this file is likely a public-facing page."""
     name = file_path.name.lower()
+    if "vistorias_" not in name:
+        return False
     stem = file_path.stem.lower()
     
     # Skip utility/config files

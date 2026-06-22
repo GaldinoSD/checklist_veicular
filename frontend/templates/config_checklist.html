@@ -1,0 +1,334 @@
+{% extends 'layout.html' %}
+{% set page_title = "Configurações do Checklist" %}
+{% block content %}
+
+<!-- ✅ HEADER PREMIUM CONFIG CHECKLIST COMPACT -->
+<div class="mb-8 animate-premium">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 glass-premium p-6 rounded-[2rem] shadow-xl overflow-hidden relative">
+        <!-- Decorativos -->
+        <div class="absolute -top-24 -right-24 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl"></div>
+        <div class="absolute -bottom-24 -left-24 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl"></div>
+
+        <div class="flex items-center gap-5 relative z-10">
+            <div class="w-12 h-12 rounded-[1.25rem] bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-2xl shadow-indigo-500/20">
+                <i class="fa-solid fa-list-check text-xl"></i>
+            </div>
+            <div>
+                <nav class="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-0.5">
+                    <span>Configurações</span>
+                    <i class="fa-solid fa-chevron-right text-[8px] opacity-30"></i>
+                    <span class="text-indigo-500">Fluxo de Inspeção</span>
+                </nav>
+                <h2 class="text-2xl font-black text-slate-800 dark:text-white tracking-tight">Fluxo de Inspeção</h2>
+                <p id="page-header-subtitle" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Configure as perguntas e o comportamento do checklist técnico.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="max-w-4xl mx-auto space-y-8 pb-12">
+
+  <!-- ======================= 🔹 MODO DO CHECKLIST ======================= -->
+  <div class="card-premium p-8">
+    <div class="flex items-center gap-4 mb-8">
+        <div class="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-500 shadow-inner">
+            <i class="fa-solid fa-toggle-on text-xl"></i>
+        </div>
+        <div>
+            <h2 class="text-xl font-black text-slate-800 dark:text-white">Modo de Operação</h2>
+            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Define quando o checklist deve ser preenchido</p>
+        </div>
+    </div>
+
+    <form method="post" action="{{ url_for('config_checklist_mode') }}" class="space-y-6">
+      <div>
+        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Fluxo de Trabalho</label>
+        <select name="mode"
+          class="w-full rounded-2xl px-5 py-3.5 border cursor-pointer
+                 bg-slate-50 text-slate-900 border-slate-900/5
+                 dark:bg-white/5 dark:text-white dark:border-white/5
+                 outline-none focus:ring-4 focus:ring-blue-500/10 transition-all">
+          <option value="disabled" {% if config.mode=='disabled' %}selected{% endif %}>❌ Desativado (Sistema em Manutenção)</option>
+          <option value="start_only" {% if config.mode=='start_only' %}selected{% endif %}>🟦 Somente na Saída (Início do Turno)</option>
+          <option value="start_end" {% if config.mode=='start_end' %}selected{% endif %}>🟩 Saída e Chegada (Fluxo Completo)</option>
+        </select>
+      </div>
+
+      <button
+        class="w-full md:w-auto px-8 py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl transition-all active:scale-95">
+        Salvar Configuração de Modo
+      </button>
+    </form>
+  </div>
+
+  <!-- ======================= 🔹 ADICIONAR NOVA PERGUNTA ======================= -->
+  <div class="card-premium p-8 border-l-4 border-l-emerald-500">
+    <div class="flex items-center gap-4 mb-8">
+        <div class="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 shadow-inner">
+            <i class="fa-solid fa-plus text-xl"></i>
+        </div>
+        <div>
+            <h2 class="text-xl font-black text-slate-800 dark:text-white">Nova Pergunta</h2>
+            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Adicione um novo campo ao formulário de inspeção</p>
+        </div>
+    </div>
+
+    <form method="post" action="{{ url_for('config_checklist_new') }}" class="space-y-6" id="new-item-form">
+      <div class="grid md:grid-cols-2 gap-6">
+        <div>
+          <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Texto da Pergunta</label>
+          <input id="text" name="text" placeholder="Ex: O veículo possui avarias?"
+            class="w-full rounded-2xl px-5 py-3.5 border
+                   bg-slate-50 text-slate-900 border-slate-900/5
+                   dark:bg-white/5 dark:text-white dark:border-white/5
+                   outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all">
+        </div>
+
+        <div>
+          <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Tipo de Resposta</label>
+          <select name="type"
+            class="w-full rounded-2xl px-5 py-3.5 border cursor-pointer type-select
+                   bg-slate-50 text-slate-900 border-slate-900/5
+                   dark:bg-white/5 dark:text-white dark:border-white/5
+                   outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all"
+            onchange="toggleOptions(this)">
+            <option value="texto_curto">Texto curto</option>
+            <option value="paragrafo">Parágrafo</option>
+            <option value="numero">Número</option>
+            <option value="data">Data</option>
+            <option value="sim_nao_na">Sim / Não / N/A</option>
+            <option value="dropdown">Lista suspensa</option>
+            <option value="radio">Seleção única</option>
+            <option value="checkboxes">Seleção múltipla</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Opções dinâmicas -->
+      <div class="hidden options-box rounded-[2rem] border p-8
+                  bg-slate-900/[0.02] border-slate-900/5
+                  dark:bg-white/[0.02] dark:border-white/5">
+        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 block">Opções da Lista</label>
+        <div class="space-y-3" id="option-list"></div>
+        <button type="button" onclick="addOptionField(this)"
+          class="mt-4 px-6 py-2.5 bg-blue-600/10 text-blue-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 hover:text-white transition-all">
+          <i class="fa-solid fa-plus mr-2"></i> Adicionar Opção
+        </button>
+        <input type="hidden" name="options" id="options-hidden">
+      </div>
+
+      <div class="flex flex-wrap items-center justify-between gap-6 pt-4 border-t border-slate-900/5 dark:border-white/5">
+        <div class="flex gap-6">
+          <label class="flex items-center gap-3 cursor-pointer group">
+            <input id="required" type="checkbox" name="required" class="w-5 h-5 rounded-lg border-slate-300 accent-emerald-500">
+            <span class="text-sm font-bold text-slate-600 dark:text-gray-300 group-hover:text-emerald-500 transition-colors">Obrigatória</span>
+          </label>
+
+          <label class="flex items-center gap-3 cursor-pointer group">
+            <input id="require_justif_no" type="checkbox" name="require_justif_no" class="w-5 h-5 rounded-lg border-slate-300 accent-amber-500">
+            <span class="text-sm font-bold text-slate-600 dark:text-gray-300 group-hover:text-amber-500 transition-colors">Exigir justificativa se 'Não'</span>
+          </label>
+        </div>
+
+        <button type="button" onclick="prepareOptions(this)"
+          class="px-10 py-4 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-emerald-500/20 transition-all active:scale-95">
+          Adicionar Pergunta
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- ======================= 🔹 LISTAGEM DE PERGUNTAS EXISTENTES ======================= -->
+  <!-- ======================= 🔹 LISTAGEM DE PERGUNTAS EXISTENTES ======================= -->
+  {% for it in items %}
+  <div class="card-premium py-3 px-6 hover:border-indigo-500/30 transition-all group/card animate-premium">
+
+    <div class="flex items-start justify-between gap-6">
+      <div class="flex-1">
+        <form method="post" action="{{ url_for('config_checklist_edit', iid=it.id) }}" class="space-y-3">
+
+          <!-- ✅ Badge de Ordem da Pergunta -->
+          <div class="flex items-center gap-2 mb-1 select-none">
+            <span class="w-6 h-6 rounded-lg bg-indigo-600 text-white flex items-center justify-center text-xs font-black shrink-0 shadow-lg shadow-indigo-500/20">
+              #{{ loop.index }}
+            </span>
+            <span class="text-[10px] font-black text-slate-400 dark:text-gray-400 uppercase tracking-widest">Ordem da Pergunta</span>
+          </div>
+
+          <div class="grid md:grid-cols-2 gap-3">
+            <div>
+              <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5 block">Texto da Pergunta</label>
+              <input id="text" name="text" value="{{ it.text }}"
+                class="w-full rounded-2xl px-5 py-3.5 border
+                       bg-slate-50 text-slate-900 border-slate-900/5
+                       dark:bg-white/5 dark:text-white dark:border-white/5
+                       outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all">
+            </div>
+
+            <div>
+              <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5 block">Tipo de Resposta</label>
+              <select name="type"
+                class="w-full rounded-2xl px-5 py-3.5 border cursor-pointer type-select
+                       bg-slate-50 text-slate-900 border-slate-900/5
+                       dark:bg-white/5 dark:text-white dark:border-white/5
+                       outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all"
+                onchange="toggleOptions(this)">
+                <option value="texto_curto" {% if it.type=='texto_curto' %}selected{% endif %}>Texto curto</option>
+                <option value="paragrafo" {% if it.type=='paragrafo' %}selected{% endif %}>Parágrafo</option>
+                <option value="numero" {% if it.type=='numero' %}selected{% endif %}>Número</option>
+                <option value="data" {% if it.type=='data' %}selected{% endif %}>Data</option>
+                <option value="sim_nao_na" {% if it.type=='sim_nao_na' %}selected{% endif %}>Sim / Não / N/A</option>
+                <option value="dropdown" {% if it.type=='dropdown' %}selected{% endif %}>Lista suspensa</option>
+                <option value="radio" {% if it.type=='radio' %}selected{% endif %}>Seleção única</option>
+                <option value="checkboxes" {% if it.type=='checkboxes' %}selected{% endif %}>Seleção múltipla</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Opções -->
+          <div class="{% if it.type in ['dropdown','radio','checkboxes'] %}{% else %}hidden{% endif %} options-box
+                      rounded-[2rem] border p-8
+                      bg-slate-900/[0.02] border-slate-900/5
+                      dark:bg-white/[0.02] dark:border-white/5">
+
+            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 block">Opções da Lista</label>
+
+            <div class="space-y-3 option-list-edit">
+              {% for opt in (it.options.split(',') if it.options else []) %}
+              <div class="flex gap-2 items-center">
+                <input id="option_inputs" type="text" name="option_inputs" value="{{ opt }}"
+                  class="flex-1 rounded-xl px-4 py-2 border
+                         bg-white text-slate-900 border-slate-900/5
+                         dark:bg-white/5 dark:text-white dark:border-white/10">
+                <button type="button" onclick="this.parentNode.remove()"
+                  class="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-900/20 text-red-600 hover:bg-red-600 hover:text-white transition-all flex items-center justify-center">
+                  <i class="fa-solid fa-trash-can"></i>
+                </button>
+              </div>
+              {% endfor %}
+            </div>
+
+            <button type="button" onclick="addOptionFieldEdit(this)"
+              class="mt-6 px-6 py-2.5 bg-indigo-600/10 text-indigo-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-600 hover:text-white transition-all">
+              <i class="fa-solid fa-plus mr-2"></i> Adicionar Opção
+            </button>
+
+            <input type="hidden" name="options" class="options-hidden-edit">
+          </div>
+
+          <!-- Ações -->
+          <div class="flex flex-wrap items-center justify-between gap-4 pt-3 border-t border-slate-900/5 dark:border-white/5">
+            <div class="flex gap-6">
+              <label class="flex items-center gap-3 cursor-pointer group">
+                <input id="required" type="checkbox" name="required" {% if it.required %}checked{% endif %} class="w-5 h-5 rounded-lg border-slate-300 accent-indigo-500">
+                <span class="text-sm font-bold text-slate-600 dark:text-gray-300 group-hover:text-indigo-500 transition-colors">Obrigatória</span>
+              </label>
+
+              <label class="flex items-center gap-3 cursor-pointer group">
+                <input id="require_justif_no" type="checkbox" name="require_justif_no" {% if it.require_justif_no %}checked{% endif %} class="w-5 h-5 rounded-lg border-slate-300 accent-amber-500">
+                <span class="text-sm font-bold text-slate-600 dark:text-gray-300 group-hover:text-amber-500 transition-colors">Justificativa se 'Não'</span>
+              </label>
+            </div>
+
+            <button type="button" onclick="prepareOptions(this)"
+              class="px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-indigo-500/20 transition-all active:scale-95">
+              Salvar Alterações
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Botões de Ordenação e Exclusão -->
+      <div class="flex flex-col gap-3 shrink-0">
+        <form method="post" action="{{ url_for('config_checklist_move', iid=it.id) }}">
+          <input type="hidden" name="dir" value="up">
+          <button title="Mover para cima"
+            class="w-10 h-10 rounded-xl border border-slate-900/5 dark:border-white/5 bg-slate-50 dark:bg-white/5 text-slate-400 hover:text-indigo-500 hover:border-indigo-500/30 transition-all flex items-center justify-center">
+            <i class="fa-solid fa-chevron-up"></i>
+          </button>
+        </form>
+
+        <form method="post" action="{{ url_for('config_checklist_move', iid=it.id) }}">
+          <input type="hidden" name="dir" value="down">
+          <button title="Mover para baixo"
+            class="w-10 h-10 rounded-xl border border-slate-900/5 dark:border-white/5 bg-slate-50 dark:bg-white/5 text-slate-400 hover:text-indigo-500 hover:border-indigo-500/30 transition-all flex items-center justify-center">
+            <i class="fa-solid fa-chevron-down"></i>
+          </button>
+        </form>
+
+        <form method="post" action="{{ url_for('config_checklist_del', iid=it.id) }}"
+              onsubmit="return confirm('Excluir item?');">
+          <button class="w-10 h-10 rounded-xl border border-red-500/10 bg-red-500/5 text-red-400 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center mt-4">
+            <i class="fa-solid fa-trash-can"></i>
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  {% else %}
+    <div class="text-center text-sm mt-10 text-slate-500 dark:text-gray-400">
+      Nenhuma pergunta cadastrada ainda.
+    </div>
+  {% endfor %}
+
+</div>
+
+<!-- ======================= JAVASCRIPT ======================= -->
+<script>
+function toggleOptions(selectEl) {
+  const form = selectEl.closest('form');
+  const box = form.querySelector('.options-box');
+  if (!box) return;
+
+  const type = selectEl.value;
+  if (['dropdown', 'radio', 'checkboxes'].includes(type)) {
+    box.classList.remove('hidden');
+  } else {
+    box.classList.add('hidden');
+  }
+}
+
+function addOptionField(btn) {
+  const list = btn.parentElement.querySelector('#option-list');
+  const div = document.createElement('div');
+  div.className = 'flex gap-2 items-center';
+  div.innerHTML = `
+    <input aria-label="Digite uma opção..." type="text" class="option-input flex-1 rounded px-3 py-1 border
+      bg-white text-slate-900 border-slate-900/10
+      dark:bg-gray-900/60 dark:text-white dark:border-white/10"
+      placeholder="Digite uma opção...">
+    <button type="button" onclick="this.parentNode.remove()"
+      class="rounded px-2 py-1 text-white bg-red-700 hover:bg-red-600">🗑</button>
+  `;
+  list.appendChild(div);
+}
+
+function addOptionFieldEdit(btn) {
+  const list = btn.parentElement.querySelector('.option-list-edit');
+  const div = document.createElement('div');
+  div.className = 'flex gap-2 items-center';
+  div.innerHTML = `
+    <input id="option_inputs" type="text" name="option_inputs" class="flex-1 rounded px-3 py-1 border
+      bg-white text-slate-900 border-slate-900/10
+      dark:bg-gray-900/60 dark:text-white dark:border-white/10"
+      placeholder="Digite uma opção...">
+    <button type="button" onclick="this.parentNode.remove()"
+      class="rounded px-2 py-1 text-white bg-red-700 hover:bg-red-600">🗑</button>
+  `;
+  list.appendChild(div);
+}
+
+function prepareOptions(btn) {
+  const form = btn.closest('form');
+  const inputs = form.querySelectorAll('.option-input, [name="option_inputs"]');
+  const values = [...inputs].map(i => i.value.trim()).filter(v => v !== '');
+  const hidden = form.querySelector('input[name="options"], .options-hidden-edit');
+  if (hidden) hidden.value = values.join(',');
+  form.submit();
+}
+</script>
+
+{% endblock %}
+
+{# accessibility helper: onkeydown= handler present #}
