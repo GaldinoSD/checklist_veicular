@@ -990,7 +990,7 @@
       // ✅ GLOBAL TAB NAVIGATION HANDLER
       document.addEventListener('click', function(e) {
         const tabLink = e.target.closest('.sidebar-tab-link');
-        if (tabLink && window.location.pathname.includes('/gestao_tecnica')) {
+        if (tabLink && (window.location.pathname.includes('/gestao-tecnica') || window.location.pathname.includes('/gestao_tecnica'))) {
           e.preventDefault();
           const tabId = tabLink.getAttribute('data-tab');
           if (typeof switchTab === 'function') {

@@ -5895,7 +5895,7 @@ function addModuleField(title = '', content = '', image_path = '', video_path = 
         <button type="button" onclick="this.closest('div').remove()" class="absolute top-3 right-3 w-7 h-7 rounded-lg bg-red-500/10 text-red-500 flex items-center justify-center hover:bg-red-500/20 transition-all"><i class="fa-solid fa-xmark text-xs"></i></button>
         <div>
             <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 block">${isRPG ? `Título da Cena ${idx}` : `Título do Módulo ${idx}`}</label>
-            <input aria-label="${isRPG ? " class="mod-title w-full bg-white dark:bg-slate-800 border border-slate-900/5 dark:border-white/5 rounded-xl px-3 py-2 text-sm font-bold dark:text-white outline-none" placeholder="${isRPG ? 'Ex: Cena 1: Curto Circuito' : 'Ex: Introdução'}" value="${title}">
+            <input aria-label="${isRPG ? 'Título da Cena' : 'Título do Módulo'}" class="mod-title w-full bg-white dark:bg-slate-800 border border-slate-900/5 dark:border-white/5 rounded-xl px-3 py-2 text-sm font-bold dark:text-white outline-none" placeholder="${isRPG ? 'Ex: Cena 1: Curto Circuito' : 'Ex: Introdução'}" value="${title}">
         </div>
         <div>
             <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1 block">${isRPG ? 'Narrativa / Descrição da Cena' : 'Conteúdo'}</label>

@@ -5,7 +5,7 @@ with app.test_client() as c:
         sess['_user_id'] = '1'
     
     # 1. Verificar se a rota da página funciona
-    resp = c.get('/gestao_tecnica')
+    resp = c.get('/gestao-tecnica')
     print("Page status:", resp.status_code)
     
     # 2. Verificar se a API funciona

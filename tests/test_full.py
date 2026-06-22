@@ -5,7 +5,7 @@ with app.test_client() as c:
         sess['_user_id'] = '1'
     
     # Get the FULL HTML of the gestao page and check for JS errors
-    resp = c.get('/gestao')
+    resp = c.get('/gestao-tecnica')
     html = resp.data.decode('utf-8')
     print("Page status:", resp.status_code)
     
