@@ -36,6 +36,7 @@
     </div>
 
     <form method="post" action="{{ url_for('config_checklist_mode') }}" class="flex flex-col sm:flex-row gap-4">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
       <div class="flex-1">
         <select name="mode"
           class="w-full rounded-2xl px-5 py-3.5 border cursor-pointer
@@ -93,6 +94,7 @@
           </span>
         </div>
         <form method="post" action="{{ url_for('config_checklist_new') }}" class="space-y-4">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
           <input type="hidden" name="vehicle_type" value="{{ vtype }}">
           <div class="grid md:grid-cols-2 gap-4">
             <div>
@@ -155,104 +157,109 @@
       {% if items %}
       <div class="divide-y divide-slate-900/5 dark:divide-white/5">
         {% for it in items %}
-        <div class="px-6 py-4 hover:bg-slate-50/50 dark:hover:bg-white/[0.015] transition-all group/item">
-          <form method="post" action="{{ url_for('config_checklist_edit', iid=it.id) }}">
-            <input type="hidden" name="vehicle_type" value="{{ vtype }}">
+        <div class="px-6 py-4 hover:bg-slate-50/50 dark:hover:bg-white/[0.015] border border-transparent rounded-2xl transition-all group/item draggable-item" draggable="true" data-id="{{ it.id }}">
+          <div class="flex items-start gap-3">
+            <!-- Grip de Arrasto -->
+            <i class="fa-solid fa-grip-vertical text-slate-300 dark:text-slate-700 cursor-grab active:cursor-grabbing mr-1 mt-1.5 shrink-0 drag-handle text-xs" title="Arraste para reordenar"></i>
+            <!-- Número de ordem -->
+            <span class="mt-1 w-6 h-6 rounded-lg bg-{{ color }}-600 text-white flex items-center justify-center text-[10px] font-black shrink-0">{{ loop.index }}</span>
 
-            <div class="flex items-start gap-3">
-              <!-- Número de ordem -->
-              <span class="mt-1 w-6 h-6 rounded-lg bg-{{ color }}-600 text-white flex items-center justify-center text-[10px] font-black shrink-0">{{ loop.index }}</span>
+            <!-- Formulário de Edição -->
+            <form method="post" action="{{ url_for('config_checklist_edit', iid=it.id) }}" class="flex-1 min-w-0 space-y-3">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <input type="hidden" name="vehicle_type" value="{{ vtype }}">
 
-              <div class="flex-1 min-w-0 space-y-3">
-                <!-- Linha principal: texto + tipo -->
-                <div class="flex flex-wrap gap-3">
-                  <input name="text" value="{{ it.text }}"
-                    class="flex-1 min-w-[200px] rounded-lg px-3 py-2 border text-sm font-semibold
-                           bg-white text-slate-900 border-slate-200
-                           dark:bg-white/5 dark:text-white dark:border-white/10
-                           outline-none focus:ring-2 focus:ring-{{ color }}-500/20 transition-all">
+              <!-- Linha principal: texto + tipo -->
+              <div class="flex flex-wrap gap-3">
+                <input name="text" value="{{ it.text }}"
+                  class="flex-1 min-w-[200px] rounded-lg px-3 py-2 border text-sm font-semibold
+                         bg-white text-slate-900 border-slate-200
+                         dark:bg-white/5 dark:text-white dark:border-white/10
+                         outline-none focus:ring-2 focus:ring-{{ color }}-500/20 transition-all">
 
-                  <select name="type" onchange="toggleOptions(this)"
-                    class="rounded-lg px-3 py-2 border text-xs font-bold cursor-pointer
-                           bg-white text-slate-700 border-slate-200
-                           dark:bg-white/5 dark:text-gray-300 dark:border-white/10
-                           outline-none focus:ring-2 focus:ring-{{ color }}-500/20 transition-all">
-                    <option value="texto_curto" {% if it.type=='texto_curto' %}selected{% endif %}>Texto curto</option>
-                    <option value="paragrafo" {% if it.type=='paragrafo' %}selected{% endif %}>Parágrafo</option>
-                    <option value="numero" {% if it.type=='numero' %}selected{% endif %}>Número</option>
-                    <option value="data" {% if it.type=='data' %}selected{% endif %}>Data</option>
-                    <option value="sim_nao_na" {% if it.type=='sim_nao_na' %}selected{% endif %}>Sim/Não/N/A</option>
-                    <option value="dropdown" {% if it.type=='dropdown' %}selected{% endif %}>Lista</option>
-                    <option value="radio" {% if it.type=='radio' %}selected{% endif %}>Radio</option>
-                    <option value="checkboxes" {% if it.type=='checkboxes' %}selected{% endif %}>Checkboxes</option>
-                  </select>
-                </div>
-
-                <!-- Opções (se tipo for lista/radio/checkboxes) -->
-                <div class="{% if it.type in ['dropdown','radio','checkboxes'] %}{% else %}hidden{% endif %} options-box rounded-xl border p-4 bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10">
-                  <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Opções</label>
-                  <div class="space-y-2 option-list-edit">
-                    {% for opt in (it.options.split(',') if it.options else []) %}
-                    <div class="flex gap-2">
-                      <input type="text" name="option_inputs" value="{{ opt }}"
-                        class="flex-1 rounded-lg px-3 py-1.5 border text-xs
-                               bg-white text-slate-900 border-slate-200
-                               dark:bg-white/10 dark:text-white dark:border-white/10">
-                      <button type="button" onclick="this.parentNode.remove()"
-                        class="w-7 h-7 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-500 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center">
-                        <i class="fa-solid fa-xmark text-xs"></i>
-                      </button>
-                    </div>
-                    {% endfor %}
-                  </div>
-                  <button type="button" onclick="addOptionFieldEdit(this)"
-                    class="mt-2 px-3 py-1.5 bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-gray-300 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-{{ color }}-500 hover:text-white transition-all">
-                    <i class="fa-solid fa-plus mr-1"></i> Opção
-                  </button>
-                  <input type="hidden" name="options" class="options-hidden-edit">
-                </div>
-
-                <!-- Flags + Ações -->
-                <div class="flex flex-wrap items-center justify-between gap-3">
-                  <div class="flex flex-wrap gap-4">
-                    <label class="flex items-center gap-2 cursor-pointer">
-                      <input type="checkbox" name="required" {% if it.required %}checked{% endif %} class="w-4 h-4 rounded accent-{{ color }}-500">
-                      <span class="text-[11px] font-bold text-slate-500 dark:text-gray-400">Obrigatória</span>
-                    </label>
-                    <label class="flex items-center gap-2 cursor-pointer">
-                      <input type="checkbox" name="require_justif_no" {% if it.require_justif_no %}checked{% endif %} class="w-4 h-4 rounded accent-amber-500">
-                      <span class="text-[11px] font-bold text-slate-500 dark:text-gray-400">Just. se "Não"</span>
-                    </label>
-                  </div>
-                  <button type="button" onclick="prepareOptions(this)"
-                    class="px-4 py-1.5 bg-{{ color }}-600 hover:bg-{{ color }}-700 text-white rounded-lg font-black text-[10px] uppercase tracking-widest transition-all active:scale-95">
-                    Salvar
-                  </button>
-                </div>
+                <select name="type" onchange="toggleOptions(this)"
+                  class="rounded-lg px-3 py-2 border text-xs font-bold cursor-pointer
+                         bg-white text-slate-700 border-slate-200
+                         dark:bg-white/5 dark:text-gray-300 dark:border-white/10
+                         outline-none focus:ring-2 focus:ring-{{ color }}-500/20 transition-all">
+                  <option value="texto_curto" {% if it.type=='texto_curto' %}selected{% endif %}>Texto curto</option>
+                  <option value="paragrafo" {% if it.type=='paragrafo' %}selected{% endif %}>Parágrafo</option>
+                  <option value="numero" {% if it.type=='numero' %}selected{% endif %}>Número</option>
+                  <option value="data" {% if it.type=='data' %}selected{% endif %}>Data</option>
+                  <option value="sim_nao_na" {% if it.type=='sim_nao_na' %}selected{% endif %}>Sim/Não/N/A</option>
+                  <option value="dropdown" {% if it.type=='dropdown' %}selected{% endif %}>Lista</option>
+                  <option value="radio" {% if it.type=='radio' %}selected{% endif %}>Radio</option>
+                  <option value="checkboxes" {% if it.type=='checkboxes' %}selected{% endif %}>Checkboxes</option>
+                </select>
               </div>
 
-              <!-- Botões lateral: ordenar + excluir -->
-              <div class="flex flex-col gap-1.5 shrink-0 opacity-0 group-hover/item:opacity-100 transition-opacity">
-                <form method="post" action="{{ url_for('config_checklist_move', iid=it.id) }}">
-                  <input type="hidden" name="dir" value="up">
-                  <button title="Subir" class="w-7 h-7 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-400 hover:text-{{ color }}-500 hover:border-{{ color }}-500/30 flex items-center justify-center transition-all">
-                    <i class="fa-solid fa-chevron-up text-[10px]"></i>
-                  </button>
-                </form>
-                <form method="post" action="{{ url_for('config_checklist_move', iid=it.id) }}">
-                  <input type="hidden" name="dir" value="down">
-                  <button title="Descer" class="w-7 h-7 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-400 hover:text-{{ color }}-500 hover:border-{{ color }}-500/30 flex items-center justify-center transition-all">
-                    <i class="fa-solid fa-chevron-down text-[10px]"></i>
-                  </button>
-                </form>
-                <form method="post" action="{{ url_for('config_checklist_del', iid=it.id) }}" onsubmit="return confirm('Excluir item?');" class="mt-1">
-                  <button class="w-7 h-7 rounded-lg border border-red-200 dark:border-red-900/30 bg-red-50 dark:bg-red-900/10 text-red-400 hover:bg-red-500 hover:text-white hover:border-red-500 flex items-center justify-center transition-all">
-                    <i class="fa-solid fa-trash text-[10px]"></i>
-                  </button>
-                </form>
+              <!-- Opções (se tipo for lista/radio/checkboxes) -->
+              <div class="{% if it.type in ['dropdown','radio','checkboxes'] %}{% else %}hidden{% endif %} options-box rounded-xl border p-4 bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10">
+                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Opções</label>
+                <div class="space-y-2 option-list-edit">
+                  {% for opt in (it.options.split(',') if it.options else []) %}
+                  <div class="flex gap-2">
+                    <input type="text" name="option_inputs" value="{{ opt }}"
+                      class="flex-1 rounded-lg px-3 py-1.5 border text-xs
+                             bg-white text-slate-900 border-slate-200
+                             dark:bg-white/10 dark:text-white dark:border-white/10">
+                    <button type="button" onclick="this.parentNode.remove()"
+                      class="w-7 h-7 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-500 hover:bg-red-500 hover:text-white transition-all flex items-center justify-center">
+                      <i class="fa-solid fa-xmark text-xs"></i>
+                    </button>
+                  </div>
+                  {% endfor %}
+                </div>
+                <button type="button" onclick="addOptionFieldEdit(this)"
+                  class="mt-2 px-3 py-1.5 bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-gray-300 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-{{ color }}-500 hover:text-white transition-all">
+                  <i class="fa-solid fa-plus mr-1"></i> Opção
+                </button>
+                <input type="hidden" name="options" class="options-hidden-edit">
               </div>
+
+              <!-- Flags + Ações -->
+              <div class="flex flex-wrap items-center justify-between gap-3">
+                <div class="flex flex-wrap gap-4">
+                  <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" name="required" {% if it.required %}checked{% endif %} class="w-4 h-4 rounded accent-{{ color }}-500">
+                    <span class="text-[11px] font-bold text-slate-500 dark:text-gray-400">Obrigatória</span>
+                  </label>
+                  <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" name="require_justif_no" {% if it.require_justif_no %}checked{% endif %} class="w-4 h-4 rounded accent-amber-500">
+                    <span class="text-[11px] font-bold text-slate-500 dark:text-gray-400">Just. se "Não"</span>
+                  </label>
+                </div>
+                <button type="button" onclick="prepareOptions(this)"
+                  class="px-4 py-1.5 bg-{{ color }}-600 hover:bg-{{ color }}-700 text-white rounded-lg font-black text-[10px] uppercase tracking-widest transition-all active:scale-95">
+                  Salvar
+                </button>
+              </div>
+            </form>
+
+            <!-- Botões lateral: ordenar + excluir -->
+            <div class="flex flex-col gap-1.5 shrink-0 opacity-0 group-hover/item:opacity-100 transition-opacity">
+              <form method="post" action="{{ url_for('config_checklist_move', iid=it.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <input type="hidden" name="dir" value="up">
+                <button title="Subir" class="w-7 h-7 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-400 hover:text-{{ color }}-500 hover:border-{{ color }}-500/30 flex items-center justify-center transition-all">
+                  <i class="fa-solid fa-chevron-up text-[10px]"></i>
+                </button>
+              </form>
+              <form method="post" action="{{ url_for('config_checklist_move', iid=it.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <input type="hidden" name="dir" value="down">
+                <button title="Descer" class="w-7 h-7 rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-white/5 text-slate-400 hover:text-{{ color }}-500 hover:border-{{ color }}-500/30 flex items-center justify-center transition-all">
+                  <i class="fa-solid fa-chevron-down text-[10px]"></i>
+                </button>
+              </form>
+              <form method="post" action="{{ url_for('config_checklist_del', iid=it.id) }}" onsubmit="return confirm('Excluir item?');" class="mt-1">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button class="w-7 h-7 rounded-lg border border-red-200 dark:border-red-900/30 bg-red-50 dark:bg-red-900/10 text-red-400 hover:bg-red-500 hover:text-white hover:border-red-500 flex items-center justify-center transition-all">
+                  <i class="fa-solid fa-trash text-[10px]"></i>
+                </button>
+              </form>
             </div>
-          </form>
+          </div>
         </div>
         {% endfor %}
       </div>
@@ -384,6 +391,82 @@ function prepareOptions(btn) {
   if (hidden) hidden.value = values.join(',');
   form.submit();
 }
+
+// ---- Drag and Drop Reordering ----
+let draggedItem = null;
+
+function setupDragAndDrop() {
+  document.querySelectorAll('.draggable-item').forEach(item => {
+    item.addEventListener('dragstart', (e) => {
+      draggedItem = item;
+      item.classList.add('opacity-40', 'border-blue-500/20', 'bg-blue-500/[0.02]');
+      e.dataTransfer.effectAllowed = 'move';
+    });
+
+    item.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      if (!draggedItem || draggedItem === item) return;
+
+      const container = item.parentNode;
+      const rect = item.getBoundingClientRect();
+      const next = (e.clientY - rect.top) / (rect.bottom - rect.top) > 0.5;
+
+      container.insertBefore(draggedItem, next ? item.nextSibling : item);
+    });
+
+    item.addEventListener('dragend', () => {
+      if (draggedItem) {
+        draggedItem.classList.remove('opacity-40', 'border-blue-500/20', 'bg-blue-500/[0.02]');
+        saveNewOrder(draggedItem.closest('.tab-panel'));
+        draggedItem = null;
+      }
+    });
+  });
+}
+
+function saveNewOrder(panel) {
+  if (!panel) return;
+  const items = panel.querySelectorAll('.draggable-item');
+  const ids = Array.from(items).map(item => item.dataset.id);
+
+  // Atualiza os números de ordem visualmente na tela de imediato
+  items.forEach((item, index) => {
+    const orderSpan = item.querySelector('.flex.items-start.gap-3 > span');
+    if (orderSpan) orderSpan.textContent = index + 1;
+  });
+
+  fetch('/config-checklist/reordenar', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ ids: ids })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (data.success) {
+      console.log('Ordem salva com sucesso!');
+      // Efeito sutil de feedback visual (piscar rápido na bolinha de ordem)
+      items.forEach(item => {
+        const orderSpan = item.querySelector('.flex.items-start.gap-3 > span');
+        if (orderSpan) {
+          orderSpan.classList.add('scale-110');
+          setTimeout(() => orderSpan.classList.remove('scale-110'), 200);
+        }
+      });
+    } else {
+      alert('Erro ao salvar a nova ordem: ' + data.message);
+    }
+  })
+  .catch(err => {
+    console.error('Erro de reordenação:', err);
+    alert('Erro de conexão ao salvar a nova ordem.');
+  });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  setupDragAndDrop();
+});
 </script>
 
 {% endblock %}

@@ -117,12 +117,38 @@
         <div class="space-y-4" id="checklist-items-wrapper">
 
             <!-- Estado inicial: nenhum veículo selecionado -->
-            <div id="no-vehicle-msg" class="card-premium p-10 text-center">
-                <div class="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-white/5 flex items-center justify-center mx-auto mb-4">
-                    <i class="fa-solid fa-car-side text-2xl text-slate-300 dark:text-gray-600"></i>
+            <div id="no-vehicle-msg" class="card-premium p-10 text-center relative overflow-hidden flex flex-col items-center justify-center min-h-[320px] animate-premium">
+                <!-- Grid de Fundo Neon Técnico -->
+                <div class="absolute inset-0 bg-[linear-gradient(to_right,#e2e8f0_1px,transparent_1px),linear-gradient(to_bottom,#e2e8f0_1px,transparent_1px)] dark:bg-[linear-gradient(to_right,rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:20px_20px] opacity-40 [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] pointer-events-none"></div>
+
+                <!-- Radar Scanner Circular -->
+                <div class="relative w-40 h-40 mb-6 flex items-center justify-center">
+                    <!-- Glow de Fundo Pulsante -->
+                    <div class="absolute inset-0 bg-blue-500/10 dark:bg-blue-500/5 rounded-full blur-2xl animate-pulse"></div>
+                    
+                    <!-- Círculos Concêntricos -->
+                    <div class="absolute inset-0 border-2 border-dashed border-blue-500/20 rounded-full scale-100 animate-ping-slow"></div>
+                    <div class="absolute inset-4 border border-blue-500/15 rounded-full"></div>
+                    <div class="absolute inset-10 border border-blue-500/10 rounded-full"></div>
+                    
+                    <!-- Linha de Varredura Laser Circular -->
+                    <div class="absolute inset-0 rounded-full bg-gradient-to-tr from-transparent via-transparent to-blue-500/20 border-r border-blue-500/30 animate-radar-sweep"></div>
+                    
+                    <!-- Centro do Scanner com Carrossel de Veículos -->
+                    <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-600 to-blue-500 flex items-center justify-center text-white shadow-xl shadow-blue-500/20 z-10">
+                        <div class="vehicle-carousel-icons relative w-8 h-8 flex items-center justify-center">
+                            <i class="fa-solid fa-car text-2xl absolute vehicle-fade-icon active"></i>
+                            <i class="fa-solid fa-motorcycle text-2xl absolute vehicle-fade-icon opacity-0"></i>
+                            <i class="fa-solid fa-truck text-2xl absolute vehicle-fade-icon opacity-0"></i>
+                            <i class="fa-solid fa-van-shuttle text-2xl absolute vehicle-fade-icon opacity-0"></i>
+                        </div>
+                    </div>
                 </div>
-                <p class="text-sm font-bold text-slate-400 dark:text-gray-500">Selecione um veículo acima</p>
-                <p class="text-xs text-slate-300 dark:text-gray-600 mt-1">O checklist será carregado automaticamente conforme o tipo de veículo.</p>
+
+                <div class="relative z-10 max-w-md">
+                    <h3 class="text-sm font-black text-slate-800 dark:text-white tracking-widest uppercase">Aguardando Seleção de Veículo</h3>
+                    <p class="text-xs text-slate-400 mt-2">Selecione o veículo operacional acima ou utilize a câmera para identificar a placa. O checklist adequado (Carro, Moto, Caminhão ou Van) será gerado dinamicamente.</p>
+                </div>
             </div>
 
             {% set all_types = [
@@ -288,6 +314,28 @@
     @keyframes slideUp {
         from { opacity: 0; transform: translateY(20px); }
         to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Animações e transições do Radar de Veículos */
+    .animate-ping-slow {
+        animation: ping 3s cubic-bezier(0, 0, 0.2, 1) infinite;
+    }
+    .animate-radar-sweep {
+        animation: sweep 4s linear infinite;
+        transform-origin: center;
+    }
+    .vehicle-fade-icon {
+        transition: opacity 0.6s ease-in-out, transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+        transform: scale(0.5);
+    }
+    .vehicle-fade-icon.active {
+        opacity: 1 !important;
+        transform: scale(1);
+    }
+
+    @keyframes sweep {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
     }
 </style>
 
@@ -731,6 +779,19 @@ function onVehicleChange(selectEl) {
 document.addEventListener('DOMContentLoaded', () => {
   const sel = document.getElementById('vehicle_id_select');
   if (sel && sel.value) onVehicleChange(sel);
+
+  // Carrossel dinâmico de ícones no radar de veículos
+  const icons = document.querySelectorAll('.vehicle-fade-icon');
+  let currentIdx = 0;
+  if (icons.length > 0) {
+    setInterval(() => {
+      icons[currentIdx].classList.remove('active');
+      icons[currentIdx].classList.add('opacity-0');
+      currentIdx = (currentIdx + 1) % icons.length;
+      icons[currentIdx].classList.remove('opacity-0');
+      icons[currentIdx].classList.add('active');
+    }, 2000);
+  }
 });
 </script>
 

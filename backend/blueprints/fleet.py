@@ -1446,7 +1446,7 @@ def config_checklist_new():
 
     if not text_:
         flash("Texto é obrigatório.", "error")
-        return redirect(url_for("config_checklist"))
+        return redirect(url_for("config_checklist") + f"#{vehicle_type}")
 
     opts = opts_raw or None
 
@@ -1468,7 +1468,7 @@ def config_checklist_new():
 
     registrar_log(f"Item de checklist adicionado ({vehicle_type}): {text_}")
     flash("Item adicionado.", "success")
-    return redirect(url_for("config_checklist"))
+    return redirect(url_for("config_checklist") + f"#{vehicle_type}")
 
 
 
@@ -1490,7 +1490,7 @@ def config_checklist_edit(iid):
 
     registrar_log(f"Item de checklist editado: {it.text} (id={iid})")
     flash("Item atualizado.", "success")
-    return redirect(url_for("config_checklist"))
+    return redirect(url_for("config_checklist") + f"#{it.vehicle_type}")
 
 
 
@@ -1513,7 +1513,7 @@ def config_checklist_del(iid):
 
     registrar_log(f"Item de checklist excluído: {texto} (id={iid})")
     flash("Item excluído.", "success")
-    return redirect(url_for("config_checklist"))
+    return redirect(url_for("config_checklist") + f"#{vtype}")
 
 
 
@@ -1537,7 +1537,31 @@ def config_checklist_move(iid):
 
     registrar_log(f"Item de checklist movido: {it.text} (id={iid}, dir={direction})")
     flash("Ordem atualizada.", "success")
-    return redirect(url_for("config_checklist"))
+    return redirect(url_for("config_checklist") + f"#{vtype}")
+
+
+
+
+@fleet_bp.route("/config-checklist/reordenar", methods=["POST"])
+@admin_required
+def config_checklist_reorder():
+    data = request.get_json() or {}
+    ids = data.get("ids", [])
+
+    if not ids:
+        return jsonify({"success": False, "message": "Nenhum ID enviado."}), 400
+
+    try:
+        # Atualiza a ordem de cada item enviado sequencialmente
+        for idx, iid in enumerate(ids, start=1):
+            it = ChecklistItem.query.get(int(iid))
+            if it:
+                it.order = idx
+        db.session.commit()
+        return jsonify({"success": True})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"success": False, "message": str(e)}), 500
 
 
 
