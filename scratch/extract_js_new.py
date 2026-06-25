@@ -2,7 +2,7 @@ import re
 import sys
 import os
 
-with open('/var/www/checklist_veicular/frontend/templates/gestao_tecnica.html', 'r') as f:
+with open('/var/www/checklist_veicular/frontend/templates/vistorias_list.html', 'r') as f:
     content = f.read()
 
 # Extract JS between <script> and </script> tags

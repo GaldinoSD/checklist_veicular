@@ -652,3 +652,8 @@ def make_premium_pdf(buffer, title, metadata, content_table_data, image_paths=No
     doc.build(story, onFirstPage=draw_background, onLaterPages=draw_background)
 
 
+def allowed_file(filename: str) -> bool:
+    if not filename:
+        return False
+    ext = os.path.splitext(filename.lower())[1]
+    return ext in ALLOWED_EXT

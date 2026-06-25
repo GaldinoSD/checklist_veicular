@@ -43,7 +43,8 @@ from backend.utils import (
     agora, br_datetime, haversine_distance, registrar_log, send_whatsapp_message, admin_required,
     supervisor_allowed, manutencao_only, count_files, list_reports,
     km_alert, iso_week, weekly_km_series, save_photos, _check_rate_limit,
-    _record_attempt, _clear_attempts, _cleanup_old_attempts, make_premium_pdf
+    _record_attempt, _clear_attempts, _cleanup_old_attempts, make_premium_pdf,
+    allowed_file
 )
 import io
 

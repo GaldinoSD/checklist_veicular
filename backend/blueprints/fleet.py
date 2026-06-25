@@ -45,7 +45,7 @@ from backend.utils import (
     supervisor_allowed, manutencao_only, count_files, list_reports,
     km_alert, iso_week, weekly_km_series, save_photos, _check_rate_limit,
     _record_attempt, _clear_attempts, _cleanup_old_attempts, parse_periodo,
-    make_premium_pdf
+    make_premium_pdf, allowed_file
 )
 
 
@@ -1929,6 +1929,677 @@ def generate_checklist_pdf(checklist_obj: Checklist, raw: dict) -> str:
     return str(out_path)
 
 
+def get_part_status(v, group_key, sub_key=None):
+    group_val = getattr(v, group_key, "ok")
+    if group_val != "avaria":
+        return "ok"
+    obs = getattr(v, f"obs_{group_key}", "") or ""
+    if obs.startswith("[parts:"):
+        end_idx = obs.find("]")
+        if end_idx != -1:
+            parts_str = obs[7:end_idx]
+            active_subs = [p.strip() for p in parts_str.split(",") if p.strip()]
+            if sub_key:
+                return "avaria" if sub_key in active_subs else "ok"
+    return "avaria"
+
+def render_motorcycle_drawing(v: Vistoria) -> Image.Image:
+    from PIL import ImageDraw
+    
+    def get_bezier_points(p0, p1, p2, p3, num_points=15):
+        pts = []
+        for i in range(num_points + 1):
+            t = i / num_points
+            x = (1-t)**3 * p0[0] + 3*(1-t)**2 * t * p1[0] + 3*(1-t) * t**2 * p2[0] + t**3 * p3[0]
+            y = (1-t)**3 * p0[1] + 3*(1-t)**2 * t * p1[1] + 3*(1-t) * t**2 * p2[1] + t**3 * p3[1]
+            pts.append((x, y))
+        return pts
+
+    S = 3
+    img = Image.new("RGBA", (200 * S, 400 * S), "#FFFFFF")
+    draw = ImageDraw.Draw(img)
+    
+    def scale_pts(pts):
+        return [(x * S, y * S) for x, y in pts]
+
+    def get_colors(group_key, sub_key=None):
+        status = get_part_status(v, group_key, sub_key)
+        if status == "avaria":
+            return (252, 230, 194, 255), (245, 158, 11, 255)
+        else:
+            return (236, 250, 245, 255), (16, 185, 129, 255)
+
+    def get_glass_colors(sub):
+        status = get_part_status(v, "vidros_parabrisa", sub)
+        if status == "avaria":
+            return (252, 230, 194, 255), (245, 158, 11, 255)
+        else:
+            return (175, 228, 252, 255), (2, 132, 199, 255)
+
+    def get_light_colors(sub, default_color):
+        status = get_part_status(v, "farois_lanternas", sub)
+        if status == "avaria":
+            return (245, 158, 11, 255)
+        else:
+            return default_color
+
+    def get_mirror_colors(sub):
+        status = get_part_status(v, "retrovisores", sub)
+        if status == "avaria":
+            return (245, 158, 11, 255)
+        else:
+            return (71, 85, 105, 255)
+
+    # 1. Pneus
+    for sub, (x, y, w, h) in [("de", (91, 40, 18, 42)), ("te", (91, 290, 18, 48))]:
+        bg, border = get_colors("pneus", sub)
+        box = [x * S, y * S, (x + w) * S, (y + h) * S]
+        draw.rounded_rectangle(box, radius=4 * S, fill=bg, outline=border, width=int(1.5 * S))
+
+    # 2. Rodas
+    for sub, (cx, cy) in [("de", (100, 61)), ("te", (100, 314))]:
+        bg, border = get_colors("calotas", sub)
+        r = 5
+        box = [(cx - r) * S, (cy - r) * S, (cx + r) * S, (cy + r) * S]
+        draw.ellipse(box, fill=bg, outline=border, width=int(1 * S))
+
+    # 3. Chassi
+    draw.polygon(scale_pts([(96, 61), (104, 61), (104, 314), (96, 314)]), fill=(226, 232, 240, 255), outline=(71, 85, 105, 255), width=int(1.5 * S))
+
+    # 4. Laterais
+    bg, border = get_colors("lateral_esquerda")
+    pts = get_bezier_points((90, 130), (80, 180), (80, 230), (90, 280))
+    draw.line(scale_pts(pts), fill=border, width=int(5 * S), joint="round")
+
+    bg, border = get_colors("lateral_direita")
+    pts = get_bezier_points((110, 130), (120, 180), (120, 230), (110, 280))
+    draw.line(scale_pts(pts), fill=border, width=int(5 * S), joint="round")
+
+    # 5. Tanque
+    bg, border = get_colors("capo")
+    pts = get_bezier_points((88, 120), (88, 95), (112, 95), (112, 120)) + [(114, 175)] + get_bezier_points((114, 175), (114, 190), (86, 190), (86, 175))
+    draw.polygon(scale_pts(pts), fill=bg, outline=border, width=int(1.5 * S))
+
+    # 6. Assento
+    bg, border = get_colors("teto")
+    pts = [(88, 185), (112, 185), (110, 245), (90, 245)]
+    draw.polygon(scale_pts(pts), fill=bg, outline=border, width=int(1.5 * S))
+
+    # 7. Baú
+    bg, border = get_colors("porta_malas")
+    box = [78 * S, 250 * S, (78 + 44) * S, (250 + 36) * S]
+    draw.rounded_rectangle(box, radius=4 * S, fill=bg, outline=border, width=int(1.5 * S))
+
+    # 8. Guidão
+    bg, border = get_colors("para_choque_dianteiro")
+    draw.line(scale_pts([(60, 90), (140, 90)]), fill=border, width=int(6 * S), joint="round")
+
+    # 9. Relação
+    bg, border = get_colors("para_choque_traseiro")
+    draw.line(scale_pts([(88, 280), (88, 325)]), fill=border, width=int(5 * S), joint="round")
+
+    # 10. Escapamento
+    bg, border = get_glass_colors("diant")
+    box = [114 * S, 255 * S, (114 + 8) * S, (255 + 60) * S]
+    draw.rectangle(box, fill=bg, outline=border, width=int(1 * S))
+
+    # 11. Faróis / Lanternas
+    c_fe = get_light_colors("fe", (253, 224, 71, 255))
+    pts = get_bezier_points((94, 36), (100, 32), (100, 32), (106, 36))
+    draw.line(scale_pts(pts), fill=c_fe, width=int(4 * S), joint="round")
+
+    c_le = get_light_colors("le", (239, 68, 68, 255))
+    pts = get_bezier_points((94, 336), (100, 340), (100, 340), (106, 336))
+    draw.line(scale_pts(pts), fill=c_le, width=int(4 * S), joint="round")
+
+    # 12. Retrovisores
+    c_esq = get_mirror_colors("esq")
+    pts = get_bezier_points((70, 90), (60, 76), (55, 76), (65, 70))
+    draw.line(scale_pts(pts), fill=c_esq, width=int(2.5 * S), joint="round")
+
+    c_dir = get_mirror_colors("dir")
+    pts = get_bezier_points((130, 90), (140, 76), (145, 76), (135, 70))
+    draw.line(scale_pts(pts), fill=c_dir, width=int(2.5 * S), joint="round")
+
+    return img
+
+def render_vehicle_drawing(v: Vistoria) -> Image.Image:
+    if v.vehicle and v.vehicle.type == 'moto':
+        return render_motorcycle_drawing(v)
+        
+    from PIL import ImageDraw
+    
+    def get_bezier_points(p0, p1, p2, p3, num_points=15):
+        pts = []
+        for i in range(num_points + 1):
+            t = i / num_points
+            x = (1-t)**3 * p0[0] + 3*(1-t)**2 * t * p1[0] + 3*(1-t) * t**2 * p2[0] + t**3 * p3[0]
+            y = (1-t)**3 * p0[1] + 3*(1-t)**2 * t * p1[1] + 3*(1-t) * t**2 * p2[1] + t**3 * p3[1]
+            pts.append((x, y))
+        return pts
+
+    def get_quad_bezier_points(p0, p1, p2, num_points=10):
+        pts = []
+        for i in range(num_points + 1):
+            t = i / num_points
+            x = (1-t)**2 * p0[0] + 2*(1-t)*t * p1[0] + t**2 * p2[0]
+            y = (1-t)**2 * p0[1] + 2*(1-t)*t * p1[1] + t**2 * p2[1]
+            pts.append((x, y))
+        return pts
+
+    S = 3
+    img = Image.new("RGBA", (200 * S, 400 * S), "#FFFFFF")
+    draw = ImageDraw.Draw(img)
+    
+    def scale_pts(pts):
+        return [(x * S, y * S) for x, y in pts]
+
+    def get_colors(group_key, sub_key=None):
+        status = get_part_status(v, group_key, sub_key)
+        if status == "avaria":
+            return (252, 230, 194, 255), (245, 158, 11, 255)
+        else:
+            return (236, 250, 245, 255), (16, 185, 129, 255)
+
+    def get_glass_colors(sub):
+        status = get_part_status(v, "vidros_parabrisa", sub)
+        if status == "avaria":
+            return (252, 230, 194, 255), (245, 158, 11, 255)
+        else:
+            return (175, 228, 252, 255), (2, 132, 199, 255)
+
+    def get_light_colors(sub, default_color):
+        status = get_part_status(v, "farois_lanternas", sub)
+        if status == "avaria":
+            return (245, 158, 11, 255)
+        else:
+            return default_color
+
+    def get_mirror_colors(sub):
+        status = get_part_status(v, "retrovisores", sub)
+        if status == "avaria":
+            return (245, 158, 11, 255)
+        else:
+            return (71, 85, 105, 255)
+
+    # 1. Pneus
+    for sub, (x, y, w, h) in [
+        ("de", (15, 80, 22, 46)),
+        ("dd", (163, 80, 22, 46)),
+        ("te", (15, 274, 22, 46)),
+        ("td", (163, 274, 22, 46))
+    ]:
+        bg, border = get_colors("pneus", sub)
+        box = [x * S, y * S, (x + w) * S, (y + h) * S]
+        draw.rounded_rectangle(box, radius=6 * S, fill=bg, outline=border, width=int(1.5 * S))
+
+    # 2. Calotas
+    for sub, (cx, cy) in [("de", (26, 103)), ("dd", (174, 103)), ("te", (26, 297)), ("td", (174, 297))]:
+        bg, border = get_colors("calotas", sub)
+        r = 7
+        box = [(cx - r) * S, (cy - r) * S, (cx + r) * S, (cy + r) * S]
+        draw.ellipse(box, fill=bg, outline=border, width=int(1 * S))
+
+    # 3. Laterais
+    bg, border = get_colors("lateral_esquerda")
+    pts = get_bezier_points((35, 75), (30, 150), (30, 250), (35, 325))
+    draw.line(scale_pts(pts), fill=border, width=int(6 * S), joint="round")
+    
+    bg, border = get_colors("lateral_direita")
+    pts = get_bezier_points((165, 75), (170, 150), (170, 250), (165, 325))
+    draw.line(scale_pts(pts), fill=border, width=int(6 * S), joint="round")
+
+    # 4. Chassi
+    chassi_pts = (
+        get_bezier_points((35, 75), (35, 55), (50, 45), (100, 45)) +
+        get_bezier_points((100, 45), (150, 45), (165, 55), (165, 75)) +
+        [(165, 325)] +
+        get_bezier_points((165, 325), (165, 345), (150, 355), (100, 355)) +
+        get_bezier_points((100, 355), (50, 355), (35, 345), (35, 325))
+    )
+    draw.polygon(scale_pts(chassi_pts), fill=(226, 232, 240, 255), outline=(71, 85, 105, 255), width=int(2 * S))
+
+    # 5. Capô
+    bg, border = get_colors("capo")
+    capo_pts = (
+        get_bezier_points((37, 75), (37, 57), (50, 47), (100, 47)) +
+        get_bezier_points((100, 47), (150, 47), (163, 57), (163, 75)) +
+        [(163, 130), (37, 130)]
+    )
+    draw.polygon(scale_pts(capo_pts), fill=bg, outline=border, width=int(1.5 * S))
+
+    # 6. Teto
+    bg, border = get_colors("teto")
+    box = [37 * S, 145 * S, (37 + 126) * S, (145 + 125) * S]
+    draw.rounded_rectangle(box, radius=8 * S, fill=bg, outline=border, width=int(1.5 * S))
+
+    # 7. Porta-malas
+    bg, border = get_colors("porta_malas")
+    porta_malas_pts = (
+        [(37, 285), (163, 285), (163, 325)] +
+        get_bezier_points((163, 325), (163, 343), (150, 353), (100, 353)) +
+        get_bezier_points((100, 353), (50, 353), (37, 343), (37, 325))
+    )
+    draw.polygon(scale_pts(porta_malas_pts), fill=bg, outline=border, width=int(1.5 * S))
+
+    # 8. Para-choques
+    bg, border = get_colors("para_choque_dianteiro")
+    pts = get_bezier_points((45, 46), (60, 41), (140, 41), (155, 46))
+    draw.line(scale_pts(pts), fill=border, width=int(7 * S), joint="round")
+    
+    bg, border = get_colors("para_choque_traseiro")
+    pts = get_bezier_points((45, 354), (60, 359), (140, 359), (155, 354))
+    draw.line(scale_pts(pts), fill=border, width=int(7 * S), joint="round")
+
+    # 9. Vidros
+    bg, border = get_glass_colors("diant")
+    pts = [(44, 140), (156, 140), (146, 125), (54, 125)]
+    draw.polygon(scale_pts(pts), fill=bg, outline=border, width=int(1 * S))
+    
+    bg, border = get_glass_colors("tras")
+    pts = [(44, 275), (156, 275), (148, 285), (52, 285)]
+    draw.polygon(scale_pts(pts), fill=bg, outline=border, width=int(1 * S))
+
+    for sub, (x, y, w, h) in [
+        ("vlde", (34, 148, 4, 56)),
+        ("vldd", (162, 148, 4, 56)),
+        ("vlte", (34, 211, 4, 56)),
+        ("vltd", (162, 211, 4, 56))
+    ]:
+        bg, border = get_glass_colors(sub)
+        box = [x * S, y * S, (x + w) * S, (y + h) * S]
+        draw.rectangle(box, fill=bg, outline=border, width=int(1 * S))
+
+    # 10. Faróis / Lanternas
+    c_fe = get_light_colors("fe", (253, 224, 71, 255))
+    pts = get_quad_bezier_points((38, 65), (48, 65), (48, 55))
+    draw.line(scale_pts(pts), fill=c_fe, width=int(4 * S), joint="round")
+    
+    c_fd = get_light_colors("fd", (253, 224, 71, 255))
+    pts = get_quad_bezier_points((162, 65), (152, 65), (152, 55))
+    draw.line(scale_pts(pts), fill=c_fd, width=int(4 * S), joint="round")
+
+    c_le = get_light_colors("le", (239, 68, 68, 255))
+    pts = get_quad_bezier_points((38, 345), (48, 345), (48, 351))
+    draw.line(scale_pts(pts), fill=c_le, width=int(4 * S), joint="round")
+    
+    c_ld = get_light_colors("ld", (239, 68, 68, 255))
+    pts = get_quad_bezier_points((162, 345), (152, 345), (152, 351))
+    draw.line(scale_pts(pts), fill=c_ld, width=int(4 * S), joint="round")
+
+    # 11. Retrovisores
+    c_esq = get_mirror_colors("esq")
+    pts = get_bezier_points((28, 135), (20, 135), (20, 145), (28, 145))
+    draw.line(scale_pts(pts), fill=c_esq, width=int(4 * S), joint="round")
+    
+    c_dir = get_mirror_colors("dir")
+    pts = get_bezier_points((172, 135), (180, 135), (180, 145), (172, 145))
+    draw.line(scale_pts(pts), fill=c_dir, width=int(4 * S), joint="round")
+
+    return img
+
+def generate_vistoria_pdf(vistoria_obj: Vistoria) -> str:
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.units import mm
+    from reportlab.lib import colors
+    from reportlab.platypus import (
+        SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image as RLImage
+    )
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    import datetime
+
+    # timezone seguro
+    try:
+        from zoneinfo import ZoneInfo
+        UTC = ZoneInfo("UTC")
+        BRT = ZoneInfo("America/Sao_Paulo")
+    except Exception:
+        from datetime import timezone, timedelta
+        UTC = timezone.utc
+        BRT = timezone(timedelta(hours=-3))
+
+    RELATORIOS_DIR.mkdir(parents=True, exist_ok=True)
+    plate = vistoria_obj.vehicle.plate if vistoria_obj.vehicle else "SEM_PLACA"
+    safe_user = (vistoria_obj.created_by_user.username if vistoria_obj.created_by_user else "supervisor").replace(" ", "_")
+
+    dt_brt = vistoria_obj.created_at.astimezone(BRT) if vistoria_obj.created_at.tzinfo is not None else vistoria_obj.created_at
+    dt_str = dt_brt.strftime("%Y-%m-%d_%Hh%M")
+    now_brt_str = datetime.datetime.now(BRT).strftime("%d/%m/%Y %H:%M")
+
+    filename = f"relatorio_vistoria_{safe_user}_{plate}_{dt_str}.pdf"
+    out_path = RELATORIOS_DIR / filename
+
+    styles = getSampleStyleSheet()
+    styles.add(ParagraphStyle(name="BodyJustify", parent=styles["Normal"], fontSize=7.5, leading=9.5))
+    styles.add(ParagraphStyle(name="SectionTitle", parent=styles["Heading3"], spaceBefore=6, spaceAfter=3,
+                               textColor=colors.HexColor("#1F3C78"), fontSize=9.5, leading=11.5))
+
+    AZUL = colors.Color(25/255, 60/255, 120/255)
+    CINZA_TEXTO = colors.HexColor("#4D4D4D")
+
+    RODAPE_LINHAS = [
+        "ADAPT LINK SERVIÇOS EM COMUNICAÇÃO MULTIMÍDIA EIRELI",
+        "CNPJ: 08.980.148/0001-41       Inscr. Est.: 78.342.480",
+        "Rua Waldir Pedro de Medeiros, 253 – São Miguel – Seropédica – RJ",
+        "CEP: 23.893-725",
+        "Tel.: (21) 3812-5900 / (21) 2682-7822",
+        "WWW.ADAPTLINK.COM.BR",
+    ]
+
+    config = SystemConfig.query.first()
+    
+    logo_path_custom = None
+    if config and config.pdf_logo:
+        custom_p = LAYOUT_UPLOAD_DIR / config.pdf_logo
+        if custom_p.exists():
+            logo_path_custom = str(custom_p)
+            
+    pdf_logo_path = logo_path_custom if logo_path_custom else (str(LOGO_PATH) if LOGO_PATH.exists() else None)
+
+    custom_rodape_linhas = None
+    if config and config.pdf_footer:
+        custom_rodape_linhas = [linha.strip() for linha in config.pdf_footer.splitlines() if linha.strip()]
+        
+    pdf_rodape_linhas = custom_rodape_linhas if custom_rodape_linhas is not None else RODAPE_LINHAS
+
+    def header_footer_factory(titulo: str, subtitulo: str):
+        def _on_page(c, doc):
+            width, height = A4
+            if pdf_logo_path:
+                try:
+                    c.drawImage(pdf_logo_path, 15*mm, height-24*mm, 26*mm, 11*mm,
+                                preserveAspectRatio=True, mask="auto")
+                except Exception:
+                    pass
+            c.setStrokeColor(AZUL)
+            c.setLineWidth(1.0)
+            c.line(12*mm, height-27*mm, width-12*mm, height-27*mm)
+            c.setFont("Helvetica-Bold", 12)
+            c.setFillColor(AZUL)
+            c.drawCentredString(width/2, height-14*mm, titulo)
+            c.setFont("Helvetica", 9)
+            c.setFillColor(colors.black)
+            c.drawCentredString(width/2, height-20*mm, subtitulo)
+            c.setFont("Helvetica", 7)
+            c.setFillColor(CINZA_TEXTO)
+            c.drawString(12*mm, height-31*mm, f"Emitido em: {now_brt_str}")
+            c.drawRightString(width-12*mm, height-31*mm, "Relatório gerado automaticamente")
+
+            footer_line_y = 20*mm
+            c.setStrokeColor(colors.HexColor("#BBBBBB"))
+            c.setLineWidth(0.8)
+            c.line(12*mm, footer_line_y, width-12*mm, footer_line_y)
+            c.setFont("Helvetica", 6.5)
+            c.setFillColor(colors.HexColor("#6E6E6E"))
+            y = 16*mm
+            for linha in pdf_rodape_linhas:
+                c.drawCentredString(width/2, y, linha)
+                y -= 2.6*mm
+            c.setFont("Helvetica-Oblique", 6.5)
+            c.drawRightString(width-12*mm, 5*mm, f"Página {c.getPageNumber()}")
+        return _on_page
+
+    doc = SimpleDocTemplate(
+        str(out_path),
+        pagesize=A4,
+        rightMargin=12 * mm,
+        leftMargin=12 * mm,
+        topMargin=34 * mm,
+        bottomMargin=23 * mm
+    )
+
+    elements = []
+
+    # 1. Informações da Vistoria
+    elements.append(Paragraph("<b>Informações da Vistoria</b>", styles["SectionTitle"]))
+    
+    status_text = "Com avarias" if vistoria_obj.status_geral == "avarias" else "OK"
+    turno_formatted = "Início do Expediente" if vistoria_obj.turno == "inicio" else ("Durante Expediente" if vistoria_obj.turno == "durante" else "Fim do Expediente")
+    
+    meta_data = [
+        ["Vistoria ID:", f"#{vistoria_obj.id}", "Supervisor/Técnico:", vistoria_obj.created_by_user.username if vistoria_obj.created_by_user else "-"],
+        ["Veículo:", f"{vistoria_obj.vehicle.brand or ''} {vistoria_obj.vehicle.model or ''}".strip(), "Placa:", plate],
+        ["KM:", str(vistoria_obj.km or "-"), "Turno:", turno_formatted],
+        ["Data:", dt_brt.strftime("%d/%m/%Y %H:%M"), "Status Geral:", status_text],
+        ["Local:", vistoria_obj.local or "-", "", ""]
+    ]
+
+    t = Table(meta_data, colWidths=[24 * mm, 69 * mm, 30 * mm, 63 * mm])
+    t.setStyle(TableStyle([
+        ("BOX", (0, 0), (-1, -1), 0.8, colors.HexColor("#707070")),
+        ("GRID", (0, 0), (-1, -1), 0.6, colors.HexColor("#707070")),
+        ("SPAN", (1, 4), (3, 4)),
+        ("FONTSIZE", (0, 0), (-1, -1), 7.5),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("TOPPADDING", (0, 0), (-1, -1), 1.5),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 1.5),
+        ("BACKGROUND", (0, 0), (0, -1), colors.HexColor("#F4F4F4")),
+        ("BACKGROUND", (2, 0), (2, -2), colors.HexColor("#F4F4F4")),
+        ("FONTNAME", (0, 0), (0, -1), "Helvetica-Bold"),
+        ("FONTNAME", (2, 0), (2, -2), "Helvetica-Bold"),
+    ]))
+    elements.append(t)
+    elements.append(Spacer(1, 4))
+
+    # 2. Mapa Visual e Observações Gerais
+    img_temp_path = None
+    map_image = None
+    try:
+        img_temp_path = RELATORIOS_DIR / f"temp_vehicle_vistoria_{vistoria_obj.id}.png"
+        img_pil = render_vehicle_drawing(vistoria_obj)
+        img_pil.save(str(img_temp_path), "PNG")
+        map_image = RLImage(str(img_temp_path), width=45 * mm, height=90 * mm)
+        map_image.hAlign = 'CENTER'
+    except Exception as e:
+        print("⚠️ Erro ao renderizar imagem do veículo no PDF:", e)
+
+    obs_text = vistoria_obj.observacoes or "Nenhuma observação geral registrada."
+    obs_style = ParagraphStyle(
+        name="ObsStyle",
+        parent=styles["Normal"],
+        fontSize=8,
+        leading=11,
+        textColor=colors.HexColor("#333333")
+    )
+    obs_p = Paragraph(f"<b>Observações Gerais:</b><br/>{obs_text}", obs_style)
+    
+    if map_image:
+        map_table_data = [[map_image, obs_p]]
+        map_table = Table(map_table_data, colWidths=[55 * mm, 131 * mm])
+        map_table.setStyle(TableStyle([
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("ALIGN", (0, 0), (0, 0), "CENTER"),
+            ("LEFTPADDING", (0, 0), (-1, -1), 0),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+            ("TOPPADDING", (0, 0), (-1, -1), 4),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+        ]))
+        elements.append(map_table)
+    else:
+        elements.append(obs_p)
+    elements.append(Spacer(1, 4))
+
+    # 3. Itens Avaliados
+    elements.append(Paragraph("<b>Detalhamento dos Itens Avaliados</b>", styles["SectionTitle"]))
+    data_tbl = [["Item", "Status", "Detalhamento da Avaria / Observação"]]
+    
+    is_moto = (vistoria_obj.vehicle and vistoria_obj.vehicle.type == 'moto')
+    if is_moto:
+        ITENS_INFO = [
+            ('para_choque_dianteiro', 'Guidão e Manetes'),
+            ('para_choque_traseiro', 'Relação (Corrente/Coroa)'),
+            ('lateral_esquerda', 'Lateral esquerda'),
+            ('lateral_direita', 'Lateral direita'),
+            ('capo', 'Tanque de Combustível'),
+            ('teto', 'Assento / Banco'),
+            ('porta_malas', 'Baú / Bauleto'),
+            ('retrovisores', 'Retrovisores'),
+            ('farois_lanternas', 'Farol / Lanterna'),
+            ('vidros_parabrisa', 'Escapamento / Motor'),
+            ('pneus', 'Pneus (Dianteiro/Traseiro)'),
+            ('calotas', 'Rodas / Raios')
+        ]
+    else:
+        ITENS_INFO = [
+            ('para_choque_dianteiro', 'Para-choque dianteiro'),
+            ('para_choque_traseiro', 'Para-choque traseiro'),
+            ('lateral_esquerda', 'Lateral esquerda'),
+            ('lateral_direita', 'Lateral direita'),
+            ('capo', 'Capô'),
+            ('teto', 'Teto'),
+            ('porta_malas', 'Porta-malas'),
+            ('retrovisores', 'Retrovisores'),
+            ('farois_lanternas', 'Faróis/Lanternas'),
+            ('vidros_parabrisa', 'Vidros/Para-brisa'),
+            ('pneus', 'Pneus'),
+            ('calotas', 'Calotas')
+        ]
+
+    def format_item_details(v, key, label):
+        val = getattr(v, key, "ok")
+        if val != "avaria":
+            return "OK", "-"
+        obs = getattr(v, f"obs_{key}", "") or ""
+        clean_obs = obs
+        sub_desc = ""
+        if obs.startswith("[parts:"):
+            end_idx = obs.find("]")
+            if end_idx != -1:
+                parts_str = obs[7:end_idx]
+                clean_obs = obs[end_idx+1:].strip()
+                if is_moto:
+                    sub_labels = {
+                        "de": "Dianteiro",
+                        "te": "Traseiro",
+                        "fe": "Farol (Dianteiro)",
+                        "le": "Lanterna (Traseiro)",
+                        "esq": "Esquerdo",
+                        "dir": "Direito"
+                    }
+                else:
+                    sub_labels = {
+                        "de": "Dianteiro Esquerdo (DE)", "dd": "Dianteiro Direito (DD)",
+                        "te": "Traseiro Esquerdo (TE)", "td": "Traseiro Direito (TD)",
+                        "diant": "Dianteiro", "tras": "Traseiro",
+                        "fe": "Farol Esquerdo", "fd": "Farol Direito",
+                        "le": "Lanterna Esquerda", "ld": "Lanterna Direita",
+                        "esq": "Esquerdo", "dir": "Direito",
+                        "vlde": "Vidro Lat. Diant. Esq.", "vldd": "Vidro Lat. Diant. Dir.",
+                        "vlte": "Vidro Lat. Tras. Esq.", "vltd": "Vidro Lat. Tras. Dir."
+                    }
+                subs = [p.strip() for p in parts_str.split(",") if p.strip()]
+                sub_names = [sub_labels.get(s, s) for s in subs]
+                if sub_names:
+                    sub_desc = f"Partes: {', '.join(sub_names)}."
+        
+        final_obs = ""
+        if sub_desc:
+            final_obs += sub_desc
+        if clean_obs:
+            if final_obs:
+                final_obs += " Obs: "
+            final_obs += clean_obs
+        if not final_obs:
+            final_obs = "-"
+        return "Avaria", final_obs
+
+    for key, label in ITENS_INFO:
+        status, details = format_item_details(vistoria_obj, key, label)
+        
+        if status == "Avaria":
+            status_para = Paragraph("<b>⚠️ AVARIA</b>", ParagraphStyle(name="AvariaStatus", parent=styles["BodyJustify"], textColor=colors.HexColor("#D97706")))
+        else:
+            status_para = Paragraph("✅ OK", ParagraphStyle(name="OkStatus", parent=styles["BodyJustify"], textColor=colors.HexColor("#059669")))
+
+        data_tbl.append([
+            Paragraph(label, styles["BodyJustify"]),
+            status_para,
+            Paragraph(details, styles["BodyJustify"])
+        ])
+
+    tbl = Table(data_tbl, colWidths=[55 * mm, 30 * mm, 101 * mm])
+    tbl.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#D9E2F3")),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.black),
+        ("GRID", (0, 0), (-1, -1), 0.6, colors.HexColor("#707070")),
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("TOPPADDING", (0, 0), (-1, -1), 1.2),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 1.2),
+        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#F5F5F5")]),
+    ]))
+    elements.append(tbl)
+    elements.append(Spacer(1, 4))
+
+    # 4. Fotos Registradas
+    photo_elements = []
+    if vistoria_obj.fotos:
+        for f in vistoria_obj.fotos[:6]:
+            try:
+                img_path = VISTORIAS_UPLOAD_DIR / f.filename
+                if img_path.exists():
+                    img = RLImage(str(img_path), width=40 * mm, height=30 * mm)
+                    photo_elements.append(img)
+            except Exception:
+                continue
+
+    if photo_elements:
+        elements.append(Paragraph("<b>Fotos Registradas</b>", styles["SectionTitle"]))
+        photo_rows = []
+        for i in range(0, len(photo_elements), 3):
+            row = photo_elements[i:i+3]
+            while len(row) < 3:
+                row.append("")
+            photo_rows.append(row)
+        
+        t_photos = Table(photo_rows, colWidths=[62 * mm, 62 * mm, 62 * mm])
+        t_photos.setStyle(TableStyle([
+            ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("TOPPADDING", (0, 0), (-1, -1), 2),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
+        ]))
+        elements.append(t_photos)
+        elements.append(Spacer(1, 4))
+
+    doc.build(
+        elements,
+        onFirstPage=header_footer_factory(
+            "RELATÓRIO DE VISTORIA VEICULAR",
+            f"Veículo: {plate}  |  Supervisor: {vistoria_obj.created_by_user.username if vistoria_obj.created_by_user else '-'}",
+        ),
+        onLaterPages=header_footer_factory(
+            "RELATÓRIO DE VISTORIA VEICULAR",
+            f"Veículo: {plate}  |  Supervisor: {vistoria_obj.created_by_user.username if vistoria_obj.created_by_user else '-'}",
+        )
+    )
+
+    if img_temp_path and img_temp_path.exists():
+        try:
+            img_temp_path.unlink()
+        except Exception:
+            pass
+
+    return str(out_path)
+
+@fleet_bp.route("/vistorias/<int:vistoria_id>/pdf")
+@supervisor_allowed
+def vistoria_pdf_download(vistoria_id):
+    from flask import send_file
+    
+    v = Vistoria.query.get_or_404(vistoria_id)
+    try:
+        pdf_path_str = generate_vistoria_pdf(v)
+    except Exception as e:
+        registrar_log(f"Erro ao gerar PDF da vistoria #{vistoria_id}: {str(e)}")
+        flash("❌ Erro interno ao compilar o PDF.", "error")
+        return redirect(url_for("vistorias_list"))
+        
+    return send_file(
+        pdf_path_str,
+        mimetype="application/pdf",
+        as_attachment=False,
+        download_name=f"vistoria_{v.id}_{v.vehicle.plate if v.vehicle else 'sem_placa'}.pdf"
+    )
 
 
 # ----------------- CHECKLIST TÉCNICO (MODO) -----------------
@@ -2349,20 +3020,37 @@ def vistorias_detail(vistoria_id):
             fotos_por_item[f.item_key].append(f)
 
     if request.args.get("format") == "json":
-        ITENS_INFO = [
-            ('para_choque_dianteiro', 'Para-choque dianteiro'),
-            ('para_choque_traseiro', 'Para-choque traseiro'),
-            ('lateral_esquerda', 'Lateral esquerda'),
-            ('lateral_direita', 'Lateral direita'),
-            ('capo', 'Capô'),
-            ('teto', 'Teto'),
-            ('porta_malas', 'Porta-malas'),
-            ('retrovisores', 'Retrovisores'),
-            ('farois_lanternas', 'Faróis/Lanternas'),
-            ('vidros_parabrisa', 'Vidros/Para-brisa'),
-            ('pneus', 'Pneus'),
-            ('calotas', 'Calotas')
-        ]
+        is_moto = (v.vehicle and v.vehicle.type == 'moto')
+        if is_moto:
+            ITENS_INFO = [
+                ('para_choque_dianteiro', 'Guidão e Manetes'),
+                ('para_choque_traseiro', 'Relação (Corrente/Coroa)'),
+                ('lateral_esquerda', 'Lateral esquerda'),
+                ('lateral_direita', 'Lateral direita'),
+                ('capo', 'Tanque de Combustível'),
+                ('teto', 'Assento / Banco'),
+                ('porta_malas', 'Baú / Bauleto'),
+                ('retrovisores', 'Retrovisores'),
+                ('farois_lanternas', 'Farol / Lanterna'),
+                ('vidros_parabrisa', 'Escapamento / Motor'),
+                ('pneus', 'Pneus (Dianteiro/Traseiro)'),
+                ('calotas', 'Rodas / Raios')
+            ]
+        else:
+            ITENS_INFO = [
+                ('para_choque_dianteiro', 'Para-choque dianteiro'),
+                ('para_choque_traseiro', 'Para-choque traseiro'),
+                ('lateral_esquerda', 'Lateral esquerda'),
+                ('lateral_direita', 'Lateral direita'),
+                ('capo', 'Capô'),
+                ('teto', 'Teto'),
+                ('porta_malas', 'Porta-malas'),
+                ('retrovisores', 'Retrovisores'),
+                ('farois_lanternas', 'Faróis/Lanternas'),
+                ('vidros_parabrisa', 'Vidros/Para-brisa'),
+                ('pneus', 'Pneus'),
+                ('calotas', 'Calotas')
+            ]
         
         serialized_items = []
         for key, label in ITENS_INFO:
@@ -2371,13 +3059,15 @@ def vistorias_detail(vistoria_id):
                 "label": label,
                 "status": getattr(v, key, "ok"),
                 "obs": getattr(v, f"obs_{key}", None) or "",
-                "fotos": [f.filename for f in fotos_por_item[key]]
+                "fotos": [f.filename for f in fotos_por_item[key]],
+                "fotos_info": [{"id": f.id, "filename": f.filename} for f in fotos_por_item[key]]
             })
             
         return jsonify({
             "id": v.id,
             "created_at": v.created_at.strftime('%d/%m/%Y %H:%M'),
             "plate": v.vehicle.plate if v.vehicle else "-",
+            "vehicle_type": v.vehicle.type if v.vehicle else "carro",
             "km": v.km,
             "turno": v.turno,
             "local": v.local or "",
@@ -2392,6 +3082,123 @@ def vistorias_detail(vistoria_id):
         v=v,
         fotos_por_item=fotos_por_item
     )
+
+
+@fleet_bp.route("/vistorias/<int:vistoria_id>/editar", methods=["GET", "POST"])
+@supervisor_allowed
+def vistorias_editar(vistoria_id):
+    v = Vistoria.query.get_or_404(vistoria_id)
+    if request.method == "GET":
+        return redirect(url_for("vistorias_list", open_id=v.id, edit="true"))
+
+    ITENS = [
+        "para_choque_dianteiro",
+        "para_choque_traseiro",
+        "lateral_esquerda",
+        "lateral_direita",
+        "capo",
+        "teto",
+        "porta_malas",
+        "retrovisores",
+        "farois_lanternas",
+        "vidros_parabrisa",
+        "pneus",
+        "calotas",
+    ]
+
+    if request.method == "POST":
+        vehicle_id = (request.form.get("vehicle_id") or "").strip()
+        km = (request.form.get("km") or "").strip()
+        turno = request.form.get("turno", "fim")
+        local = (request.form.get("local") or "").strip() or None
+        observacoes = (request.form.get("observacoes") or "").strip() or None
+
+        if not vehicle_id.isdigit():
+            flash("Selecione um veículo válido.", "error")
+            return redirect(url_for("vistorias_list", open_id=v.id, edit="true"))
+
+        # 1) Excluir fotos marcadas para exclusão
+        delete_photo_ids = request.form.getlist("delete_photos[]")
+        for f_id_str in delete_photo_ids:
+            if f_id_str.isdigit():
+                f_id = int(f_id_str)
+                foto_obj = VistoriaFoto.query.filter_by(id=f_id, vistoria_id=v.id).first()
+                if foto_obj:
+                    if foto_obj.filename:
+                        filepath = VISTORIAS_UPLOAD_DIR / foto_obj.filename
+                        if filepath.exists():
+                            try:
+                                filepath.unlink()
+                            except Exception as unlink_err:
+                                print(f"Erro ao deletar arquivo de foto {filepath}: {unlink_err}")
+                    db.session.delete(foto_obj)
+
+        # 2) Atualizar status e observações dos itens
+        campos_status = {k: (request.form.get(k) or "ok") for k in ITENS}
+        for k in ITENS:
+            setattr(v, k, campos_status[k])
+            obs_val = (request.form.get(f"obs_{k}") or "").strip()
+            setattr(v, f"obs_{k}", obs_val or None)
+
+        # 3) Processar novas fotos
+        VISTORIAS_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+        saved = 0
+        rejected = 0
+
+        for k in ITENS:
+            files = request.files.getlist(f"foto_{k}[]")
+            if not files:
+                continue
+
+            for file in files:
+                if not file or not file.filename:
+                    continue
+
+                if not allowed_file(file.filename):
+                    rejected += 1
+                    continue
+
+                ext = os.path.splitext(file.filename)[1].lower()
+                filename = f"vistoria_{v.id}_{k}_{uuid.uuid4().hex}{ext}"
+                path = VISTORIAS_UPLOAD_DIR / filename
+
+                try:
+                    file.save(str(path))
+                    db.session.add(VistoriaFoto(
+                        vistoria_id=v.id,
+                        filename=filename,
+                        item_key=k
+                    ))
+                    saved += 1
+                except Exception as e:
+                    print("Erro salvando nova foto na edição:", k, e)
+                    rejected += 1
+
+        # 4) Atualizar dados principais
+        v.vehicle_id = int(vehicle_id)
+        v.km = int(km) if km.isdigit() else None
+        v.turno = turno
+        v.local = local
+        v.observacoes = observacoes
+
+        # 5) Recalcular status geral automático
+        v.status_geral = "avarias" if any(getattr(v, k) == "avaria" for k in ITENS) else "ok"
+
+        try:
+            db.session.commit()
+            registrar_log(f"Vistoria editada: ID {v.id} (Veículo: {v.vehicle.plate if v.vehicle else 'N/A'})")
+            if rejected:
+                flash(f"Vistoria atualizada. Fotos novas salvas: {saved}. Rejeitadas: {rejected}", "success")
+            else:
+                flash("Vistoria atualizada com sucesso.", "success")
+            return redirect(url_for("vistorias_list", open_id=v.id))
+        except Exception as e:
+            db.session.rollback()
+            registrar_log(f"Vistoria: ERRO AO EDITAR id={v.id}: {str(e)}")
+            flash(f"Erro ao salvar alterações da vistoria: {e}", "error")
+            return redirect(url_for("vistorias_list", open_id=v.id, edit="true"))
+
+    return redirect(url_for("vistorias_list", open_id=v.id, edit="true"))
 
 
 @fleet_bp.route("/vistorias/<int:vistoria_id>/excluir", methods=["POST"])
