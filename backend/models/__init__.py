@@ -179,6 +179,8 @@ class ChecklistItem(db.Model):
     require_justif_no = db.Column(db.Boolean, default=False)
     type = db.Column(db.String(50), default="texto_curto")
     options = db.Column(db.Text)
+    # Tipo de veículo ao qual este item pertence: carro | moto | caminhao | van
+    vehicle_type = db.Column(db.String(20), default="carro")
 
 
 class Announcement(db.Model):

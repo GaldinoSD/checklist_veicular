@@ -1385,13 +1385,23 @@ def checklist_delete(cid):
 @fleet_bp.route("/config-checklist")
 @admin_required
 def config_checklist():
-    items = ChecklistItem.query.order_by(ChecklistItem.order.asc()).all()
+    items_carro   = ChecklistItem.query.filter_by(vehicle_type="carro").order_by(ChecklistItem.order.asc()).all()
+    items_moto    = ChecklistItem.query.filter_by(vehicle_type="moto").order_by(ChecklistItem.order.asc()).all()
+    items_caminhao = ChecklistItem.query.filter_by(vehicle_type="caminhao").order_by(ChecklistItem.order.asc()).all()
+    items_van     = ChecklistItem.query.filter_by(vehicle_type="van").order_by(ChecklistItem.order.asc()).all()
     config = SystemConfig.query.first()
     if not config:
         config = SystemConfig(mode="start_only")
         db.session.add(config)
         db.session.commit()
-    return render_template("config_checklist.html", items=items, config=config)
+    return render_template(
+        "config_checklist.html",
+        items_carro=items_carro,
+        items_moto=items_moto,
+        items_caminhao=items_caminhao,
+        items_van=items_van,
+        config=config
+    )
 
 
 
@@ -1428,6 +1438,11 @@ def config_checklist_new():
     require_justif_no = request.form.get("require_justif_no") == "on"
     typ = request.form.get("type", "texto_curto")
     opts_raw = (request.form.get("options") or "").strip()
+    vehicle_type = request.form.get("vehicle_type", "carro")
+
+    allowed_vtypes = {"carro", "moto", "caminhao", "van"}
+    if vehicle_type not in allowed_vtypes:
+        vehicle_type = "carro"
 
     if not text_:
         flash("Texto é obrigatório.", "error")
@@ -1435,7 +1450,9 @@ def config_checklist_new():
 
     opts = opts_raw or None
 
-    last = db.session.query(db.func.max(ChecklistItem.order)).scalar() or 0
+    last = db.session.query(db.func.max(ChecklistItem.order)).filter(
+        ChecklistItem.vehicle_type == vehicle_type
+    ).scalar() or 0
     db.session.add(
         ChecklistItem(
             order=last + 1,
@@ -1444,11 +1461,12 @@ def config_checklist_new():
             require_justif_no=require_justif_no,
             type=typ,
             options=opts,
+            vehicle_type=vehicle_type,
         )
     )
     db.session.commit()
 
-    registrar_log(f"Item de checklist adicionado: {text_}")
+    registrar_log(f"Item de checklist adicionado ({vehicle_type}): {text_}")
     flash("Item adicionado.", "success")
     return redirect(url_for("config_checklist"))
 
@@ -1482,12 +1500,13 @@ def config_checklist_edit(iid):
 def config_checklist_del(iid):
     it = ChecklistItem.query.get_or_404(iid)
     texto = it.text
+    vtype = it.vehicle_type
 
     db.session.delete(it)
     db.session.commit()
 
     # reajustar ordem
-    items = ChecklistItem.query.order_by(ChecklistItem.order.asc()).all()
+    items = ChecklistItem.query.filter_by(vehicle_type=vtype).order_by(ChecklistItem.order.asc()).all()
     for idx, x in enumerate(items, start=1):
         x.order = idx
     db.session.commit()
@@ -1504,8 +1523,9 @@ def config_checklist_del(iid):
 def config_checklist_move(iid):
     direction = request.form.get("dir", "up")
     it = ChecklistItem.query.get_or_404(iid)
+    vtype = it.vehicle_type
 
-    items = ChecklistItem.query.order_by(ChecklistItem.order.asc()).all()
+    items = ChecklistItem.query.filter_by(vehicle_type=vtype).order_by(ChecklistItem.order.asc()).all()
     pos = items.index(it)
 
     if direction == "up" and pos > 0:
@@ -2602,12 +2622,30 @@ def vistoria_pdf_download(vistoria_id):
     )
 
 
+# ----------------- API: TIPO DO VEÍCULO -----------------
+@fleet_bp.route("/api/vehicle/<int:vid>/type")
+@login_required
+def api_vehicle_type(vid):
+    """Retorna o tipo do veículo em JSON para uso no frontend."""
+    from flask import jsonify
+    v = Vehicle.query.get_or_404(vid)
+    return jsonify({"type": v.type or "carro"})
+
+
 # ----------------- CHECKLIST TÉCNICO (MODO) -----------------
 @fleet_bp.route("/checklist", methods=["GET", "POST"])
 @login_required
 def checklist_mobile():
     vehicles = Vehicle.query.order_by(Vehicle.plate.asc()).all()
-    items_qs = ChecklistItem.query.order_by(ChecklistItem.order.asc()).all()
+    # Carrega itens de todos os tipos para o template (o JS filtra na tela)
+    items_by_type = {
+        "carro":    ChecklistItem.query.filter_by(vehicle_type="carro").order_by(ChecklistItem.order.asc()).all(),
+        "moto":     ChecklistItem.query.filter_by(vehicle_type="moto").order_by(ChecklistItem.order.asc()).all(),
+        "caminhao": ChecklistItem.query.filter_by(vehicle_type="caminhao").order_by(ChecklistItem.order.asc()).all(),
+        "van":      ChecklistItem.query.filter_by(vehicle_type="van").order_by(ChecklistItem.order.asc()).all(),
+    }
+    # items_qs usado no POST (filtrado pelo tipo do veículo submetido)
+    items_qs = []
     success = request.args.get("success") == "true"
 
     config = SystemConfig.query.first()
@@ -2619,7 +2657,7 @@ def checklist_mobile():
         return render_template(
             "checklist_mobile.html",
             vehicles=[],
-            items=[],
+            items_by_type={"carro":[], "moto":[], "caminhao":[], "van":[]},
             success=False,
             disabled=True
         )
@@ -2638,6 +2676,11 @@ def checklist_mobile():
         except ValueError:
             flash("KM inválido.", "error")
             return redirect(url_for("checklist_mobile"))
+
+        # Detecta o tipo do veículo e carrega apenas os itens correspondentes
+        v = Vehicle.query.get(vehicle_id)
+        v_type = (v.type or "carro") if v else "carro"
+        items_qs = ChecklistItem.query.filter_by(vehicle_type=v_type).order_by(ChecklistItem.order.asc()).all()
 
         # =====================================================
         # 🔥 CORRIGIDO: PEGAR DATA LOCAL REAL
@@ -2669,8 +2712,7 @@ def checklist_mobile():
                     flash("O checklist de chegada deve ser feito para o mesmo veículo do início.", "error")
                     return redirect(url_for("checklist_mobile"))
 
-        # 🔍 VALIDAÇÃO DE KM
-        v = Vehicle.query.get(vehicle_id)
+        # 🔍 VALIDAÇÃO DE KM (v já foi obtido para detectar o tipo)
         if v:
             km_atual = v.km or 0
 
@@ -2802,7 +2844,7 @@ def checklist_mobile():
         flash("✅ Checklist enviado com sucesso!", "success")
         return redirect(url_for("checklist_mobile", success="true"))
 
-    return render_template("checklist_mobile.html", vehicles=vehicles, items=items_qs, success=success)
+    return render_template("checklist_mobile.html", vehicles=vehicles, items_by_type=items_by_type, success=success)
 
 
 

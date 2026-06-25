@@ -283,7 +283,8 @@ def create_app():
             text('ALTER TABLE user_tool_inspection ADD COLUMN IF NOT EXISTS is_locked BOOLEAN DEFAULT true'),
             text('ALTER TABLE user_tool_status ADD COLUMN IF NOT EXISTS is_editable BOOLEAN DEFAULT false'),
             text('ALTER TABLE user_tool_inspection ADD COLUMN IF NOT EXISTS signature VARCHAR(255)'),
-            text('ALTER TABLE checklist ADD COLUMN IF NOT EXISTS signature VARCHAR(255)')
+            text('ALTER TABLE checklist ADD COLUMN IF NOT EXISTS signature VARCHAR(255)'),
+            text("ALTER TABLE checklist_item ADD COLUMN IF NOT EXISTS vehicle_type VARCHAR(20) DEFAULT 'carro'")
         ]
         for stmt in stmts:
             try:
@@ -296,7 +297,8 @@ def create_app():
             print("⚠️ Erro commit ensure_min_schema:", e)
             db.session.rollback()
  
-    DEFAULT_ITEMS = [
+    # Itens padrão por tipo de veículo
+    DEFAULT_ITEMS_CARRO = [
         ("Pneus (calibragem/estado)", "sim_nao_na"),
         ("Luzes frontais", "sim_nao_na"),
         ("Luzes traseiras", "sim_nao_na"),
@@ -306,7 +308,46 @@ def create_app():
         ("Documentação do veículo", "sim_nao_na"),
         ("Observações gerais", "paragrafo"),
     ]
- 
+
+    DEFAULT_ITEMS_MOTO = [
+        ("Pneus (calibragem/estado)", "sim_nao_na"),
+        ("Luzes frontais e traseiras", "sim_nao_na"),
+        ("Setas e alerta", "sim_nao_na"),
+        ("Freios (dianteiro/traseiro)", "sim_nao_na"),
+        ("Nível de óleo do motor", "sim_nao_na"),
+        ("Corrente (tensão/lubrificação)", "sim_nao_na"),
+        ("Documentação da moto", "sim_nao_na"),
+        ("EPI utilizado (capacete/luvas)", "sim_nao_na"),
+        ("Observações gerais", "paragrafo"),
+    ]
+
+    DEFAULT_ITEMS_CAMINHAO = [
+        ("Pneus (calibragem/estado/step)", "sim_nao_na"),
+        ("Luzes frontais", "sim_nao_na"),
+        ("Luzes traseiras e de freio", "sim_nao_na"),
+        ("Setas e alerta", "sim_nao_na"),
+        ("Extintor (validade)", "sim_nao_na"),
+        ("Nível de óleo do motor", "sim_nao_na"),
+        ("Nível de água do radiador", "sim_nao_na"),
+        ("Freios (sistema de ar)", "sim_nao_na"),
+        ("Tacógrafo", "sim_nao_na"),
+        ("Documentação do veículo", "sim_nao_na"),
+        ("Carga fixada adequadamente", "sim_nao_na"),
+        ("Observações gerais", "paragrafo"),
+    ]
+
+    DEFAULT_ITEMS_VAN = [
+        ("Pneus (calibragem/estado)", "sim_nao_na"),
+        ("Luzes frontais", "sim_nao_na"),
+        ("Luzes traseiras", "sim_nao_na"),
+        ("Setas e alerta", "sim_nao_na"),
+        ("Extintor (validade)", "sim_nao_na"),
+        ("Painel sem avisos críticos", "sim_nao_na"),
+        ("Portas e travas funcionando", "sim_nao_na"),
+        ("Documentação do veículo", "sim_nao_na"),
+        ("Observações gerais", "paragrafo"),
+    ]
+
     def seed_defaults():
         if not User.query.filter_by(username="admin").first():
             _admin_pwd = secrets.token_urlsafe(16)
@@ -327,9 +368,17 @@ def create_app():
         if WhatsAppConfig.query.count() == 0:
             db.session.add(WhatsAppConfig())
  
-        if ChecklistItem.query.count() == 0:
-            for i, (txt, typ) in enumerate(DEFAULT_ITEMS, start=1):
-                db.session.add(ChecklistItem(order=i, text=txt, type=typ))
+        # Seed itens por tipo de veículo (apenas se ainda não existir nenhum)
+        seeds = [
+            ("carro",    DEFAULT_ITEMS_CARRO),
+            ("moto",     DEFAULT_ITEMS_MOTO),
+            ("caminhao", DEFAULT_ITEMS_CAMINHAO),
+            ("van",      DEFAULT_ITEMS_VAN),
+        ]
+        for vtype, items_list in seeds:
+            if ChecklistItem.query.filter_by(vehicle_type=vtype).count() == 0:
+                for i, (txt, typ) in enumerate(items_list, start=1):
+                    db.session.add(ChecklistItem(order=i, text=txt, type=typ, vehicle_type=vtype))
  
         try:
             from backend.models import Tool

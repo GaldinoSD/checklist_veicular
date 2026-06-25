@@ -14,8 +14,7 @@ class TestConfigView(unittest.TestCase):
                 
             html_content = resp.data.decode('utf-8')
             
-            # 3. Testar a presença dos novos valores
-            self.assertIn("max-w-4xl mx-auto space-y-8 pb-12", html_content, "Container não ajustado para max-w-4xl!")
+            self.assertIn("w-full space-y-6 pb-16", html_content, "Container não ajustado para largura total!")
             
             # 4. Consultar o layout geral para ver o link
             resp_layout = client.get("/dashboard")

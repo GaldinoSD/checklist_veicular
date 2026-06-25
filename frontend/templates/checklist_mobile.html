@@ -79,10 +79,12 @@
                     <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1" id="vehicle_id_select_label">Veículo Operacional</label>
                     <div class="flex gap-2">
                         <div class="relative flex-1">
-                            <select name="vehicle_id" id="vehicle_id_select" aria-labelledby="vehicle_id_select_label" required class="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-900/5 dark:border-white/5 rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 dark:text-white appearance-none focus:ring-4 focus:ring-blue-500/10 transition-all outline-none">
+                            <select name="vehicle_id" id="vehicle_id_select" aria-labelledby="vehicle_id_select_label" required
+                                    onchange="onVehicleChange(this)"
+                                    class="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-900/5 dark:border-white/5 rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 dark:text-white appearance-none focus:ring-4 focus:ring-blue-500/10 transition-all outline-none">
                                 <option value="">Selecione o Veículo</option>
                                 {% for v in vehicles %}
-                                    <option value="{{ v.id }}" data-plate="{{ v.plate }}">{{ v.plate }} — {{ v.brand }} {{ v.model }}</option>
+                                    <option value="{{ v.id }}" data-plate="{{ v.plate }}" data-vtype="{{ v.type or 'carro' }}">{{ v.plate }} — {{ v.brand }} {{ v.model }}</option>
                                 {% endfor %}
                             </select>
                             <div class="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
@@ -92,6 +94,11 @@
                         <button type="button" onclick="startPlateOCR()" class="w-14 h-14 bg-gradient-to-br from-blue-600 to-blue-400 hover:from-blue-700 hover:to-blue-500 text-white rounded-2xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-md" title="Escanear Placa por Foto" aria-label="Escanear placa do veículo usando a câmera">
                             <i class="fa-solid fa-camera text-lg"></i>
                         </button>
+                    </div>
+                    <!-- Badge do tipo de veículo detectado -->
+                    <div id="vehicle-type-badge" class="hidden mt-2 flex items-center gap-2 text-xs font-black uppercase tracking-widest">
+                        <span id="vehicle-type-icon"></span>
+                        <span id="vehicle-type-label"></span>
                     </div>
                 </div>
 
@@ -106,94 +113,135 @@
             </div>
         </div>
 
-        <!-- ====================== PERGUNTAS ====================== -->
-        <div class="space-y-4">
-            {% for q in items %}
-            {% set q_index = loop.index %}
-            <div class="card-premium p-6 group transition-all hover:border-blue-500/20">
-                <div class="flex gap-4">
-                    <div class="w-8 h-8 rounded-xl bg-slate-100 dark:bg-white/5 flex items-center justify-center text-[11px] font-black text-slate-400 group-hover:bg-blue-500 group-hover:text-white transition-all">
-                        {{ q_index }}
+        <!-- ====================== PERGUNTAS POR TIPO DE VEÍCULO ====================== -->
+        <div class="space-y-4" id="checklist-items-wrapper">
+
+            <!-- Estado inicial: nenhum veículo selecionado -->
+            <div id="no-vehicle-msg" class="card-premium p-10 text-center">
+                <div class="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-white/5 flex items-center justify-center mx-auto mb-4">
+                    <i class="fa-solid fa-car-side text-2xl text-slate-300 dark:text-gray-600"></i>
+                </div>
+                <p class="text-sm font-bold text-slate-400 dark:text-gray-500">Selecione um veículo acima</p>
+                <p class="text-xs text-slate-300 dark:text-gray-600 mt-1">O checklist será carregado automaticamente conforme o tipo de veículo.</p>
+            </div>
+
+            {% set all_types = [
+                ("carro",    items_by_type.carro,    "fa-car",         "Checklist de Carro"),
+                ("moto",     items_by_type.moto,     "fa-motorcycle",  "Checklist de Moto"),
+                ("caminhao", items_by_type.caminhao, "fa-truck",       "Checklist de Caminhão"),
+                ("van",      items_by_type.van,      "fa-van-shuttle", "Checklist de Van"),
+            ] %}
+
+            {% for vtype, vtype_items, vicon, vtitle in all_types %}
+            <div class="checklist-type-group hidden" data-vehicle-type="{{ vtype }}">
+
+                <!-- Cabeçalho do tipo -->
+                <div class="flex items-center gap-3 mb-4 px-2">
+                    <div class="w-8 h-8 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500">
+                        <i class="fa-solid {{ vicon }} text-sm"></i>
                     </div>
-                    <div class="flex-1 space-y-4">
-                        <label class="block text-sm font-bold text-slate-700 dark:text-white leading-relaxed">
-                            {{ q.text }}
-                        </label>
+                    <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">{{ vtitle }}</span>
+                    <span class="text-[10px] font-bold text-slate-300 dark:text-gray-600">— {{ vtype_items|length }} item(s)</span>
+                </div>
 
-                        <div class="p-4 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-900/5 dark:border-white/5">
-                            {% if q.type == 'texto_curto' %}
-                                <input id="itemq_index" type="text" name="item{{ q_index }}" placeholder="Sua resposta..."
-                                       class="w-full bg-transparent border-none outline-none text-sm font-bold text-blue-600 dark:text-blue-400 placeholder:text-slate-400">
+                {% if vtype_items %}
+                {% for q in vtype_items %}
+                {% set q_index = loop.index %}
+                <div class="card-premium p-6 group transition-all hover:border-blue-500/20 mb-4">
+                    <div class="flex gap-4">
+                        <div class="w-8 h-8 rounded-xl bg-slate-100 dark:bg-white/5 flex items-center justify-center text-[11px] font-black text-slate-400 group-hover:bg-blue-500 group-hover:text-white transition-all">
+                            {{ q_index }}
+                        </div>
+                        <div class="flex-1 space-y-4">
+                            <label class="block text-sm font-bold text-slate-700 dark:text-white leading-relaxed">
+                                {{ q.text }}
+                                {% if q.required %}<span class="text-red-500 ml-1">*</span>{% endif %}
+                            </label>
 
-                            {% elif q.type == 'paragrafo' %}
-                                <textarea name="item{{ q_index }}" rows="3" placeholder="Descreva detalhadamente..."
-                                          class="w-full bg-transparent border-none outline-none text-sm font-bold text-blue-600 dark:text-blue-400 placeholder:text-slate-400 resize-none"></textarea>
+                            <div class="p-4 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-900/5 dark:border-white/5">
+                                {% if q.type == 'texto_curto' %}
+                                    <input type="text" name="item{{ q_index }}" placeholder="Sua resposta..."
+                                           class="w-full bg-transparent border-none outline-none text-sm font-bold text-blue-600 dark:text-blue-400 placeholder:text-slate-400">
 
-                            {% elif q.type == 'numero' %}
-                                <input id="itemq_index" type="number" name="item{{ q_index }}" placeholder="0"
-                                       class="w-full bg-transparent border-none outline-none text-sm font-bold text-blue-600 dark:text-blue-400 placeholder:text-slate-400">
+                                {% elif q.type == 'paragrafo' %}
+                                    <textarea name="item{{ q_index }}" rows="3" placeholder="Descreva detalhadamente..."
+                                              class="w-full bg-transparent border-none outline-none text-sm font-bold text-blue-600 dark:text-blue-400 placeholder:text-slate-400 resize-none"></textarea>
 
-                            {% elif q.type == 'data' %}
-                                <input id="itemq_index" type="date" name="item{{ q_index }}"
-                                       class="w-full bg-transparent border-none outline-none text-sm font-bold text-blue-600 dark:text-blue-400">
+                                {% elif q.type == 'numero' %}
+                                    <input type="number" name="item{{ q_index }}" placeholder="0"
+                                           class="w-full bg-transparent border-none outline-none text-sm font-bold text-blue-600 dark:text-blue-400 placeholder:text-slate-400">
 
-                            {% elif q.type == 'sim_nao_na' %}
-                                <div class="flex gap-3">
-                                    {% for opt in ["Sim", "Não", "N/A"] %}
-                                    <label class="flex-1">
-                                        <input id="itemq_index" type="radio" name="item{{ q_index }}" value="{{ opt }}" class="sr-only peer">
-                                        <div class="w-full py-2.5 text-center rounded-xl text-[11px] font-black uppercase tracking-widest border border-slate-900/5 dark:border-white/5 bg-white dark:bg-slate-800 text-slate-400 peer-checked:bg-blue-600 peer-checked:text-white peer-checked:border-blue-600 transition-all cursor-pointer">
-                                            {{ opt }}
-                                        </div>
-                                    </label>
-                                    {% endfor %}
-                                </div>
+                                {% elif q.type == 'data' %}
+                                    <input type="date" name="item{{ q_index }}"
+                                           class="w-full bg-transparent border-none outline-none text-sm font-bold text-blue-600 dark:text-blue-400">
 
-                            {% elif q.type == 'dropdown' %}
-                                <select name="item{{ q_index }}" class="w-full bg-transparent border-none outline-none text-sm font-bold text-blue-600 dark:text-blue-400 appearance-none">
-                                    <option value="">Selecione uma opção</option>
-                                    {% for opt in q.options.split(',') %}
-                                        <option value="{{ opt }}">{{ opt }}</option>
-                                    {% endfor %}
-                                </select>
+                                {% elif q.type == 'sim_nao_na' %}
+                                    <div class="flex gap-3">
+                                        {% for opt in ["Sim", "Não", "N/A"] %}
+                                        <label class="flex-1">
+                                            <input type="radio" name="item{{ q_index }}" value="{{ opt }}" class="sr-only peer">
+                                            <div class="w-full py-2.5 text-center rounded-xl text-[11px] font-black uppercase tracking-widest border border-slate-900/5 dark:border-white/5 bg-white dark:bg-slate-800 text-slate-400 peer-checked:bg-blue-600 peer-checked:text-white peer-checked:border-blue-600 transition-all cursor-pointer">
+                                                {{ opt }}
+                                            </div>
+                                        </label>
+                                        {% endfor %}
+                                    </div>
 
-                            {% elif q.type == 'radio' %}
-                                <div class="space-y-2">
-                                    {% for opt in q.options.split(',') %}
-                                    <label class="flex items-center gap-3 cursor-pointer group/opt">
-                                        <input id="itemq_index" type="radio" name="item{{ q_index }}" value="{{ opt }}" class="sr-only peer">
-                                        <div class="w-5 h-5 rounded-full border-2 border-slate-200 dark:border-slate-700 peer-checked:border-blue-600 peer-checked:bg-blue-600 transition-all"></div>
-                                        <span class="text-sm font-bold text-slate-500 peer-checked:text-blue-600 dark:peer-checked:text-blue-400">{{ opt }}</span>
-                                    </label>
-                                    {% endfor %}
-                                </div>
+                                {% elif q.type == 'dropdown' %}
+                                    <select name="item{{ q_index }}" class="w-full bg-transparent border-none outline-none text-sm font-bold text-blue-600 dark:text-blue-400 appearance-none">
+                                        <option value="">Selecione uma opção</option>
+                                        {% for opt in q.options.split(',') %}
+                                            <option value="{{ opt }}">{{ opt }}</option>
+                                        {% endfor %}
+                                    </select>
 
-                            {% elif q.type == 'checkboxes' %}
-                                <div class="space-y-2">
-                                    {% for opt in q.options.split(',') %}
-                                    <label class="flex items-center gap-3 cursor-pointer">
-                                        <input id="itemq_index" type="checkbox" name="item{{ q_index }}" value="{{ opt }}" class="sr-only peer">
-                                        <div class="w-5 h-5 rounded-lg border-2 border-slate-200 dark:border-slate-700 peer-checked:border-blue-600 peer-checked:bg-blue-600 flex items-center justify-center transition-all">
-                                            <i class="fa-solid fa-check text-[10px] text-white opacity-0 peer-checked:opacity-100"></i>
-                                        </div>
-                                        <span class="text-sm font-bold text-slate-500 peer-checked:text-blue-600 dark:peer-checked:text-blue-400">{{ opt }}</span>
-                                    </label>
-                                    {% endfor %}
-                                </div>
+                                {% elif q.type == 'radio' %}
+                                    <div class="space-y-2">
+                                        {% for opt in q.options.split(',') %}
+                                        <label class="flex items-center gap-3 cursor-pointer group/opt">
+                                            <input type="radio" name="item{{ q_index }}" value="{{ opt }}" class="sr-only peer">
+                                            <div class="w-5 h-5 rounded-full border-2 border-slate-200 dark:border-slate-700 peer-checked:border-blue-600 peer-checked:bg-blue-600 transition-all"></div>
+                                            <span class="text-sm font-bold text-slate-500 peer-checked:text-blue-600 dark:peer-checked:text-blue-400">{{ opt }}</span>
+                                        </label>
+                                        {% endfor %}
+                                    </div>
+
+                                {% elif q.type == 'checkboxes' %}
+                                    <div class="space-y-2">
+                                        {% for opt in q.options.split(',') %}
+                                        <label class="flex items-center gap-3 cursor-pointer">
+                                            <input type="checkbox" name="item{{ q_index }}" value="{{ opt }}" class="sr-only peer">
+                                            <div class="w-5 h-5 rounded-lg border-2 border-slate-200 dark:border-slate-700 peer-checked:border-blue-600 peer-checked:bg-blue-600 flex items-center justify-center transition-all">
+                                                <i class="fa-solid fa-check text-[10px] text-white opacity-0 peer-checked:opacity-100"></i>
+                                            </div>
+                                            <span class="text-sm font-bold text-slate-500 peer-checked:text-blue-600 dark:peer-checked:text-blue-400">{{ opt }}</span>
+                                        </label>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            {% if q.type != 'data' %}
+                            <div class="pl-4 border-l-2 border-slate-100 dark:border-white/5 space-y-1">
+                                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Justificativa / Observação</label>
+                                <input type="text" name="item{{ q_index }}_just" placeholder="Adicionar observação..."
+                                       class="w-full bg-transparent border-none outline-none text-xs font-bold text-slate-500 placeholder:text-slate-300">
+                            </div>
                             {% endif %}
                         </div>
-
-                        {% if q.type != 'data' %}
-                        <div class="pl-4 border-l-2 border-slate-100 dark:border-white/5 space-y-1">
-                            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Justificativa / Observação</label>
-                            <input id="itemq_index_just" type="text" name="item{{ q_index }}_just" placeholder="Adicionar observação..."
-                                   class="w-full bg-transparent border-none outline-none text-xs font-bold text-slate-500 placeholder:text-slate-300">
-                        </div>
-                        {% endif %}
                     </div>
                 </div>
-            </div>
+                {% endfor %}
+                {% else %}
+                <div class="card-premium p-8 text-center mb-4">
+                    <p class="text-sm font-bold text-slate-400">Nenhuma pergunta configurada para este tipo de veículo.</p>
+                    <p class="text-xs text-slate-300 mt-1">Configure as perguntas em Configurações → Checklist.</p>
+                </div>
+                {% endif %}
+
+            </div><!-- fim checklist-type-group -->
             {% endfor %}
+
         </div>
 
         <!-- FOTOS PREMIUM -->
@@ -635,6 +683,55 @@ async function scanLoop() {
         setTimeout(scanLoop, 800);
     }
 }
+
+// =============================================
+// 🔹 DETECÇÃO AUTOMÁTICA DE TIPO DE VEÍCULO
+// =============================================
+const VTYPE_META = {
+  carro:    { label: '🚗 Carro',    color: 'text-indigo-600'  },
+  moto:     { label: '🏍️ Moto',     color: 'text-emerald-600' },
+  caminhao: { label: '🚛 Caminhão', color: 'text-amber-600'   },
+  van:      { label: '🚐 Van',      color: 'text-sky-600'     },
+};
+
+function onVehicleChange(selectEl) {
+  const selected = selectEl.options[selectEl.selectedIndex];
+  const vtype = selected ? (selected.dataset.vtype || 'carro') : null;
+
+  // Oculta mensagem inicial
+  const noVehicleMsg = document.getElementById('no-vehicle-msg');
+  if (noVehicleMsg) noVehicleMsg.classList.add('hidden');
+
+  // Oculta todos os grupos de checklist
+  document.querySelectorAll('.checklist-type-group').forEach(g => g.classList.add('hidden'));
+
+  // Atualiza badge de tipo
+  const badge = document.getElementById('vehicle-type-badge');
+  const labelEl = document.getElementById('vehicle-type-label');
+
+  if (!selectEl.value || !vtype) {
+    if (badge) badge.classList.add('hidden');
+    if (noVehicleMsg) noVehicleMsg.classList.remove('hidden');
+    return;
+  }
+
+  // Exibe o grupo correto
+  const group = document.querySelector(`.checklist-type-group[data-vehicle-type="${vtype}"]`);
+  if (group) group.classList.remove('hidden');
+
+  // Exibe badge
+  if (badge && labelEl) {
+    badge.className = 'mt-2 flex items-center gap-2 text-xs font-black uppercase tracking-widest ' +
+                      (VTYPE_META[vtype]?.color || 'text-slate-500');
+    labelEl.textContent = VTYPE_META[vtype]?.label || vtype;
+  }
+}
+
+// Inicializa caso o select já tenha um valor (ex: reload com valor pré-selecionado)
+document.addEventListener('DOMContentLoaded', () => {
+  const sel = document.getElementById('vehicle_id_select');
+  if (sel && sel.value) onVehicleChange(sel);
+});
 </script>
 
 {% endblock %}
