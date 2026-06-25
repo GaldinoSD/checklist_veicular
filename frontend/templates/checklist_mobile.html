@@ -711,6 +711,11 @@ async function scanLoop() {
                 const detectedPlate = bestMatch.getAttribute('data-plate');
                 console.log(`Veículo encontrado por correspondência difusa: ${detectedPlate} (distância: ${bestDistance})`);
                 selectElement.value = bestMatch.value;
+                selectElement.dispatchEvent(new Event('change'));
+                
+                // Foca no input de KM para agilizar o preenchimento
+                const kmInput = document.getElementById('km');
+                if (kmInput) kmInput.focus();
                 
                 if (typeof showToast === "function") {
                     showToast(`Veículo identificado: ${detectedPlate}!`, "success");

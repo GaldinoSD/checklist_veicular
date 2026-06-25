@@ -157,7 +157,7 @@
       {% if items %}
       <div class="divide-y divide-slate-900/5 dark:divide-white/5">
         {% for it in items %}
-        <div class="px-6 py-4 hover:bg-slate-50/50 dark:hover:bg-white/[0.015] border border-transparent rounded-2xl transition-all group/item draggable-item" draggable="true" data-id="{{ it.id }}">
+        <div class="px-6 py-4 hover:bg-slate-50/50 dark:hover:bg-white/[0.015] border border-transparent rounded-2xl transition-all group/item draggable-item" draggable="false" data-id="{{ it.id }}">
           <div class="flex items-start gap-3">
             <!-- Grip de Arrasto -->
             <i class="fa-solid fa-grip-vertical text-slate-300 dark:text-slate-700 cursor-grab active:cursor-grabbing mr-1 mt-1.5 shrink-0 drag-handle text-xs" title="Arraste para reordenar"></i>
@@ -397,7 +397,28 @@ let draggedItem = null;
 
 function setupDragAndDrop() {
   document.querySelectorAll('.draggable-item').forEach(item => {
+    const handle = item.querySelector('.drag-handle');
+    if (handle) {
+      // Habilita arrastar apenas quando clicar/segurar no grip handle
+      handle.addEventListener('mousedown', () => {
+        item.setAttribute('draggable', 'true');
+      });
+      handle.addEventListener('mouseup', () => {
+        item.setAttribute('draggable', 'false');
+      });
+      handle.addEventListener('mouseleave', () => {
+        if (!draggedItem) {
+          item.setAttribute('draggable', 'false');
+        }
+      });
+    }
+
     item.addEventListener('dragstart', (e) => {
+      // Impede o drag se a origem não for o grip handle
+      if (!e.target.closest('.drag-handle')) {
+        e.preventDefault();
+        return;
+      }
       draggedItem = item;
       item.classList.add('opacity-40', 'border-blue-500/20', 'bg-blue-500/[0.02]');
       e.dataTransfer.effectAllowed = 'move';
@@ -420,6 +441,7 @@ function setupDragAndDrop() {
         saveNewOrder(draggedItem.closest('.tab-panel'));
         draggedItem = null;
       }
+      item.setAttribute('draggable', 'false');
     });
   });
 }
