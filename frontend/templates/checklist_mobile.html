@@ -270,8 +270,8 @@
 
         </div>
 
-        <!-- FOTOS PREMIUM -->
-        <div class="card-premium p-8">
+        <!-- FOTOS PREMIUM (oculto até selecionar veículo) -->
+        <div id="checklist-fotos-section" class="card-premium p-8 hidden">
             <div class="flex flex-col items-center justify-center text-center p-8 border-2 border-dashed border-slate-900/10 dark:border-white/10 rounded-[2rem] hover:border-blue-500/30 transition-all group relative overflow-hidden">
                 <input id="fotos" type="file" name="fotos" multiple accept="image/*" class="absolute inset-0 opacity-0 cursor-pointer z-10">
                 <div class="w-16 h-16 rounded-2xl bg-blue-500/5 flex items-center justify-center text-blue-600 mb-4 group-hover:scale-110 transition-transform">
@@ -282,8 +282,8 @@
             </div>
         </div>
 
-        <!-- BOTÃO FINALIZAR -->
-        <div class="pt-4">
+        <!-- BOTÃO FINALIZAR (oculto até selecionar veículo) -->
+        <div id="checklist-submit-section" class="pt-4 hidden">
             <button type="submit" class="w-full py-5 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-[2rem] font-black uppercase tracking-[0.2em] shadow-2xl shadow-emerald-500/40 active:scale-[0.98] transition-all flex items-center justify-center gap-3">
                 <i class="fa-solid fa-cloud-arrow-up"></i>
                 Enviar Checklist
@@ -709,20 +709,42 @@ async function scanLoop() {
             // Aceita erro de até 2 caracteres de diferença (ex: ler 0 em vez de O, 8 em vez de B, etc.)
             if (bestMatch && bestDistance <= 2) {
                 const detectedPlate = bestMatch.getAttribute('data-plate');
-                console.log(`Veículo encontrado por correspondência difusa: ${detectedPlate} (distância: ${bestDistance})`);
-                selectElement.value = bestMatch.value;
-                selectElement.dispatchEvent(new Event('change'));
+                const matchedValue = bestMatch.value;
+                const matchedVtype = bestMatch.dataset.vtype || 'carro';
+                console.log(`[OCR] Veículo encontrado: placa=${detectedPlate}, value=${matchedValue}, tipo=${matchedVtype}, distância=${bestDistance}`);
                 
-                // Foca no input de KM para agilizar o preenchimento
-                const kmInput = document.getElementById('km');
-                if (kmInput) kmInput.focus();
-                
-                if (typeof showToast === "function") {
-                    showToast(`Veículo identificado: ${detectedPlate}!`, "success");
-                } else {
-                    alert(`Veículo identificado com sucesso: ${detectedPlate}!`);
-                }
+                // 1. Fecha o scanner PRIMEIRO para liberar o DOM
                 closeOCRScanner();
+                
+                // 2. Aguarda o próximo frame para DOM estabilizar
+                setTimeout(() => {
+                    const sel = document.getElementById('vehicle_id_select');
+                    if (!sel) { console.error('[OCR] select não encontrado!'); return; }
+                    
+                    // Define o valor no select
+                    sel.value = matchedValue;
+                    console.log(`[OCR] select.value definido = "${sel.value}", selectedIndex = ${sel.selectedIndex}`);
+                    
+                    // Verifica se a opção foi realmente selecionada
+                    const selectedOpt = sel.options[sel.selectedIndex];
+                    console.log(`[OCR] opção selecionada: text="${selectedOpt?.text}", vtype="${selectedOpt?.dataset?.vtype}"`);
+                    
+                    // Chama onVehicleChange diretamente
+                    onVehicleChange(sel);
+                    
+                    // Verifica se o grupo do checklist ficou visível
+                    const visibleGroup = document.querySelector(`.checklist-type-group:not(.hidden)`);
+                    console.log(`[OCR] grupo visível: ${visibleGroup ? visibleGroup.dataset.vehicleType : 'NENHUM'}`);
+                    
+                    // Foca no input de KM para agilizar o preenchimento
+                    const kmInput = document.getElementById('km');
+                    if (kmInput) kmInput.focus();
+                    
+                    // Toast/alert por último (alert bloqueia o render)
+                    if (typeof showToast === "function") {
+                        showToast(`Veículo identificado: ${detectedPlate}!`, "success");
+                    }
+                }, 100);
                 return; // Interrompe o loop de scan
             }
         } catch (err) {
@@ -762,15 +784,25 @@ function onVehicleChange(selectEl) {
   const badge = document.getElementById('vehicle-type-badge');
   const labelEl = document.getElementById('vehicle-type-label');
 
+  // Referências das seções de fotos e botão enviar
+  const fotosSection = document.getElementById('checklist-fotos-section');
+  const submitSection = document.getElementById('checklist-submit-section');
+
   if (!selectEl.value || !vtype) {
     if (badge) badge.classList.add('hidden');
     if (noVehicleMsg) noVehicleMsg.classList.remove('hidden');
+    if (fotosSection) fotosSection.classList.add('hidden');
+    if (submitSection) submitSection.classList.add('hidden');
     return;
   }
 
   // Exibe o grupo correto
   const group = document.querySelector(`.checklist-type-group[data-vehicle-type="${vtype}"]`);
   if (group) group.classList.remove('hidden');
+
+  // Exibe seções de fotos e botão enviar
+  if (fotosSection) fotosSection.classList.remove('hidden');
+  if (submitSection) submitSection.classList.remove('hidden');
 
   // Exibe badge
   if (badge && labelEl) {
