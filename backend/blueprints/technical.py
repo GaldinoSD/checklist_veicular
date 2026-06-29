@@ -98,6 +98,41 @@ def api_gestao_config():
             config.scale_start_date = datetime.strptime(scale_start_date_str, "%Y-%m-%d").date()
         config.scale_rotation_order = data.get("scale_rotation_order")
         db.session.commit()
+        
+        # Gera escalas de sábado automaticamente para as próximas 52 semanas
+        if config.scale_start_date and config.scale_rotation_order:
+            rotation_order = [int(x) for x in config.scale_rotation_order.split(",") if x.strip().isdigit()]
+            if rotation_order:
+                from datetime import timedelta
+                curr_date = config.scale_start_date
+                # Encontra o primeiro sábado a partir da data de início
+                while curr_date.weekday() != 5:
+                    curr_date += timedelta(days=1)
+                
+                for _ in range(52):
+                    existing = Scale.query.filter_by(date=curr_date).first()
+                    weeks = (curr_date - config.scale_start_date).days // 7
+                    team_idx = weeks % len(rotation_order)
+                    team_id = rotation_order[team_idx]
+                    
+                    team = Team.query.get(team_id)
+                    if team:
+                        if existing:
+                            existing.type = "sabado"
+                            existing.team_ids = str(team_id)
+                            existing.technician_ids = ",".join([str(m.id) for m in team.members])
+                            existing.obs = "Escala automática por rodízio de equipes"
+                        else:
+                            s = Scale()
+                            s.type = "sabado"
+                            s.date = curr_date
+                            s.obs = "Escala automática por rodízio de equipes"
+                            s.team_ids = str(team_id)
+                            s.technician_ids = ",".join([str(m.id) for m in team.members])
+                            db.session.add(s)
+                    curr_date += timedelta(days=7)
+                db.session.commit()
+                
         return jsonify({"status": "ok"})
     
     return jsonify({
@@ -883,7 +918,8 @@ def api_escalas(id=None):
     view_list = request.args.get("view") == "list"
     
     if view_list:
-        items = Scale.query.order_by(Scale.date.desc()).all()
+        today_date = datetime.now().date()
+        items = Scale.query.filter(Scale.date >= today_date).order_by(Scale.date.asc()).all()
         res = []
         for s in items:
             tech_names = ""
@@ -893,6 +929,9 @@ def api_escalas(id=None):
                     tech_names = ", ".join([u.username for u in User.query.filter(User.id.in_(ids))])
                 except Exception:
                     tech_names = s.technician_ids
+            t_ids = s.team_ids
+            if not t_ids and s.team_id:
+                t_ids = str(s.team_id)
             res.append({
                 "id": s.id,
                 "type": s.type,
@@ -901,7 +940,7 @@ def api_escalas(id=None):
                 "status": s.status,
                 "technician_ids": s.technician_ids,
                 "technician_names": tech_names,
-                "team_ids": s.team_ids
+                "team_ids": t_ids
             })
         return jsonify(res)
 

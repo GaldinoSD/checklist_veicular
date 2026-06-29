@@ -334,12 +334,19 @@
          HEADER MINIMALIST REDESIGN (Ajuste do Entorno do Header)
          ========================================================================== */
 
-      /* 1. Reduzir o espaçamento de padding superior do main para aproximar o cabeçalho da topbar */
+      /* 1. Aproximar o cabeçalho do topbar */
       main:not(.p-0) {
-        padding-top: 1.25rem !important;
+        padding-top: 0.75rem !important;
       }
 
-      /* 2. Remover fundo, bordas, sombras e arredondamento dos contêineres de header nas páginas */
+      /* 2. Compactar o tamanho dos cabeçalhos das páginas (Remover fundo, diminuir margens e padding) */
+      main > .animate-premium:first-of-type,
+      main > div > .animate-premium:first-of-type,
+      main > .mb-8:first-of-type,
+      main > div > .mb-8:first-of-type {
+        margin-bottom: 1.25rem !important;
+      }
+
       main > .animate-premium:first-of-type > .glass-premium,
       main > div > .animate-premium:first-of-type > .glass-premium,
       main > form > .glass-premium:first-of-type,
@@ -347,33 +354,51 @@
       main > .animate-premium:first-of-type > form.glass-premium,
       main > div > .animate-premium:first-of-type > form.glass-premium,
       main > .animate-premium:first-child > .glass-premium,
-      main > div > .animate-premium:first-child > .glass-premium {
+      main > div > .animate-premium:first-child > .glass-premium,
+      main > .mb-8:first-of-type > .glass-premium,
+      main > div > .mb-8:first-of-type > .glass-premium {
         background: transparent !important;
         backdrop-filter: none !important;
         -webkit-backdrop-filter: none !important;
         border: none !important;
         box-shadow: none !important;
-        padding: 0 !important;
-        border-radius: 0 !important;
-        overflow: visible !important;
+        overflow: hidden !important;
+        padding-top: 0.25rem !important;
+        padding-bottom: 0.25rem !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
       }
 
-      /* 3. Otimizar margem inferior do cabeçalho reduzindo o espaçamento após ele de mb-8/mb-10 para mb-4 */
-      main > .animate-premium:first-of-type,
-      main > div > .animate-premium:first-of-type,
-      main > form:first-of-type,
-      main > div > form:first-of-type {
-        margin-bottom: 1.25rem !important;
-      }
-
-      /* 4. Ocultar todos os círculos desfocados de decoração absoluta contidos nos cabeçalhos modificados */
-      main > .animate-premium:first-of-type > .glass-premium .absolute,
-      main > div > .animate-premium:first-of-type > .glass-premium .absolute,
-      main > .animate-premium:first-of-type > form.glass-premium .absolute,
-      main > div > .animate-premium:first-of-type > form.glass-premium .absolute,
-      main > form > .glass-premium:first-of-type .absolute,
-      main > div > form > .glass-premium:first-of-type .absolute {
+      /* 2.1 Ocultar elementos decorativos (blurs, círculos absolutos) dos headers */
+      main > .animate-premium:first-of-type .absolute,
+      main > div > .animate-premium:first-of-type .absolute,
+      main > .mb-8:first-of-type .absolute,
+      main > div > .mb-8:first-of-type .absolute {
         display: none !important;
+      }
+
+      /* 3. Ajustar o tamanho das imagens/ícones e títulos nos cabeçalhos para tamanho compacto padronizado */
+      main .glass-premium h1,
+      main .glass-premium h2 {
+        font-size: 1.25rem !important; /* text-xl */
+        line-height: 1.75rem !important;
+      }
+      
+      main .glass-premium p {
+        font-size: 0.75rem !important; /* text-xs */
+        margin-top: 0.125rem !important;
+      }
+
+      main .glass-premium .w-12.h-12,
+      main .glass-premium .w-14.h-14 {
+        width: 2.5rem !important; /* w-10 */
+        height: 2.5rem !important; /* h-10 */
+        border-radius: 0.75rem !important;
+      }
+
+      main .glass-premium .w-12.h-12 i,
+      main .glass-premium .w-14.h-14 i {
+        font-size: 1.125rem !important; /* text-lg */
       }
     </style>
   </head>
@@ -578,7 +603,6 @@
           {% endif %}
 
           {% set tech_tabs = [
-            ('equipes', 'Equipes', 'fa-users-gear'),
             ('calendario', 'Calendário', 'fa-calendar-days'),
             ('escalas', 'Escalas', 'fa-clock-rotate-left'),
             ('reunioes', 'Reuniões', 'fa-handshake'),
@@ -790,22 +814,22 @@
         
         <!-- TOPBAR (Modern & Functional) -->
         {% if not hide_header %}
-        <header class="h-16 border-b border-slate-900/5 dark:border-white/5 flex items-center justify-between px-8 sticky top-0 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl z-40">
-          <div class="flex items-center gap-6">
+        <header class="h-16 border-b border-slate-900/5 dark:border-white/5 flex items-center justify-between px-8 sticky top-0 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl z-40 flex-nowrap overflow-hidden">
+          <div class="flex items-center gap-6 flex-nowrap flex-shrink-0">
             <button id="btnMobileToggle" class="lg:hidden p-3 rounded-2xl bg-slate-900/5 dark:bg-white/5 text-slate-500 hover:text-slate-900 dark:hover:text-white transition-all active:scale-95">
               <i class="fa-solid fa-bars-staggered text-lg"></i>
             </button>
             
-            <div class="flex items-center gap-4">
-              <h1 class="text-sm font-black text-slate-800 dark:text-white uppercase tracking-[0.1em] hidden md:block">Sistema de Gestão de Frota e Equipes</h1>
+            <div class="flex items-center gap-4 flex-nowrap">
+              <h1 class="text-sm font-black text-slate-800 dark:text-white uppercase tracking-[0.1em] hidden xl:block whitespace-nowrap">Gestão de Frotas & Equipes</h1>
             </div>
           </div>
           
-          <div class="flex items-center gap-4">
+          <div class="flex items-center gap-4 flex-nowrap min-w-0">
               <!-- ✅ CLIMA E RELÓGIO (RESPONSIVO) -->
-              <div class="flex items-center gap-3 md:gap-6 md:px-6 border-r border-slate-900/5 dark:border-white/5">
-                <div class="flex items-center gap-2">
-                  <div class="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-500" id="weather-icon-box">
+              <div class="flex items-center gap-3 md:gap-4 md:px-4 border-r border-slate-900/5 dark:border-white/5 whitespace-nowrap flex-nowrap flex-shrink-0">
+                <div class="flex items-center gap-2 flex-nowrap">
+                  <div class="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-500 flex-shrink-0" id="weather-icon-box">
                     <i class="fa-solid fa-sun text-sm" id="weather-icon"></i>
                   </div>
                   <div class="text-left hidden md:block">
@@ -815,43 +839,43 @@
                   <div class="text-[11px] font-black text-slate-700 dark:text-white md:hidden" id="weather-temp-mobile">--°C</div>
                 </div>
                 
-                <div class="flex items-center gap-2">
-                  <div class="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-500">
+                <div class="flex items-center gap-2 flex-nowrap">
+                  <div class="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-500 flex-shrink-0">
                     <i class="fa-solid fa-clock text-sm"></i>
                   </div>
                   <div id="topbar-clock" class="text-[11px] md:text-xs font-black text-slate-700 dark:text-white leading-none font-mono min-w-[65px] md:min-w-[75px] text-center">00:00:00</div>
                 </div>
               </div>
 
-             <div class="flex items-center gap-1 sm:gap-2 pr-4 border-r border-slate-900/5 dark:border-white/5">
-               <!-- ✅ SUPORTE WHATSAPP -->
-               <a href="https://wa.me/5521996994117" target="_blank" title="Suporte Técnico"
-                  class="p-2 rounded-xl text-emerald-500 hover:bg-emerald-500/10 transition-all">
-                 <i class="fa-brands fa-whatsapp text-lg md:text-xl"></i>
-               </a>
+             <div class="flex items-center gap-1 sm:gap-2 pr-4 border-r border-slate-900/5 dark:border-white/5 flex-nowrap flex-shrink-0">
+                <!-- ✅ SUPORTE WHATSAPP -->
+                <a href="https://wa.me/5521996994117" target="_blank" title="Suporte Técnico"
+                   class="p-2 rounded-xl text-emerald-500 hover:bg-emerald-500/10 transition-all flex-shrink-0">
+                  <i class="fa-brands fa-whatsapp text-lg md:text-xl"></i>
+                </a>
 
-               <button onclick="toggleNotifications()" class="p-2 rounded-xl text-slate-400 hover:bg-slate-900/5 dark:hover:bg-white/5 transition-all relative">
-                 <i class="fa-solid fa-bell text-base md:text-lg"></i>
-                 <span id="notif-badge" class="hidden absolute top-1.5 right-1.5 px-1 min-w-[14px] h-[14px] bg-red-500 text-white text-[8px] font-black rounded-full flex items-center justify-center border border-white dark:border-slate-900 animate-bounce">0</span>
-               </button>
+                <button onclick="toggleNotifications()" class="p-2 rounded-xl text-slate-400 hover:bg-slate-900/5 dark:hover:bg-white/5 transition-all relative flex-shrink-0">
+                  <i class="fa-solid fa-bell text-base md:text-lg"></i>
+                  <span id="notif-badge" class="hidden absolute top-1.5 right-1.5 px-1 min-w-[14px] h-[14px] bg-red-500 text-white text-[8px] font-black rounded-full flex items-center justify-center border border-white dark:border-slate-900 animate-bounce">0</span>
+                </button>
 
-               <button onclick="toggleHelp()" title="Informações e Manuais" class="p-2 rounded-xl text-slate-400 hover:bg-slate-900/5 dark:hover:bg-white/5 transition-all">
-                 <i class="fa-solid fa-circle-question text-base md:text-lg"></i>
-               </button>
+                <button onclick="toggleHelp()" title="Informações e Manuais" class="p-2 rounded-xl text-slate-400 hover:bg-slate-900/5 dark:hover:bg-white/5 transition-all flex-shrink-0">
+                  <i class="fa-solid fa-circle-question text-base md:text-lg"></i>
+                </button>
 
-               <!-- ✅ STATUS DO SISTEMA -->
-               <div class="flex items-center gap-2 px-2 md:px-3 py-1.5 rounded-xl bg-emerald-500/5 border border-emerald-500/10 ml-1 md:ml-2">
-                 <span class="relative flex h-2 w-2">
-                   <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                   <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                 </span>
-                 <span class="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest hidden md:block">Online</span>
-               </div>
-             </div>
+                <!-- ✅ STATUS DO SISTEMA -->
+                <div class="flex items-center gap-2 px-2 md:px-3 py-1.5 rounded-xl bg-emerald-500/5 border border-emerald-500/10 ml-1 md:ml-2 flex-shrink-0">
+                  <span class="relative flex h-2 w-2 flex-shrink-0">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                  </span>
+                  <span class="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest hidden md:block">Online</span>
+                </div>
+              </div>
 
-             <div class="hidden lg:block text-right">
+             <div class="hidden xl:block text-right whitespace-nowrap flex-shrink-0 ml-2">
                 <div class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-0.5">Painel de Controle</div>
-                <div class="text-xs font-bold text-slate-800 dark:text-white">{{ page_title or 'Checklist Veicular' }}</div>
+                <div class="text-xs font-bold text-slate-800 dark:text-white truncate max-w-[180px]" title="{{ page_title or 'Checklist Veicular' }}">{{ page_title or 'Checklist Veicular' }}</div>
              </div>
           </div>
         </header>

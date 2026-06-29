@@ -192,20 +192,123 @@ def admin_required(view):
     return wrapper
 
 def supervisor_allowed(view):
-    """Admin + Supervisor podem acessar, ou qualquer perfil com permissão explícita para o endpoint."""
+    """Admin + Supervisor podem acessar, ou qualquer perfil com permissão explícita para o endpoint.
+    
+    Mapeamento explícito endpoint → permissão para casos onde os nomes diferem.
+    """
+    # Endpoints cujo nome de função não bate com a chave de permissão salva
+    ENDPOINT_PERM_MAP = {
+        # Frota / Veículos
+        "vehicles": "veiculos",
+        "controle_veiculos": "controle_veiculos",
+        "deletar_movimento": "controle_veiculos",
+        # Avarias
+        "avarias_registro": "avarias",
+        "avarias_excluir": "avarias",
+        "avaria_pdf": "avarias",
+        # Relatórios de frota
+        "reports": "relatorios",
+        "reports_generate": "relatorios",
+        "report_download": "relatorios",
+        "report_delete": "relatorios",
+        # Checklists (view)
+        "checklists": "checklists_view",
+        "checklist_detail": "checklists_view",
+        "checklist_pdf_download": "checklists_view",
+        "checklist_delete": "checklists_view",
+        # Vistorias
+        "vistorias_list": "vistorias_list",
+        "vistorias_nova": "vistorias_nova",
+        "vistorias_detail": "vistorias_list",
+        "vistorias_editar": "vistorias_list",
+        "vistorias_excluir": "vistorias_list",
+        "vistoria_pdf_download": "vistorias_list",
+        # Dashboard
+        "dashboard": "dashboard",
+        "api_frota_stats": "dashboard",
+        "api_gestao_stats": "dashboard",
+        # Gestão Técnica — endpoint único que serve várias abas via ?tab=
+        # Permite acesso se qualquer sub-permissão gestao_* estiver ativa
+        "gestao_tecnica": None,  # Tratado especialmente abaixo
+        # APIs internas de gestão técnica — herdam perm da sub-aba correspondente
+        "api_gestao_config": None,
+        "api_geradores": "gestao_geradores",
+        "api_rfo": "gestao_rfo",
+        "api_supervisao": "gestao_supervisao",
+        "api_equipes": "gestao_equipes",
+        "api_patios": "gestao_equipes",
+        "api_encerramento": "gestao_encerramento",
+        "api_tarefas": "gestao_tarefas",
+        "api_atividades_realizadas": "gestao_atividades",
+        "atividade_realizada_pdf": "gestao_atividades",
+        "api_escalas": "gestao_escalas",
+        "api_reunioes": "gestao_reunioes",
+        "api_atividades": "gestao_atividades",
+        "api_rota_exata": "gestao_rota_exata",
+        "api_status_toggle": None,
+        "encerramento_pdf": "gestao_encerramento",
+        "atividade_pdf": "gestao_atividades",
+        "reuniao_pdf": "gestao_reunioes",
+        "rfo_pdf": "gestao_rfo",
+        "rota_exata_pdf": "gestao_rota_exata",
+        "supervisao_pdf": "gestao_supervisao",
+        "gestao_relatorios_gerar": "gestao_relatorios",
+        "gestao_relatorios_preview": "gestao_relatorios",
+        "rfo_list": "gestao_rfo",
+        "geradores": "gestao_geradores",
+        "treinamentos_admin": "gestao_treinamentos",
+        "treinamentos_gerir": "gestao_treinamentos",
+        "api_gestao_treinamentos_lms_list": "gestao_treinamentos",
+        "api_gestao_treinamentos_lms_upload_media": "gestao_treinamentos",
+        "api_gestao_treinamentos_lms_save": "gestao_treinamentos",
+        "api_gestao_treinamentos_lms_get": "gestao_treinamentos",
+        "api_gestao_treinamentos_lms_delete": "gestao_treinamentos",
+        "api_gestao_treinamentos_lms_publish": "gestao_treinamentos",
+        "monitoramento_aparelhos": "monitoramento_aparelhos",
+        "monitoramento_historico": "monitoramento_historico",
+        "monitoramento_config": "monitoramento_config",
+        "monitoramento_relatorio_pdf": "monitoramento_aparelhos",
+    }
+
+    # Sub-permissões que dão acesso à página gestao_tecnica
+    GESTAO_TECNICA_PERMS = [
+        "gestao_equipes", "gestao_calendario", "gestao_escalas", "gestao_reunioes",
+        "gestao_anotacoes", "gestao_atividades", "gestao_encerramento", "gestao_rfo",
+        "gestao_tarefas", "gestao_geradores", "gestao_rota_exata", "gestao_supervisao",
+        "gestao_treinamentos", "gestao_solicitacoes", "gestao_relatorios",
+        "gestao_mapas", "gestao_powerbi",
+    ]
+
     @wraps(view)
     def wrapper(*args, **kwargs):
         if not current_user.is_authenticated:
             return redirect(url_for("login"))
-        
+
+        if current_user.is_admin or current_user.is_supervisor:
+            return view(*args, **kwargs)
+
         endpoint = request.endpoint
         if endpoint and "." in endpoint:
             endpoint_name = endpoint.split(".")[-1]
         else:
             endpoint_name = endpoint
-            
-        if current_user.is_admin or current_user.is_supervisor or (endpoint_name and current_user.has_permission(endpoint_name)):
+
+        allowed = False
+
+        if endpoint_name in ENDPOINT_PERM_MAP:
+            mapped_perm = ENDPOINT_PERM_MAP[endpoint_name]
+            if mapped_perm is None:
+                # Caso especial: gestao_tecnica e APIs genéricas — verifica qualquer sub-permissão
+                allowed = any(current_user.has_permission(p) for p in GESTAO_TECNICA_PERMS)
+            else:
+                allowed = current_user.has_permission(mapped_perm)
+        elif endpoint_name:
+            # Fallback: tenta o próprio nome do endpoint (já funcionava antes para nomes que batem)
+            allowed = current_user.has_permission(endpoint_name)
+
+        if allowed:
             return view(*args, **kwargs)
+
         flash("Acesso restrito a supervisor ou administrador.", "error")
         if current_user.is_manutencao:
             return redirect(url_for("manutencao_os"))

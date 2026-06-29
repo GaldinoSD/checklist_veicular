@@ -25,13 +25,23 @@
                 </div>
             </div>
             
-            <div class="flex items-center gap-4 relative z-10">
+            <div class="flex flex-wrap items-center gap-3 relative z-10">
                 <button onclick="openRegistrarServico()" 
                         class="px-5 py-3 bg-gradient-to-r from-orange-500 to-yellow-600 hover:from-orange-600 hover:to-yellow-700 text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-lg shadow-orange-500/20 transition-all active:scale-95 flex items-center gap-2">
                     <i class="fa-solid fa-plus text-xs"></i> Registrar Serviço
                 </button>
 
-                <div class="px-4 py-2 rounded-2xl bg-slate-900/5 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 relative z-10">
+                <!-- Botão: Ver O.S. Finalizadas -->
+                <button onclick="toggleFinalizadas()" id="btnFinalizadas"
+                        class="px-5 py-3 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 rounded-2xl text-xs font-black uppercase tracking-widest transition-all active:scale-95 flex items-center gap-2">
+                    <i class="fa-solid fa-check-circle text-xs"></i>
+                    Finalizadas
+                    <span class="px-2 py-0.5 bg-emerald-500 text-white rounded-full text-[10px] font-black">
+                        {{ ordens | selectattr('status', 'equalto', 'finalizada') | list | length }}
+                    </span>
+                </button>
+
+                <div class="px-4 py-2 rounded-2xl bg-slate-900/5 dark:bg-white/5 border border-slate-900/5 dark:border-white/5">
                     <span class="text-[10px] font-black text-slate-500 dark:text-gray-400 uppercase tracking-widest block text-center">Etapa</span>
                     <span class="text-xs font-black text-orange-600 dark:text-orange-400 uppercase block text-center">Manutenção</span>
                 </div>
@@ -127,9 +137,108 @@
     </div>
 
 
+    <!-- ✅ SEÇÃO: O.S. FINALIZADAS (colapsável) -->
+    <div id="secaoFinalizadas" class="hidden mb-12 animate-premium">
+        <div class="flex items-center gap-3 mb-6">
+            <span class="w-3 h-3 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]"></span>
+            <h3 class="text-xs font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">
+                O.S. Finalizadas
+            </h3>
+            <span class="ml-auto px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-[10px] font-black text-emerald-600 dark:text-emerald-400">
+                {{ ordens | selectattr('status', 'equalto', 'finalizada') | list | length }} registros
+            </span>
+        </div>
+
+        <!-- Filtro de busca rápida -->
+        <div class="mb-6">
+            <div class="relative max-w-sm">
+                <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                <input type="text" id="filtroFinalizadas" oninput="filtrarFinalizadas(this.value)"
+                       placeholder="Buscar por placa ou veículo..."
+                       class="w-full pl-10 pr-4 py-3 bg-white dark:bg-slate-800/50 border border-slate-900/5 dark:border-white/5 rounded-2xl text-sm font-bold text-slate-800 dark:text-white focus:ring-4 focus:ring-emerald-500/10 outline-none transition-all">
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5" id="gridFinalizadas">
+            {% for os in ordens %}
+            {% if os.status == 'finalizada' %}
+            <div class="card-finalizada card-premium p-5 flex flex-col group h-full border-l-4 border-emerald-500/40 hover:border-emerald-500 transition-all"
+                 data-placa="{{ os.vehicle.plate | lower }}"
+                 data-modelo="{{ os.vehicle.brand | lower }} {{ os.vehicle.model | lower }}">
+
+                <!-- Topo do card -->
+                <div class="flex justify-between items-start mb-4">
+                    <div class="space-y-0.5">
+                        <div class="flex items-center gap-2">
+                            <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Protocolo</span>
+                            <span class="px-2 py-0.5 bg-slate-100 dark:bg-white/5 rounded-md text-[10px] font-bold text-slate-600 dark:text-gray-400">#{{ os.id }}</span>
+                        </div>
+                        <h3 class="text-lg font-black text-slate-800 dark:text-white tracking-tight group-hover:text-emerald-500 transition-colors">
+                            {{ os.vehicle.plate }}
+                        </h3>
+                        <p class="text-[11px] font-bold text-slate-400">
+                            <i class="fa-solid fa-car-side mr-1"></i>{{ os.vehicle.brand }} {{ os.vehicle.model }}
+                        </p>
+                    </div>
+                    <div class="px-3 py-1 bg-emerald-500/10 border border-emerald-500/20 rounded-xl flex-shrink-0">
+                        <span class="text-[9px] font-black text-emerald-600 uppercase tracking-widest">Finalizada</span>
+                    </div>
+                </div>
+
+                <!-- Campos resumo -->
+                <div class="space-y-2 flex-1 text-left">
+                    {% if os.servico_realizado %}
+                    <div class="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-900/5 dark:border-white/5">
+                        <p class="text-[9px] font-black text-slate-400 uppercase mb-1 tracking-tight">Serviço Realizado</p>
+                        <p class="text-xs font-medium text-slate-700 dark:text-gray-200 line-clamp-2">{{ os.servico_realizado }}</p>
+                    </div>
+                    {% endif %}
+
+                    <div class="grid grid-cols-2 gap-2">
+                        <div class="p-2.5 bg-white dark:bg-white/5 rounded-xl border border-slate-900/5 dark:border-white/5">
+                            <span class="text-[9px] font-black text-slate-400 uppercase block mb-0.5">Custo</span>
+                            <span class="text-xs font-black text-emerald-600 dark:text-emerald-400">
+                                {% if os.valor_gasto %}R$ {{ '%.2f' | format(os.valor_gasto) }}{% else %}—{% endif %}
+                            </span>
+                        </div>
+                        <div class="p-2.5 bg-white dark:bg-white/5 rounded-xl border border-slate-900/5 dark:border-white/5">
+                            <span class="text-[9px] font-black text-slate-400 uppercase block mb-0.5">Gravidade</span>
+                            <span class="text-xs font-bold {% if os.gravidade == 'alta' %}text-red-500{% elif os.gravidade == 'media' %}text-orange-500{% else %}text-slate-600 dark:text-gray-300{% endif %} uppercase">{{ os.gravidade }}</span>
+                        </div>
+                    </div>
+
+                    {% if os.data_fechamento %}
+                    <p class="text-[10px] font-bold text-slate-400">
+                        <i class="fa-regular fa-calendar-check mr-1 text-emerald-500"></i>
+                        Fechado: {{ os.data_fechamento.strftime('%d/%m/%Y') }}
+                    </p>
+                    {% endif %}
+                </div>
+
+                <!-- Botão ver detalhes -->
+                <button onclick="openDetalhesOS({{ os.id }})" 
+                        class="mt-4 w-full py-2.5 bg-slate-100 dark:bg-white/5 hover:bg-emerald-500/10 hover:text-emerald-600 dark:hover:bg-emerald-500/10 dark:hover:text-emerald-400 text-slate-600 dark:text-gray-300 rounded-2xl text-[11px] font-black uppercase tracking-widest transition-all">
+                    <i class="fa-solid fa-eye mr-1"></i> Ver Detalhes
+                </button>
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
+
+        {% if ordens | selectattr('status', 'equalto', 'finalizada') | list | length == 0 %}
+        <div class="py-16 text-center glass-premium rounded-[3rem]">
+            <div class="w-20 h-20 rounded-full bg-slate-100 dark:bg-white/5 flex items-center justify-center mx-auto mb-4">
+                <i class="fa-solid fa-folder-open text-3xl text-slate-400"></i>
+            </div>
+            <h3 class="text-xl font-black text-slate-800 dark:text-white mb-1">Nenhuma O.S. finalizada</h3>
+            <p class="text-slate-500 text-sm">As ordens concluídas aparecerão aqui.</p>
+        </div>
+        {% endif %}
+    </div>
+
 </div>
 
-<!-- ✅ MODAIS FICHA TÉCNICA -->
+<!-- ✅ MODAIS FICHA TÉCNICA (O.S. ABERTAS) -->
 {% for os in ordens %}
 {% if os.status == 'aberta' %}
 <div id="modalInfoVeiculo{{ os.id }}" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden items-center justify-center z-[100] p-4">
@@ -194,6 +303,110 @@
 </div>
 {% endif %}
 {% endfor %}
+
+<!-- ✅ MODAL ÚNICO: DETALHES DE O.S. FINALIZADA (populado via JS) -->
+<div id="modalDetalhesOS" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden items-center justify-center z-[100] p-4">
+    <div class="bg-white dark:bg-slate-900 w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden border border-slate-900/10 dark:border-white/10 animate-premium flex flex-col max-h-[90vh]">
+
+        <!-- Header do modal -->
+        <div class="px-8 py-6 border-b border-slate-900/10 dark:border-white/10 bg-slate-50 dark:bg-white/5 flex justify-between items-center flex-shrink-0">
+            <div class="text-left">
+                <div class="flex items-center gap-2 mb-1">
+                    <span class="px-2.5 py-0.5 bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-[10px] font-black text-emerald-600 uppercase tracking-widest">Finalizada</span>
+                    <span id="detalhe-protocolo" class="text-[11px] font-bold text-slate-400"></span>
+                </div>
+                <h3 id="detalhe-placa" class="text-2xl font-black text-slate-800 dark:text-white tracking-tight"></h3>
+                <p id="detalhe-veiculo" class="text-[11px] font-bold text-slate-400 mt-0.5"></p>
+            </div>
+            <button onclick="closeModal('modalDetalhesOS')" class="w-10 h-10 rounded-full hover:bg-slate-200 dark:hover:bg-white/10 text-slate-400 transition-all flex-shrink-0">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <!-- Corpo scrollável -->
+        <div class="p-8 space-y-5 overflow-y-auto flex-1 custom-scrollbar text-left">
+
+            <!-- Descrição do problema -->
+            <div class="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-900/5 dark:border-white/5">
+                <p class="text-[9px] font-black text-slate-400 uppercase mb-2 tracking-widest">Descrição do Problema</p>
+                <p id="detalhe-descricao" class="text-sm font-medium text-slate-700 dark:text-gray-200 italic"></p>
+            </div>
+
+            <!-- Serviço realizado -->
+            <div class="p-4 bg-emerald-500/5 rounded-2xl border border-emerald-500/10">
+                <p class="text-[9px] font-black text-emerald-600 dark:text-emerald-400 uppercase mb-2 tracking-widest">Serviço Realizado</p>
+                <p id="detalhe-servico" class="text-sm font-medium text-slate-700 dark:text-gray-200"></p>
+            </div>
+
+            <!-- Peças trocadas -->
+            <div class="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-900/5 dark:border-white/5">
+                <p class="text-[9px] font-black text-slate-400 uppercase mb-2 tracking-widest">Peças Trocadas</p>
+                <p id="detalhe-pecas" class="text-sm font-medium text-slate-700 dark:text-gray-200"></p>
+            </div>
+
+            <!-- Grid de info -->
+            <div class="grid grid-cols-2 gap-3">
+                <div class="p-4 bg-white dark:bg-white/5 rounded-2xl border border-slate-900/5 dark:border-white/5">
+                    <span class="text-[9px] font-black text-slate-400 uppercase block mb-1 tracking-widest">Custo Total</span>
+                    <span id="detalhe-valor" class="text-base font-black text-emerald-600 dark:text-emerald-400"></span>
+                </div>
+                <div class="p-4 bg-white dark:bg-white/5 rounded-2xl border border-slate-900/5 dark:border-white/5">
+                    <span class="text-[9px] font-black text-slate-400 uppercase block mb-1 tracking-widest">KM na O.S.</span>
+                    <span id="detalhe-km" class="text-base font-black text-slate-800 dark:text-white"></span>
+                </div>
+                <div class="p-4 bg-white dark:bg-white/5 rounded-2xl border border-slate-900/5 dark:border-white/5">
+                    <span class="text-[9px] font-black text-slate-400 uppercase block mb-1 tracking-widest">Gravidade</span>
+                    <span id="detalhe-gravidade" class="text-sm font-black uppercase"></span>
+                </div>
+                <div class="p-4 bg-white dark:bg-white/5 rounded-2xl border border-slate-900/5 dark:border-white/5">
+                    <span class="text-[9px] font-black text-slate-400 uppercase block mb-1 tracking-widest">Responsável</span>
+                    <span id="detalhe-responsavel" class="text-sm font-black text-slate-800 dark:text-white"></span>
+                </div>
+            </div>
+
+            <!-- Datas -->
+            <div class="grid grid-cols-2 gap-3">
+                <div class="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-900/5 dark:border-white/5">
+                    <span class="text-[9px] font-black text-slate-400 uppercase block mb-1 tracking-widest">Data de Abertura</span>
+                    <span id="detalhe-data-abertura" class="text-sm font-bold text-slate-700 dark:text-gray-200"></span>
+                </div>
+                <div class="p-4 bg-emerald-500/5 rounded-2xl border border-emerald-500/10">
+                    <span class="text-[9px] font-black text-emerald-600 dark:text-emerald-400 uppercase block mb-1 tracking-widest">Data de Fechamento</span>
+                    <span id="detalhe-data-fechamento" class="text-sm font-bold text-slate-700 dark:text-gray-200"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="px-8 py-5 bg-slate-50 dark:bg-white/5 border-t border-slate-900/10 dark:border-white/10 flex-shrink-0">
+            <button onclick="closeModal('modalDetalhesOS')" class="w-full py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-black uppercase tracking-[0.2em] text-[11px] transition-all active:scale-95">
+                Fechar
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Dados das O.S. finalizadas para JS -->
+<script>
+const osFinalizadasData = {
+    {% for os in ordens %}{% if os.status == 'finalizada' %}
+    {{ os.id }}: {
+        id: {{ os.id }},
+        placa: "{{ os.vehicle.plate }}",
+        veiculo: "{{ os.vehicle.brand }} {{ os.vehicle.model }}",
+        descricao: {{ os.descricao | tojson }},
+        servico: {{ (os.servico_realizado or 'Não informado') | tojson }},
+        pecas: {{ (os.pecas_trocadas or 'Não informado') | tojson }},
+        valor: {% if os.valor_gasto %}"R$ {{ '%.2f' | format(os.valor_gasto) }}"{%else%}"—"{%endif%},
+        km: {{ os.km if os.km else '"—"' }},
+        gravidade: "{{ os.gravidade or '—' }}",
+        responsavel: "{{ os.responsavel.username if os.responsavel else 'Sistema' }}",
+        dataAbertura: "{% if os.data_abertura %}{{ os.data_abertura.strftime('%d/%m/%Y %H:%M') }}{% else %}—{% endif %}",
+        dataFechamento: "{% if os.data_fechamento %}{{ os.data_fechamento.strftime('%d/%m/%Y %H:%M') }}{% else %}—{% endif %}"
+    },
+    {% endif %}{% endfor %}
+};
+</script>
 
 <!-- ✅ MODAL: FINALIZAR O.S -->
 <div id="modalFinalizarOS" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden items-center justify-center z-[100] p-4">
@@ -583,6 +796,60 @@ function updateKmFromVehicle() {
             kmInput.value = km || '';
         }
     }
+}
+
+// ===== O.S. FINALIZADAS =====
+function toggleFinalizadas() {
+    const secao = document.getElementById('secaoFinalizadas');
+    const btn = document.getElementById('btnFinalizadas');
+    const isHidden = secao.classList.contains('hidden');
+
+    if (isHidden) {
+        secao.classList.remove('hidden');
+        btn.classList.add('bg-emerald-500/20', 'ring-2', 'ring-emerald-500/30');
+        btn.classList.remove('bg-emerald-500/10');
+        secao.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else {
+        secao.classList.add('hidden');
+        btn.classList.remove('bg-emerald-500/20', 'ring-2', 'ring-emerald-500/30');
+        btn.classList.add('bg-emerald-500/10');
+    }
+}
+
+function openDetalhesOS(id) {
+    const os = osFinalizadasData[id];
+    if (!os) return;
+
+    document.getElementById('detalhe-protocolo').textContent = '#' + os.id;
+    document.getElementById('detalhe-placa').textContent = os.placa;
+    document.getElementById('detalhe-veiculo').textContent = os.veiculo;
+    document.getElementById('detalhe-descricao').textContent = os.descricao;
+    document.getElementById('detalhe-servico').textContent = os.servico;
+    document.getElementById('detalhe-pecas').textContent = os.pecas;
+    document.getElementById('detalhe-valor').textContent = os.valor;
+    document.getElementById('detalhe-km').textContent = os.km !== '—' ? os.km + ' KM' : '—';
+    document.getElementById('detalhe-responsavel').textContent = os.responsavel;
+    document.getElementById('detalhe-data-abertura').textContent = os.dataAbertura;
+    document.getElementById('detalhe-data-fechamento').textContent = os.dataFechamento;
+
+    // Cor da gravidade
+    const gravEl = document.getElementById('detalhe-gravidade');
+    gravEl.textContent = os.gravidade;
+    gravEl.className = 'text-sm font-black uppercase';
+    if (os.gravidade === 'alta') gravEl.classList.add('text-red-500');
+    else if (os.gravidade === 'media') gravEl.classList.add('text-orange-500');
+    else gravEl.classList.add('text-slate-600', 'dark:text-gray-300');
+
+    openModal('modalDetalhesOS');
+}
+
+function filtrarFinalizadas(q) {
+    const termo = q.toLowerCase().trim();
+    document.querySelectorAll('.card-finalizada').forEach(card => {
+        const placa = card.dataset.placa || '';
+        const modelo = card.dataset.modelo || '';
+        card.style.display = (!termo || placa.includes(termo) || modelo.includes(termo)) ? '' : 'none';
+    });
 }
 </script>
 

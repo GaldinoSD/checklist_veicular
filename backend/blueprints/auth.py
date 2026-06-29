@@ -678,27 +678,50 @@ def users_new():
 @admin_required
 def users_role(uid):
     u = User.query.get_or_404(uid)
-    role = request.form.get("role", "tech").strip().lower()
+    role = request.form.get("role", u.role).strip().lower()
     email = request.form.get("email", "").strip()
     phone = request.form.get("phone", "").strip()
+    pwd = request.form.get("password", "").strip()
 
-    if role not in {"admin", "supervisor", "tech", "manutencao"}:
-        flash("Papel inválido.", "error")
-        return redirect(url_for("users"))
+    # --- Atualização de senha (se fornecida) ---
+    if pwd:
+        # Para o admin, exige senha mestre
+        if u.username == "admin":
+            master = request.form.get("master_key", "").strip()
+            if not master:
+                flash("Para alterar a senha do ADMIN é necessário informar a senha mestre.", "error")
+                return redirect(url_for("users"))
+            if master != MASTER_PASSWORD:
+                flash("Senha mestre incorreta. Operação não autorizada.", "error")
+                return redirect(url_for("users"))
 
-    # Atualiza dados básicos
-    u.role = role
-    u.email = email
-    u.phone = phone
+        u.set_password(pwd)
+        registrar_log(f"Senha atualizada: {u.username}")
 
-    # Ao mudar o papel, resetamos para as permissões padrão daquele papel
-    perms = get_default_perms(role)
-    
-    u.permissions = json.dumps(perms)
+    # --- Atualização de dados (apenas para não-admin) ---
+    if u.username != "admin":
+        if role not in {"admin", "supervisor", "tech", "manutencao"}:
+            flash("Papel inválido.", "error")
+            return redirect(url_for("users"))
+
+        u.role = role
+        u.email = email
+        u.phone = phone
+
+        # Ao mudar o papel, resetamos para as permissões padrão daquele papel
+        perms = get_default_perms(role)
+        u.permissions = json.dumps(perms)
+
     db.session.commit()
 
+    if pwd and u.username != "admin":
+        flash(f"Dados e senha atualizados com sucesso!", "success")
+    elif pwd:
+        flash("Senha atualizada com sucesso!", "success")
+    else:
+        flash(f"Dados atualizados para {role}.", "success")
+
     registrar_log(f"Perfil atualizado: {u.username} -> {role}")
-    flash(f"Dados e permissões padrão atualizados para {role}.", "success")
     return redirect(url_for("users"))
 
 

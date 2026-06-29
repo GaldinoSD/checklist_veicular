@@ -237,23 +237,23 @@
       <p class="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">Colaborador: {{ u.username }}</p>
     </div>
     <div class="p-8">
-      <form method="post" action="{{ url_for('users_pwd', uid=u.id) }}" class="space-y-6">
+      <form method="post" action="{{ url_for('users_role', uid=u.id) }}" class="space-y-6">
         <div>
-          <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Alterar Senha</label>
-          <input id="password" name="password" type="password" placeholder="Digite a nova senha" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl px-5 py-3.5 text-sm dark:text-white outline-none focus:ring-4 focus:ring-blue-500/10 transition-all">
+          <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Alterar Senha <span class="text-slate-300 dark:text-slate-600 normal-case tracking-normal">(deixe em branco para manter)</span></label>
+          <input id="password" name="password" type="password" placeholder="Nova senha (opcional)" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl px-5 py-3.5 text-sm dark:text-white outline-none focus:ring-4 focus:ring-blue-500/10 transition-all">
         </div>
         
         {% if u.username == 'admin' %}
         <div class="p-5 bg-red-500/5 border border-red-500/20 rounded-2xl">
           <label class="text-[10px] font-black text-red-600 uppercase tracking-widest mb-2 block">Senha Mestre Requerida</label>
-          <input id="master_key" name="master_key" type="password" placeholder="Senha do Admin Principal" required class="w-full bg-white dark:bg-white/5 border border-red-500/20 rounded-xl px-4 py-3 text-sm outline-none">
+          <input id="master_key" name="master_key" type="password" placeholder="Senha do Admin Principal" class="w-full bg-white dark:bg-white/5 border border-red-500/20 rounded-xl px-4 py-3 text-sm outline-none">
         </div>
         {% endif %}
 
         {% if u.username != 'admin' %}
         <div>
           <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Perfil de Acesso</label>
-          <select name="role" form="formRole{{ u.id }}" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl px-5 py-3.5 text-sm dark:text-white outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all cursor-pointer">
+          <select name="role" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl px-5 py-3.5 text-sm dark:text-white outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all cursor-pointer">
             <option value="tech" {% if u.role == 'tech' %}selected{% endif %}>Técnico</option>
             <option value="supervisor" {% if u.role == 'supervisor' %}selected{% endif %}>Supervisor</option>
             <option value="admin" {% if u.role == 'admin' %}selected{% endif %}>Administrador</option>
@@ -264,24 +264,20 @@
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">E-mail</label>
-            <input id="email" name="email" type="email" value="{{ u.email or '' }}" placeholder="ex@email.com" form="formRole{{ u.id }}" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl px-5 py-3 text-sm dark:text-white outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all">
+            <input id="email" name="email" type="email" value="{{ u.email or '' }}" placeholder="ex@email.com" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl px-5 py-3 text-sm dark:text-white outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all">
           </div>
           <div>
             <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Telefone</label>
-            <input id="phone" name="phone" type="text" value="{{ u.phone or '' }}" placeholder="(00) 00000-0000" form="formRole{{ u.id }}" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl px-5 py-3 text-sm dark:text-white outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all">
+            <input id="phone" name="phone" type="text" value="{{ u.phone or '' }}" placeholder="(00) 00000-0000" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl px-5 py-3 text-sm dark:text-white outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all">
           </div>
         </div>
         {% endif %}
 
         <div class="flex flex-col gap-3 pt-4">
-          <button formaction="{{ url_for('users_pwd', uid=u.id) }}" class="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-xl shadow-blue-500/30 transition-all active:scale-95">Salvar Nova Senha</button>
-          {% if u.username != 'admin' %}
-          <button form="formRole{{ u.id }}" class="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-xl shadow-indigo-500/30 transition-all active:scale-95">Atualizar Dados</button>
-          {% endif %}
+          <button type="submit" class="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-xl shadow-indigo-500/30 transition-all active:scale-95">Atualizar Dados</button>
           <button type="button" onclick="closeModal('modalEdit{{ u.id }}')" class="w-full py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] hover:text-slate-600 transition-colors">Cancelar</button>
         </div>
       </form>
-      <form id="formRole{{ u.id }}" method="post" action="{{ url_for('users_role', uid=u.id) }}"></form>
     </div>
   </div>
 </div>

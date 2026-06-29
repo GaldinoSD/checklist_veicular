@@ -6,13 +6,13 @@
 <style>
     /* Premium Panel Animation */
     .animate-premium {
-        animation: panelFadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        animation: panelFadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     }
     
     @keyframes panelFadeIn {
         from {
             opacity: 0;
-            transform: translateY(16px);
+            transform: translateY(12px);
         }
         to {
             opacity: 1;
@@ -23,8 +23,8 @@
     /* Tab transitions */
     .tab-panel {
         opacity: 0;
-        transform: translateY(8px);
-        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        transform: translateY(6px);
+        transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
     }
     .active-panel {
         opacity: 1 !important;
@@ -33,12 +33,12 @@
 
     /* Pulse glow for online badge */
     .pulse-ring-emerald {
-        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5);
         animation: pulseEmerald 2s infinite;
     }
     @keyframes pulseEmerald {
         70% {
-            box-shadow: 0 0 0 8px rgba(16, 185, 129, 0);
+            box-shadow: 0 0 0 6px rgba(16, 185, 129, 0);
         }
         100% {
             box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
@@ -47,12 +47,12 @@
 
     /* Pulse glow for test button */
     .pulse-ring-amber {
-        box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.7);
+        box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.5);
         animation: pulseAmber 2s infinite;
     }
     @keyframes pulseAmber {
         70% {
-            box-shadow: 0 0 0 8px rgba(245, 158, 11, 0);
+            box-shadow: 0 0 0 6px rgba(245, 158, 11, 0);
         }
         100% {
             box-shadow: 0 0 0 0 rgba(245, 158, 11, 0);
@@ -62,7 +62,7 @@
     /* SVG Pipeline Flow Animation */
     .flow-dash {
         stroke-dasharray: 6;
-        animation: flowDashAnim 30s linear infinite;
+        animation: flowDashAnim 25s linear infinite;
     }
     
     @keyframes flowDashAnim {
@@ -73,7 +73,7 @@
     
     /* Code Terminal aesthetic */
     .terminal-textarea {
-        background-color: #0b0f19;
+        background-color: #0d131f;
         font-family: 'Fira Code', 'Courier New', Courier, monospace;
         color: #e2e8f0;
         border-color: #1e293b;
@@ -81,7 +81,18 @@
     }
     .terminal-textarea:focus {
         border-color: #10b981 !important;
-        box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.15) !important;
+        box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1) !important;
+    }
+    
+    /* Light theme terminal override */
+    :root:not(.dark) .terminal-textarea {
+        background-color: #f8fafc;
+        color: #1e293b;
+        border-color: #e2e8f0;
+    }
+    :root:not(.dark) .terminal-textarea:focus {
+        border-color: #10b981 !important;
+        box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.08) !important;
     }
 </style>
 
@@ -90,9 +101,9 @@
     <!-- =======================================================
             HEADER HUD (CONNECTION COMMAND CONTROL)
          ======================================================= -->
-    <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 relative overflow-hidden shadow-2xl">
+    <div class="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/80 rounded-xl p-6 relative overflow-hidden shadow-lg">
         <!-- Technical Grid Background -->
-        <div class="absolute inset-0 bg-[linear-gradient(to_right,#1e293b_1px,transparent_1px),linear-gradient(to_bottom,#1e293b_1px,transparent_1px)] bg-[size:24px_24px] opacity-10"></div>
+        <div class="absolute inset-0 bg-[linear-gradient(to_right,rgba(148,163,184,0.08)_1px,transparent_1px),linear-gradient(to_bottom,rgba(148,163,184,0.08)_1px,transparent_1px)] dark:bg-[linear-gradient(to_right,#1e293b_1px,transparent_1px),linear-gradient(to_bottom,#1e293b_1px,transparent_1px)] bg-[size:24px_24px] opacity-100 dark:opacity-10"></div>
         <div class="absolute -top-32 -right-32 w-80 h-80 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
 
         <div class="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
@@ -102,46 +113,46 @@
                     <i class="fa-solid fa-network-wired text-xl"></i>
                 </div>
                 <div>
-                    <div class="flex items-center gap-2 text-[10px] font-extrabold text-slate-500 uppercase tracking-widest mb-1">
+                    <div class="flex items-center gap-2 text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1">
                         <span>Painel Operacional</span>
                         <i class="fa-solid fa-chevron-right text-[8px] opacity-40"></i>
                         <span class="text-emerald-500">Evolution API Gateway</span>
                     </div>
-                    <h2 class="text-xl font-extrabold text-white tracking-tight">Configurações de Comunicação</h2>
-                    <p class="text-xs text-slate-400 mt-1">Gerencie a integração de mensageria instantânea com disparo de notificações automatizadas.</p>
+                    <h2 class="text-xl font-extrabold text-slate-900 dark:text-white tracking-tight">Configurações de Comunicação</h2>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Gerencie a integração de mensageria instantânea com disparo de notificações automatizadas.</p>
                 </div>
             </div>
 
             <!-- Operational Status & Telemetry HUD -->
-            <div class="flex flex-wrap items-center gap-4 bg-slate-950/60 border border-slate-800/80 rounded-xl p-4">
+            <div class="flex flex-wrap items-center gap-4 bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800/80 rounded-xl p-4">
                 <!-- Status Badge -->
                 <div class="flex flex-col gap-1">
-                    <span class="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Status do Servidor</span>
-                    <div id="conn-badge" class="flex items-center gap-2.5 px-3 py-1.5 bg-slate-800/50 rounded-lg border border-slate-700 transition-all">
+                    <span class="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Status do Servidor</span>
+                    <div id="conn-badge" class="flex items-center gap-2.5 px-3 py-1.5 bg-slate-100 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-700 transition-all">
                         <div class="relative flex h-2 w-2">
-                            <span id="conn-ping" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-slate-400 opacity-75"></span>
-                            <span id="conn-dot" class="relative inline-flex rounded-full h-2 w-2 bg-slate-500"></span>
+                            <span id="conn-ping" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-slate-400 dark:bg-slate-600 opacity-75"></span>
+                            <span id="conn-dot" class="relative inline-flex rounded-full h-2 w-2 bg-slate-500 dark:bg-slate-400"></span>
                         </div>
-                        <span id="conn-text" class="text-[10px] font-black uppercase tracking-widest text-slate-400">Verificando...</span>
+                        <span id="conn-text" class="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400">Verificando...</span>
                     </div>
                 </div>
 
                 <!-- Divider -->
-                <div class="hidden sm:block h-8 w-px bg-slate-800"></div>
+                <div class="hidden sm:block h-8 w-px bg-slate-200 dark:bg-slate-800"></div>
 
                 <!-- Simulation Metric 1: System Sync -->
                 <div class="hidden sm:flex flex-col gap-0.5">
-                    <span class="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Canal Ativo</span>
-                    <span class="text-xs font-mono font-bold text-emerald-400">INST_WHATSAPP</span>
+                    <span class="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Canal Ativo</span>
+                    <span class="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400">INST_WHATSAPP</span>
                 </div>
 
                 <!-- Divider -->
-                <div class="hidden md:block h-8 w-px bg-slate-800"></div>
+                <div class="hidden md:block h-8 w-px bg-slate-200 dark:bg-slate-800"></div>
 
                 <!-- Simulation Metric 2: Encryption -->
                 <div class="hidden md:flex flex-col gap-0.5">
-                    <span class="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Protocolo de Envio</span>
-                    <span class="text-xs font-mono font-bold text-slate-300">SSL / TLS SECURE</span>
+                    <span class="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Protocolo de Envio</span>
+                    <span class="text-xs font-mono font-bold text-slate-700 dark:text-slate-300">SSL / TLS SECURE</span>
                 </div>
             </div>
         </div>
@@ -155,10 +166,10 @@
             <button onclick="switchTab('tab-config-api', this)" class="tab-btn px-4 py-2 rounded-lg text-xs font-extrabold transition-all flex items-center gap-2 bg-slate-900 dark:bg-white text-white dark:text-slate-950 shadow-sm border border-slate-850 dark:border-white/20">
                 <i class="fa-solid fa-sliders"></i> Credenciais da API
             </button>
-            <button onclick="switchTab('tab-templates', this)" class="tab-btn px-4 py-2 rounded-lg text-xs font-bold transition-all text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 flex items-center gap-2 border border-transparent">
+            <button onclick="switchTab('tab-templates', this)" class="tab-btn px-4 py-2 rounded-lg text-xs font-bold transition-all text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-205 flex items-center gap-2 border border-transparent">
                 <i class="fa-solid fa-envelope-open-text"></i> Templates de Notificação
             </button>
-            <button onclick="switchTab('tab-gatilhos', this)" class="tab-btn px-4 py-2 rounded-lg text-xs font-bold transition-all text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 flex items-center gap-2 border border-transparent">
+            <button onclick="switchTab('tab-gatilhos', this)" class="tab-btn px-4 py-2 rounded-lg text-xs font-bold transition-all text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-205 flex items-center gap-2 border border-transparent">
                 <i class="fa-solid fa-circle-nodes"></i> Pipeline de Gatilhos
             </button>
         </div>
@@ -175,266 +186,476 @@
     <div id="tabs-container">
 
         <!-- 🟢 TAB 1: API CREDENTIALS FORM -->
-        <div id="tab-config-api" class="tab-panel max-w-3xl active-panel">
-            <div class="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/80 rounded-xl shadow-xl overflow-hidden">
-                <div class="p-6 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/20">
-                    <h3 class="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
-                        <i class="fa-solid fa-key text-emerald-500"></i> Autenticação com Evolution API
-                    </h3>
-                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">Insira as chaves de acesso e URL da API da sua instância para ativar a mensageria.</p>
-                </div>
-
-                <form method="post" action="{{ url_for('whatsapp_config_save') }}" class="p-6 space-y-6">
-                    <!-- URL & INSTANCE -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div class="space-y-2">
-                            <label class="text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest block">URL do Servidor (API URL)</label>
-                            <div class="relative">
-                                <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-600 font-mono text-xs"><i class="fa-solid fa-link"></i></span>
-                                <input id="api_url" name="api_url" required value="{{ whatsapp_config.api_url or 'https://api.evolution.com' }}" placeholder="https://api.seudominio.com" 
-                                       class="w-full bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 rounded-lg pl-10 pr-4 py-3 text-xs dark:text-white outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-mono">
-                            </div>
-                        </div>
-                        <div class="space-y-2">
-                            <label class="text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest block">Identificador da Instância (Instance Name)</label>
-                            <div class="relative">
-                                <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-600 font-mono text-xs"><i class="fa-solid fa-server"></i></span>
-                                <input id="instance_name" name="instance_name" required value="{{ whatsapp_config.instance_name or 'checklist_instance' }}" placeholder="checklist_instance" 
-                                       class="w-full bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 rounded-lg pl-10 pr-4 py-3 text-xs dark:text-white outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-mono">
-                            </div>
-                        </div>
+        <div id="tab-config-api" class="tab-panel active-panel">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                
+                <!-- Form Column -->
+                <div class="lg:col-span-8 bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/80 rounded-xl shadow-xl overflow-hidden">
+                    <div class="p-6 border-b border-slate-200 dark:border-slate-800 bg-slate-5/50 dark:bg-slate-900/20">
+                        <h3 class="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                            <i class="fa-solid fa-key text-emerald-500"></i> Autenticação com Evolution API
+                        </h3>
+                        <p class="text-xs text-slate-550 dark:text-slate-400 mt-1">Insira as chaves de acesso e URL da API da sua instância para ativar a mensageria.</p>
                     </div>
 
-                    <!-- API KEY -->
-                    <div class="space-y-2">
-                        <label class="text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest block">Chave de API Global (Global API Key)</label>
-                        <div class="relative">
-                            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-600 font-mono text-xs"><i class="fa-solid fa-fingerprint"></i></span>
-                            <input id="apikey-input" name="apikey" type="password" value="{{ whatsapp_config.apikey or '' }}" placeholder="Cole a chave gerada pela Evolution API" 
-                                   class="w-full bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 rounded-lg pl-10 pr-12 py-3 text-xs dark:text-white outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-mono">
-                            <button type="button" onclick="toggleApikeyVisibility()" class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors" title="Ver Chave">
-                                <i class="fa-solid fa-eye" id="apikey-eye"></i>
+                    <form method="post" action="{{ url_for('whatsapp_config_save') }}" class="p-6 space-y-6">
+                        <!-- URL & INSTANCE -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div class="space-y-2">
+                                <label class="text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest block">URL do Servidor (API URL)</label>
+                                <div class="relative">
+                                    <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-600 font-mono text-xs"><i class="fa-solid fa-link"></i></span>
+                                    <input id="api_url" name="api_url" required value="{{ whatsapp_config.api_url or 'https://api.evolution.com' }}" placeholder="https://api.seudominio.com" 
+                                           class="w-full bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 rounded-lg pl-10 pr-4 py-3 text-xs dark:text-white outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-mono">
+                                </div>
+                            </div>
+                            <div class="space-y-2">
+                                <label class="text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest block">Identificador da Instância (Instance Name)</label>
+                                <div class="relative">
+                                    <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-600 font-mono text-xs"><i class="fa-solid fa-server"></i></span>
+                                    <input id="instance_name" name="instance_name" required value="{{ whatsapp_config.instance_name or 'checklist_instance' }}" placeholder="checklist_instance" 
+                                           class="w-full bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 rounded-lg pl-10 pr-4 py-3 text-xs dark:text-white outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-mono">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- API KEY -->
+                        <div class="space-y-2">
+                            <label class="text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest block">Chave de API Global (Global API Key)</label>
+                            <div class="relative">
+                                <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-600 font-mono text-xs"><i class="fa-solid fa-fingerprint"></i></span>
+                                <input id="apikey-input" name="apikey" type="password" value="{{ whatsapp_config.apikey or '' }}" placeholder="Cole a chave gerada pela Evolution API" 
+                                       class="w-full bg-slate-50 dark:bg-slate-955/40 border border-slate-200 dark:border-slate-800 rounded-lg pl-10 pr-12 py-3 text-xs dark:text-white outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-mono">
+                                <button type="button" onclick="toggleApikeyVisibility()" class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors" title="Ver Chave">
+                                    <i class="fa-solid fa-eye" id="apikey-eye"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- RECIPIENTS -->
+                        <div class="space-y-2">
+                            <label class="text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest block">Contatos Administrativos Globais (WhatsApp separados por vírgula)</label>
+                            <textarea name="recipients" rows="2" placeholder="5521999998888, 5521777776666" 
+                                      class="w-full bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 rounded-lg px-4 py-3 text-xs dark:text-white outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-mono leading-relaxed">{{ whatsapp_config.recipients or '' }}</textarea>
+                            <span class="text-[9px] text-slate-400 dark:text-slate-500 block leading-relaxed"><i class="fa-solid fa-circle-info text-emerald-500 mr-0.5"></i> Digite apenas números no formato de código de país + DDD + telefone (ex: 5521999998888), sem hifens, parênteses ou espaços.</span>
+                        </div>
+
+                        <!-- ACTIVE TOGGLE -->
+                        <div class="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-950/30 rounded-xl border border-slate-200 dark:border-slate-800/80">
+                            <div class="space-y-0.5">
+                                <h4 class="text-xs font-extrabold text-slate-800 dark:text-white">Habilitar Disparos de Notificações</h4>
+                                <p class="text-[10px] text-slate-550 dark:text-slate-400">Ativa ou suspende instantaneamente todos os envios automáticos configurados no sistema.</p>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer select-none">
+                                <input id="is_enabled" type="checkbox" name="is_enabled" {% if whatsapp_config.is_enabled %}checked{% endif %} class="sr-only peer">
+                                <div class="w-10 h-5.5 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2.5px] after:left-[2px] after:bg-white after:rounded-full after:h-4.5 after:w-4.5 after:transition-all peer-checked:bg-emerald-500 shadow-inner"></div>
+                            </label>
+                        </div>
+
+                        <!-- BUTTONS -->
+                        <div class="flex flex-wrap items-center gap-3 pt-6 border-t border-slate-200 dark:border-slate-800">
+                            <button type="submit" class="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[10px] uppercase tracking-wider rounded-lg active:scale-98 transition-all flex items-center gap-2">
+                                <i class="fa-solid fa-floppy-disk"></i> Salvar Alterações
+                            </button>
+                            <button type="button" onclick="testConnection()" class="px-5 py-3 bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-750 text-slate-650 dark:text-slate-300 font-extrabold text-[10px] uppercase tracking-wider rounded-lg active:scale-98 transition-all flex items-center gap-2">
+                                <i class="fa-solid fa-rotate-right" id="test-conn-icon"></i> Testar Conexão
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Info/Guide Column -->
+                <div class="lg:col-span-4 space-y-6">
+                    <div class="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900/60 dark:to-slate-900/40 border border-slate-200 dark:border-slate-800/80 rounded-xl p-5 space-y-4 shadow-lg animate-premium">
+                        <h4 class="text-xs font-extrabold uppercase tracking-wider text-slate-800 dark:text-white flex items-center gap-2">
+                            <i class="fa-solid fa-circle-question text-emerald-500"></i> Como obter as credenciais?
+                        </h4>
+                        <ol class="text-[11px] text-slate-600 dark:text-slate-400 space-y-3 list-decimal list-inside leading-relaxed">
+                            <li>Acesse o painel administrativo da sua <strong>Evolution API</strong>.</li>
+                            <li>No menu lateral, crie ou selecione uma instância dedicada ao aplicativo (ex: <code class="px-1.5 py-0.5 rounded bg-slate-200 dark:bg-slate-800 font-mono text-[10px] text-slate-750 dark:text-slate-300">checklist_instance</code>).</li>
+                            <li>Conecte o WhatsApp na instância via QRCode.</li>
+                            <li>Copie a <strong>API URL</strong> (ex: <code class="font-mono text-[9px]">https://api.seudominio.com</code>).</li>
+                            <li>Copie a <strong>Chave de API Global</strong> gerada nas configurações gerais de segurança da sua Evolution API.</li>
+                            <li>Preencha o formulário e clique em <strong>Salvar Alterações</strong>.</li>
+                        </ol>
+                        <div class="pt-2 border-t border-slate-200 dark:border-slate-800 text-[10px] text-slate-500 leading-normal flex items-start gap-2">
+                            <i class="fa-solid fa-circle-exclamation text-amber-500 mt-0.5"></i>
+                            <span>Certifique-se de que a instância criada está online no painel da Evolution antes de testar a conexão no sistema.</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 🟢 TAB 2: AUTOMATIC MESSAGE TEMPLATES (DUAL COLUMN INTEGRATION WITH PHONE PREVIEW) -->
+        <div id="tab-templates" class="tab-panel hidden">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                
+                <!-- Left Column: Template Forms and Sub-Tabs -->
+                <div class="lg:col-span-8 bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/80 rounded-xl shadow-xl overflow-hidden">
+                    <div class="p-6 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/20">
+                        <h3 class="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                            <i class="fa-solid fa-envelope-open-text text-emerald-500"></i> Templates de Mensagens Automáticas
+                        </h3>
+                        <p class="text-xs text-slate-550 dark:text-slate-400 mt-1">Customize a estrutura do texto enviado aos contatos operacionais quando os gatilhos forem ativados.</p>
+                    </div>
+
+                    <!-- Category sub-tabs switcher -->
+                    <div class="p-6 pb-0">
+                        <div class="flex flex-wrap gap-1 bg-slate-105 dark:bg-slate-950 p-1 rounded-lg border border-slate-200 dark:border-slate-850/80">
+                            <button type="button" onclick="switchSubTab('subtab-checklist', this)" class="sub-tab-btn flex-1 min-w-[125px] px-3.5 py-2.5 rounded-md text-[11px] font-extrabold transition-all border flex items-center justify-center gap-1.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20">
+                                <i class="fa-solid fa-clipboard-list"></i> Checklists & Vistorias
+                            </button>
+                            <button type="button" onclick="switchSubTab('subtab-os', this)" class="sub-tab-btn flex-1 min-w-[125px] px-3.5 py-2.5 rounded-md text-[11px] font-bold transition-all border flex items-center justify-center gap-1.5 text-slate-500 dark:text-slate-400 border-transparent hover:text-slate-900 dark:hover:text-slate-200">
+                                <i class="fa-solid fa-wrench"></i> Ordens de Serviço
+                            </button>
+                            <button type="button" onclick="switchSubTab('subtab-operacional', this)" class="sub-tab-btn flex-1 min-w-[125px] px-3.5 py-2.5 rounded-md text-[11px] font-bold transition-all border flex items-center justify-center gap-1.5 text-slate-500 dark:text-slate-400 border-transparent hover:text-slate-900 dark:hover:text-slate-200">
+                                <i class="fa-solid fa-users-gear"></i> Plantões & Treinos
                             </button>
                         </div>
                     </div>
 
-                    <!-- RECIPIENTS -->
-                    <div class="space-y-2">
-                        <label class="text-[10px] font-extrabold text-slate-400 dark:text-slate-500 uppercase tracking-widest block">Contatos Administrativos Globais (WhatsApp separados por vírgula)</label>
-                        <textarea name="recipients" rows="2" placeholder="5521999998888, 5521777776666" 
-                                  class="w-full bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 rounded-lg px-4 py-3 text-xs dark:text-white outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all font-mono leading-relaxed">{{ whatsapp_config.recipients or '' }}</textarea>
-                        <span class="text-[9px] text-slate-400 dark:text-slate-500 block leading-relaxed"><i class="fa-solid fa-circle-info text-emerald-500 mr-0.5"></i> Digite apenas números no formato de código de país + DDD + telefone (ex: 5521999998888), sem hifens, parênteses ou espaços.</span>
-                    </div>
+                    <form method="post" action="{{ url_for('whatsapp_templates_save') }}" class="p-6 space-y-6">
+                        
+                        <!-- Sub-tab panel 1: Checklists -->
+                        <div id="subtab-checklist" class="sub-tab-panel space-y-6">
+                            <!-- Template 1: Checklist Inconformidade -->
+                            <div class="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden transition-all duration-350 hover:border-emerald-500/20">
+                                <div class="flex flex-wrap items-center justify-between gap-3 px-5 py-3 bg-slate-50 dark:bg-slate-955/20 border-b border-slate-200 dark:border-slate-850">
+                                    <span class="text-xs font-extrabold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                                        <span class="w-2 h-2 rounded-full bg-red-500 shadow-sm shadow-red-500/50"></span>
+                                        Inconformidade detectada em Checklist
+                                    </span>
+                                    <div class="flex items-center gap-1 flex-wrap">
+                                        <span class="text-[8px] text-slate-400 font-bold uppercase tracking-wider mr-1">Clique para inserir:</span>
+                                        <button type="button" onclick="insertTag('msg_checklist_fail', '{tecnico}')" class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 hover:bg-emerald-500/10 hover:text-emerald-500 text-[9px] font-semibold text-slate-650 dark:text-slate-350 font-mono border border-slate-200 dark:border-slate-700 transition-colors">{tecnico}</button>
+                                        <button type="button" onclick="insertTag('msg_checklist_fail', '{veiculo}')" class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 hover:bg-emerald-500/10 hover:text-emerald-500 text-[9px] font-semibold text-slate-650 dark:text-slate-350 font-mono border border-slate-200 dark:border-slate-700 transition-colors">{veiculo}</button>
+                                        <button type="button" onclick="insertTag('msg_checklist_fail', '{placa}')" class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 hover:bg-emerald-500/10 hover:text-emerald-500 text-[9px] font-semibold text-slate-650 dark:text-slate-350 font-mono border border-slate-200 dark:border-slate-700 transition-colors">{placa}</button>
+                                    </div>
+                                </div>
+                                <textarea id="msg_checklist_fail" name="msg_checklist_fail" rows="4" required 
+                                          onfocus="syncPreview(this, 'Inconformidade Checklist')"
+                                          oninput="updatePreviewText(this.value, this.name)"
+                                          class="w-full terminal-textarea px-5 py-4 text-xs outline-none transition-all leading-relaxed">{{ whatsapp_config.msg_checklist_fail }}</textarea>
+                                
+                                <!-- Mobile Only Preview container -->
+                                <div class="lg:hidden p-3 bg-[#efeae2] dark:bg-[#0b141a] border-t border-slate-200 dark:border-slate-850">
+                                    <div class="text-[9px] font-bold text-slate-450 dark:text-slate-500 uppercase tracking-widest mb-1.5 flex items-center gap-1"><i class="fa-brands fa-whatsapp text-emerald-500"></i> Pré-visualização celular</div>
+                                    <div class="relative bg-white dark:bg-[#202c33] text-[#111b21] dark:text-[#e9edef] rounded-lg rounded-tl-none p-3 text-[11px] font-sans leading-relaxed shadow-sm border border-slate-100 dark:border-transparent max-w-[95%]">
+                                        <svg class="absolute top-0 -left-2 text-white dark:text-[#202c33]" width="8" height="13" viewBox="0 0 8 13" fill="currentColor"><path d="M5.188 0H0v11.5L5.188 0z" /></svg>
+                                        <div class="preview-mobile-bubble break-words" data-target="msg_checklist_fail"></div>
+                                    </div>
+                                </div>
+                            </div>
 
-                    <!-- ACTIVE TOGGLE -->
-                    <div class="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-950/30 rounded-xl border border-slate-200 dark:border-slate-800/80">
-                        <div class="space-y-0.5">
-                            <h4 class="text-xs font-extrabold text-slate-800 dark:text-white">Habilitar Disparos de Notificações</h4>
-                            <p class="text-[10px] text-slate-550 dark:text-slate-400">Ativa ou suspende instantaneamente todos os envios automáticos configurados no sistema.</p>
+                            <!-- Template 2: Nova Vistoria -->
+                            <div class="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden transition-all duration-350 hover:border-emerald-500/20">
+                                <div class="flex flex-wrap items-center justify-between gap-3 px-5 py-3 bg-slate-50 dark:bg-slate-955/20 border-b border-slate-200 dark:border-slate-850">
+                                    <span class="text-xs font-extrabold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                                        <span class="w-2 h-2 rounded-full bg-cyan-500 shadow-sm shadow-cyan-500/50"></span>
+                                        Nova Vistoria de Veículo
+                                    </span>
+                                    <div class="flex items-center gap-1 flex-wrap">
+                                        <span class="text-[8px] text-slate-400 font-bold uppercase tracking-wider mr-1">Clique para inserir:</span>
+                                        <button type="button" onclick="insertTag('msg_new_vistoria', '{veiculo}')" class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 hover:bg-emerald-500/10 hover:text-emerald-500 text-[9px] font-semibold text-slate-650 dark:text-slate-350 font-mono border border-slate-200 dark:border-slate-700 transition-colors">{veiculo}</button>
+                                        <button type="button" onclick="insertTag('msg_new_vistoria', '{placa}')" class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 hover:bg-emerald-500/10 hover:text-emerald-500 text-[9px] font-semibold text-slate-650 dark:text-slate-350 font-mono border border-slate-200 dark:border-slate-700 transition-colors">{placa}</button>
+                                        <button type="button" onclick="insertTag('msg_new_vistoria', '{status}')" class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 hover:bg-emerald-500/10 hover:text-emerald-500 text-[9px] font-semibold text-slate-650 dark:text-slate-355 font-mono border border-slate-200 dark:border-slate-700 transition-colors">{status}</button>
+                                    </div>
+                                </div>
+                                <textarea id="msg_new_vistoria" name="msg_new_vistoria" rows="4" required 
+                                          onfocus="syncPreview(this, 'Nova Vistoria')"
+                                          oninput="updatePreviewText(this.value, this.name)"
+                                          class="w-full terminal-textarea px-5 py-4 text-xs outline-none transition-all leading-relaxed">{{ whatsapp_config.msg_new_vistoria }}</textarea>
+                                
+                                <!-- Mobile Only Preview container -->
+                                <div class="lg:hidden p-3 bg-[#efeae2] dark:bg-[#0b141a] border-t border-slate-200 dark:border-slate-850">
+                                    <div class="text-[9px] font-bold text-slate-450 dark:text-slate-500 uppercase tracking-widest mb-1.5 flex items-center gap-1"><i class="fa-brands fa-whatsapp text-emerald-500"></i> Pré-visualização celular</div>
+                                    <div class="relative bg-white dark:bg-[#202c33] text-[#111b21] dark:text-[#e9edef] rounded-lg rounded-tl-none p-3 text-[11px] font-sans leading-relaxed shadow-sm border border-slate-100 dark:border-transparent max-w-[95%]">
+                                        <svg class="absolute top-0 -left-2 text-white dark:text-[#202c33]" width="8" height="13" viewBox="0 0 8 13" fill="currentColor"><path d="M5.188 0H0v11.5L5.188 0z" /></svg>
+                                        <div class="preview-mobile-bubble break-words" data-target="msg_new_vistoria"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Template 3: Lembrete Checklist Pendente -->
+                            <div class="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden transition-all duration-350 hover:border-emerald-500/20">
+                                <div class="flex flex-wrap items-center justify-between gap-3 px-5 py-3 bg-slate-50 dark:bg-slate-955/20 border-b border-slate-200 dark:border-slate-850">
+                                    <span class="text-xs font-extrabold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                                        <span class="w-2 h-2 rounded-full bg-yellow-500 shadow-sm shadow-yellow-500/50"></span>
+                                        Automação: Lembrete de Checklist Diário Pendente
+                                    </span>
+                                    <div class="flex items-center gap-1 flex-wrap">
+                                        <span class="text-[8px] text-slate-400 font-bold uppercase tracking-wider mr-1">Clique para inserir:</span>
+                                        <button type="button" onclick="insertTag('msg_late_checklist', '{usuario}')" class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 hover:bg-emerald-500/10 hover:text-emerald-500 text-[9px] font-semibold text-slate-650 dark:text-slate-350 font-mono border border-slate-200 dark:border-slate-700 transition-colors">{usuario}</button>
+                                    </div>
+                                </div>
+                                <textarea id="msg_late_checklist" name="msg_late_checklist" rows="4" required 
+                                          onfocus="syncPreview(this, 'Checklist Pendente')"
+                                          oninput="updatePreviewText(this.value, this.name)"
+                                          class="w-full terminal-textarea px-5 py-4 text-xs outline-none transition-all leading-relaxed">{{ whatsapp_config.msg_late_checklist }}</textarea>
+                                
+                                <!-- Mobile Only Preview container -->
+                                <div class="lg:hidden p-3 bg-[#efeae2] dark:bg-[#0b141a] border-t border-slate-200 dark:border-slate-850">
+                                    <div class="text-[9px] font-bold text-slate-450 dark:text-slate-500 uppercase tracking-widest mb-1.5 flex items-center gap-1"><i class="fa-brands fa-whatsapp text-emerald-500"></i> Pré-visualização celular</div>
+                                    <div class="relative bg-white dark:bg-[#202c33] text-[#111b21] dark:text-[#e9edef] rounded-lg rounded-tl-none p-3 text-[11px] font-sans leading-relaxed shadow-sm border border-slate-100 dark:border-transparent max-w-[95%]">
+                                        <svg class="absolute top-0 -left-2 text-white dark:text-[#202c33]" width="8" height="13" viewBox="0 0 8 13" fill="currentColor"><path d="M5.188 0H0v11.5L5.188 0z" /></svg>
+                                        <div class="preview-mobile-bubble break-words" data-target="msg_late_checklist"></div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
-                        <label class="relative inline-flex items-center cursor-pointer select-none">
-                            <input id="is_enabled" type="checkbox" name="is_enabled" {% if whatsapp_config.is_enabled %}checked{% endif %} class="sr-only peer">
-                            <div class="w-10 h-5.5 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2.5px] after:left-[2px] after:bg-white after:rounded-full after:h-4.5 after:w-4.5 after:transition-all peer-checked:bg-emerald-500 shadow-inner"></div>
-                        </label>
-                    </div>
 
-                    <!-- BUTTONS -->
-                    <div class="flex flex-wrap items-center gap-3 pt-6 border-t border-slate-200 dark:border-slate-800">
-                        <button type="submit" class="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[10px] uppercase tracking-wider rounded-lg active:scale-98 transition-all flex items-center gap-2">
-                            <i class="fa-solid fa-floppy-disk"></i> Salvar Alterações
-                        </button>
-                        <button type="button" onclick="testConnection()" class="px-5 py-3 bg-slate-100 dark:bg-slate-800/80 hover:bg-slate-200 dark:hover:bg-slate-750 text-slate-650 dark:text-slate-300 font-extrabold text-[10px] uppercase tracking-wider rounded-lg active:scale-98 transition-all flex items-center gap-2">
-                            <i class="fa-solid fa-rotate-right" id="test-conn-icon"></i> Testar Conexão
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
+                        <!-- Sub-tab panel 2: Ordens de Serviço -->
+                        <div id="subtab-os" class="sub-tab-panel space-y-6 hidden">
+                            <!-- Template 1: Nova OS Avaria -->
+                            <div class="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden transition-all duration-350 hover:border-emerald-500/20">
+                                <div class="flex flex-wrap items-center justify-between gap-3 px-5 py-3 bg-slate-50 dark:bg-slate-955/20 border-b border-slate-200 dark:border-slate-850">
+                                    <span class="text-xs font-extrabold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                                        <span class="w-2 h-2 rounded-full bg-orange-500 shadow-sm shadow-orange-500/50"></span>
+                                        Nova Ordem de Serviço Iniciada
+                                    </span>
+                                    <div class="flex items-center gap-1 flex-wrap">
+                                        <span class="text-[8px] text-slate-400 font-bold uppercase tracking-wider mr-1">Clique para inserir:</span>
+                                        <button type="button" onclick="insertTag('msg_os_opened', '{veiculo}')" class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 hover:bg-emerald-500/10 hover:text-emerald-500 text-[9px] font-semibold text-slate-650 dark:text-slate-350 font-mono border border-slate-200 dark:border-slate-700 transition-colors">{veiculo}</button>
+                                        <button type="button" onclick="insertTag('msg_os_opened', '{placa}')" class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 hover:bg-emerald-500/10 hover:text-emerald-500 text-[9px] font-semibold text-slate-650 dark:text-slate-350 font-mono border border-slate-200 dark:border-slate-700 transition-colors">{placa}</button>
+                                        <button type="button" onclick="insertTag('msg_os_opened', '{gravidade}')" class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 hover:bg-emerald-500/10 hover:text-emerald-500 text-[9px] font-semibold text-slate-650 dark:text-slate-350 font-mono border border-slate-200 dark:border-slate-700 transition-colors">{gravidade}</button>
+                                        <button type="button" onclick="insertTag('msg_os_opened', '{descricao}')" class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 hover:bg-emerald-500/10 hover:text-emerald-500 text-[9px] font-semibold text-slate-650 dark:text-slate-350 font-mono border border-slate-200 dark:border-slate-700 transition-colors">{descricao}</button>
+                                    </div>
+                                </div>
+                                <textarea id="msg_os_opened" name="msg_os_opened" rows="4" required 
+                                          onfocus="syncPreview(this, 'Abertura de O.S.')"
+                                          oninput="updatePreviewText(this.value, this.name)"
+                                          class="w-full terminal-textarea px-5 py-4 text-xs outline-none transition-all leading-relaxed">{{ whatsapp_config.msg_os_opened }}</textarea>
+                                
+                                <!-- Mobile Only Preview container -->
+                                <div class="lg:hidden p-3 bg-[#efeae2] dark:bg-[#0b141a] border-t border-slate-200 dark:border-slate-850">
+                                    <div class="text-[9px] font-bold text-slate-450 dark:text-slate-500 uppercase tracking-widest mb-1.5 flex items-center gap-1"><i class="fa-brands fa-whatsapp text-emerald-500"></i> Pré-visualização celular</div>
+                                    <div class="relative bg-white dark:bg-[#202c33] text-[#111b21] dark:text-[#e9edef] rounded-lg rounded-tl-none p-3 text-[11px] font-sans leading-relaxed shadow-sm border border-slate-100 dark:border-transparent max-w-[95%]">
+                                        <svg class="absolute top-0 -left-2 text-white dark:text-[#202c33]" width="8" height="13" viewBox="0 0 8 13" fill="currentColor"><path d="M5.188 0H0v11.5L5.188 0z" /></svg>
+                                        <div class="preview-mobile-bubble break-words" data-target="msg_os_opened"></div>
+                                    </div>
+                                </div>
+                            </div>
 
-        <!-- 🟢 TAB 2: AUTOMATIC MESSAGE TEMPLATES -->
-        <div id="tab-templates" class="tab-panel hidden max-w-4xl">
-            <div class="bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/80 rounded-xl shadow-xl overflow-hidden">
-                <div class="p-6 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/20">
-                    <h3 class="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
-                        <i class="fa-solid fa-envelope-open-text text-emerald-500"></i> Templates de Mensagens Automáticas
-                    </h3>
-                    <p class="text-xs text-slate-550 dark:text-slate-400 mt-1">Customize a estrutura do texto enviado aos contatos operacionais quando os gatilhos forem ativados.</p>
+                            <!-- Template 2: OS Finalizada -->
+                            <div class="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden transition-all duration-350 hover:border-emerald-500/20">
+                                <div class="flex flex-wrap items-center justify-between gap-3 px-5 py-3 bg-slate-50 dark:bg-slate-955/20 border-b border-slate-200 dark:border-slate-850">
+                                    <span class="text-xs font-extrabold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                                        <span class="w-2 h-2 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/50"></span>
+                                        Ordem de Serviço Finalizada
+                                    </span>
+                                    <div class="flex items-center gap-1 flex-wrap">
+                                        <span class="text-[8px] text-slate-400 font-bold uppercase tracking-wider mr-1">Clique para inserir:</span>
+                                        <button type="button" onclick="insertTag('msg_os_closed', '{id}')" class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 hover:bg-emerald-500/10 hover:text-emerald-500 text-[9px] font-semibold text-slate-650 dark:text-slate-350 font-mono border border-slate-200 dark:border-slate-700 transition-colors">{id}</button>
+                                        <button type="button" onclick="insertTag('msg_os_closed', '{veiculo}')" class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 hover:bg-emerald-500/10 hover:text-emerald-500 text-[9px] font-semibold text-slate-650 dark:text-slate-350 font-mono border border-slate-200 dark:border-slate-700 transition-colors">{veiculo}</button>
+                                        <button type="button" onclick="insertTag('msg_os_closed', '{usuario}')" class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 hover:bg-emerald-500/10 hover:text-emerald-500 text-[9px] font-semibold text-slate-650 dark:text-slate-350 font-mono border border-slate-200 dark:border-slate-700 transition-colors">{usuario}</button>
+                                        <button type="button" onclick="insertTag('msg_os_closed', '{servico}')" class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 hover:bg-emerald-500/10 hover:text-emerald-500 text-[9px] font-semibold text-slate-650 dark:text-slate-355 font-mono border border-slate-200 dark:border-slate-700 transition-colors">{servico}</button>
+                                    </div>
+                                </div>
+                                <textarea id="msg_os_closed" name="msg_os_closed" rows="4" required 
+                                          onfocus="syncPreview(this, 'Fechamento de O.S.')"
+                                          oninput="updatePreviewText(this.value, this.name)"
+                                          class="w-full terminal-textarea px-5 py-4 text-xs outline-none transition-all leading-relaxed">{{ whatsapp_config.msg_os_closed }}</textarea>
+                                
+                                <!-- Mobile Only Preview container -->
+                                <div class="lg:hidden p-3 bg-[#efeae2] dark:bg-[#0b141a] border-t border-slate-200 dark:border-slate-850">
+                                    <div class="text-[9px] font-bold text-slate-450 dark:text-slate-500 uppercase tracking-widest mb-1.5 flex items-center gap-1"><i class="fa-brands fa-whatsapp text-emerald-500"></i> Pré-visualização celular</div>
+                                    <div class="relative bg-white dark:bg-[#202c33] text-[#111b21] dark:text-[#e9edef] rounded-lg rounded-tl-none p-3 text-[11px] font-sans leading-relaxed shadow-sm border border-slate-100 dark:border-transparent max-w-[95%]">
+                                        <svg class="absolute top-0 -left-2 text-white dark:text-[#202c33]" width="8" height="13" viewBox="0 0 8 13" fill="currentColor"><path d="M5.188 0H0v11.5L5.188 0z" /></svg>
+                                        <div class="preview-mobile-bubble break-words" data-target="msg_os_closed"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Template 3: Alerta de OS Atrasada -->
+                            <div class="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden transition-all duration-350 hover:border-emerald-500/20">
+                                <div class="flex flex-wrap items-center justify-between gap-3 px-5 py-3 bg-slate-50 dark:bg-slate-955/20 border-b border-slate-200 dark:border-slate-850">
+                                    <span class="text-xs font-extrabold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                                        <span class="w-2 h-2 rounded-full bg-rose-500 shadow-sm shadow-rose-500/50"></span>
+                                        Automação: Alerta de O.S. Pendente (+7 dias)
+                                    </span>
+                                    <div class="flex items-center gap-1 flex-wrap">
+                                        <span class="text-[8px] text-slate-400 font-bold uppercase tracking-wider mr-1">Clique para inserir:</span>
+                                        <button type="button" onclick="insertTag('msg_os_overdue', '{usuario}')" class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 hover:bg-emerald-500/10 hover:text-emerald-500 text-[9px] font-semibold text-slate-650 dark:text-slate-350 font-mono border border-slate-200 dark:border-slate-700 transition-colors">{usuario}</button>
+                                        <button type="button" onclick="insertTag('msg_os_overdue', '{id}')" class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 hover:bg-emerald-500/10 hover:text-emerald-500 text-[9px] font-semibold text-slate-650 dark:text-slate-350 font-mono border border-slate-200 dark:border-slate-700 transition-colors">{id}</button>
+                                    </div>
+                                </div>
+                                <textarea id="msg_os_overdue" name="msg_os_overdue" rows="4" required 
+                                          onfocus="syncPreview(this, 'O.S. Atrasada')"
+                                          oninput="updatePreviewText(this.value, this.name)"
+                                          class="w-full terminal-textarea px-5 py-4 text-xs outline-none transition-all leading-relaxed">{{ whatsapp_config.msg_os_overdue }}</textarea>
+                                
+                                <!-- Mobile Only Preview container -->
+                                <div class="lg:hidden p-3 bg-[#efeae2] dark:bg-[#0b141a] border-t border-slate-200 dark:border-slate-850">
+                                    <div class="text-[9px] font-bold text-slate-450 dark:text-slate-500 uppercase tracking-widest mb-1.5 flex items-center gap-1"><i class="fa-brands fa-whatsapp text-emerald-500"></i> Pré-visualização celular</div>
+                                    <div class="relative bg-white dark:bg-[#202c33] text-[#111b21] dark:text-[#e9edef] rounded-lg rounded-tl-none p-3 text-[11px] font-sans leading-relaxed shadow-sm border border-slate-100 dark:border-transparent max-w-[95%]">
+                                        <svg class="absolute top-0 -left-2 text-white dark:text-[#202c33]" width="8" height="13" viewBox="0 0 8 13" fill="currentColor"><path d="M5.188 0H0v11.5L5.188 0z" /></svg>
+                                        <div class="preview-mobile-bubble break-words" data-target="msg_os_overdue"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Sub-tab panel 3: Plantões & Treinos -->
+                        <div id="subtab-operacional" class="sub-tab-panel space-y-6 hidden">
+                            <!-- Template 1: Plantão Confirmado -->
+                            <div class="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden transition-all duration-350 hover:border-emerald-500/20">
+                                <div class="flex flex-wrap items-center justify-between gap-3 px-5 py-3 bg-slate-50 dark:bg-slate-955/20 border-b border-slate-200 dark:border-slate-850">
+                                    <span class="text-xs font-extrabold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                                        <span class="w-2 h-2 rounded-full bg-amber-500 shadow-sm shadow-amber-500/50"></span>
+                                        Automação: Confirmação de Plantão Operacional
+                                    </span>
+                                    <div class="flex items-center gap-1 flex-wrap">
+                                        <span class="text-[8px] text-slate-400 font-bold uppercase tracking-wider mr-1">Clique para inserir:</span>
+                                        <button type="button" onclick="insertTag('msg_scale_alert', '{usuario}')" class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 hover:bg-emerald-500/10 hover:text-emerald-500 text-[9px] font-semibold text-slate-650 dark:text-slate-350 font-mono border border-slate-200 dark:border-slate-700 transition-colors">{usuario}</button>
+                                        <button type="button" onclick="insertTag('msg_scale_alert', '{escala}')" class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 hover:bg-emerald-500/10 hover:text-emerald-500 text-[9px] font-semibold text-slate-650 dark:text-slate-350 font-mono border border-slate-200 dark:border-slate-700 transition-colors">{escala}</button>
+                                        <button type="button" onclick="insertTag('msg_scale_alert', '{data}')" class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 hover:bg-emerald-500/10 hover:text-emerald-500 text-[9px] font-semibold text-slate-650 dark:text-slate-355 font-mono border border-slate-200 dark:border-slate-700 transition-colors">{data}</button>
+                                    </div>
+                                </div>
+                                <textarea id="msg_scale_alert" name="msg_scale_alert" rows="4" required 
+                                          onfocus="syncPreview(this, 'Escala de Plantão')"
+                                          oninput="updatePreviewText(this.value, this.name)"
+                                          class="w-full terminal-textarea px-5 py-4 text-xs outline-none transition-all leading-relaxed">{{ whatsapp_config.msg_scale_alert }}</textarea>
+                                
+                                <!-- Mobile Only Preview container -->
+                                <div class="lg:hidden p-3 bg-[#efeae2] dark:bg-[#0b141a] border-t border-slate-200 dark:border-slate-850">
+                                    <div class="text-[9px] font-bold text-slate-450 dark:text-slate-500 uppercase tracking-widest mb-1.5 flex items-center gap-1"><i class="fa-brands fa-whatsapp text-emerald-500"></i> Pré-visualização celular</div>
+                                    <div class="relative bg-white dark:bg-[#202c33] text-[#111b21] dark:text-[#e9edef] rounded-lg rounded-tl-none p-3 text-[11px] font-sans leading-relaxed shadow-sm border border-slate-100 dark:border-transparent max-w-[95%]">
+                                        <svg class="absolute top-0 -left-2 text-white dark:text-[#202c33]" width="8" height="13" viewBox="0 0 8 13" fill="currentColor"><path d="M5.188 0H0v11.5L5.188 0z" /></svg>
+                                        <div class="preview-mobile-bubble break-words" data-target="msg_scale_alert"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Template 2: LMS Treinamento -->
+                            <div class="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden transition-all duration-350 hover:border-emerald-500/20">
+                                <div class="flex flex-wrap items-center justify-between gap-3 px-5 py-3 bg-slate-50 dark:bg-slate-955/20 border-b border-slate-200 dark:border-slate-850">
+                                    <span class="text-xs font-extrabold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                                        <span class="w-2 h-2 rounded-full bg-teal-500 shadow-sm shadow-teal-500/50"></span>
+                                        Automação: Lembrete de Treinamento Obrigatório
+                                    </span>
+                                    <div class="flex items-center gap-1 flex-wrap">
+                                        <span class="text-[8px] text-slate-400 font-bold uppercase tracking-wider mr-1">Clique para inserir:</span>
+                                        <button type="button" onclick="insertTag('msg_training_alert', '{usuario}')" class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 hover:bg-emerald-500/10 hover:text-emerald-500 text-[9px] font-semibold text-slate-650 dark:text-slate-355 font-mono border border-slate-200 dark:border-slate-700 transition-colors">{usuario}</button>
+                                        <button type="button" onclick="insertTag('msg_training_alert', '{curso}')" class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 hover:bg-emerald-500/10 hover:text-emerald-500 text-[9px] font-semibold text-slate-650 dark:text-slate-355 font-mono border border-slate-200 dark:border-slate-700 transition-colors">{curso}</button>
+                                    </div>
+                                </div>
+                                <textarea id="msg_training_alert" name="msg_training_alert" rows="4" required 
+                                          onfocus="syncPreview(this, 'Treinamento LMS')"
+                                          oninput="updatePreviewText(this.value, this.name)"
+                                          class="w-full terminal-textarea px-5 py-4 text-xs outline-none transition-all leading-relaxed">{{ whatsapp_config.msg_training_alert }}</textarea>
+                                
+                                <!-- Mobile Only Preview container -->
+                                <div class="lg:hidden p-3 bg-[#efeae2] dark:bg-[#0b141a] border-t border-slate-200 dark:border-slate-850">
+                                    <div class="text-[9px] font-bold text-slate-450 dark:text-slate-500 uppercase tracking-widest mb-1.5 flex items-center gap-1"><i class="fa-brands fa-whatsapp text-emerald-500"></i> Pré-visualização celular</div>
+                                    <div class="relative bg-white dark:bg-[#202c33] text-[#111b21] dark:text-[#e9edef] rounded-lg rounded-tl-none p-3 text-[11px] font-sans leading-relaxed shadow-sm border border-slate-100 dark:border-transparent max-w-[95%]">
+                                        <svg class="absolute top-0 -left-2 text-white dark:text-[#202c33]" width="8" height="13" viewBox="0 0 8 13" fill="currentColor"><path d="M5.188 0H0v11.5L5.188 0z" /></svg>
+                                        <div class="preview-mobile-bubble break-words" data-target="msg_training_alert"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Template 3: Técnico Inativo Lembrete -->
+                            <div class="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden transition-all duration-350 hover:border-emerald-500/20">
+                                <div class="flex flex-wrap items-center justify-between gap-3 px-5 py-3 bg-slate-55 dark:bg-slate-955/20 border-b border-slate-200 dark:border-slate-850">
+                                    <span class="text-xs font-extrabold text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                                        <span class="w-2 h-2 rounded-full bg-slate-500 shadow-sm shadow-slate-500/50"></span>
+                                        Automação: Aviso de Técnico Inativo (+7 dias)
+                                    </span>
+                                    <div class="flex items-center gap-1 flex-wrap">
+                                        <span class="text-[8px] text-slate-400 font-bold uppercase tracking-wider mr-1">Clique para inserir:</span>
+                                        <button type="button" onclick="insertTag('msg_inactive_tech', '{usuario}')" class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 hover:bg-emerald-500/10 hover:text-emerald-500 text-[9px] font-semibold text-slate-650 dark:text-slate-350 font-mono border border-slate-200 dark:border-slate-700 transition-colors">{usuario}</button>
+                                    </div>
+                                </div>
+                                <textarea id="msg_inactive_tech" name="msg_inactive_tech" rows="4" required 
+                                          onfocus="syncPreview(this, 'Técnico Inativo')"
+                                          oninput="updatePreviewText(this.value, this.name)"
+                                          class="w-full terminal-textarea px-5 py-4 text-xs outline-none transition-all leading-relaxed">{{ whatsapp_config.msg_inactive_tech }}</textarea>
+                                
+                                <!-- Mobile Only Preview container -->
+                                <div class="lg:hidden p-3 bg-[#efeae2] dark:bg-[#0b141a] border-t border-slate-200 dark:border-slate-850">
+                                    <div class="text-[9px] font-bold text-slate-450 dark:text-slate-500 uppercase tracking-widest mb-1.5 flex items-center gap-1"><i class="fa-brands fa-whatsapp text-emerald-500"></i> Pré-visualização celular</div>
+                                    <div class="relative bg-white dark:bg-[#202c33] text-[#111b21] dark:text-[#e9edef] rounded-lg rounded-tl-none p-3 text-[11px] font-sans leading-relaxed shadow-sm border border-slate-100 dark:border-transparent max-w-[95%]">
+                                        <svg class="absolute top-0 -left-2 text-white dark:text-[#202c33]" width="8" height="13" viewBox="0 0 8 13" fill="currentColor"><path d="M5.188 0H0v11.5L5.188 0z" /></svg>
+                                        <div class="preview-mobile-bubble break-words" data-target="msg_inactive_tech"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- SAVE BUTTON -->
+                        <div class="pt-6 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                            <button type="submit" class="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[10px] uppercase tracking-wider rounded-lg active:scale-98 transition-all flex items-center gap-2">
+                                <i class="fa-solid fa-floppy-disk"></i> Salvar Todos os Templates
+                            </button>
+                            <span class="text-[10px] text-slate-450 dark:text-slate-500"><i class="fa-solid fa-circle-check text-emerald-500 mr-1"></i>Todas as abas são salvas juntas</span>
+                        </div>
+                    </form>
                 </div>
 
-                <form method="post" action="{{ url_for('whatsapp_templates_save') }}" class="p-6 space-y-8">
-                    
-                    <!-- Grid layout of templates (Visualized as Technical Code Terminals) -->
-                    <div class="grid grid-cols-1 gap-6">
-
-                        <!-- Template 1: Checklist Inconformidade (Red border) -->
-                        <div class="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden transition-all duration-350 hover:border-red-500/40">
-                            <!-- Template Header -->
-                            <div class="flex flex-wrap items-center justify-between gap-3 px-5 py-3 bg-slate-50 dark:bg-slate-950/20 border-b border-slate-200 dark:border-slate-850">
-                                <span class="text-xs font-extrabold text-slate-800 dark:text-slate-200 flex items-center gap-2">
-                                    <span class="w-2 h-2 rounded-full bg-red-500 shadow-sm shadow-red-500/50"></span>
-                                    Inconformidade detectada em Checklist
-                                </span>
-                                <div class="flex items-center gap-1.5 flex-wrap">
-                                    <span class="text-[9px] text-slate-400 font-bold uppercase tracking-wider mr-1">Tags Disponíveis:</span>
-                                    <span class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-[9px] font-semibold text-slate-650 dark:text-slate-350 font-mono border border-slate-250 dark:border-slate-700">{tecnico}</span>
-                                    <span class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-[9px] font-semibold text-slate-650 dark:text-slate-350 font-mono border border-slate-250 dark:border-slate-700">{veiculo}</span>
-                                    <span class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-[9px] font-semibold text-slate-650 dark:text-slate-350 font-mono border border-slate-250 dark:border-slate-700">{placa}</span>
-                                </div>
+                <!-- Right Column: Sticky Phone Simulator -->
+                <div class="hidden lg:block lg:col-span-4 sticky top-6">
+                    <div class="w-full max-w-[310px] mx-auto bg-slate-950 dark:bg-slate-900 border-[8px] border-slate-800 dark:border-slate-955 rounded-[32px] shadow-2xl relative flex flex-col overflow-hidden h-[540px]">
+                        <!-- Phone Camera notch / Speaker -->
+                        <div class="absolute top-2 left-1/2 -translate-x-1/2 w-28 h-4.5 bg-slate-850 dark:bg-slate-950 rounded-full z-30 flex items-center justify-between px-3">
+                            <span class="w-1.5 h-1.5 bg-slate-750 dark:bg-slate-800 rounded-full"></span>
+                            <span class="w-12 h-1 bg-slate-750 dark:bg-slate-800 rounded-full"></span>
+                        </div>
+                        
+                        <!-- WhatsApp Header -->
+                        <div class="bg-[#005c4b] text-white pt-8 pb-3 px-4 flex items-center gap-2.5 shrink-0 relative z-20 shadow-md">
+                            <div class="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-[#005c4b] font-bold shrink-0 text-sm">
+                                <i class="fa-solid fa-robot text-sm"></i>
                             </div>
-                            <!-- Terminal Textarea -->
-                            <textarea name="msg_checklist_fail" rows="3" required 
-                                      class="w-full terminal-textarea px-5 py-4 text-xs outline-none transition-all leading-relaxed">{{ whatsapp_config.msg_checklist_fail }}</textarea>
+                            <div class="min-w-0 flex-1">
+                                <div class="text-[11px] font-bold leading-tight truncate">Checklist Bot</div>
+                                <div class="text-[9px] opacity-80 leading-none">online</div>
+                            </div>
+                            <div class="flex items-center gap-3 opacity-90 text-[10px]">
+                                <i class="fa-solid fa-video"></i>
+                                <i class="fa-solid fa-phone"></i>
+                                <i class="fa-solid fa-ellipsis-vertical"></i>
+                            </div>
                         </div>
 
-                        <!-- Template 2: Nova OS Avaria (Orange border) -->
-                        <div class="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden transition-all duration-350 hover:border-orange-500/40">
-                            <div class="flex flex-wrap items-center justify-between gap-3 px-5 py-3 bg-slate-50 dark:bg-slate-950/20 border-b border-slate-200 dark:border-slate-850">
-                                <span class="text-xs font-extrabold text-slate-800 dark:text-slate-200 flex items-center gap-2">
-                                    <span class="w-2 h-2 rounded-full bg-orange-500 shadow-sm shadow-orange-500/50"></span>
-                                    Nova Ordem de Serviço Iniciada
-                                </span>
-                                <div class="flex items-center gap-1.5 flex-wrap">
-                                    <span class="text-[9px] text-slate-400 font-bold uppercase tracking-wider mr-1">Tags Disponíveis:</span>
-                                    <span class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-[9px] font-semibold text-slate-650 dark:text-slate-350 font-mono border border-slate-250 dark:border-slate-700">{veiculo}</span>
-                                    <span class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-[9px] font-semibold text-slate-650 dark:text-slate-350 font-mono border border-slate-250 dark:border-slate-700">{placa}</span>
-                                    <span class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-[9px] font-semibold text-slate-650 dark:text-slate-350 font-mono border border-slate-250 dark:border-slate-700">{gravidade}</span>
-                                    <span class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-[9px] font-semibold text-slate-650 dark:text-slate-350 font-mono border border-slate-250 dark:border-slate-700">{descricao}</span>
-                                </div>
-                            </div>
-                            <textarea name="msg_os_opened" rows="3" required 
-                                      class="w-full terminal-textarea px-5 py-4 text-xs outline-none transition-all leading-relaxed">{{ whatsapp_config.msg_os_opened }}</textarea>
+                        <!-- System Message Banner indicating which template is being previewed -->
+                        <div class="bg-emerald-500/10 dark:bg-emerald-500/5 border-b border-slate-200 dark:border-slate-850/80 py-1.5 px-3 text-center shrink-0">
+                            <span class="text-[9px] font-extrabold uppercase tracking-wider text-emerald-600 dark:text-emerald-450 block truncate">
+                                <span id="preview-title">Inconformidade Checklist</span>
+                            </span>
                         </div>
 
-                        <!-- Template 3: OS Finalizada (Emerald border) -->
-                        <div class="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden transition-all duration-350 hover:border-emerald-500/40">
-                            <div class="flex flex-wrap items-center justify-between gap-3 px-5 py-3 bg-slate-50 dark:bg-slate-950/20 border-b border-slate-200 dark:border-slate-850">
-                                <span class="text-xs font-extrabold text-slate-800 dark:text-slate-200 flex items-center gap-2">
-                                    <span class="w-2 h-2 rounded-full bg-emerald-500 shadow-sm shadow-emerald-500/50"></span>
-                                    Ordem de Serviço Finalizada
-                                </span>
-                                <div class="flex items-center gap-1.5 flex-wrap">
-                                    <span class="text-[9px] text-slate-400 font-bold uppercase tracking-wider mr-1">Tags Disponíveis:</span>
-                                    <span class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-[9px] font-semibold text-slate-650 dark:text-slate-350 font-mono border border-slate-250 dark:border-slate-700">{id}</span>
-                                    <span class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-[9px] font-semibold text-slate-650 dark:text-slate-350 font-mono border border-slate-250 dark:border-slate-700">{veiculo}</span>
-                                    <span class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-[9px] font-semibold text-slate-650 dark:text-slate-350 font-mono border border-slate-250 dark:border-slate-700">{usuario}</span>
-                                    <span class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-[9px] font-semibold text-slate-650 dark:text-slate-350 font-mono border border-slate-250 dark:border-slate-700">{servico}</span>
+                        <!-- Chat Area (Scrollable Wallpaper) -->
+                        <div class="flex-1 overflow-y-auto p-4 bg-[#efeae2] dark:bg-[#0b141a] relative flex flex-col justify-end">
+                            <!-- Simulated background pattern overlay -->
+                            <div class="absolute inset-0 opacity-[0.03] dark:opacity-[0.04] pointer-events-none bg-[radial-gradient(#000_1px,transparent_1px)] [background-size:16px_16px]"></div>
+                            
+                            <!-- WhatsApp Chat Bubble -->
+                            <div class="relative z-10 self-start bg-white dark:bg-[#202c33] text-[#111b21] dark:text-[#e9edef] rounded-[10px] rounded-tl-none p-3 shadow-md border border-slate-100 dark:border-transparent max-w-[90%] space-y-1">
+                                <!-- Tail SVG for standard WhatsApp look -->
+                                <svg class="absolute top-0 -left-2 text-white dark:text-[#202c33]" width="8" height="13" viewBox="0 0 8 13" fill="currentColor">
+                                    <path d="M5.188 0H0v11.5L5.188 0z" />
+                                </svg>
+                                
+                                <!-- Dynamic Content -->
+                                <div id="preview-bubble" class="text-[11.5px] leading-relaxed break-words font-sans whitespace-pre-wrap">
+                                    <!-- Dynamic text will be injected here -->
+                                </div>
+                                
+                                <!-- Time & Double Check -->
+                                <div class="flex items-center justify-end gap-1 text-[8px] text-slate-450 dark:text-slate-450/80 mt-1 select-none">
+                                    <span>09:41</span>
+                                    <i class="fa-solid fa-check-double text-[#53bdeb]"></i>
                                 </div>
                             </div>
-                            <textarea name="msg_os_closed" rows="3" required 
-                                      class="w-full terminal-textarea px-5 py-4 text-xs outline-none transition-all leading-relaxed">{{ whatsapp_config.msg_os_closed }}</textarea>
                         </div>
-
-                        <!-- Template 4: Nova Vistoria (Blue/Cyan border) -->
-                        <div class="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden transition-all duration-350 hover:border-cyan-500/40">
-                            <div class="flex flex-wrap items-center justify-between gap-3 px-5 py-3 bg-slate-50 dark:bg-slate-950/20 border-b border-slate-200 dark:border-slate-850">
-                                <span class="text-xs font-extrabold text-slate-800 dark:text-slate-200 flex items-center gap-2">
-                                    <span class="w-2 h-2 rounded-full bg-cyan-500 shadow-sm shadow-cyan-500/50"></span>
-                                    Nova Vistoria de Veículo
-                                </span>
-                                <div class="flex items-center gap-1.5 flex-wrap">
-                                    <span class="text-[9px] text-slate-400 font-bold uppercase tracking-wider mr-1">Tags Disponíveis:</span>
-                                    <span class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-[9px] font-semibold text-slate-650 dark:text-slate-350 font-mono border border-slate-250 dark:border-slate-700">{veiculo}</span>
-                                    <span class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-[9px] font-semibold text-slate-650 dark:text-slate-350 font-mono border border-slate-250 dark:border-slate-700">{placa}</span>
-                                    <span class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-[9px] font-semibold text-slate-650 dark:text-slate-350 font-mono border border-slate-250 dark:border-slate-700">{status}</span>
-                                </div>
-                            </div>
-                            <textarea name="msg_new_vistoria" rows="3" required 
-                                      class="w-full terminal-textarea px-5 py-4 text-xs outline-none transition-all leading-relaxed">{{ whatsapp_config.msg_new_vistoria }}</textarea>
+                        
+                        <!-- Phone bottom bar -->
+                        <div class="bg-slate-900 dark:bg-slate-950 py-2 flex items-center justify-center shrink-0">
+                            <div class="w-20 h-1 bg-slate-750 dark:bg-slate-850 rounded-full"></div>
                         </div>
-
-                        <!-- Template 5: Plantão Confirmado (Amber/Gold border) -->
-                        <div class="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden transition-all duration-350 hover:border-amber-500/40">
-                            <div class="flex flex-wrap items-center justify-between gap-3 px-5 py-3 bg-slate-50 dark:bg-slate-950/20 border-b border-slate-200 dark:border-slate-850">
-                                <span class="text-xs font-extrabold text-slate-800 dark:text-slate-200 flex items-center gap-2">
-                                    <span class="w-2 h-2 rounded-full bg-amber-550 shadow-sm shadow-amber-550/50"></span>
-                                    Automação: Confirmação de Plantão Operacional
-                                </span>
-                                <div class="flex items-center gap-1.5 flex-wrap">
-                                    <span class="text-[9px] text-slate-400 font-bold uppercase tracking-wider mr-1">Tags Disponíveis:</span>
-                                    <span class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-[9px] font-semibold text-slate-650 dark:text-slate-355 font-mono border border-slate-250 dark:border-slate-700">{usuario}</span>
-                                    <span class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-[9px] font-semibold text-slate-650 dark:text-slate-355 font-mono border border-slate-250 dark:border-slate-700">{escala}</span>
-                                    <span class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-[9px] font-semibold text-slate-650 dark:text-slate-355 font-mono border border-slate-250 dark:border-slate-700">{data}</span>
-                                </div>
-                            </div>
-                            <textarea name="msg_scale_alert" rows="3" required 
-                                      class="w-full terminal-textarea px-5 py-4 text-xs outline-none transition-all leading-relaxed">{{ whatsapp_config.msg_scale_alert }}</textarea>
-                        </div>
-
-                        <!-- Template 6: Lembrete Checklist Pendente (Yellow/Amber border) -->
-                        <div class="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden transition-all duration-350 hover:border-yellow-500/40">
-                            <div class="flex flex-wrap items-center justify-between gap-3 px-5 py-3 bg-slate-50 dark:bg-slate-950/20 border-b border-slate-200 dark:border-slate-850">
-                                <span class="text-xs font-extrabold text-slate-800 dark:text-slate-200 flex items-center gap-2">
-                                    <span class="w-2 h-2 rounded-full bg-yellow-550 shadow-sm shadow-yellow-550/50"></span>
-                                    Automação: Lembrete de Checklist Diário Pendente
-                                </span>
-                                <div class="flex items-center gap-1.5 flex-wrap">
-                                    <span class="text-[9px] text-slate-400 font-bold uppercase tracking-wider mr-1">Tags Disponíveis:</span>
-                                    <span class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-[9px] font-semibold text-slate-650 dark:text-slate-355 font-mono border border-slate-250 dark:border-slate-700">{usuario}</span>
-                                </div>
-                            </div>
-                            <textarea name="msg_late_checklist" rows="3" required 
-                                      class="w-full terminal-textarea px-5 py-4 text-xs outline-none transition-all leading-relaxed">{{ whatsapp_config.msg_late_checklist }}</textarea>
-                        </div>
-
-                        <!-- Template 7: LMS Treinamento (Teal/Emerald-light border) -->
-                        <div class="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden transition-all duration-350 hover:border-teal-500/40">
-                            <div class="flex flex-wrap items-center justify-between gap-3 px-5 py-3 bg-slate-50 dark:bg-slate-950/20 border-b border-slate-200 dark:border-slate-850">
-                                <span class="text-xs font-extrabold text-slate-800 dark:text-slate-200 flex items-center gap-2">
-                                    <span class="w-2 h-2 rounded-full bg-teal-500 shadow-sm shadow-teal-500/50"></span>
-                                    Automação: Lembrete de Treinamento Obrigatório
-                                </span>
-                                <div class="flex items-center gap-1.5 flex-wrap">
-                                    <span class="text-[9px] text-slate-400 font-bold uppercase tracking-wider mr-1">Tags Disponíveis:</span>
-                                    <span class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-[9px] font-semibold text-slate-650 dark:text-slate-350 font-mono border border-slate-250 dark:border-slate-700">{usuario}</span>
-                                    <span class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-[9px] font-semibold text-slate-650 dark:text-slate-350 font-mono border border-slate-250 dark:border-slate-700">{curso}</span>
-                                </div>
-                            </div>
-                            <textarea name="msg_training_alert" rows="3" required 
-                                      class="w-full terminal-textarea px-5 py-4 text-xs outline-none transition-all leading-relaxed">{{ whatsapp_config.msg_training_alert }}</textarea>
-                        </div>
-
-                        <!-- Template 8: Alerta de OS Atrasada (Rose border) -->
-                        <div class="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden transition-all duration-350 hover:border-rose-500/40">
-                            <div class="flex flex-wrap items-center justify-between gap-3 px-5 py-3 bg-slate-50 dark:bg-slate-950/20 border-b border-slate-200 dark:border-slate-850">
-                                <span class="text-xs font-extrabold text-slate-800 dark:text-slate-200 flex items-center gap-2">
-                                    <span class="w-2 h-2 rounded-full bg-rose-500 shadow-sm shadow-rose-500/50"></span>
-                                    Automação: Alerta de O.S. Pendente (+7 dias)
-                                </span>
-                                <div class="flex items-center gap-1.5 flex-wrap">
-                                    <span class="text-[9px] text-slate-400 font-bold uppercase tracking-wider mr-1">Tags Disponíveis:</span>
-                                    <span class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-[9px] font-semibold text-slate-650 dark:text-slate-350 font-mono border border-slate-250 dark:border-slate-700">{usuario}</span>
-                                    <span class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-[9px] font-semibold text-slate-650 dark:text-slate-350 font-mono border border-slate-250 dark:border-slate-700">{id}</span>
-                                </div>
-                            </div>
-                            <textarea name="msg_os_overdue" rows="3" required 
-                                      class="w-full terminal-textarea px-5 py-4 text-xs outline-none transition-all leading-relaxed">{{ whatsapp_config.msg_os_overdue }}</textarea>
-                        </div>
-
-                        <!-- Template 9: Técnico Inativo Lembrete (Slate/Gray border) -->
-                        <div class="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden transition-all duration-350 hover:border-slate-500/40">
-                            <div class="flex flex-wrap items-center justify-between gap-3 px-5 py-3 bg-slate-50 dark:bg-slate-950/20 border-b border-slate-200 dark:border-slate-850">
-                                <span class="text-xs font-extrabold text-slate-800 dark:text-slate-200 flex items-center gap-2">
-                                    <span class="w-2 h-2 rounded-full bg-slate-500 shadow-sm shadow-slate-500/50"></span>
-                                    Automação: Aviso de Técnico Inativo (+7 dias)
-                                </span>
-                                <div class="flex items-center gap-1.5 flex-wrap">
-                                    <span class="text-[9px] text-slate-400 font-bold uppercase tracking-wider mr-1">Tags Disponíveis:</span>
-                                    <span class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-[9px] font-semibold text-slate-650 dark:text-slate-350 font-mono border border-slate-250 dark:border-slate-700">{usuario}</span>
-                                </div>
-                            </div>
-                            <textarea name="msg_inactive_tech" rows="3" required 
-                                      class="w-full terminal-textarea px-5 py-4 text-xs outline-none transition-all leading-relaxed">{{ whatsapp_config.msg_inactive_tech }}</textarea>
-                        </div>
-
                     </div>
-
-                    <!-- SAVE BUTTON -->
-                    <div class="pt-6 border-t border-slate-200 dark:border-slate-800">
-                        <button type="submit" class="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[10px] uppercase tracking-wider rounded-lg active:scale-98 transition-all flex items-center gap-2">
-                            <i class="fa-solid fa-floppy-disk"></i> Salvar Todos os Templates
-                        </button>
-                    </div>
-                </form>
+                </div>
             </div>
         </div>
 
@@ -445,7 +666,7 @@
                     <h3 class="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
                         <i class="fa-solid fa-circle-nodes text-emerald-500"></i> Diagrama Esquemático do Pipeline
                     </h3>
-                    <p class="text-xs text-slate-550 dark:text-slate-400 mt-1">Entenda o fluxo lógico de como as atividades geram notificações automáticas em tempo real.</p>
+                    <p class="text-xs text-slate-555 dark:text-slate-400 mt-1">Entenda o fluxo lógico de como as atividades geram notificações automáticas em tempo real.</p>
                 </div>
 
                 <div class="p-6 space-y-10">
@@ -506,47 +727,47 @@
                     <!-- Trigger Cards Grid -->
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <!-- Card 1 -->
-                        <div class="p-5 bg-slate-50 dark:bg-slate-900/30 border border-slate-200 dark:border-slate-800 rounded-xl space-y-2">
+                        <div class="p-5 bg-slate-50 dark:bg-slate-900/30 border border-slate-200 dark:border-slate-800 rounded-xl space-y-2 animate-premium">
                             <div class="flex items-center gap-3">
                                 <div class="w-8 h-8 rounded-lg bg-red-100 dark:bg-red-950/30 flex items-center justify-center text-red-650 dark:text-red-400">
                                     <i class="fa-solid fa-triangle-exclamation"></i>
                                 </div>
                                 <h4 class="text-xs font-extrabold uppercase tracking-wider text-slate-850 dark:text-white">Alerta de Inconformidade</h4>
                             </div>
-                            <p class="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">Disparado no momento em que um checklist técnico é finalizado e contém qualquer item respondido como "Não" (inconformidade). Alerta automaticamente a equipe de supervisão para ação imediata.</p>
+                            <p class="text-[11px] text-slate-550 dark:text-slate-400 leading-relaxed">Disparado no momento em que um checklist técnico é finalizado e contém qualquer item respondido como "Não" (inconformidade). Alerta automaticamente a equipe de supervisão para ação imediata.</p>
                         </div>
 
                         <!-- Card 2 -->
-                        <div class="p-5 bg-slate-50 dark:bg-slate-900/30 border border-slate-200 dark:border-slate-800 rounded-xl space-y-2">
+                        <div class="p-5 bg-slate-50 dark:bg-slate-900/30 border border-slate-200 dark:border-slate-800 rounded-xl space-y-2 animate-premium">
                             <div class="flex items-center gap-3">
-                                <div class="w-8 h-8 rounded-lg bg-orange-100 dark:bg-orange-950/30 flex items-center justify-center text-orange-655 dark:text-orange-400">
+                                <div class="w-8 h-8 rounded-lg bg-orange-100 dark:bg-orange-950/30 flex items-center justify-center text-orange-600 dark:text-orange-400">
                                     <i class="fa-solid fa-file-circle-plus"></i>
                                 </div>
                                 <h4 class="text-xs font-extrabold uppercase tracking-wider text-slate-850 dark:text-white">Abertura de Ordem de Serviço</h4>
                             </div>
-                            <p class="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">Notifica os administradores e encarregados da manutenção assim que uma nova avaria ou defeito crítico é registrado no veículo, garantindo agilidade na resposta corretiva da oficina.</p>
+                            <p class="text-[11px] text-slate-550 dark:text-slate-400 leading-relaxed">Notifica os administradores e encarregados da manutenção assim que uma nova avaria ou defeito crítico é registrado no veículo, garantindo agilidade na resposta corretiva da oficina.</p>
                         </div>
 
                         <!-- Card 3 -->
-                        <div class="p-5 bg-slate-50 dark:bg-slate-900/30 border border-slate-200 dark:border-slate-800 rounded-xl space-y-2">
+                        <div class="p-5 bg-slate-50 dark:bg-slate-900/30 border border-slate-200 dark:border-slate-800 rounded-xl space-y-2 animate-premium">
                             <div class="flex items-center gap-3">
-                                <div class="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-950/30 flex items-center justify-center text-emerald-650 dark:text-emerald-400">
+                                <div class="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-955/30 flex items-center justify-center text-emerald-650 dark:text-emerald-400">
                                     <i class="fa-solid fa-file-circle-check"></i>
                                 </div>
                                 <h4 class="text-xs font-extrabold uppercase tracking-wider text-slate-850 dark:text-white">Finalização de O.S.</h4>
                             </div>
-                            <p class="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">Envia os detalhes dos gastos, peças trocadas e serviço executado aos administradores da frota imediatamente após o encerramento do ticket da Ordem de Serviço pela equipe da oficina.</p>
+                            <p class="text-[11px] text-slate-555 dark:text-slate-400 leading-relaxed">Envia os detalhes dos gastos, peças trocadas e serviço executado aos administradores da frota imediatamente após o encerramento do ticket da Ordem de Serviço pela equipe da oficina.</p>
                         </div>
 
                         <!-- Card 4 -->
-                        <div class="p-5 bg-slate-50 dark:bg-slate-900/30 border border-slate-200 dark:border-slate-800 rounded-xl space-y-2">
+                        <div class="p-5 bg-slate-50 dark:bg-slate-900/30 border border-slate-200 dark:border-slate-800 rounded-xl space-y-2 animate-premium">
                             <div class="flex items-center gap-3">
                                 <div class="w-8 h-8 rounded-lg bg-cyan-100 dark:bg-cyan-950/30 flex items-center justify-center text-cyan-650 dark:text-cyan-400">
                                     <i class="fa-solid fa-user-check"></i>
                                 </div>
                                 <h4 class="text-xs font-extrabold uppercase tracking-wider text-slate-850 dark:text-white">Nova Vistoria de Veículo</h4>
                             </div>
-                            <p class="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed">Disparado sempre que uma vistoria física detalhada do veículo é registrada por um supervisor, enviando o status geral consolidado das condições de conservação do carro.</p>
+                            <p class="text-[11px] text-slate-555 dark:text-slate-400 leading-relaxed">Disparado sempre que uma vistoria física detalhada do veículo é registrada por um supervisor, enviando o status geral consolidado das condições de conservação do carro.</p>
                         </div>
                     </div>
                 </div>
@@ -561,6 +782,9 @@
         CLIENT JAVASCRIPT & AJAX INTEGRATION
      ======================================================= -->
 <script>
+    // Global active textarea tracker
+    let currentActiveTextarea = null;
+
     // Tab switching controller with high-end premium transitions
     function switchTab(tabId, element) {
         // Hide all panels
@@ -582,7 +806,127 @@
         }, 20);
         
         // Activate current tab button
-        element.className = 'tab-btn px-4 py-2 rounded-lg text-xs font-extrabold transition-all flex items-center gap-2 bg-slate-900 dark:bg-white text-white dark:text-slate-950 shadow-sm border border-slate-850 dark:border-white/20';
+        element.className = 'tab-btn px-4 py-2 rounded-lg text-xs font-extrabold transition-all flex items-center gap-2 bg-slate-900 dark:bg-white text-white dark:text-slate-955 shadow-sm border border-slate-850 dark:border-white/20';
+
+        // Auto focus first textarea if moving to templates to fire simulation preview
+        if (tabId === 'tab-templates') {
+            const activeSubtabPanel = document.querySelector('.sub-tab-panel:not(.hidden)');
+            if (activeSubtabPanel) {
+                const firstTextarea = activeSubtabPanel.querySelector('textarea');
+                if (firstTextarea) {
+                    firstTextarea.focus();
+                }
+            }
+        }
+    }
+
+    // Switch between Sub-Tabs inside Templates
+    function switchSubTab(subTabId, element) {
+        // Hide all sub-panels
+        document.querySelectorAll('.sub-tab-panel').forEach(panel => {
+            panel.classList.add('hidden');
+        });
+        
+        // Reset sub-tab button states
+        document.querySelectorAll('.sub-tab-btn').forEach(btn => {
+            btn.className = 'sub-tab-btn flex-1 min-w-[125px] px-3.5 py-2.5 rounded-md text-[11px] font-bold transition-all border flex items-center justify-center gap-1.5 text-slate-500 dark:text-slate-400 border-transparent hover:text-slate-900 dark:hover:text-slate-205';
+        });
+
+        // Show target panel
+        const targetPanel = document.getElementById(subTabId);
+        targetPanel.classList.remove('hidden');
+        
+        // Highlight active sub-tab button
+        element.className = 'sub-tab-btn flex-1 min-w-[125px] px-3.5 py-2.5 rounded-md text-[11px] font-extrabold transition-all border flex items-center justify-center gap-1.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-450 border-emerald-500/20';
+
+        // Focus first textarea of this tab to sync mockup
+        const textarea = targetPanel.querySelector('textarea');
+        if (textarea) {
+            textarea.focus();
+        }
+    }
+
+    // Insert tag token at current cursor position in a textarea
+    function insertTag(textareaId, tag) {
+        const textarea = document.getElementById(textareaId);
+        if (!textarea) return;
+        
+        const start = textarea.selectionStart;
+        const end = textarea.selectionEnd;
+        const text = textarea.value;
+        const before = text.substring(0, start);
+        const after = text.substring(end, text.length);
+        
+        textarea.value = before + tag + after;
+        textarea.focus();
+        textarea.selectionStart = textarea.selectionEnd = start + tag.length;
+        
+        // Update both mobile and desktop previews
+        updatePreviewText(textarea.value, textarea.name);
+    }
+
+    // Sync template selection into desktop simulator
+    function syncPreview(textarea, label) {
+        currentActiveTextarea = textarea;
+        
+        const previewTitle = document.getElementById('preview-title');
+        if (previewTitle) {
+            previewTitle.innerText = label;
+        }
+        
+        updatePreviewText(textarea.value, textarea.name);
+    }
+
+    // Update Simulated Message Bubble Text
+    function updatePreviewText(value, name) {
+        const formatted = formatWhatsAppMessage(value);
+        
+        // Desktop mockup sync
+        if (currentActiveTextarea && currentActiveTextarea.name === name) {
+            const bubble = document.getElementById('preview-bubble');
+            if (bubble) {
+                bubble.innerHTML = formatted;
+            }
+        }
+        
+        // Mobile layout sync (inline card mockup)
+        const mobileBubble = document.querySelector(`.preview-mobile-bubble[data-target="${name}"]`);
+        if (mobileBubble) {
+            mobileBubble.innerHTML = formatted;
+        }
+    }
+
+    // Parse WhatsApp formatting operators (*bold*, _italics_, ~strike~, ```code```)
+    function formatWhatsAppMessage(text) {
+        if (!text || text.trim() === '') {
+            return '<em class="text-slate-400 dark:text-slate-500">Escreva uma mensagem...</em>';
+        }
+        
+        // HTML escape to prevent injection
+        let formatted = text
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;");
+        
+        // Code Blocks: ```text```
+        formatted = formatted.replace(/```([\s\S]*?)```/g, '<code class="block font-mono bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-2 my-1 rounded text-[10.5px] text-slate-700 dark:text-slate-300 leading-tight whitespace-pre-wrap">$1</code>');
+        
+        // Bold: *text*
+        formatted = formatted.replace(/\*(.*?)\*/g, '<strong class="font-extrabold">$1</strong>');
+        
+        // Italic: _text_
+        formatted = formatted.replace(/_(.*?)_/g, '<em class="italic">$1</em>');
+        
+        // Strikethrough: ~text~
+        formatted = formatted.replace(/~(.*?)~/g, '<del class="line-through">$1</del>');
+        
+        // Newlines to html line-breaks
+        formatted = formatted.replace(/\n/g, '<br>');
+        
+        // Variable highlight tags: {usuario}, {veiculo}, etc.
+        formatted = formatted.replace(/({[a-zA-Z0-9_]+})/g, '<span class="px-1.5 py-0.5 mx-0.5 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-450 border border-emerald-200 dark:border-emerald-900/50 font-mono text-[10px] font-extrabold inline-block">$1</span>');
+        
+        return formatted;
     }
 
     // Hide/Show API Key Field
@@ -614,7 +958,7 @@
                 badge.className = 'flex items-center gap-2.5 px-3 py-1.5 bg-emerald-500/10 rounded-lg border border-emerald-500/20 transition-all shadow-sm';
                 ping.className = 'animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-450 opacity-75';
                 dot.className = 'relative inline-flex rounded-full h-2 w-2 bg-emerald-500 shadow-sm shadow-emerald-500/50 pulse-ring-emerald';
-                text.className = 'text-[10px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400';
+                text.className = 'text-[10px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-450';
                 text.innerText = 'Online';
             } else {
                 badge.className = 'flex items-center gap-2.5 px-3 py-1.5 bg-red-500/10 rounded-lg border border-red-500/20 transition-all shadow-sm';
@@ -628,7 +972,7 @@
             badge.className = 'flex items-center gap-2.5 px-3 py-1.5 bg-amber-500/10 rounded-lg border border-amber-500/20 transition-all shadow-sm';
             ping.className = '';
             dot.className = 'relative inline-flex rounded-full h-2 w-2 bg-amber-500 shadow-sm shadow-amber-500/50 pulse-ring-amber';
-            text.className = 'text-[10px] font-black uppercase tracking-widest text-amber-600 dark:text-amber-400';
+            text.className = 'text-[10px] font-black uppercase tracking-widest text-amber-600 dark:text-amber-450';
             text.innerText = 'Erro Conexão';
         });
     }
@@ -655,6 +999,11 @@
     document.addEventListener('DOMContentLoaded', () => {
         checkConnectionState();
         setInterval(checkConnectionState, 30000);
+
+        // Prepopulate and initialize preview values on page load
+        document.querySelectorAll('.tab-panel textarea').forEach(textarea => {
+            updatePreviewText(textarea.value, textarea.name);
+        });
     });
 </script>
 
