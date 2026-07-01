@@ -1810,7 +1810,7 @@ def generate_checklist_pdf(checklist_obj: Checklist, raw: dict) -> str:
             c.setFont("Helvetica", 7)
             c.setFillColor(CINZA_TEXTO)
             c.drawString(12*mm, height-31*mm, f"Emitido em: {now_brt_str}")
-            c.drawRightString(width-12*mm, height-31*mm, "Relatório gerado automaticamente")
+            c.drawRightString(width-12*mm, height-31*mm, f"Doc Ref: CK-{checklist_obj.id}")
 
             footer_line_y = 20*mm
             c.setStrokeColor(colors.HexColor("#BBBBBB"))
@@ -2367,7 +2367,7 @@ def generate_vistoria_pdf(vistoria_obj: Vistoria) -> str:
             c.setFont("Helvetica", 7)
             c.setFillColor(CINZA_TEXTO)
             c.drawString(12*mm, height-31*mm, f"Emitido em: {now_brt_str}")
-            c.drawRightString(width-12*mm, height-31*mm, "Relatório gerado automaticamente")
+            c.drawRightString(width-12*mm, height-31*mm, f"Doc Ref: CK-{vistoria_obj.id}")
 
             footer_line_y = 20*mm
             c.setStrokeColor(colors.HexColor("#BBBBBB"))

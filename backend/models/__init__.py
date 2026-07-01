@@ -563,6 +563,7 @@ class Note(db.Model):
     date = db.Column(db.DateTime, default=agora)
     priority = db.Column(db.String(20), default="MEDIA")
     event_date = db.Column(db.Date)
+    status = db.Column(db.String(20), default="PENDENTE")
 
 
 class Activity(db.Model):

@@ -1614,7 +1614,10 @@
         <div class="p-6 space-y-4 overflow-y-auto text-sm flex-1">
             <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 dark:border-white/5 pb-3">
                 <div class="flex flex-col gap-1">
-                    <span id="detalhe-anotacao-categoria" class="px-2.5 py-0.5 bg-teal-50 dark:bg-teal-950/20 text-teal-600 dark:text-teal-400 rounded-md text-[9px] font-black uppercase tracking-wider w-fit"></span>
+                    <div class="flex items-center gap-2">
+                        <span id="detalhe-anotacao-categoria" class="px-2.5 py-0.5 bg-teal-50 dark:bg-teal-950/20 text-teal-600 dark:text-teal-400 rounded-md text-[9px] font-black uppercase tracking-wider w-fit"></span>
+                        <span id="detalhe-anotacao-status" class="px-2.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider w-fit"></span>
+                    </div>
                     <h4 id="detalhe-anotacao-titulo" class="font-extrabold text-base text-slate-800 dark:text-white leading-tight"></h4>
                 </div>
             </div>
@@ -1848,6 +1851,13 @@
                     <option value="Geral">Geral</option>
                     <option value="Rede">Rede</option>
                     <option value="Supervisão">Supervisão</option>
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Status da Anotação</label>
+                <select name="status" class="w-full bg-slate-50 dark:bg-gray-800 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-purple-500/20">
+                    <option value="PENDENTE">Pendente</option>
+                    <option value="CONCLUIDO">Concluída</option>
                 </select>
             </div>
             <div>
@@ -2257,6 +2267,90 @@
             <button onclick="closeModal('modal-atividade-realizada')" class="px-6 py-3 text-slate-600 dark:text-gray-400 font-bold text-sm">Cancelar</button>
             <button onclick="submitAtividadeRealizada()" class="px-8 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold text-sm shadow-lg shadow-emerald-500/30 transition-all active:scale-95 flex items-center gap-2">
                 <i class="fa-solid fa-check"></i> Salvar Atividade
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Exportar Relatórios -->
+<div id="modal-exportar-relatorio" class="fixed inset-0 bg-slate-950/60 backdrop-blur-md hidden items-center justify-center z-[110] p-4">
+    <div class="bg-white dark:bg-gray-900 w-full max-w-md rounded-[2rem] shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800 flex flex-col">
+        <!-- Modal Header -->
+        <div class="px-6 py-5 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-900">
+            <h3 class="text-sm font-black text-slate-800 dark:text-white flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center">
+                    <i class="fa-solid fa-file-export text-base"></i>
+                </div>
+                <div class="flex flex-col">
+                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">EXPORTAR</span>
+                    <span id="export-modal-title" class="text-xs font-black text-slate-800 dark:text-white leading-tight">Exportar Relatório</span>
+                </div>
+            </h3>
+            <button onclick="closeModal('modal-exportar-relatorio')" class="w-10 h-10 rounded-xl hover:bg-slate-100 dark:hover:bg-white/10 text-slate-400 transition-all flex items-center justify-center">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+        </div>
+        
+        <!-- Modal Body Content -->
+        <form id="form-exportar-relatorio" onsubmit="submitExportReport(event)" class="p-6 space-y-4 text-sm">
+            <input type="hidden" id="export-report-type">
+            
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Data Inicial</label>
+                    <input type="date" id="export-start-date" required
+                           class="w-full bg-slate-900/5 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 rounded-xl px-4 py-3 text-xs font-bold text-slate-700 dark:text-white outline-none focus:border-emerald-500/50 transition-all">
+                </div>
+                <div>
+                    <label class="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Data Final</label>
+                    <input type="date" id="export-end-date" required
+                           class="w-full bg-slate-900/5 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 rounded-xl px-4 py-3 text-xs font-bold text-slate-700 dark:text-white outline-none focus:border-emerald-500/50 transition-all">
+                </div>
+            </div>
+        </form>
+        
+        <!-- Modal Footer -->
+        <div class="px-6 py-4 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex justify-end gap-3">
+            <button onclick="closeModal('modal-exportar-relatorio')" type="button"
+                    class="px-5 py-2.5 bg-slate-200 hover:bg-slate-300 dark:bg-gray-800 dark:hover:bg-gray-700 text-slate-700 dark:text-gray-300 rounded-xl text-xs font-black uppercase tracking-wider transition-all active:scale-95">
+                Cancelar
+            </button>
+            <button type="submit" form="form-exportar-relatorio"
+                    class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all active:scale-95 shadow-lg shadow-emerald-500/20">
+                Gerar Relatório
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Visualizador Dinâmico de Detalhes -->
+<div id="modal-gestao-detalhes-view" class="fixed inset-0 bg-slate-950/60 backdrop-blur-md hidden items-center justify-center z-[110] p-4">
+    <div class="bg-white dark:bg-gray-900 w-full max-w-2xl rounded-[2rem] shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800 flex flex-col max-h-[90vh]">
+        <!-- Modal Header -->
+        <div class="px-6 py-5 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-slate-50 dark:bg-slate-900">
+            <h3 class="text-lg font-black text-slate-800 dark:text-white flex items-center gap-3">
+                <div id="detalhes-view-icon-bg" class="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-850 text-slate-600 dark:text-slate-350 flex items-center justify-center">
+                    <i id="detalhes-view-icon" class="fa-solid fa-circle-info text-base"></i>
+                </div>
+                <div class="flex flex-col">
+                    <span id="detalhes-view-category" class="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">DETALHES</span>
+                    <span id="detalhes-view-title" class="text-sm font-black text-slate-800 dark:text-white leading-tight">Visualizar Informações</span>
+                </div>
+            </h3>
+            <button onclick="closeModal('modal-gestao-detalhes-view')" class="w-10 h-10 rounded-xl hover:bg-slate-100 dark:hover:bg-white/10 text-slate-400 transition-all flex items-center justify-center">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+        </div>
+        
+        <!-- Modal Body Content -->
+        <div id="detalhes-view-body" class="p-6 space-y-4 overflow-y-auto text-sm flex-1 custom-scrollbar">
+            <!-- Injetado via JS -->
+        </div>
+        
+        <!-- Modal Footer -->
+        <div class="px-6 py-4 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex justify-end">
+            <button onclick="closeModal('modal-gestao-detalhes-view')" class="px-6 py-2.5 bg-slate-200 hover:bg-slate-300 dark:bg-gray-800 dark:hover:bg-gray-700 text-slate-700 dark:text-gray-300 rounded-xl text-xs font-black uppercase tracking-wider transition-all active:scale-95">
+                Fechar
             </button>
         </div>
     </div>
@@ -3055,35 +3149,9 @@ function filterTarefas() {
 }
 
 function exportTarefasReport() {
-    const today = new Date();
-    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-    
-    const formatDate = (d) => {
-        const year = d.getFullYear();
-        const month = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-    };
-
-    const start = prompt('Digite a data inicial (AAAA-MM-DD):', formatDate(firstDay));
-    if (start === null) return;
-    const end = prompt('Digite a data final (AAAA-MM-DD):', formatDate(today));
-    if (end === null) return;
-
-    if (!start || !end) {
-        alert('Por favor, preencha as datas inicial e final.');
-        return;
-    }
-
     const subTab = document.getElementById('subpane-tarefas').classList.contains('hidden') ? 'atividades-realizadas' : 'tarefas';
-    const params = new URLSearchParams({
-        type: subTab,
-        start_date: start,
-        end_date: end,
-        user_id: ''
-    });
-
-    window.open(`/api/gestao/relatorios/gerar?${params.toString()}`, '_blank');
+    const title = subTab === 'tarefas' ? 'Exportar Plano de Ação e Tarefas' : 'Exportar Atividades Realizadas';
+    openExportModal(subTab, title);
 }
 
 function renderTarefasCards(data) {
@@ -3330,8 +3398,8 @@ function renderAtividadesRealizadasCards(data) {
                 <!-- Ações -->
                 <td class="px-4 py-2.5 text-center">
                     <div class="flex items-center justify-center gap-3">
-                        <button onclick="toggleAtividadeRealizadaRowDetails(${item.id})" class="w-8 h-8 flex items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 hover:bg-blue-500 hover:text-white transition-all shadow-sm" title="Ver Detalhes">
-                            <i id="chevron-atividade-realizada-${item.id}" class="fa-solid fa-chevron-down text-sm transition-transform duration-200"></i>
+                        <button onclick="showAtividadeRealizadaDetalhes(${item.id})" class="w-8 h-8 flex items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 hover:bg-blue-500 hover:text-white transition-all shadow-sm" title="Visualizar">
+                            <i class="fa-solid fa-eye text-xs"></i>
                         </button>
                         
                         <button onclick="window.open('/api/gestao/atividades-realizadas/${item.id}/pdf', '_blank')" class="w-8 h-8 flex items-center justify-center rounded-xl bg-rose-500/10 text-rose-600 hover:bg-rose-500 hover:text-white transition-all shadow-sm" title="Gerar PDF">
@@ -3345,15 +3413,6 @@ function renderAtividadesRealizadasCards(data) {
                         <button onclick="deleteAtividadeRealizada(${item.id})" class="w-8 h-8 flex items-center justify-center rounded-xl bg-rose-500/10 text-rose-600 hover:bg-rose-500 hover:text-white transition-all shadow-sm" title="Excluir">
                             <i class="fa-solid fa-trash-can text-sm"></i>
                         </button>
-                    </div>
-                </td>
-            </tr>
-
-            <!-- Expanded Drawer Row -->
-            <tr id="atividade-realizada-row-${item.id}" class="hidden bg-slate-50/50 dark:bg-gray-900/30">
-                <td colspan="5" class="px-4 py-4 border-b border-slate-900/10 dark:border-white/10">
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        ${allFieldsHtml}
                     </div>
                 </td>
             </tr>
@@ -3371,6 +3430,66 @@ function renderAtividadesRealizadasCards(data) {
     `;
 
     container.innerHTML = tableHtml;
+}
+
+function openDetailsModal(category, title, icon, htmlContent) {
+    const iconBgEl = document.getElementById('detalhes-view-icon-bg');
+    const iconEl = document.getElementById('detalhes-view-icon');
+    const catEl = document.getElementById('detalhes-view-category');
+    const titleEl = document.getElementById('detalhes-view-title');
+    const bodyEl = document.getElementById('detalhes-view-body');
+    
+    if (catEl) catEl.textContent = category.toUpperCase();
+    if (titleEl) titleEl.textContent = title;
+    if (bodyEl) bodyEl.innerHTML = htmlContent;
+    
+    // Set dynamic icons and background colors based on category
+    if (iconEl && icon) {
+        iconEl.className = `fa-solid ${icon} text-base`;
+    }
+    
+    openModal('modal-gestao-detalhes-view');
+}
+
+function openExportModal(type, title) {
+    const today = new Date();
+    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+    
+    const formatDate = (d) => {
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    };
+
+    document.getElementById('export-report-type').value = type;
+    document.getElementById('export-modal-title').textContent = title;
+    document.getElementById('export-start-date').value = formatDate(firstDay);
+    document.getElementById('export-end-date').value = formatDate(today);
+    
+    openModal('modal-exportar-relatorio');
+}
+
+function submitExportReport(event) {
+    event.preventDefault();
+    const type = document.getElementById('export-report-type').value;
+    const start = document.getElementById('export-start-date').value;
+    const end = document.getElementById('export-end-date').value;
+    
+    if (!start || !end) {
+        showToast('Por favor, preencha as datas inicial e final.', 'error');
+        return;
+    }
+    
+    const params = new URLSearchParams({
+        type: type,
+        start_date: start,
+        end_date: end,
+        user_id: ''
+    });
+    
+    window.open(`/api/gestao/relatorios/gerar?${params.toString()}`, '_blank');
+    closeModal('modal-exportar-relatorio');
 }
 
 // === SUPERVISAO HELPERS ===
@@ -3399,34 +3518,7 @@ function filterSupervisao() {
 }
 
 function exportSupervisaoReport() {
-    const today = new Date();
-    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-    
-    const formatDate = (d) => {
-        const year = d.getFullYear();
-        const month = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-    };
-
-    const start = prompt('Digite a data inicial (AAAA-MM-DD):', formatDate(firstDay));
-    if (start === null) return;
-    const end = prompt('Digite a data final (AAAA-MM-DD):', formatDate(today));
-    if (end === null) return;
-
-    if (!start || !end) {
-        alert('Por favor, preencha as datas inicial e final.');
-        return;
-    }
-
-    const params = new URLSearchParams({
-        type: 'supervisao',
-        start_date: start,
-        end_date: end,
-        user_id: ''
-    });
-
-    window.open(`/api/gestao/relatorios/gerar?${params.toString()}`, '_blank');
+    openExportModal('supervisao', 'Exportar Supervisão em Campo');
 }
 
 function renderSupervisaoTable(data) {
@@ -3569,8 +3661,8 @@ function renderSupervisaoTable(data) {
                 <!-- Ações -->
                 <td class="px-4 py-3 text-center">
                     <div class="flex items-center justify-center gap-3">
-                        <button onclick="toggleSupervisaoRowDetails(${i.id})" class="w-8 h-8 flex items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 hover:bg-blue-500 hover:text-white transition-all shadow-sm" title="Ver Detalhes">
-                            <i id="chevron-supervisao-${i.id}" class="fa-solid fa-chevron-down text-sm transition-transform duration-200"></i>
+                        <button onclick="showSupervisaoModal(${i.id})" class="w-8 h-8 flex items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 hover:bg-blue-500 hover:text-white transition-all shadow-sm" title="Visualizar">
+                            <i class="fa-solid fa-eye text-xs"></i>
                         </button>
                         
                         <button onclick="downloadSupervisaoPDF(${i.id})" class="w-8 h-8 flex items-center justify-center rounded-xl bg-rose-500/10 text-rose-600 hover:bg-rose-500 hover:text-white transition-all shadow-sm" title="Gerar PDF">
@@ -3584,58 +3676,6 @@ function renderSupervisaoTable(data) {
                         <button onclick="deleteSupervisao(${i.id})" class="w-8 h-8 flex items-center justify-center rounded-xl bg-rose-500/10 text-rose-600 hover:bg-rose-500 hover:text-white transition-all shadow-sm" title="Excluir">
                             <i class="fa-solid fa-trash-can text-sm"></i>
                         </button>
-                    </div>
-                </td>
-            </tr>
-
-            <!-- Expanded Drawer Row -->
-            <tr id="supervisao-row-${i.id}" class="hidden bg-slate-50/50 dark:bg-gray-900/30">
-                <td colspan="5" class="px-4 py-4 border-b border-slate-900/10 dark:border-white/10">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <!-- Detalhes das Auditorias -->
-                        <div class="bg-white dark:bg-gray-800 p-4 rounded-xl border border-slate-900/5 dark:border-white/5 shadow-sm space-y-3">
-                            <span class="text-[9px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider block mb-1">Auditorias de Campo</span>
-                            <div class="space-y-3 max-h-60 overflow-y-auto pr-1">
-                                ${techList.map(t => `
-                                    <div class="border-l-2 border-emerald-500 pl-3">
-                                        <h5 class="text-xs font-bold text-slate-700 dark:text-gray-200">${t.tech_name || 'Técnico'}</h5>
-                                        <p class="text-[10px] text-slate-500 mt-0.5">
-                                            <strong>Local:</strong> ${t.location || 'N/A'} | <strong>Horário:</strong> ${t.supervision_time || 'N/A'} <br>
-                                            <strong>Atividade:</strong> ${t.activity || 'N/A'} <br>
-                                            <strong>Ação / Conclusão:</strong> ${t.conclusion || 'N/A'}
-                                        </p>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        </div>
-                        
-                        <!-- Segurança & Observações -->
-                        <div class="bg-white dark:bg-gray-800 p-4 rounded-xl border border-slate-900/5 dark:border-white/5 shadow-sm space-y-4">
-                            <div>
-                                <span class="text-[9px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider block mb-2">Checklist de Segurança & Risco</span>
-                                <div class="space-y-2 max-h-40 overflow-y-auto">
-                                    ${techList.map(t => {
-                                        const epiStatus = t.epi === 'OK' ? `<span class="text-emerald-500 font-bold">EPI: OK</span>` : `<span class="text-red-500 font-bold">EPI: INCORRETO</span>`;
-                                        const epcStatus = t.epc === 'OK' ? `<span class="text-emerald-500 font-bold">EPC: OK</span>` : `<span class="text-red-500 font-bold">EPC: INCORRETO</span>`;
-                                        const ladder = t.ladder_position === 'OK' ? `<span class="text-emerald-500 font-bold">Escada: OK</span>` : `<span class="text-red-500 font-bold">Escada: INCORRETA</span>`;
-                                        const car = t.car_position === 'OK' ? `<span class="text-emerald-500 font-bold">Carro: OK</span>` : `<span class="text-red-500 font-bold">Carro: INCORRETO</span>`;
-                                        const uniform = t.uniform === 'OK' ? `<span class="text-emerald-500 font-bold">Uniforme: OK</span>` : `<span class="text-red-500 font-bold">Uniforme: INCORRETO</span>`;
-                                        const risk = t.risk_level === 'Alto' ? `<span class="px-1.5 py-0.5 bg-red-100 text-red-600 rounded text-[9px] font-black">Alto Risco</span>` : t.risk_level === 'Médio' ? `<span class="px-1.5 py-0.5 bg-amber-100 text-amber-600 rounded text-[9px] font-black">Médio Risco</span>` : `<span class="px-1.5 py-0.5 bg-emerald-100 text-emerald-600 rounded text-[9px] font-black">Baixo Risco</span>`;
-                                        
-                                        return `
-                                            <div class="text-[10px] text-slate-600 dark:text-gray-300 leading-normal border-b border-slate-100 dark:border-white/5 pb-1">
-                                                <strong>${t.tech_name || 'Técnico'}:</strong> ${epiStatus} | ${epcStatus} | ${ladder} | ${car} | ${uniform} | ${risk}
-                                            </div>
-                                        `;
-                                    }).join('')}
-                                </div>
-                            </div>
-                            
-                            <div class="border-t border-slate-900/10 dark:border-white/10 pt-3">
-                                <span class="text-[9px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider block mb-1">Observações Gerais</span>
-                                <p class="text-xs text-slate-700 dark:text-gray-300 leading-relaxed font-medium">${i.obs || 'Nenhuma observação geral registrada.'}</p>
-                            </div>
-                        </div>
                     </div>
                 </td>
             </tr>
@@ -3653,6 +3693,398 @@ function renderSupervisaoTable(data) {
     `;
 
     container.innerHTML = tableHtml;
+}
+
+function showReuniaoModal(id) {
+    const i = currentReunioes.find(x => x.id === id);
+    if (!i) return;
+    const dateFormatted = i.date ? i.date.split('-').reverse().join('/') : 'N/A';
+    const html = `
+        <div class="space-y-4">
+            <div class="grid grid-cols-2 gap-4 bg-slate-50 dark:bg-slate-800/30 p-4 rounded-2xl border border-slate-200 dark:border-slate-800">
+                <div>
+                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Data da Reunião</span>
+                    <p class="text-xs font-bold text-slate-700 dark:text-gray-200"><i class="fa-solid fa-calendar-day text-slate-400 mr-1.5"></i>${dateFormatted}</p>
+                </div>
+                <div>
+                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Pauta / Assunto</span>
+                    <p class="text-xs font-bold text-slate-700 dark:text-gray-200"><i class="fa-solid fa-tag text-slate-400 mr-1.5"></i>${i.subject || 'N/A'}</p>
+                </div>
+            </div>
+            
+            <div class="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-1.5">
+                <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Ata Completa / Deliberações</span>
+                <p class="text-xs text-slate-655 dark:text-gray-300 leading-relaxed whitespace-pre-wrap font-medium">${i.description || 'Nenhuma ata descritiva registrada.'}</p>
+            </div>
+        </div>
+    `;
+    openDetailsModal('REUNIÃO', i.title || 'Detalhes da Reunião', 'fa-handshake', html);
+}
+
+function showAnotacaoModal(id) {
+    const i = currentAnotacoes.find(x => x.id === id);
+    if (!i) return;
+    const html = `
+        <div class="space-y-4">
+            <div class="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-1.5">
+                <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Descrição / Conteúdo</span>
+                <p class="text-xs text-slate-700 dark:text-gray-200 leading-relaxed whitespace-pre-wrap font-medium">${i.description || 'Sem descrição.'}</p>
+            </div>
+        </div>
+    `;
+    openDetailsModal('ANOTAÇÃO', i.title || 'Detalhes da Anotação', 'fa-note-sticky', html);
+}
+
+function showAtividadeModal(id) {
+    const i = currentAtividades.find(x => x.id === id);
+    if (!i) return;
+    const isMultiple = i.blocks && i.blocks.length > 1;
+    let html = '';
+    if (isMultiple) {
+        html = `
+            <div class="space-y-3">
+                <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Vistorias Integradas (${i.blocks.length} técnicos)</span>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-[11px]">
+                        <thead>
+                            <tr class="border-b border-slate-200 dark:border-slate-800 text-slate-400 font-bold uppercase tracking-wider">
+                                <th class="py-2 pr-4">Técnico</th>
+                                <th class="py-2 pr-4">Cliente</th>
+                                <th class="py-2 pr-4">Atividade</th>
+                                <th class="py-2 pr-4">Qualidade</th>
+                                <th class="py-2 pr-4">O.S. Fechada</th>
+                                <th class="py-2">Feedback & Observações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${i.blocks.map(b => `
+                                <tr class="border-b border-slate-100 dark:border-slate-800 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+                                    <td class="py-2 pr-4 font-bold text-slate-700 dark:text-gray-300">${b.tech_responsible || 'N/A'}</td>
+                                    <td class="py-2 pr-4 text-slate-600 dark:text-gray-400">
+                                        <div class="font-semibold">${b.client_name || 'N/A'}</div>
+                                        <div class="text-[9px] text-slate-400">Cód: ${b.client_code || 'N/A'}</div>
+                                    </td>
+                                    <td class="py-2 pr-4"><span class="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-355 rounded text-[9px] font-bold">${b.type || 'Vistoria'}</span></td>
+                                    <td class="py-2 pr-4"><span class="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-355 rounded text-[9px] font-bold">${b.quality_rating || 'Excelente'}</span></td>
+                                    <td class="py-2 pr-4 font-semibold">${b.os_closure || 'N/A'}</td>
+                                    <td class="py-2 max-w-[250px] truncate" title="Feedback: ${b.client_feedback || 'Sem feedback'}\nObs: ${b.conclusion || 'Sem conclusão'}">
+                                        <div class="truncate text-slate-500"><i class="fa-solid fa-comment-dots text-slate-400"></i> ${b.client_feedback || 'Sem feedback'}</div>
+                                        <div class="truncate text-[9px] text-slate-400"><i class="fa-solid fa-check-double text-slate-400"></i> ${b.conclusion || 'Sem conclusão'}</div>
+                                    </td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+    } else {
+        html = `
+            <div class="space-y-4">
+                <div class="grid grid-cols-2 gap-4 bg-slate-50 dark:bg-slate-800/30 p-4 rounded-2xl border border-slate-200 dark:border-slate-800">
+                    <div>
+                        <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Técnico Responsável</span>
+                        <p class="text-xs font-bold text-slate-700 dark:text-gray-200"><i class="fa-solid fa-user text-slate-400 mr-1.5"></i>${i.tech || 'Não informado'}</p>
+                    </div>
+                    <div>
+                        <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">O.S. Fechada</span>
+                        <p class="text-xs font-bold text-slate-700 dark:text-gray-200"><i class="fa-solid fa-clipboard text-slate-400 mr-1.5"></i>${i.os_closure || 'Não informado'}</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-1.5">
+                        <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Feedback do Cliente</span>
+                        <p class="text-xs text-slate-700 dark:text-gray-200 leading-relaxed font-medium">${i.client_feedback || i.feedback || 'Sem feedback registrado'}</p>
+                    </div>
+                    <div class="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-1.5">
+                        <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Conclusão / Observações Finais</span>
+                        <p class="text-xs text-slate-700 dark:text-gray-200 leading-relaxed font-medium">${i.conclusion || 'Nenhuma observação final'}</p>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    openDetailsModal('ATIVIDADE', i.type || 'Detalhes da Atividade', 'fa-person-digging', html);
+}
+
+function showEncerramentoModal(id) {
+    const i = currentEncerramentos.find(x => x.id === id);
+    if (!i) return;
+    const dateFormatted = i.date ? i.date.split('-').reverse().join('/') : 'N/A';
+    const html = `
+        <div class="space-y-4">
+            <div class="grid grid-cols-2 gap-4 bg-slate-50 dark:bg-slate-800/30 p-4 rounded-2xl border border-slate-200 dark:border-slate-800">
+                <div>
+                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Data / Turno</span>
+                    <p class="text-xs font-bold text-slate-700 dark:text-gray-200"><i class="fa-solid fa-calendar-day text-slate-400 mr-1.5"></i>${dateFormatted} | Turno: ${i.shift || 'N/A'}</p>
+                </div>
+                <div>
+                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Pátio Principal</span>
+                    <p class="text-xs font-bold text-slate-700 dark:text-gray-200"><i class="fa-solid fa-map-pin text-slate-400 mr-1.5"></i>${i.patio_name || 'N/A'}</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Status e Alarme dos Pátios -->
+                <div class="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
+                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Status e Alarme dos Pátios</span>
+                    <div class="space-y-2">
+                        ${(i.patios || []).map(p => `
+                            <div class="flex justify-between items-center text-xs border-b border-slate-100 dark:border-slate-800 pb-1.5 last:border-0 last:pb-0">
+                                <span class="font-bold text-slate-700 dark:text-gray-300">${p.patio_name}</span>
+                                <div class="flex items-center gap-2">
+                                    <span class="text-slate-500 text-[10px]">Horário: ${p.closing_time}</span>
+                                    <span class="px-2 py-0.5 rounded text-[8px] font-black uppercase bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-350">
+                                        ${p.alarm_armed ? 'Armado' : 'Desarmado'}
+                                    </span>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+
+                <!-- Técnicos Presentes -->
+                <div class="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-3">
+                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Técnicos Presentes no Fechamento</span>
+                    <div class="space-y-2">
+                        ${(i.techs || []).map(t => `
+                            <div class="flex justify-between items-center text-xs border-b border-slate-100 dark:border-slate-800 pb-1.5 last:border-0 last:pb-0">
+                                <span class="font-bold text-slate-700 dark:text-gray-300"><i class="fa-solid fa-user text-slate-400 mr-1"></i>${t.username}</span>
+                                <span class="font-semibold text-slate-500 text-[10px]">Chegada: ${t.arrival_time}</span>
+                            </div>
+                        `).join('') || '<span class="text-slate-400 italic text-[11px]">Nenhum técnico presente</span>'}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-1.5">
+                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Pendências</span>
+                    <p class="text-xs text-slate-700 dark:text-gray-200 leading-relaxed font-medium">${i.pendencies || 'Nenhuma pendência pendente.'}</p>
+                </div>
+                <div class="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-1.5">
+                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Ocorrências</span>
+                    <p class="text-xs text-slate-700 dark:text-gray-200 leading-relaxed font-medium">${i.occurrences || 'Nenhuma ocorrência registrada.'}</p>
+                </div>
+            </div>
+        </div>
+    `;
+    openDetailsModal('ENCERRAMENTO', 'Fechamento de Turno', 'fa-door-closed', html);
+}
+
+function showRFOModal(id) {
+    const i = currentRFOs.find(x => x.id === id);
+    if (!i) return;
+    const dateFormatted = i.date ? i.date.split('-').reverse().join('/') : 'N/A';
+    const html = `
+        <div class="space-y-4">
+            <div class="grid grid-cols-2 gap-4 bg-slate-50 dark:bg-slate-800/30 p-4 rounded-2xl border border-slate-200 dark:border-slate-800">
+                <div>
+                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Data / Protocolo</span>
+                    <p class="text-xs font-bold text-slate-700 dark:text-gray-200"><i class="fa-solid fa-calendar-day text-slate-400 mr-1.5"></i>${dateFormatted} | Protocolo: ${i.number || '-'}</p>
+                </div>
+                <div>
+                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Localização</span>
+                    <p class="text-xs font-bold text-slate-700 dark:text-gray-200"><i class="fa-solid fa-location-dot text-slate-400 mr-1.5"></i>${i.neighborhood || 'N/A'}, ${i.city || 'N/A'}</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-1.5">
+                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Causa Raiz</span>
+                    <p class="text-xs text-slate-700 dark:text-gray-200 leading-relaxed font-medium">${i.root_cause || 'Não registrada.'}</p>
+                </div>
+                <div class="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-1.5">
+                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Ações para Solução</span>
+                    <p class="text-xs text-slate-700 dark:text-gray-200 leading-relaxed font-medium">${i.action || 'Não registradas.'}</p>
+                </div>
+            </div>
+
+            <div class="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-1.5">
+                <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Observações Adicionais</span>
+                <p class="text-xs text-slate-700 dark:text-gray-200 leading-relaxed font-medium">${i.observations || i.description || 'Nenhuma observação informada.'}</p>
+            </div>
+        </div>
+    `;
+    openDetailsModal('RFO', i.problem_type || 'Relatório de Falha', 'fa-file-circle-exclamation', html);
+}
+
+function showTarefaModal(id) {
+    const i = currentTarefas.find(x => x.id === id);
+    if (!i) return;
+    const deadlineFormatted = i.deadline ? i.deadline.split('-').reverse().join('/') : 'Sem prazo';
+    const html = `
+        <div class="space-y-4">
+            <div class="grid grid-cols-2 gap-4 bg-slate-50 dark:bg-slate-800/30 p-4 rounded-2xl border border-slate-200 dark:border-slate-800">
+                <div>
+                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Prazo Final / Limite</span>
+                    <p class="text-xs font-bold text-slate-700 dark:text-gray-200"><i class="fa-solid fa-calendar-day text-slate-400 mr-1.5"></i>${deadlineFormatted}</p>
+                </div>
+                <div>
+                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Responsável</span>
+                    <p class="text-xs font-bold text-slate-700 dark:text-gray-200"><i class="fa-solid fa-user text-slate-400 mr-1.5"></i>${i.responsible_name || 'N/A'}</p>
+                </div>
+            </div>
+
+            <div class="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-1.5">
+                <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Descrição da Tarefa</span>
+                <p class="text-xs text-slate-700 dark:text-gray-200 leading-relaxed font-medium">${i.description || 'Sem descrição.'}</p>
+            </div>
+            
+            ${i.obs ? `
+                <div class="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-1.5">
+                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Observações</span>
+                    <p class="text-xs text-slate-700 dark:text-gray-200 leading-relaxed font-medium">${i.obs}</p>
+                </div>
+            ` : ''}
+        </div>
+    `;
+    openDetailsModal('TAREFA', i.title || 'Detalhes da Tarefa', 'fa-list-check', html);
+}
+
+function showRotaExataModal(id) {
+    const i = rotaExataData.find(x => x.id === id);
+    if (!i) return;
+    const techList = i.techs_data || [];
+    const html = `
+        <div class="space-y-4">
+            <div class="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 space-y-3">
+                <span class="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Trajetos Auditados</span>
+                <div class="space-y-3 max-h-60 overflow-y-auto pr-1">
+                    ${techList.map(t => `
+                        <div class="border-l-2 border-slate-300 dark:border-slate-700 pl-3">
+                            <h5 class="text-xs font-bold text-slate-700 dark:text-gray-200">${t.tech_name || 'Técnico'}</h5>
+                            <p class="text-[10px] text-slate-500 mt-0.5">
+                                <strong>Rota Planejada:</strong> ${t.planned_route || 'N/A'} <br>
+                                <strong>Saída Pátio:</strong> ${t.yard_departure_time || 'N/A'} | 
+                                <strong>Almoço:</strong> ${t.lunch_start || 'N/A'} - ${t.lunch_end || 'N/A'}
+                            </p>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+            
+            <div class="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 space-y-4">
+                <div>
+                    <span class="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-2">Desvios de Rota & Atrasos</span>
+                    <div class="space-y-2 max-h-32 overflow-y-auto">
+                        ${techList.map(t => {
+                            const delay = t.delay_reason ? `<span class="text-amber-500 font-bold">Atraso: ${t.delay_reason}</span>` : `<span class="text-slate-500">Sem Atraso</span>`;
+                            const dev = (t.route_deviation || t.identified_reason) ? `<span class="text-red-500 font-bold">Desvio: ${t.route_deviation || 'Local N/A'} (${t.identified_reason || 'Motivo N/A'})</span>` : `<span class="text-slate-500">Sem Desvio</span>`;
+                            return `
+                                <div class="text-[10px] text-slate-600 dark:text-gray-300 leading-tight">
+                                    <strong>${t.tech_name || 'Técnico'}:</strong> ${delay} | ${dev}
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+                
+                <div class="border-t border-slate-100 dark:border-slate-800 pt-3">
+                    <span class="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Observações do Supervisor</span>
+                    <p class="text-xs text-slate-700 dark:text-gray-300 leading-relaxed font-medium">${i.obs || 'Nenhuma observação geral registrada.'}</p>
+                </div>
+            </div>
+        </div>
+    `;
+    openDetailsModal('ROTA EXATA', 'Auditoria Rota Exata', 'fa-route', html);
+}
+
+function showSupervisaoModal(id) {
+    const i = supervisaoData.find(x => x.id === id);
+    if (!i) return;
+    const techList = i.techs_data || [];
+    const html = `
+        <div class="space-y-4">
+            <div class="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 space-y-3">
+                <span class="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Auditorias de Campo</span>
+                <div class="space-y-3 max-h-60 overflow-y-auto pr-1">
+                    ${techList.map(t => `
+                        <div class="border-l-2 border-slate-300 dark:border-slate-700 pl-3">
+                            <h5 class="text-xs font-bold text-slate-700 dark:text-gray-200">${t.tech_name || 'Técnico'}</h5>
+                            <p class="text-[10px] text-slate-500 mt-0.5">
+                                <strong>Local:</strong> ${t.location || 'N/A'} | <strong>Horário:</strong> ${t.supervision_time || 'N/A'} <br>
+                                <strong>Atividade:</strong> ${t.activity || 'N/A'} <br>
+                                <strong>Ação / Conclusão:</strong> ${t.conclusion || 'N/A'}
+                            </p>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+            
+            <div class="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800 space-y-4">
+                <div>
+                    <span class="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-2">Checklist de Segurança & Risco</span>
+                    <div class="space-y-2 max-h-40 overflow-y-auto">
+                        ${techList.map(t => {
+                            const epiStatus = t.epi === 'OK' ? `<span class="text-slate-500">EPI: OK</span>` : `<span class="text-red-500 font-bold">EPI: INCORRETO</span>`;
+                            const epcStatus = t.epc === 'OK' ? `<span class="text-slate-500">EPC: OK</span>` : `<span class="text-red-500 font-bold">EPC: INCORRETO</span>`;
+                            const ladder = t.ladder_position === 'OK' ? `<span class="text-slate-500">Escada: OK</span>` : `<span class="text-red-500 font-bold">Escada: INCORRETA</span>`;
+                            const car = t.car_position === 'OK' ? `<span class="text-slate-500">Carro: OK</span>` : `<span class="text-red-500 font-bold">Carro: INCORRETO</span>`;
+                            const uniform = t.uniform === 'OK' ? `<span class="text-slate-500">Uniforme: OK</span>` : `<span class="text-red-500 font-bold">Uniforme: INCORRETO</span>`;
+                            const risk = t.risk_level === 'Alto' ? `<span class="px-1.5 py-0.5 bg-slate-100 text-slate-700 rounded text-[9px] font-black">Alto Risco</span>` : t.risk_level === 'Médio' ? `<span class="px-1.5 py-0.5 bg-slate-100 text-slate-700 rounded text-[9px] font-black">Médio Risco</span>` : `<span class="px-1.5 py-0.5 bg-slate-100 text-slate-700 rounded text-[9px] font-black">Baixo Risco</span>`;
+                            
+                            return `
+                                <div class="text-[10px] text-slate-600 dark:text-gray-300 leading-normal border-b border-slate-100 dark:border-slate-800 pb-1">
+                                    <strong>${t.tech_name || 'Técnico'}:</strong> ${epiStatus} | ${epcStatus} | ${ladder} | ${car} | ${uniform} | ${risk}
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                </div>
+                
+                <div class="border-t border-slate-100 dark:border-slate-800 pt-3">
+                    <span class="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Observações Gerais</span>
+                    <p class="text-xs text-slate-700 dark:text-gray-300 leading-relaxed font-medium">${i.obs || 'Nenhuma observação geral registrada.'}</p>
+                </div>
+            </div>
+        </div>
+    `;
+    openDetailsModal('SUPERVISÃO', 'Supervisão em Campo', 'fa-users-viewfinder', html);
+}
+
+function showSolicitacaoModal(id) {
+    const i = solicitacoesList.find(x => x.id === id);
+    if (!i) return;
+    const html = `
+        <div class="space-y-4">
+            <div class="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800">
+                <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Descrição Detalhada / Justificativa</span>
+                <blockquote class="text-xs text-slate-700 dark:text-gray-200 border-l-2 border-slate-300 dark:border-slate-750 pl-3 py-1 font-medium bg-slate-50/50 dark:bg-white/5 rounded-r-lg italic">
+                    "${i.description || 'Nenhuma descrição fornecida.'}"
+                </blockquote>
+                
+                <div class="mt-3">
+                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Observações Adicionais</span>
+                    <p class="text-xs text-slate-655 dark:text-gray-300 leading-relaxed bg-slate-50/30 dark:bg-white/5 p-2 rounded-lg">${i.obs || 'Nenhuma observação informada.'}</p>
+                </div>
+            </div>
+
+            <div class="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800 flex flex-col justify-between">
+                <div>
+                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-2">Histórico de Decisão da Coordenação</span>
+                    ${i.management_response ? `
+                        <div class="p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-800 rounded-xl">
+                            <p class="text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1"><i class="fa-solid fa-user-tie mr-1"></i>Parecer da Gestão</p>
+                            <p class="text-xs text-slate-700 dark:text-gray-200 italic font-medium">"${i.management_response}"</p>
+                        </div>
+                    ` : `
+                        <div class="p-3 bg-slate-50/50 dark:bg-white/5 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 text-center">
+                            <i class="fa-solid fa-clock-rotate-left text-slate-400 text-lg mb-1 block"></i>
+                            <p class="text-[10px] text-slate-400 font-bold">Esta solicitação ainda está sob análise.</p>
+                        </div>
+                    `}
+                </div>
+                
+                <div class="text-[9px] text-slate-400 font-bold uppercase tracking-wider border-t border-slate-100 dark:border-slate-800 pt-2 mt-3 flex justify-between items-center">
+                    <span>Status Atual: <strong>${i.status}</strong></span>
+                    <span>Criado em: ${new Date(i.date).toLocaleString()}</span>
+                </div>
+            </div>
+        </div>
+    `;
+    openDetailsModal('SOLICITAÇÃO', i.type || 'Detalhes da Solicitação', 'fa-paper-plane', html);
 }
 
 // === ROTA EXATA HELPERS ===
@@ -3681,34 +4113,7 @@ function filterRotaExata() {
 }
 
 function exportRotaExataReport() {
-    const today = new Date();
-    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-    
-    const formatDate = (d) => {
-        const year = d.getFullYear();
-        const month = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-    };
-
-    const start = prompt('Digite a data inicial (AAAA-MM-DD):', formatDate(firstDay));
-    if (start === null) return;
-    const end = prompt('Digite a data final (AAAA-MM-DD):', formatDate(today));
-    if (end === null) return;
-
-    if (!start || !end) {
-        alert('Por favor, preencha as datas inicial e final.');
-        return;
-    }
-
-    const params = new URLSearchParams({
-        type: 'rota_exata',
-        start_date: start,
-        end_date: end,
-        user_id: ''
-    });
-
-    window.open(`/api/gestao/relatorios/gerar?${params.toString()}`, '_blank');
+    openExportModal('rota_exata', 'Exportar Rota Exata');
 }
 
 function renderRotaExataTable(data) {
@@ -3843,8 +4248,8 @@ function renderRotaExataTable(data) {
                 <!-- Ações -->
                 <td class="px-4 py-3 text-center">
                     <div class="flex items-center justify-center gap-3">
-                        <button onclick="toggleRotaExataRowDetails(${i.id})" class="w-8 h-8 flex items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 hover:bg-blue-500 hover:text-white transition-all shadow-sm" title="Ver Detalhes">
-                            <i id="chevron-rota-exata-${i.id}" class="fa-solid fa-chevron-down text-sm transition-transform duration-200"></i>
+                        <button onclick="showRotaExataModal(${i.id})" class="w-8 h-8 flex items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 hover:bg-blue-500 hover:text-white transition-all shadow-sm" title="Visualizar">
+                            <i class="fa-solid fa-eye text-xs"></i>
                         </button>
                         
                         <button onclick="downloadRotaPDF(${i.id})" class="w-8 h-8 flex items-center justify-center rounded-xl bg-rose-500/10 text-rose-600 hover:bg-rose-500 hover:text-white transition-all shadow-sm" title="Gerar PDF">
@@ -3858,53 +4263,6 @@ function renderRotaExataTable(data) {
                         <button onclick="deleteRota(${i.id})" class="w-8 h-8 flex items-center justify-center rounded-xl bg-rose-500/10 text-rose-600 hover:bg-rose-500 hover:text-white transition-all shadow-sm" title="Excluir">
                             <i class="fa-solid fa-trash-can text-sm"></i>
                         </button>
-                    </div>
-                </td>
-            </tr>
-
-            <!-- Expanded Drawer Row -->
-            <tr id="rota-exata-row-${i.id}" class="hidden bg-slate-50/50 dark:bg-gray-900/30">
-                <td colspan="5" class="px-4 py-4 border-b border-slate-900/10 dark:border-white/10">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <!-- Detalhes dos Trajetos -->
-                        <div class="bg-white dark:bg-gray-800 p-4 rounded-xl border border-slate-900/5 dark:border-white/5 shadow-sm space-y-3">
-                            <span class="text-[9px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider block mb-1">Trajetos Auditados</span>
-                            <div class="space-y-3 max-h-60 overflow-y-auto pr-1">
-                                ${techList.map(t => `
-                                    <div class="border-l-2 border-purple-500 pl-3">
-                                        <h5 class="text-xs font-bold text-slate-700 dark:text-gray-200">${t.tech_name || 'Técnico'}</h5>
-                                        <p class="text-[10px] text-slate-500 mt-0.5">
-                                            <strong>Rota Planejada:</strong> ${t.planned_route || 'N/A'} <br>
-                                            <strong>Saída Pátio:</strong> ${t.yard_departure_time || 'N/A'} | 
-                                            <strong>Almoço:</strong> ${t.lunch_start || 'N/A'} - ${t.lunch_end || 'N/A'}
-                                        </p>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        </div>
-                        
-                        <!-- Atrasos, Desvios & Obs -->
-                        <div class="bg-white dark:bg-gray-800 p-4 rounded-xl border border-slate-900/5 dark:border-white/5 shadow-sm space-y-4">
-                            <div>
-                                <span class="text-[9px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider block mb-2">Desvios de Rota & Atrasos</span>
-                                <div class="space-y-2 max-h-32 overflow-y-auto">
-                                    ${techList.map(t => {
-                                        const delay = t.delay_reason ? `<span class="text-amber-500 font-bold">Atraso: ${t.delay_reason}</span>` : `<span class="text-emerald-500 font-bold">Sem Atraso</span>`;
-                                        const dev = (t.route_deviation || t.identified_reason) ? `<span class="text-red-500 font-bold">Desvio: ${t.route_deviation || 'Local N/A'} (${t.identified_reason || 'Motivo N/A'})</span>` : `<span class="text-emerald-500 font-bold">Sem Desvio</span>`;
-                                        return `
-                                            <div class="text-[10px] text-slate-600 dark:text-gray-300 leading-tight">
-                                                <strong>${t.tech_name || 'Técnico'}:</strong> ${delay} | ${dev}
-                                            </div>
-                                        `;
-                                    }).join('')}
-                                </div>
-                            </div>
-                            
-                            <div class="border-t border-slate-900/10 dark:border-white/10 pt-3">
-                                <span class="text-[9px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider block mb-1">Observações do Supervisor</span>
-                                <p class="text-xs text-slate-700 dark:text-gray-300 leading-relaxed font-medium">${i.obs || 'Nenhuma observação geral registrada.'}</p>
-                            </div>
-                        </div>
                     </div>
                 </td>
             </tr>
@@ -3953,34 +4311,7 @@ function filterRFOs() {
 }
 
 function exportRFOReport() {
-    const today = new Date();
-    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-    
-    const formatDate = (d) => {
-        const year = d.getFullYear();
-        const month = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-    };
-
-    const start = prompt('Digite a data inicial (AAAA-MM-DD):', formatDate(firstDay));
-    if (start === null) return;
-    const end = prompt('Digite a data final (AAAA-MM-DD):', formatDate(today));
-    if (end === null) return;
-
-    if (!start || !end) {
-        alert('Por favor, preencha as datas inicial e final.');
-        return;
-    }
-
-    const params = new URLSearchParams({
-        type: 'rfo',
-        start_date: start,
-        end_date: end,
-        user_id: ''
-    });
-
-    window.open(`/api/gestao/relatorios/gerar?${params.toString()}`, '_blank');
+    openExportModal('rfo', 'Exportar RFO (Relatórios de Falha)');
 }
 
 function renderRFOTable(data) {
@@ -4109,8 +4440,8 @@ function renderRFOTable(data) {
                 <!-- Ações -->
                 <td class="px-4 py-2 text-center">
                     <div class="flex items-center justify-center gap-3">
-                        <button onclick="toggleRFODetails(${i.id})" class="w-8 h-8 flex items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 hover:bg-blue-500 hover:text-white transition-all shadow-sm" title="Ver Detalhes">
-                            <i id="chevron-rfo-${i.id}" class="fa-solid fa-chevron-down text-sm transition-transform duration-200"></i>
+                        <button onclick="showRFOModal(${i.id})" class="w-8 h-8 flex items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 hover:bg-blue-500 hover:text-white transition-all shadow-sm" title="Visualizar">
+                            <i class="fa-solid fa-eye text-xs"></i>
                         </button>
                         
                         <button onclick="downloadRFOPDF(${i.id})" class="w-8 h-8 flex items-center justify-center rounded-xl bg-rose-500/10 text-rose-600 hover:bg-rose-500 hover:text-white transition-all shadow-sm" title="Gerar PDF">
@@ -4124,40 +4455,6 @@ function renderRFOTable(data) {
                         <button onclick="deleteRFO(${i.id})" class="w-8 h-8 flex items-center justify-center rounded-xl bg-rose-500/10 text-rose-600 hover:bg-rose-500 hover:text-white transition-all shadow-sm" title="Excluir">
                             <i class="fa-solid fa-trash-can text-sm"></i>
                         </button>
-                    </div>
-                </td>
-            </tr>
-
-            <!-- Expanded Drawer Row -->
-            <tr id="rfo-row-${i.id}" class="hidden bg-slate-50/50 dark:bg-gray-900/30">
-                <td colspan="6" class="px-4 py-4 border-b border-slate-900/10 dark:border-white/10">
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                        <!-- Causa Raiz -->
-                        <div class="bg-white dark:bg-gray-800 p-3 rounded-xl border border-slate-900/5 dark:border-white/5 shadow-sm">
-                            <span class="text-[9px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider block mb-1">Causa Raiz</span>
-                            <p class="text-xs text-slate-600 dark:text-gray-300 leading-relaxed">${i.root_cause || '<span class="text-slate-400 italic text-[10px]">Não registrada</span>'}</p>
-                        </div>
-                        
-                        <!-- Ações para Solução -->
-                        <div class="bg-white dark:bg-gray-800 p-3 rounded-xl border border-slate-900/5 dark:border-white/5 shadow-sm">
-                            <span class="text-[9px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider block mb-1">Ações para Solução</span>
-                            <p class="text-xs text-slate-600 dark:text-gray-300 leading-relaxed">${i.action || '<span class="text-slate-400 italic text-[10px]">Não registradas</span>'}</p>
-                        </div>
-                        
-                        <!-- Observações -->
-                        <div class="bg-white dark:bg-gray-800 p-3 rounded-xl border border-slate-900/5 dark:border-white/5 shadow-sm">
-                            <span class="text-[9px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider block mb-1">Observações Adicionais</span>
-                            <p class="text-xs text-slate-600 dark:text-gray-300 leading-relaxed">${i.observations || i.description || '<span class="text-slate-400 italic text-[10px]">Nenhuma</span>'}</p>
-                        </div>
-                        
-                        <!-- Localização -->
-                        <div class="bg-white dark:bg-gray-800 p-3 rounded-xl border border-slate-900/5 dark:border-white/5 shadow-sm">
-                            <span class="text-[9px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider block mb-1.5">Local do Incidente</span>
-                            <div class="space-y-1 text-xs text-slate-700 dark:text-gray-300">
-                                <div class="flex items-center gap-1.5"><i class="fa-solid fa-location-dot text-red-500"></i> Bairro: ${i.neighborhood || 'N/A'}</div>
-                                <div class="flex items-center gap-1.5"><i class="fa-solid fa-city text-indigo-500"></i> Cidade: ${i.city || 'N/A'}</div>
-                            </div>
-                        </div>
                     </div>
                 </td>
             </tr>
@@ -4203,34 +4500,7 @@ function filterEncerramentos() {
 }
 
 function exportEncerramentoReport() {
-    const today = new Date();
-    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-    
-    const formatDate = (d) => {
-        const year = d.getFullYear();
-        const month = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-    };
-
-    const start = prompt('Digite a data inicial (AAAA-MM-DD):', formatDate(firstDay));
-    if (start === null) return;
-    const end = prompt('Digite a data final (AAAA-MM-DD):', formatDate(today));
-    if (end === null) return;
-
-    if (!start || !end) {
-        alert('Por favor, preencha as datas inicial e final.');
-        return;
-    }
-
-    const params = new URLSearchParams({
-        type: 'encerramento',
-        start_date: start,
-        end_date: end,
-        user_id: ''
-    });
-
-    window.open(`/api/gestao/relatorios/gerar?${params.toString()}`, '_blank');
+    openExportModal('encerramento', 'Exportar Fechamento de Turno');
 }
 
 function renderEncerramentoTable(data) {
@@ -4341,8 +4611,8 @@ function renderEncerramentoTable(data) {
                 <!-- Ações -->
                 <td class="px-4 py-2 text-center">
                     <div class="flex items-center justify-center gap-3">
-                        <button onclick="toggleEncerramentoDetails(${i.id})" class="w-8 h-8 flex items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 hover:bg-blue-500 hover:text-white transition-all shadow-sm" title="Ver Detalhes">
-                            <i id="chevron-encerramento-${i.id}" class="fa-solid fa-chevron-down text-sm transition-transform duration-200"></i>
+                        <button onclick="showEncerramentoModal(${i.id})" class="w-8 h-8 flex items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 hover:bg-blue-500 hover:text-white transition-all shadow-sm" title="Visualizar">
+                            <i class="fa-solid fa-eye text-xs"></i>
                         </button>
                         
                         <button onclick="window.open('/api/gestao/encerramento/${i.id}/pdf', '_blank')" class="w-8 h-8 flex items-center justify-center rounded-xl bg-rose-500/10 text-rose-600 hover:bg-rose-500 hover:text-white transition-all shadow-sm" title="Gerar PDF">
@@ -4352,44 +4622,6 @@ function renderEncerramentoTable(data) {
                         <button onclick="deleteEncerramento(${i.id})" class="w-8 h-8 flex items-center justify-center rounded-xl bg-rose-500/10 text-rose-600 hover:bg-rose-500 hover:text-white transition-all shadow-sm" title="Excluir">
                             <i class="fa-solid fa-trash-can text-sm"></i>
                         </button>
-                    </div>
-                </td>
-            </tr>
-
-            <!-- Expanded Drawer Row -->
-            <tr id="encerramento-row-${i.id}" class="hidden bg-slate-50/50 dark:bg-gray-900/30">
-                <td colspan="4" class="px-4 py-4 border-b border-slate-900/10 dark:border-white/10">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <!-- Pátios Fechados & Status Alarme -->
-                        <div class="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-slate-900/5 dark:border-white/5 shadow-sm">
-                            <span class="text-[9px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider block mb-3">Status e Alarme dos Pátios</span>
-                            <div class="space-y-2">
-                                ${(i.patios || []).map(p => `
-                                    <div class="flex justify-between items-center text-xs border-b border-slate-900/5 dark:border-white/5 pb-1.5 last:border-0 last:pb-0">
-                                        <span class="font-bold text-slate-700 dark:text-gray-300">${p.patio_name}</span>
-                                        <div class="flex items-center gap-3">
-                                            <span class="text-slate-500">Horário: ${p.closing_time}</span>
-                                            <span class="px-2 py-0.5 rounded text-[10px] font-black uppercase ${p.alarm_armed ? 'bg-emerald-50 text-emerald-600 border border-emerald-500/20' : 'bg-rose-50 text-rose-600 border border-rose-500/20'}">
-                                                Alarme: ${p.alarm_armed ? 'Armado' : 'Desarmado'}
-                                            </span>
-                                        </div>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        </div>
-
-                        <!-- Técnicos Presentes -->
-                        <div class="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-slate-900/5 dark:border-white/5 shadow-sm">
-                            <span class="text-[9px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider block mb-3">Técnicos Presentes no Fechamento</span>
-                            <div class="space-y-2">
-                                ${(i.techs || []).map(t => `
-                                    <div class="flex justify-between items-center text-xs border-b border-slate-900/5 dark:border-white/5 pb-1.5 last:border-0 last:pb-0">
-                                        <span class="font-bold text-slate-700 dark:text-gray-300"><i class="fa-solid fa-user text-slate-400 mr-1.5"></i>${t.username}</span>
-                                        <span class="font-semibold text-slate-500">Chegada: ${t.arrival_time}</span>
-                                    </div>
-                                `).join('') || '<span class="text-slate-400 italic text-[11px]">Nenhum técnico presente</span>'}
-                            </div>
-                        </div>
                     </div>
                 </td>
             </tr>
@@ -4434,34 +4666,7 @@ function filterReunioes() {
 }
 
 function exportReunioesReport() {
-    const today = new Date();
-    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-    
-    const formatDate = (d) => {
-        const year = d.getFullYear();
-        const month = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-    };
-
-    const start = prompt('Digite a data inicial (AAAA-MM-DD):', formatDate(firstDay));
-    if (start === null) return;
-    const end = prompt('Digite a data final (AAAA-MM-DD):', formatDate(today));
-    if (end === null) return;
-
-    if (!start || !end) {
-        alert('Por favor, preencha as datas inicial e final.');
-        return;
-    }
-
-    const params = new URLSearchParams({
-        type: 'reunioes',
-        start_date: start,
-        end_date: end,
-        user_id: ''
-    });
-
-    window.open(`/api/gestao/relatorios/gerar?${params.toString()}`, '_blank');
+    openExportModal('reunioes', 'Exportar Reuniões');
 }
 
 function renderReunioesTable(data) {
@@ -4568,8 +4773,12 @@ function renderReunioesTable(data) {
                 <!-- Ações -->
                 <td class="px-4 py-2 text-center">
                     <div class="flex items-center justify-center gap-3">
-                        <button onclick="toggleAtaDetails(${i.id})" class="w-8 h-8 flex items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 hover:bg-blue-500 hover:text-white transition-all shadow-sm" title="Ver Detalhes">
-                            <i id="chevron-ata-${i.id}" class="fa-solid fa-chevron-down text-sm transition-transform duration-200"></i>
+                        <button onclick="showReuniaoModal(${i.id})" class="w-8 h-8 flex items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 hover:bg-blue-500 hover:text-white transition-all shadow-sm" title="Visualizar">
+                            <i class="fa-solid fa-eye text-xs"></i>
+                        </button>
+                        
+                        <button onclick="downloadMeetingPDF(${i.id})" class="w-8 h-8 flex items-center justify-center rounded-xl bg-rose-500/10 text-rose-600 hover:bg-rose-500 hover:text-white transition-all shadow-sm" title="Gerar PDF">
+                            <i class="fa-solid fa-file-pdf text-sm"></i>
                         </button>
                         
                         <button onclick="editReuniao(${i.id})" class="w-8 h-8 flex items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 hover:bg-blue-50 hover:text-white transition-all shadow-sm" title="Editar">
@@ -4579,16 +4788,6 @@ function renderReunioesTable(data) {
                         <button onclick="deleteReuniao(${i.id})" class="w-8 h-8 flex items-center justify-center rounded-xl bg-rose-500/10 text-rose-600 hover:bg-rose-500 hover:text-white transition-all shadow-sm" title="Excluir">
                             <i class="fa-solid fa-trash-can text-sm"></i>
                         </button>
-                    </div>
-                </td>
-            </tr>
-
-            <!-- Expanded Drawer Row -->
-            <tr id="ata-row-${i.id}" class="hidden bg-slate-50/50 dark:bg-gray-900/30">
-                <td colspan="4" class="px-4 py-4 border-b border-slate-900/10 dark:border-white/10">
-                    <div class="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-slate-900/5 dark:border-white/5 shadow-sm">
-                        <span class="text-[9px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider block mb-1">Ata Completa / Deliberações</span>
-                        <p class="text-xs text-slate-655 dark:text-gray-300 leading-relaxed whitespace-pre-wrap">${i.description || '<span class="text-slate-400 italic text-[10px]">Nenhuma ata descritiva registrada</span>'}</p>
                     </div>
                 </td>
             </tr>
@@ -4633,34 +4832,7 @@ function filterAnotacoes() {
 }
 
 function exportAnotacoesReport() {
-    const today = new Date();
-    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-    
-    const formatDate = (d) => {
-        const year = d.getFullYear();
-        const month = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-    };
-
-    const start = prompt('Digite a data inicial (AAAA-MM-DD):', formatDate(firstDay));
-    if (start === null) return;
-    const end = prompt('Digite a data final (AAAA-MM-DD):', formatDate(today));
-    if (end === null) return;
-
-    if (!start || !end) {
-        alert('Por favor, preencha as datas inicial e final.');
-        return;
-    }
-
-    const params = new URLSearchParams({
-        type: 'anotacoes',
-        start_date: start,
-        end_date: end,
-        user_id: ''
-    });
-
-    window.open(`/api/gestao/relatorios/gerar?${params.toString()}`, '_blank');
+    openExportModal('anotacoes', 'Exportar Anotações');
 }
 
 function renderAnotacoesTable(data) {
@@ -4697,7 +4869,8 @@ function renderAnotacoesTable(data) {
                             <th class="px-4 py-2 w-32">Categoria</th>
                             <th class="px-4 py-2 w-64">Título</th>
                             <th class="px-4 py-2 w-40">Autor</th>
-                            <th class="px-4 py-2 w-32 text-center">Ações</th>
+                            <th class="px-4 py-2 w-28">Status</th>
+                            <th class="px-4 py-2 w-40 text-center">Ações</th>
                         </tr>
                     </thead>
     `;
@@ -4738,7 +4911,7 @@ function renderAnotacoesTable(data) {
                 <tbody>
                     <tr class="bg-slate-900/5 dark:bg-white/5 cursor-pointer hover:bg-slate-900/10 dark:hover:bg-white/10 transition-all select-none" 
                         onclick="toggleMonthGroup(${groupIndex})">
-                        <td colspan="5" class="px-4 py-3 text-blue-700 dark:text-blue-300 font-black uppercase tracking-wider text-xs">
+                        <td colspan="6" class="px-4 py-3 text-blue-700 dark:text-blue-300 font-black uppercase tracking-wider text-xs">
                             <div class="flex items-center justify-between">
                                 <span class="flex items-center gap-2">
                                     <i class="fa-solid fa-calendar-days text-blue-500"></i>
@@ -4761,6 +4934,11 @@ function renderAnotacoesTable(data) {
             : i.category === 'Rede'
             ? 'bg-blue-100/80 dark:bg-blue-500/20 text-blue-700 dark:text-blue-400 border-blue-500/30'
             : 'bg-purple-100/80 dark:bg-purple-500/20 text-purple-700 dark:text-purple-400 border-purple-500/30';
+
+        const isConcluido = (i.status || '').toUpperCase() === 'CONCLUIDO' || (i.status || '').toUpperCase() === 'CONCLUÍDO';
+        const statusBadge = isConcluido 
+            ? '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-600 border border-emerald-500/20 whitespace-nowrap shrink-0"><i class="fa-solid fa-circle-check"></i>Concluída</span>' 
+            : '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-amber-50 text-amber-600 border border-amber-500/20 whitespace-nowrap shrink-0"><i class="fa-solid fa-clock animate-pulse"></i>Pendente</span>';
 
         tableHtml += `
             <tr class="border-b border-slate-900/10 dark:border-white/10 hover:bg-slate-900/5 dark:hover:bg-white/5 transition">
@@ -4786,11 +4964,20 @@ function renderAnotacoesTable(data) {
                     <span class="flex items-center gap-1.5"><i class="fa-solid fa-user-circle text-slate-400"></i> ${i.user || 'N/A'}</span>
                 </td>
 
+                <!-- Status -->
+                <td class="px-4 py-2">
+                    ${statusBadge}
+                </td>
+
                 <!-- Ações -->
                 <td class="px-4 py-2 text-center">
                     <div class="flex items-center justify-center gap-3">
-                        <button onclick="toggleAnotacaoDetails(${i.id})" class="w-8 h-8 flex items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 hover:bg-blue-500 hover:text-white transition-all shadow-sm" title="Ver Detalhes">
-                            <i id="chevron-anot-${i.id}" class="fa-solid fa-chevron-down text-sm transition-transform duration-200"></i>
+                        <button onclick="showAnotacaoDetalhes(${i.id})" class="w-8 h-8 flex items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 hover:bg-blue-500 hover:text-white transition-all shadow-sm" title="Visualizar">
+                            <i class="fa-solid fa-eye text-xs"></i>
+                        </button>
+                        
+                        <button onclick="downloadAnotacaoPDF(${i.id})" class="w-8 h-8 flex items-center justify-center rounded-xl bg-rose-500/10 text-rose-600 hover:bg-rose-500 hover:text-white transition-all shadow-sm" title="Gerar PDF">
+                            <i class="fa-solid fa-file-pdf text-sm"></i>
                         </button>
                         
                         <button onclick="editAnotacao(${i.id})" class="w-8 h-8 flex items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 hover:bg-blue-50 hover:text-white transition-all shadow-sm" title="Editar">
@@ -4800,16 +4987,6 @@ function renderAnotacoesTable(data) {
                         <button onclick="deleteAnotacao(${i.id})" class="w-8 h-8 flex items-center justify-center rounded-xl bg-rose-500/10 text-rose-600 hover:bg-rose-500 hover:text-white transition-all shadow-sm" title="Excluir">
                             <i class="fa-solid fa-trash-can text-sm"></i>
                         </button>
-                    </div>
-                </td>
-            </tr>
-
-            <!-- Expanded Drawer Row -->
-            <tr id="anot-row-${i.id}" class="hidden bg-slate-50/50 dark:bg-gray-900/30">
-                <td colspan="5" class="px-4 py-4 border-b border-slate-900/10 dark:border-white/10">
-                    <div class="bg-white dark:bg-gray-800 p-4 rounded-2xl border border-slate-900/5 dark:border-white/5 shadow-sm">
-                        <span class="text-[9px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider block mb-1">Conteúdo da Anotação</span>
-                        <p class="text-xs text-slate-655 dark:text-gray-300 leading-relaxed whitespace-pre-wrap">${i.description || '<span class="text-slate-400 italic text-[10px]">Sem descrição registrada</span>'}</p>
                     </div>
                 </td>
             </tr>
@@ -4858,34 +5035,7 @@ function filterAtividades() {
 }
 
 function exportAtividadesReport() {
-    const today = new Date();
-    const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-    
-    const formatDate = (d) => {
-        const year = d.getFullYear();
-        const month = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-    };
-
-    const start = prompt('Digite a data inicial (AAAA-MM-DD):', formatDate(firstDay));
-    if (start === null) return;
-    const end = prompt('Digite a data final (AAAA-MM-DD):', formatDate(today));
-    if (end === null) return;
-
-    if (!start || !end) {
-        alert('Por favor, preencha as datas inicial e final.');
-        return;
-    }
-
-    const params = new URLSearchParams({
-        type: 'atividades',
-        start_date: start,
-        end_date: end,
-        user_id: ''
-    });
-
-    window.open(`/api/gestao/relatorios/gerar?${params.toString()}`, '_blank');
+    openExportModal('atividades', 'Exportar Atividades Realizadas');
 }
 
 function renderAtividadesTable(data) {
@@ -5077,8 +5227,8 @@ function renderAtividadesTable(data) {
                 <!-- Ações -->
                 <td class="px-4 py-2 text-center">
                     <div class="flex items-center justify-center gap-3">
-                        <button onclick="toggleAtividadeDetails(${i.id})" class="w-8 h-8 flex items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 hover:bg-blue-500 hover:text-white transition-all shadow-sm" title="Ver Detalhes">
-                            <i id="chevron-atividade-${i.id}" class="fa-solid fa-chevron-down text-sm transition-transform duration-200"></i>
+                        <button onclick="showAtividadeModal(${i.id})" class="w-8 h-8 flex items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 hover:bg-blue-500 hover:text-white transition-all shadow-sm" title="Visualizar">
+                            <i class="fa-solid fa-eye text-xs"></i>
                         </button>
                         
                         <button onclick="downloadVistoriaPDF(${i.id})" class="w-8 h-8 flex items-center justify-center rounded-xl bg-rose-500/10 text-rose-600 hover:bg-rose-500 hover:text-white transition-all shadow-sm" title="Gerar PDF">
@@ -5093,13 +5243,6 @@ function renderAtividadesTable(data) {
                             <i class="fa-solid fa-trash-can text-sm"></i>
                         </button>
                     </div>
-                </td>
-            </tr>
-
-            <!-- Expanded Drawer Row -->
-            <tr id="atividade-row-${i.id}" class="hidden bg-slate-50/50 dark:bg-gray-900/30">
-                <td colspan="6" class="px-4 py-4 border-b border-slate-900/10 dark:border-white/10">
-                    ${drawerContent}
                 </td>
             </tr>
         `;
@@ -5408,11 +5551,11 @@ function renderSolicitacoes(items) {
         const statusUpper = (i.status || '').toUpperCase();
         let statusBadge = '';
         if (statusUpper === 'APROVADA') {
-            statusBadge = '<span class="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-600 border border-emerald-500/20 shrink-0"><i class="fa-solid fa-circle-check mr-1"></i>Aprovada</span>';
+            statusBadge = '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-600 border border-emerald-500/20 whitespace-nowrap shrink-0"><i class="fa-solid fa-circle-check"></i>Aprovada</span>';
         } else if (statusUpper === 'RECUSADA') {
-            statusBadge = '<span class="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-rose-50 text-rose-600 border border-rose-500/20 shrink-0"><i class="fa-solid fa-circle-xmark mr-1"></i>Recusada</span>';
+            statusBadge = '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-rose-50 text-rose-600 border border-rose-500/20 whitespace-nowrap shrink-0"><i class="fa-solid fa-circle-xmark"></i>Recusada</span>';
         } else {
-            statusBadge = '<span class="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-amber-50 text-amber-600 border border-amber-500/20 shrink-0"><i class="fa-solid fa-clock mr-1 animate-pulse"></i>Pendente</span>';
+            statusBadge = '<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-amber-50 text-amber-600 border border-amber-500/20 whitespace-nowrap shrink-0"><i class="fa-solid fa-clock animate-pulse"></i>Pendente</span>';
         }
 
         // Color block types
@@ -5456,8 +5599,8 @@ function renderSolicitacoes(items) {
                 <!-- Ações -->
                 <td class="px-4 py-2.5 text-center">
                     <div class="flex items-center justify-center gap-2.5">
-                        <button onclick="toggleSolicitacaoRowDetails(${i.id})" class="w-8 h-8 flex items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 hover:bg-blue-500 hover:text-white transition-all shadow-sm" title="Ver Detalhes">
-                            <i id="chevron-solicitacao-${i.id}" class="fa-solid fa-chevron-down text-sm transition-transform duration-200"></i>
+                        <button onclick="showSolicitacaoModal(${i.id})" class="w-8 h-8 flex items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 hover:bg-blue-500 hover:text-white transition-all shadow-sm" title="Visualizar">
+                            <i class="fa-solid fa-eye text-xs"></i>
                         </button>
                         
                         ${(statusUpper === 'PENDENTE' && (user_role === 'admin' || user_role === 'supervisor')) ? `
@@ -5468,47 +5611,6 @@ function renderSolicitacoes(items) {
                         <button onclick="deleteSolicitacao(${i.id})" class="w-8 h-8 flex items-center justify-center rounded-xl bg-rose-500/10 text-rose-600 hover:bg-rose-500 hover:text-white transition-all shadow-sm" title="Excluir">
                             <i class="fa-solid fa-trash-can text-sm"></i>
                         </button>
-                    </div>
-                </td>
-            </tr>
-
-            <!-- Expanded Drawer Row -->
-            <tr id="solicitacao-row-${i.id}" class="hidden bg-slate-50/50 dark:bg-gray-900/30">
-                <td colspan="6" class="px-4 py-4 border-b border-slate-900/10 dark:border-white/10">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div class="bg-white dark:bg-gray-800 p-3 rounded-xl border border-slate-900/5 dark:border-white/5">
-                            <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Descrição Detalhada / Justificativa</span>
-                            <blockquote class="text-xs text-slate-700 dark:text-gray-200 border-l-2 border-indigo-500 pl-3 py-1 font-medium bg-slate-50/50 dark:bg-white/5 rounded-r-lg italic">
-                                "${i.description || 'Nenhuma descrição fornecida.'}"
-                            </blockquote>
-                            
-                            <div class="mt-3">
-                                <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Observações Adicionais</span>
-                                <p class="text-xs text-slate-600 dark:text-gray-300 leading-relaxed bg-slate-50/30 dark:bg-white/5 p-2 rounded-lg">${i.obs || 'Nenhuma observação informada.'}</p>
-                            </div>
-                        </div>
-
-                        <div class="bg-white dark:bg-gray-800 p-3 rounded-xl border border-slate-900/5 dark:border-white/5 flex flex-col justify-between">
-                            <div>
-                                <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-2">Histórico de Decisão da Coordenação</span>
-                                ${i.management_response ? `
-                                    <div class="p-3 bg-indigo-50/30 dark:bg-indigo-950/20 border border-indigo-200/50 dark:border-indigo-900/30 rounded-xl">
-                                        <p class="text-[10px] font-black text-indigo-500 uppercase tracking-wider mb-1"><i class="fa-solid fa-user-tie mr-1"></i>Parecer da Gestão</p>
-                                        <p class="text-xs text-slate-700 dark:text-gray-200 italic font-medium">"${i.management_response}"</p>
-                                    </div>
-                                ` : `
-                                    <div class="p-3 bg-slate-50/50 dark:bg-white/5 rounded-xl border border-dashed border-slate-200 dark:border-white/5 text-center">
-                                        <i class="fa-solid fa-clock-rotate-left text-slate-400 text-lg mb-1 block"></i>
-                                        <p class="text-[10px] text-slate-400 font-bold">Esta solicitação ainda está sob análise.</p>
-                                    </div>
-                                `}
-                            </div>
-                            
-                            <div class="text-[9px] text-slate-400 font-bold uppercase tracking-wider border-t border-slate-900/5 dark:border-white/5 pt-2 mt-3 flex justify-between items-center">
-                                <span>Status Atual: <strong class="${statusUpper === 'PENDENTE' ? 'text-amber-500' : statusUpper === 'APROVADA' ? 'text-emerald-500' : 'text-red-500'}">${i.status}</strong></span>
-                                <span>Criado em: ${new Date(i.date).toLocaleString()}</span>
-                            </div>
-                        </div>
                     </div>
                 </td>
             </tr>
@@ -6145,6 +6247,7 @@ async function editAnotacao(id) {
     form.querySelector('[name="id"]').value = item.id;
     form.querySelector('[name="title"]').value = item.title;
     form.querySelector('[name="category"]').value = item.category;
+    form.querySelector('[name="status"]').value = item.status || 'PENDENTE';
     form.querySelector('[name="description"]').value = item.description;
     
     if (item.event_date) {
@@ -6465,6 +6568,17 @@ async function showAnotacaoDetalhes(id) {
 
     document.getElementById('detalhe-anotacao-titulo').textContent = item.title || 'Sem Título';
     document.getElementById('detalhe-anotacao-categoria').textContent = item.category || 'Geral';
+    
+    const statusEl = document.getElementById('detalhe-anotacao-status');
+    if (statusEl) {
+        const isConcluido = (item.status || '').toUpperCase() === 'CONCLUIDO' || (item.status || '').toUpperCase() === 'CONCLUÍDO';
+        statusEl.textContent = isConcluido ? 'Concluída' : 'Pendente';
+        statusEl.className = `px-2.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider w-fit ${
+            isConcluido 
+                ? 'bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' 
+                : 'bg-amber-50 dark:bg-amber-950/20 text-amber-600 dark:text-amber-400 border border-amber-500/20'
+        }`;
+    }
     
     let dateFormatted = 'N/A';
     if (item.event_date) {
@@ -7014,6 +7128,10 @@ function downloadRFOPDF(id) {
 
 function downloadEncerramentoPDF(id) {
     window.open(`/api/gestao/encerramento/${id}/pdf`, '_blank');
+}
+
+function downloadAnotacaoPDF(id) {
+    window.open(`/api/gestao/anotacoes/${id}/pdf`, '_blank');
 }
 
 // --- ROTA EXATA JS ---

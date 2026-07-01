@@ -833,6 +833,7 @@ def atividade_realizada_pdf(id):
     buffer = io.BytesIO()
 
     metadata = {
+        "__ref_id__": f"AR-{a.id}",
         "Título": a.title or "N/A",
         "Data": a.date.strftime("%d/%m/%Y") if a.date else "N/A",
         "Responsável": a.responsible.username if a.responsible else "N/A",
@@ -1307,6 +1308,7 @@ def api_anotacoes(id=None):
         n.category = data.get("category")
         n.description = data.get("description")
         n.priority = data.get("priority", "MEDIA")
+        n.status = data.get("status", "PENDENTE")
         
         event_date_str = data.get("event_date")
         if event_date_str:
@@ -1329,9 +1331,48 @@ def api_anotacoes(id=None):
             "user_name": i.user.username if i.user else "N/A",
             "date": i.date.isoformat() if i.date else "",
             "priority": i.priority,
-            "event_date": str(i.event_date) if i.event_date else ""
+            "event_date": str(i.event_date) if i.event_date else "",
+            "status": i.status or "PENDENTE"
         })
     return jsonify(res)
+
+
+
+@technical_bp.route("/api/gestao/anotacoes/<int:id>/pdf", methods=["GET"])
+@login_required
+def anotacao_pdf(id):
+    import io
+    from flask import send_file
+    
+    n = Note.query.get_or_404(id)
+    buffer = io.BytesIO()
+
+    metadata = {
+        "__ref_id__": f"AN-{n.id}",
+        "Autor": n.user.username if n.user else "N/A",
+        "Data de Criação": n.date.strftime("%d/%m/%Y %H:%M") if n.date else "N/A",
+        "Categoria": n.category or "Geral",
+        "Prioridade": n.priority or "MEDIA",
+        "Status": n.status or "PENDENTE"
+    }
+
+    if n.event_date:
+        metadata["Data do Evento"] = n.event_date.strftime("%d/%m/%Y")
+
+    content = [
+        ("Título / Assunto", n.title or "Sem Título"),
+        ("Descrição Detalhada", n.description or "Sem descrição registrada.")
+    ]
+
+    make_premium_pdf(buffer, "Anotação Técnica", metadata, content)
+    buffer.seek(0)
+    
+    return send_file(
+        buffer,
+        mimetype="application/pdf",
+        as_attachment=False,
+        download_name=f"anotacao_{id}.pdf"
+    )
 
 
 
@@ -1606,6 +1647,9 @@ def api_status_toggle(slug, id):
     return jsonify({"status": "ok"})
 
 def make_premium_pdf(buffer, title, metadata, content_table_data, image_paths=None, signature_path=None):
+    metadata = dict(metadata)
+    ref_id = metadata.pop("__ref_id__", None)
+
     from reportlab.lib.pagesizes import A4
     from reportlab.lib import colors
     from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image as RLImage
@@ -1711,8 +1755,8 @@ def make_premium_pdf(buffer, title, metadata, content_table_data, image_paths=No
         now_str = agora().strftime("%d/%m/%Y %H:%M")
         c.drawString(25, divider_y - 10, f"Emitido em: {now_str}")
         
-        ref_id = metadata.get("ID") or metadata.get("Código") or metadata.get("Placa") or metadata.get("Nº") or "N/A"
-        c.drawRightString(width - 25, divider_y - 10, f"Doc Ref: {ref_id}")
+        doc_ref = ref_id or metadata.get("ID") or metadata.get("Código") or metadata.get("Placa") or metadata.get("Nº") or "N/A"
+        c.drawRightString(width - 25, divider_y - 10, f"Doc Ref: {doc_ref}")
 
         # 5. Rodapé Institucional AdaptLink
         c.setStrokeColor(colors.HexColor("#E2E8F0"))
@@ -1931,6 +1975,7 @@ def encerramento_pdf(id):
         closing_display_time = ", ".join(closing_times) if closing_times else "N/A"
 
     metadata = {
+        "__ref_id__": f"EN-{e.id}",
         "Pátio(s)": patio_display_name,
         "Data": e.date.strftime("%d/%m/%Y") if e.date else "N/A",
         "Horário de Fechamento": closing_display_time or "N/A",
@@ -1944,7 +1989,7 @@ def encerramento_pdf(id):
             for p in patios_list:
                 name = p.get('patio_name') or p.get('name') or "N/A"
                 val = p.get('closing_time') or p.get('status') or "N/A"
-                lines.append(f"- {name}: {val}")
+                lines.append(f"• <b>{name}:</b> {val}")
             patios_str = "\n".join(lines)
         except Exception:
             patios_str = str(e.patios_json)
@@ -2008,6 +2053,7 @@ def atividade_pdf(id):
     if len(blocks) <= 1:
         # Layout individual legado/simplificado
         metadata = {
+            "__ref_id__": f"AT-{a.id}",
             "Tipo de Atividade": a.type or "N/A",
             "Localização": a.location or "N/A",
             "Data": a.date.strftime("%d/%m/%Y") if a.date else "N/A",
@@ -2085,7 +2131,7 @@ def atividade_pdf(id):
             c.setFillColor(colors.HexColor("#475569"))
             now_str = agora().strftime("%d/%m/%Y %H:%M")
             c.drawString(25, height - 75, f"Emitido em: {now_str}")
-            c.drawRightString(width - 25, height - 75, f"Doc Ref: #{a.id}")
+            c.drawRightString(width - 25, height - 75, f"Doc Ref: AT-{a.id}")
 
             # 5. Rodapé Institucional AdaptLink
             c.setStrokeColor(colors.HexColor("#E2E8F0"))
@@ -2335,6 +2381,7 @@ def reuniao_pdf(id):
             parts_str = m.participants
 
     metadata = {
+        "__ref_id__": f"RN-{m.id}",
         "Assunto": m.subject or "N/A",
         "Data": m.date.strftime("%d/%m/%Y") if m.date else "N/A",
         "Horário": m.time or "N/A",
@@ -2393,6 +2440,7 @@ def rfo_pdf(id):
     end_formatted = format_dt(r.end_time)
 
     metadata = {
+        "__ref_id__": r.number or f"RF-{r.id}",
         "Número RFO": r.number or "N/A",
         "Cidade / Bairro": f"{r.city or 'N/A'} / {r.neighborhood or 'N/A'}",
         "Data": r.date.strftime("%d/%m/%Y") if r.date else "N/A",
@@ -2443,11 +2491,11 @@ def rota_exata_pdf(id):
     buffer = io.BytesIO()
 
     metadata = {
+        "__ref_id__": f"RE-{r.id}",
         "Supervisor": r.supervisor.username if r.supervisor else "N/A",
         "Data de Auditoria": r.date.strftime("%d/%m/%Y") if r.date else "N/A",
         "Horário": r.time or "N/A",
         "Ponto de Checagem": r.location or "N/A",
-        "Status da Auditoria": r.status or "PENDENTE"
     }
 
     techs_str = ""
@@ -2457,30 +2505,33 @@ def rota_exata_pdf(id):
                 lines = []
                 for i, t in enumerate(r.techs_data, 1):
                     tech_name = t.get('tech_name') or f"Técnico ID {t.get('tech_id')}"
-                    lines.append(f"AUDITORIA {i}: {tech_name.upper()}")
-                    lines.append(f"  - Data de Supervisão: {t.get('supervision_date') or 'N/A'}")
-                    lines.append(f"  - Saída do Pátio: {t.get('yard_departure_time') or 'N/A'}")
+                    lines.append(f"<b>AUDITORIA {i}: {tech_name.upper()}</b>")
+                    lines.append(f"  • <b>Data de Supervisão:</b> {t.get('supervision_date') or 'N/A'}")
+                    lines.append(f"  • <b>Saída do Pátio:</b> {t.get('yard_departure_time') or 'N/A'}")
                     
                     delay_reason = t.get('delay_reason')
                     if delay_reason:
-                        lines.append(f"  - Atraso na Saída: Sim - Motivo: {delay_reason}")
+                        lines.append(f"  • <b>Atraso na Saída:</b> Sim | <b>Motivo:</b> {delay_reason}")
                     else:
-                        lines.append(f"  - Atraso na Saída: Não")
+                        lines.append(f"  • <b>Atraso na Saída:</b> Não")
                     
                     route_deviation = t.get('route_deviation')
                     identified_reason = t.get('identified_reason')
                     if route_deviation or identified_reason:
-                        lines.append(f"  - Desvio de Rota: Sim - Local: {route_deviation or 'N/A'} (Motivo: {identified_reason or 'N/A'})")
+                        lines.append(f"  • <b>Desvio de Rota:</b> Sim | <b>Local:</b> {route_deviation or 'N/A'} (<b>Motivo:</b> {identified_reason or 'N/A'})")
                     else:
-                        lines.append(f"  - Desvio de Rota: Não")
+                        lines.append(f"  • <b>Desvio de Rota:</b> Não")
                         
-                    lines.append(f"  - Horário de Almoço: {t.get('lunch_start') or 'N/A'} até {t.get('lunch_end') or 'N/A'}")
-                    lines.append(f"  - Rota Planejada: {t.get('planned_route') or 'N/A'}")
+                    lines.append(f"  • <b>Horário de Almoço:</b> {t.get('lunch_start') or 'N/A'} até {t.get('lunch_end') or 'N/A'}")
+                    lines.append(f"  • <b>Rota Planejada:</b> {t.get('planned_route') or 'N/A'}")
                     
                     obs = t.get('observations')
                     if obs:
-                        lines.append(f"  - Observações: {obs}")
+                        lines.append(f"  • <b>Observações:</b> {obs}")
                     lines.append("")
+                    if i < len(r.techs_data):
+                        lines.append("__________________________________________________________________")
+                        lines.append("")
                 techs_str = "\n".join(lines)
             else:
                 techs_str = str(r.techs_data)
@@ -2514,9 +2565,10 @@ def supervisao_pdf(id):
     buffer = io.BytesIO()
 
     metadata = {
+        "__ref_id__": f"SV-{s.id}",
         "Supervisor": s.supervisor.username if s.supervisor else "N/A",
         "Data de Auditoria": s.date.strftime("%d/%m/%Y") if s.date else "N/A",
-        "Horário Geral": s.time or "N/A",
+        "Horário": s.time or "N/A",
     }
 
     def map_status_pdf(val):
@@ -2564,12 +2616,16 @@ def supervisao_pdf(id):
                     lines.append(f"  • <b>Atividade Desenvolvida:</b> {t.get('activity') or 'N/A'}")
                     lines.append(f"  • <b>Conclusão / Ação:</b> {t.get('conclusion') or 'N/A'}")
                     lines.append(f"  • <b>Grau de Risco:</b> {risk}")
-                    lines.append(f"  • <b>Checklists de Segurança:</b>")
-                    lines.append(f"    - EPI: {epi}  |  EPC: {epc}")
-                    lines.append(f"    - Posicionamento de Escada: {ladder}")
-                    lines.append(f"    - Posicionamento do Carro: {car}")
-                    lines.append(f"    - Uniforme e Identificação: {uniform}")
                     lines.append("")
+                    lines.append(f"  • <b>Checklist de Conformidades:</b>")
+                    lines.append(f"    EPI: {epi}  |  EPC: {epc}")
+                    lines.append(f"    Posicionamento da Escada: {ladder}")
+                    lines.append(f"    Posicionamento do Carro: {car}")
+                    lines.append(f"    Uniforme e Identificação: {uniform}")
+                    lines.append("")
+                    if i < len(s.techs_data):
+                        lines.append("__________________________________________________________________")
+                        lines.append("")
                 techs_str = "\n".join(lines)
             else:
                 techs_str = str(s.techs_data)
@@ -6932,6 +6988,7 @@ def controle_ferramentas_relatorio_pdf(user_id):
     user = ins.user
     
     metadata = {
+        "__ref_id__": f"VT-{ins.id}",
         "Documento": "Termo de Responsabilidade e Controle",
         "Técnico Responsável": user.username,
         "Última Atualização": ins.updated_at.strftime("%d/%m/%Y %H:%M"),
