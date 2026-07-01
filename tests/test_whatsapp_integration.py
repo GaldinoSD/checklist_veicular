@@ -332,5 +332,40 @@ class TestWhatsAppIntegration(unittest.TestCase):
             config.instance_name = old_instance
             db.session.commit()
 
+    def test_whatsapp_logs_route(self):
+        """Testa o endpoint de busca de logs /api/whatsapp/logs"""
+        from backend.models import WhatsAppLog
+        from unittest.mock import patch
+        
+        admin_user = User(username='test_admin', role='admin')
+        
+        # Cria um log de teste no banco
+        w_log = WhatsAppLog(
+            phone="5521999999999",
+            message="Mensagem de teste de logs",
+            status_code=200,
+            status_text="SENT"
+        )
+        db.session.add(w_log)
+        db.session.commit()
+        
+        try:
+            with patch('flask_login.utils._get_user', return_value=admin_user):
+                response = self.client.get('/api/whatsapp/logs')
+                self.assertEqual(response.status_code, 200)
+                data = response.get_json()
+                self.assertIsInstance(data, list)
+                self.assertTrue(len(data) >= 1)
+                
+                # Verifica as propriedades do primeiro log
+                log_data = data[0]
+                self.assertEqual(log_data['phone'], "5521999999999")
+                self.assertEqual(log_data['message'], "Mensagem de teste de logs")
+                self.assertEqual(log_data['status_code'], 200)
+                self.assertEqual(log_data['status_text'], "SENT")
+        finally:
+            db.session.delete(w_log)
+            db.session.commit()
+
 if __name__ == '__main__':
     unittest.main()

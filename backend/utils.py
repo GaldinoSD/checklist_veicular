@@ -88,7 +88,7 @@ def registrar_log(acao):
         print("⚠️ Erro registrar_log:", e)
         db.session.rollback()
 
-def send_whatsapp_message(to_number_or_msg, text_message=None):
+def send_whatsapp_message(to_number_or_msg, text_message=None, rule_slug=None, user_id=None):
     """
     Dispara uma mensagem de texto assíncrona usando a Evolution API.
     Totalmente isolado em uma thread em background para não travar a aplicação principal.
@@ -137,16 +137,206 @@ def send_whatsapp_message(to_number_or_msg, text_message=None):
                         "text": actual_msg
                     }
                     
+                    from backend.models import WhatsAppLog
+                    from backend import db
+
+                    status_code = None
+                    status_text = "SENT"
                     url = f"{config.api_url.rstrip('/')}/message/sendText/{config.instance_name}"
+                    error_msg = None
                     try:
                         res = requests.post(url, json=payload, headers=headers, timeout=10)
-                        print(f"Evolution API status for {sanitized_number}: {res.status_code}")
+                        try:
+                            status_code = int(res.status_code)
+                        except Exception:
+                            status_code = None
+                        print(f"Evolution API status for {sanitized_number}: {status_code}")
+                        if status_code not in (200, 201):
+                            status_text = "ERROR"
+                            error_msg = f"HTTP {status_code}: {res.text[:100]}"
                     except Exception as err:
+                        status_text = "ERROR"
+                        error_msg = str(err)
                         print(f"⚠️ Erro ao postar na Evolution API para {sanitized_number}: {err}")
+                    
+                    try:
+                        w_log = WhatsAppLog(
+                            phone=sanitized_number,
+                            message=actual_msg,
+                            status_code=status_code,
+                            status_text=status_text
+                        )
+                        db.session.add(w_log)
+                        db.session.commit()
+                    except Exception as db_err:
+                        print("⚠️ Erro ao gravar log de WhatsApp no banco:", db_err)
+                        db.session.rollback()
+
+                    if rule_slug:
+                        try:
+                            from backend.models import SystemRuleLog
+                            sys_log = SystemRuleLog(
+                                rule_slug=rule_slug,
+                                user_id=user_id,
+                                channel="whatsapp",
+                                recipient=sanitized_number,
+                                message=actual_msg,
+                                status="SENT" if status_text == "SENT" else "FAILED",
+                                error_message=error_msg
+                            )
+                            db.session.add(sys_log)
+                            db.session.commit()
+                        except Exception as sys_err:
+                            print("⚠️ Erro ao gravar SystemRuleLog de WhatsApp:", sys_err)
+                            db.session.rollback()
         except Exception as e:
             print("⚠️ Erro ao processar worker de envio de WhatsApp:", e)
 
     threading.Thread(target=worker, daemon=True).start()
+
+
+def send_telegram_message(to_chat_id_or_msg, text_message=None, rule_slug=None, user_id=None):
+    """
+    Dispara uma mensagem do Telegram de forma assíncrona.
+    Totalmente isolado em uma thread em background para não travar a aplicação principal.
+    """
+    if text_message is not None:
+        target_chat = to_chat_id_or_msg
+        actual_msg = text_message
+    else:
+        target_chat = None
+        actual_msg = to_chat_id_or_msg
+
+    from backend import create_app
+    from backend.models import TelegramConfig
+    app = current_app._get_current_object()
+
+    def worker():
+        try:
+            with app.app_context():
+                config = TelegramConfig.query.first()
+                if not config or not config.is_enabled or not config.bot_token:
+                    return
+                
+                chat = target_chat or config.chat_id
+                if not chat:
+                    return
+
+                # Limpa HTML básico ou formata tags suportadas pelo Telegram
+                url = f"https://api.telegram.org/bot{config.bot_token}/sendMessage"
+                payload = {
+                    "chat_id": chat,
+                    "text": actual_msg,
+                    "parse_mode": "HTML"
+                }
+                
+                status_ok = True
+                error_msg = None
+                try:
+                    res = requests.post(url, json=payload, timeout=10)
+                    print(f"Telegram status for {chat}: {res.status_code}")
+                    status_ok = (res.status_code in (200, 201))
+                    error_msg = None if status_ok else f"HTTP {res.status_code}: {res.text[:100]}"
+                except Exception as err:
+                    status_ok = False
+                    error_msg = str(err)
+                    print(f"⚠️ Erro ao enviar Telegram para {chat}: {err}")
+
+                if rule_slug:
+                    try:
+                        from backend.models import SystemRuleLog
+                        from backend import db
+                        sys_log = SystemRuleLog(
+                            rule_slug=rule_slug,
+                            user_id=user_id,
+                            channel="telegram",
+                            recipient=str(chat),
+                            message=actual_msg,
+                            status="SENT" if status_ok else "FAILED",
+                            error_message=error_msg
+                        )
+                        db.session.add(sys_log)
+                        db.session.commit()
+                    except Exception as sys_err:
+                        print("⚠️ Erro ao gravar SystemRuleLog de Telegram:", sys_err)
+                        db.session.rollback()
+        except Exception as e:
+            print("⚠️ Erro ao processar worker de envio de Telegram:", e)
+
+    import threading
+    threading.Thread(target=worker, daemon=True).start()
+
+
+def send_email_notification(to_email, subject, body_message, rule_slug=None, user_id=None):
+    """
+    Dispara um e-mail de notificação de forma assíncrona usando SMTP.
+    Totalmente isolado em uma thread em background para não travar a aplicação principal.
+    """
+    from backend.models import EmailConfig
+    from backend import create_app
+    app = current_app._get_current_object()
+
+    def worker():
+        try:
+            with app.app_context():
+                config = EmailConfig.query.first()
+                if not config or not config.is_enabled or not config.smtp_server:
+                    return
+                
+                import smtplib
+                from email.mime.text import MIMEText
+                from email.mime.multipart import MIMEMultipart
+
+                msg = MIMEMultipart()
+                msg['From'] = config.from_email or config.smtp_user
+                msg['To'] = to_email
+                msg['Subject'] = subject
+                msg.attach(MIMEText(body_message, 'plain', 'utf-8'))
+
+                status_ok = True
+                error_msg = None
+                try:
+                    if config.use_ssl:
+                        server = smtplib.SMTP_SSL(config.smtp_server, config.smtp_port, timeout=10)
+                    else:
+                        server = smtplib.SMTP(config.smtp_server, config.smtp_port, timeout=10)
+                        server.starttls()
+                    
+                    if config.smtp_user and config.smtp_password:
+                        server.login(config.smtp_user, config.smtp_password)
+                    
+                    server.sendmail(msg['From'], [to_email], msg.as_string())
+                    server.quit()
+                    print(f"E-mail enviado com sucesso para {to_email}")
+                except Exception as err:
+                    status_ok = False
+                    error_msg = str(err)
+                    print(f"⚠️ Erro ao enviar e-mail para {to_email}: {err}")
+
+                if rule_slug:
+                    try:
+                        from backend.models import SystemRuleLog
+                        from backend import db
+                        sys_log = SystemRuleLog(
+                            rule_slug=rule_slug,
+                            user_id=user_id,
+                            channel="email",
+                            recipient=to_email,
+                            message=f"Assunto: {subject}\n\n{body_message}",
+                            status="SENT" if status_ok else "FAILED",
+                            error_message=error_msg
+                        )
+                        db.session.add(sys_log)
+                        db.session.commit()
+                    except Exception as sys_err:
+                        print("⚠️ Erro ao gravar SystemRuleLog de E-mail:", sys_err)
+                        db.session.rollback()
+        except Exception as e:
+            print("⚠️ Erro ao processar worker de envio de e-mail:", e)
+
+    import threading
+    threading.Thread(target=worker, daemon=True).start()
+
 
 # ----------------- HELPERS DE PERMISSÃO -----------------
 def admin_required(view):

@@ -172,6 +172,9 @@
             <button onclick="switchTab('tab-gatilhos', this)" class="tab-btn px-4 py-2 rounded-lg text-xs font-bold transition-all text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-205 flex items-center gap-2 border border-transparent">
                 <i class="fa-solid fa-circle-nodes"></i> Pipeline de Gatilhos
             </button>
+            <button onclick="switchTab('tab-logs', this)" class="tab-btn px-4 py-2 rounded-lg text-xs font-bold transition-all text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-205 flex items-center gap-2 border border-transparent">
+                <i class="fa-solid fa-list-check"></i> Registro de Envios
+            </button>
         </div>
 
         <div class="text-[10px] font-extrabold uppercase tracking-widest text-slate-400 dark:text-slate-500 flex items-center gap-1.5">
@@ -774,6 +777,77 @@
             </div>
         </div>
 
+        <!-- 🟢 TAB 4: SENDING LOGS -->
+        <div id="tab-logs" class="tab-panel hidden bg-white dark:bg-slate-900/40 border border-slate-200 dark:border-slate-800/80 rounded-xl shadow-xl overflow-hidden animate-premium">
+            <div class="p-6 border-b border-slate-200 dark:border-slate-800 bg-slate-5/50 dark:bg-slate-900/20 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                    <h3 class="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                        <i class="fa-solid fa-list-check text-emerald-500"></i> Registro de Envios de WhatsApp
+                    </h3>
+                    <p class="text-xs text-slate-550 dark:text-slate-400 mt-1">Acompanhe o histórico de mensagens enviadas e o status de conexão da API.</p>
+                </div>
+                <button onclick="carregarWhatsappLogs()" class="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-[11px] font-black uppercase tracking-wider flex items-center gap-1.5 transition-all active:scale-95">
+                    <i class="fa-solid fa-rotate"></i> Atualizar
+                </button>
+            </div>
+            
+            <div class="p-6">
+                <!-- Status da Fila / Estatísticas Rápidas -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-6">
+                    <div class="p-4 bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 rounded-xl flex items-center gap-4">
+                        <div class="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+                            <i class="fa-solid fa-paper-plane text-base"></i>
+                        </div>
+                        <div>
+                            <span class="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Total Enviados</span>
+                            <h4 id="logs-total" class="text-lg font-black text-slate-900 dark:text-white mt-0.5">--</h4>
+                        </div>
+                    </div>
+                    <div class="p-4 bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 rounded-xl flex items-center gap-4">
+                        <div class="w-10 h-10 rounded-lg bg-red-500/10 flex items-center justify-center text-red-500">
+                            <i class="fa-solid fa-triangle-exclamation text-base"></i>
+                        </div>
+                        <div>
+                            <span class="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Total Erros</span>
+                            <h4 id="logs-erros" class="text-lg font-black text-slate-900 dark:text-white mt-0.5">--</h4>
+                        </div>
+                    </div>
+                    <div class="p-4 bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800 rounded-xl flex items-center gap-4">
+                        <div class="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-500">
+                            <i class="fa-solid fa-percent text-base"></i>
+                        </div>
+                        <div>
+                            <span class="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Taxa de Sucesso</span>
+                            <h4 id="logs-sucesso-taxa" class="text-lg font-black text-slate-900 dark:text-white mt-0.5">--</h4>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tabela de Logs -->
+                <div class="overflow-x-auto border border-slate-200 dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900/10">
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead>
+                            <tr class="bg-slate-50 dark:bg-slate-950/50 border-b border-slate-200 dark:border-slate-800 text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                                <th class="py-3 px-4 w-[160px]">Data/Hora</th>
+                                <th class="py-3 px-4 w-[150px]">Destinatário</th>
+                                <th class="py-3 px-4">Mensagem</th>
+                                <th class="py-3 px-4 w-[100px] text-center">Status HTTP</th>
+                                <th class="py-3 px-4 w-[120px] text-center">Resultado</th>
+                            </tr>
+                        </thead>
+                        <tbody id="whatsapp-logs-tbody">
+                            <tr>
+                                <td colspan="5" class="py-10 text-center text-slate-400 dark:text-slate-500">
+                                    <div class="animate-spin inline-block w-5 h-5 border-2 border-slate-400 border-t-transparent rounded-full mb-3"></div>
+                                    <p class="text-[10px] font-bold uppercase tracking-wider">Carregando registros...</p>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
     </div>
 
 </div>
@@ -817,6 +891,8 @@
                     firstTextarea.focus();
                 }
             }
+        } else if (tabId === 'tab-logs') {
+            carregarWhatsappLogs();
         }
     }
 
@@ -993,6 +1069,79 @@
                 }
             }, 400);
         }, 800);
+    }
+
+    async function carregarWhatsappLogs() {
+        const tbody = document.getElementById('whatsapp-logs-tbody');
+        if (!tbody) return;
+
+        try {
+            const res = await fetch('/api/whatsapp/logs?t=' + Date.now());
+            if (res.ok) {
+                const data = await res.json();
+                
+                if (data.length === 0) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="5" class="py-12 text-center text-slate-400 dark:text-slate-500">
+                                <i class="fa-solid fa-box-open text-2xl mb-3 opacity-30"></i>
+                                <p class="text-[10px] font-bold uppercase tracking-wider">Nenhum registro de envio encontrado</p>
+                            </td>
+                        </tr>
+                    `;
+                    document.getElementById('logs-total').innerText = '0';
+                    document.getElementById('logs-erros').innerText = '0';
+                    document.getElementById('logs-sucesso-taxa').innerText = '0%';
+                    return;
+                }
+
+                let total = data.length;
+                let erros = data.filter(l => l.status_text === 'ERROR').length;
+                let taxa = total > 0 ? (((total - erros) / total) * 100).toFixed(1) + '%' : '100%';
+
+                document.getElementById('logs-total').innerText = total;
+                document.getElementById('logs-erros').innerText = erros;
+                document.getElementById('logs-sucesso-taxa').innerText = taxa;
+
+                tbody.innerHTML = data.map(l => {
+                    let badgeClass = 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/20 dark:text-emerald-450 border-emerald-500/10';
+                    if (l.status_text === 'ERROR') {
+                        badgeClass = 'bg-rose-100 text-rose-800 dark:bg-rose-950/20 dark:text-rose-450 border-rose-500/10';
+                    }
+
+                    return `
+                        <tr class="border-b border-slate-200 dark:border-slate-800/60 hover:bg-slate-50/50 dark:hover:bg-white/5 transition-all">
+                            <td class="py-3 px-4 font-mono text-[11px] text-slate-550 dark:text-slate-400 whitespace-nowrap">${l.sent_at}</td>
+                            <td class="py-3 px-4 font-mono font-bold text-slate-700 dark:text-slate-300 whitespace-nowrap">${l.phone}</td>
+                            <td class="py-3 px-4 font-medium text-slate-650 dark:text-slate-350 pr-8 whitespace-pre-wrap">${l.message}</td>
+                            <td class="py-3 px-4 font-mono font-bold text-center text-slate-500 dark:text-slate-400">${l.status_code || '---'}</td>
+                            <td class="py-3 px-4 text-center">
+                                <span class="px-2 py-0.5 rounded-full border text-[9px] font-black uppercase tracking-wider \${badgeClass}">${l.status_text}</span>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            } else {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="py-12 text-center text-red-500">
+                            <i class="fa-solid fa-triangle-exclamation text-2xl mb-3 opacity-30"></i>
+                            <p class="text-[10px] font-bold uppercase tracking-wider">Falha ao carregar registros do servidor</p>
+                        </td>
+                    </tr>
+                `;
+            }
+        } catch (e) {
+            console.error(e);
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="5" class="py-12 text-center text-red-500">
+                        <i class="fa-solid fa-triangle-exclamation text-2xl mb-3 opacity-30"></i>
+                        <p class="text-[10px] font-bold uppercase tracking-wider">Erro de conexão</p>
+                    </td>
+                </tr>
+            `;
+        }
     }
 
     // DOM Initialization

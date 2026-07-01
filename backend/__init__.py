@@ -284,7 +284,50 @@ def create_app():
             text('ALTER TABLE user_tool_status ADD COLUMN IF NOT EXISTS is_editable BOOLEAN DEFAULT false'),
             text('ALTER TABLE user_tool_inspection ADD COLUMN IF NOT EXISTS signature VARCHAR(255)'),
             text('ALTER TABLE checklist ADD COLUMN IF NOT EXISTS signature VARCHAR(255)'),
-            text("ALTER TABLE checklist_item ADD COLUMN IF NOT EXISTS vehicle_type VARCHAR(20) DEFAULT 'carro'")
+            text("ALTER TABLE checklist_item ADD COLUMN IF NOT EXISTS vehicle_type VARCHAR(20) DEFAULT 'carro'"),
+            text('ALTER TABLE "user" ADD COLUMN IF NOT EXISTS telegram_chat_id VARCHAR(100)'),
+            text('ALTER TABLE system_rule ADD COLUMN IF NOT EXISTS trigger_days INTEGER DEFAULT 7'),
+            text('ALTER TABLE system_rule ADD COLUMN IF NOT EXISTS channels VARCHAR(100) DEFAULT \'system,whatsapp\''),
+            text('ALTER TABLE system_rule ADD COLUMN IF NOT EXISTS msg_system TEXT'),
+            text('ALTER TABLE system_rule ADD COLUMN IF NOT EXISTS msg_whatsapp TEXT'),
+            text('ALTER TABLE system_rule ADD COLUMN IF NOT EXISTS msg_telegram TEXT'),
+            text('ALTER TABLE system_rule ADD COLUMN IF NOT EXISTS msg_email TEXT'),
+            text('''
+                CREATE TABLE IF NOT EXISTS telegram_config (
+                    id SERIAL PRIMARY KEY,
+                    bot_token VARCHAR(255) DEFAULT '',
+                    chat_id VARCHAR(100) DEFAULT '',
+                    is_enabled BOOLEAN DEFAULT FALSE
+                )
+            '''),
+            text('''
+                CREATE TABLE IF NOT EXISTS email_config (
+                    id SERIAL PRIMARY KEY,
+                    smtp_server VARCHAR(255) DEFAULT '',
+                    smtp_port INTEGER DEFAULT 587,
+                    smtp_user VARCHAR(255) DEFAULT '',
+                    smtp_password VARCHAR(255) DEFAULT '',
+                    from_email VARCHAR(255) DEFAULT '',
+                    use_ssl BOOLEAN DEFAULT FALSE,
+                    is_enabled BOOLEAN DEFAULT FALSE
+                )
+            '''),
+            text('ALTER TABLE email_config ADD COLUMN IF NOT EXISTS use_ssl BOOLEAN DEFAULT FALSE'),
+            text('ALTER TABLE system_rule ADD COLUMN IF NOT EXISTS silence_days INTEGER DEFAULT 1'),
+            text('''
+                CREATE TABLE IF NOT EXISTS system_rule_logs (
+                    id SERIAL PRIMARY KEY,
+                    rule_slug VARCHAR(50) NOT NULL,
+                    user_id INTEGER,
+                    channel VARCHAR(20) NOT NULL,
+                    recipient VARCHAR(255) NOT NULL,
+                    message TEXT NOT NULL,
+                    status VARCHAR(20) DEFAULT 'SENT',
+                    error_message TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    retry_count INTEGER DEFAULT 0
+                )
+            ''')
         ]
         for stmt in stmts:
             try:
@@ -295,6 +338,28 @@ def create_app():
             db.session.commit()
         except Exception as e:
             print("⚠️ Erro commit ensure_min_schema:", e)
+            db.session.rollback()
+
+        # Migração automática dos templates legados de WhatsApp para as regras de SystemRule correspondentes
+        try:
+            from backend.models import SystemRule, WhatsAppConfig
+            w_config = WhatsAppConfig.query.first()
+            if w_config:
+                mapping = {
+                    "scale_alert": w_config.msg_scale_alert,
+                    "late_checklist": w_config.msg_late_checklist,
+                    "training_alert": w_config.msg_training_alert,
+                    "os_alert": w_config.msg_os_overdue,
+                    "os_sla": w_config.msg_os_overdue,
+                    "inactive_tech_alert": w_config.msg_inactive_tech
+                }
+                for slug, template in mapping.items():
+                    rule = SystemRule.query.filter_by(slug=slug).first()
+                    if rule and template and not rule.msg_whatsapp:
+                        rule.msg_whatsapp = template
+                db.session.commit()
+        except Exception as e:
+            print("⚠️ Erro ao migrar templates de WhatsApp para as regras:", e)
             db.session.rollback()
  
     # Itens padrão por tipo de veículo
@@ -389,9 +454,13 @@ def create_app():
         db.session.commit()
  
     with app.app_context():
-        db.create_all()
-        if not is_testing:
-            ensure_min_schema()
-        seed_defaults()
+        try:
+            db.create_all()
+            if not is_testing:
+                ensure_min_schema()
+            seed_defaults()
+        except Exception as startup_err:
+            print("⚠️ Erro na inicialização concorrente do banco de dados:", startup_err)
+            db.session.rollback()
 
     return app

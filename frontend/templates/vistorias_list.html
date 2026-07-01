@@ -269,10 +269,15 @@
 
             <!-- Itens (Área rolável interna de Grid) -->
             <div class="flex-1 overflow-y-auto pr-2 mb-4 custom-scrollbar">
+                <!-- Mobile Tab Switcher -->
+                <div class="flex lg:hidden gap-2 mb-4 shrink-0">
+                    <button type="button" onclick="switchVistoriaTab('modalNovaVistoria', 'map')" id="btnTabNovaMap" class="tab-btn-map flex-1 py-2 text-xs font-black rounded-xl bg-emerald-500 text-white shadow-lg transition-all">🗺️ Mapa Visual</button>
+                    <button type="button" onclick="switchVistoriaTab('modalNovaVistoria', 'list')" id="btnTabNovaList" class="tab-btn-list flex-1 py-2 text-xs font-black rounded-xl bg-slate-100 text-slate-700 dark:bg-white/5 dark:text-slate-300 transition-all">📝 Lista de Itens</button>
+                </div>
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
                     <!-- Coluna Esquerda: Mapa 2D de Seleção -->
                     <div class="lg:col-span-1 bg-slate-50/70 border border-slate-900/10 rounded-2xl p-4 flex flex-col items-center justify-center
-                                dark:bg-black/10 dark:border-white/10">
+                                dark:bg-black/10 dark:border-white/10 vistoria-map-col" id="modalNovaVistoriaMapCol">
                         <p class="text-[11px] text-slate-500 mb-4 text-center dark:text-gray-400">
                             Selecione as partes danificadas diretamente no veículo
                         </p>
@@ -368,7 +373,7 @@
                     </div>
 
                     <!-- Coluna Direita: Cards dos Itens -->
-                    <div class="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-3.5">
+                    <div class="lg:col-span-2 hidden lg:grid grid-cols-1 md:grid-cols-2 gap-3.5 vistoria-list-col" id="modalNovaVistoriaListCol">
                         {% for key, label in [
                             ("para_choque_dianteiro", "Para-choque dianteiro"),
                             ("para_choque_traseiro",  "Para-choque traseiro"),
@@ -564,13 +569,15 @@
             </div>
 
             <!-- Evaluated Items Grid -->
-            <div>
-                <h4 class="text-xs font-black text-slate-400 uppercase tracking-wider mb-3">Itens Evaluados</h4>
-                
+                <!-- Mobile Tab Switcher -->
+                <div class="flex lg:hidden gap-2 mb-4 shrink-0">
+                    <button type="button" onclick="switchVistoriaTab('modalVerVistoria', 'map')" id="btnTabVerMap" class="tab-btn-map flex-1 py-2 text-xs font-black rounded-xl bg-emerald-500 text-white shadow-lg transition-all">🗺️ Mapa Visual</button>
+                    <button type="button" onclick="switchVistoriaTab('modalVerVistoria', 'list')" id="btnTabVerList" class="tab-btn-list flex-1 py-2 text-xs font-black rounded-xl bg-slate-100 text-slate-700 dark:bg-white/5 dark:text-slate-300 transition-all">📝 Lista de Itens</button>
+                </div>
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
                     <!-- Coluna Esquerda: Mapa 2D -->
                     <div class="lg:col-span-1 bg-slate-50/70 border border-slate-900/10 rounded-2xl p-4 flex flex-col items-center justify-center
-                                dark:bg-black/10 dark:border-white/10">
+                                dark:bg-black/10 dark:border-white/10 vistoria-map-col" id="modalVerVistoriaMapCol">
                         <p class="text-[11px] text-slate-500 mb-4 text-center dark:text-gray-400">
                             Mapa de avarias (clique nas áreas <span class="text-amber-500 font-bold font-black">laranjas</span> para detalhes)
                         </p>
@@ -666,7 +673,7 @@
                     </div>
 
                     <!-- Coluna Direita: Detalhes -->
-                    <div class="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-3" id="verModalItemsGrid">
+                    <div class="lg:col-span-2 hidden lg:grid grid-cols-1 md:grid-cols-2 gap-3 vistoria-list-col" id="verModalItemsGrid">
                         <!-- Dinâmico -->
                     </div>
                 </div>
@@ -828,6 +835,10 @@ window.onerror = function(message, source, lineno, colno, error) {
                 sel.dispatchEvent(new Event("change"));
             });
             
+            if (typeof switchVistoriaTab === 'function') {
+                switchVistoriaTab('modalNovaVistoria', 'map');
+            }
+            
             modalNova.showModal();
             document.body.classList.add('overflow-hidden');
         } else {
@@ -932,6 +943,9 @@ window.onerror = function(message, source, lineno, colno, error) {
         });
         
         // Abrir o modal
+        if (typeof switchVistoriaTab === 'function') {
+            switchVistoriaTab('modalNovaVistoria', 'map');
+        }
         modalNova.showModal();
         document.body.classList.add('overflow-hidden');
     }
@@ -1265,6 +1279,9 @@ window.onerror = function(message, source, lineno, colno, error) {
         // Ver Vistoria Lógica
         const modalVer = document.getElementById('modalVerVistoria');
         window.openVerVistoriaModal = function() {
+            if (typeof switchVistoriaTab === 'function') {
+                switchVistoriaTab('modalVerVistoria', 'map');
+            }
             modalVer.showModal();
             document.body.classList.add('overflow-hidden');
         }
@@ -1756,6 +1773,52 @@ async function scanLoop() {
     if (isScanning) {
         document.getElementById('ocr-status').innerText = 'Enquadre a placa';
         setTimeout(scanLoop, 800);
+    }
+}
+
+window.switchVistoriaTab = function(modalId, activeTab) {
+    const modal = document.getElementById(modalId);
+    if (!modal) return;
+    
+    const mapCol = modal.querySelector('.vistoria-map-col');
+    const listCol = modal.querySelector('.vistoria-list-col');
+    const btnMap = modal.querySelector('.tab-btn-map');
+    const btnList = modal.querySelector('.tab-btn-list');
+    
+    if (activeTab === 'map') {
+        if (mapCol) {
+            mapCol.classList.remove('hidden');
+            mapCol.classList.add('flex');
+        }
+        if (listCol) {
+            listCol.classList.add('hidden');
+            listCol.classList.remove('grid');
+        }
+        if (btnMap) {
+            btnMap.classList.add('bg-emerald-500', 'text-white', 'shadow-lg');
+            btnMap.classList.remove('bg-slate-100', 'text-slate-750', 'dark:bg-white/5', 'dark:text-slate-300');
+        }
+        if (btnList) {
+            btnList.classList.remove('bg-emerald-500', 'text-white', 'shadow-lg');
+            btnList.classList.add('bg-slate-100', 'text-slate-750', 'dark:bg-white/5', 'dark:text-slate-300');
+        }
+    } else {
+        if (mapCol) {
+            mapCol.classList.add('hidden');
+            mapCol.classList.remove('flex');
+        }
+        if (listCol) {
+            listCol.classList.remove('hidden');
+            listCol.classList.add('grid');
+        }
+        if (btnList) {
+            btnList.classList.add('bg-emerald-500', 'text-white', 'shadow-lg');
+            btnList.classList.remove('bg-slate-100', 'text-slate-750', 'dark:bg-white/5', 'dark:text-slate-300');
+        }
+        if (btnMap) {
+            btnMap.classList.remove('bg-emerald-500', 'text-white', 'shadow-lg');
+            btnMap.classList.add('bg-slate-100', 'text-slate-750', 'dark:bg-white/5', 'dark:text-slate-300');
+        }
     }
 }
 

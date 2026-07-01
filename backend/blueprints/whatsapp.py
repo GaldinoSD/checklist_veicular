@@ -36,7 +36,7 @@ from backend.models import (
     TrainingQuestion, TrainingAssignment, TrainingAttempt, Badge, Generator,
     RFO, Solicitacao, SupervisaoTecnica, RotaExata, Team, Task, Patio, Encerramento,
     Scale, Meeting, Note, Activity, SystemRule, Company, Contract, ExternalCollaborator,
-    AvariaOS, Log, Vistoria, VistoriaFoto, SystemConfig, WhatsAppConfig,
+    AvariaOS, Log, Vistoria, VistoriaFoto, SystemConfig, WhatsAppConfig, WhatsAppLog,
     NetworkNode, NetworkSplitter, NetworkEdge, GPSDevice, GPSLog
 )
 from backend.utils import (
@@ -345,5 +345,25 @@ def allowed_file(filename: str) -> bool:
         return False
     ext = os.path.splitext(filename.lower())[1]
     return ext in ALLOWED_EXT
+
+
+@whatsapp_bp.route("/api/whatsapp/logs", methods=["GET"])
+@login_required
+def whatsapp_logs():
+    if not (current_user.is_admin or current_user.has_permission("whatsapp_evolution")):
+        return jsonify({"error": "Acesso negado"}), 403
+        
+    logs = WhatsAppLog.query.order_by(WhatsAppLog.sent_at.desc()).limit(100).all()
+    res = []
+    for l in logs:
+        res.append({
+            "id": l.id,
+            "phone": l.phone,
+            "message": l.message,
+            "status_code": l.status_code,
+            "status_text": l.status_text,
+            "sent_at": l.sent_at.strftime("%d/%m/%Y %H:%M:%S")
+        })
+    return jsonify(res)
 
 

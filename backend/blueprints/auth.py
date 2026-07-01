@@ -621,7 +621,7 @@ def get_default_perms(role):
         "perm_gestao_encerramento", "perm_gestao_rfo", "perm_gestao_tarefas",
         "perm_gestao_geradores", "perm_gestao_rota_exata", "perm_gestao_supervisao",
         "perm_gestao_treinamentos", "perm_gestao_solicitacoes", "perm_gestao_relatorios",
-        "perm_whatsapp_evolution", "perm_whatsapp_conversas", "perm_gestao_mapas", "perm_gestao_powerbi"
+        "perm_whatsapp_evolution", "perm_whatsapp_conversas", "perm_gestao_mapas", "perm_gestao_powerbi", "perm_avisos_historico"
     ]
     perms = {}
     if role == "tech":
@@ -641,6 +641,15 @@ def get_default_perms(role):
     return perms
 
 
+def sanitize_and_validate_phone(phone: str):
+    if not phone:
+        return ""
+    sanitized = "".join(filter(str.isdigit, phone))
+    if sanitized.startswith("55") and len(sanitized) > 10:
+        sanitized = sanitized[2:]
+    if len(sanitized) not in (10, 11):
+        raise ValueError("Número de telefone inválido. Deve conter o DDD (2 dígitos) mais o número (ex: 21999998888).")
+    return sanitized
 
 
 @auth_bp.route("/usuarios/novo", methods=["POST"])
@@ -651,6 +660,7 @@ def users_new():
     role = request.form.get("role", "tech").strip().lower()
     email = request.form.get("email", "").strip()
     phone = request.form.get("phone", "").strip()
+    telegram_chat_id = request.form.get("telegram_chat_id", "").strip()
 
     if not username or not password:
         flash("Usuário e senha obrigatórios.", "error")
@@ -660,9 +670,16 @@ def users_new():
         flash("Usuário já existe.", "error")
         return redirect(url_for("users"))
 
+    if phone:
+        try:
+            phone = sanitize_and_validate_phone(phone)
+        except ValueError as err:
+            flash(str(err), "error")
+            return redirect(url_for("users"))
+
     perms = get_default_perms(role)
 
-    u = User(username=username, role=role, email=email, phone=phone, permissions=json.dumps(perms))
+    u = User(username=username, role=role, email=email, phone=phone, telegram_chat_id=telegram_chat_id, permissions=json.dumps(perms))
     u.set_password(password)
     db.session.add(u)
     db.session.commit()
@@ -681,6 +698,7 @@ def users_role(uid):
     role = request.form.get("role", u.role).strip().lower()
     email = request.form.get("email", "").strip()
     phone = request.form.get("phone", "").strip()
+    telegram_chat_id = request.form.get("telegram_chat_id", "").strip()
     pwd = request.form.get("password", "").strip()
 
     # --- Atualização de senha (se fornecida) ---
@@ -704,9 +722,17 @@ def users_role(uid):
             flash("Papel inválido.", "error")
             return redirect(url_for("users"))
 
+        if phone:
+            try:
+                phone = sanitize_and_validate_phone(phone)
+            except ValueError as err:
+                flash(str(err), "error")
+                return redirect(url_for("users"))
+
         u.role = role
         u.email = email
         u.phone = phone
+        u.telegram_chat_id = telegram_chat_id
 
         # Ao mudar o papel, resetamos para as permissões padrão daquele papel
         perms = get_default_perms(role)
@@ -746,7 +772,7 @@ def users_permissions(uid):
         "perm_gestao_geradores", "perm_gestao_rota_exata", "perm_gestao_supervisao",
         "perm_gestao_treinamentos", "perm_gestao_solicitacoes", "perm_gestao_relatorios",
         "perm_whatsapp_evolution", "perm_whatsapp_conversas",
-        "perm_config_ferramentas", "perm_controle_ferramentas", "perm_controle_ferramentas_atual", "perm_gestao_mapas", "perm_gestao_powerbi"
+        "perm_config_ferramentas", "perm_controle_ferramentas", "perm_controle_ferramentas_atual", "perm_gestao_mapas", "perm_gestao_powerbi", "perm_avisos_historico"
     ]
     
     perms_data = request.form.to_dict()

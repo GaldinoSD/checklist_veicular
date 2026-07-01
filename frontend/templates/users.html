@@ -207,7 +207,7 @@
             <option value="manutencao">Manutenção</option>
           </select>
         </div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">E-mail</label>
             <input id="email" name="email" type="email" placeholder="ex@email.com" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl px-5 py-3 text-sm dark:text-white outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all">
@@ -215,6 +215,10 @@
           <div>
             <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Telefone</label>
             <input id="phone" name="phone" type="text" placeholder="(00) 00000-0000" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl px-5 py-3 text-sm dark:text-white outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all">
+          </div>
+          <div>
+            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">ID Telegram</label>
+            <input id="telegram_chat_id" name="telegram_chat_id" type="text" placeholder="Ex: 12345678" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl px-5 py-3 text-sm dark:text-white outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all">
           </div>
         </div>
         <div class="flex flex-col gap-3 pt-4">
@@ -261,7 +265,7 @@
           </select>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">E-mail</label>
             <input id="email" name="email" type="email" value="{{ u.email or '' }}" placeholder="ex@email.com" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl px-5 py-3 text-sm dark:text-white outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all">
@@ -269,6 +273,10 @@
           <div>
             <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Telefone</label>
             <input id="phone" name="phone" type="text" value="{{ u.phone or '' }}" placeholder="(00) 00000-0000" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl px-5 py-3 text-sm dark:text-white outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all">
+          </div>
+          <div>
+            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">ID Telegram</label>
+            <input id="telegram_chat_id" name="telegram_chat_id" type="text" value="{{ u.telegram_chat_id or '' }}" placeholder="Ex: 12345678" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl px-5 py-3 text-sm dark:text-white outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all">
           </div>
         </div>
         {% endif %}
@@ -307,6 +315,7 @@
                         <label class="flex items-center gap-3 cursor-pointer group"><input id="perm_logs" type="checkbox" name="perm_logs" value="on" {% if u.has_permission('logs') %}checked{% endif %} class="rounded text-purple-600 focus:ring-purple-500"> <span class="text-sm text-slate-700 dark:text-gray-300 group-hover:text-purple-600">Logs do Sistema</span></label>
                         <label class="flex items-center gap-3 cursor-pointer group"><input id="perm_relatorios" type="checkbox" name="perm_relatorios" value="on" {% if u.has_permission('relatorios') %}checked{% endif %} class="rounded text-purple-600 focus:ring-purple-500"> <span class="text-sm text-slate-700 dark:text-gray-300 group-hover:text-purple-600">Relatórios</span></label>
                         <label class="flex items-center gap-3 cursor-pointer group"><input id="perm_avisos" type="checkbox" name="perm_avisos" value="on" {% if u.has_permission('avisos') %}checked{% endif %} class="rounded text-purple-600 focus:ring-purple-500"> <span class="text-sm text-slate-700 dark:text-gray-300 group-hover:text-purple-600">Central de Avisos</span></label>
+                        <label class="flex items-center gap-3 cursor-pointer group"><input id="perm_avisos_historico" type="checkbox" name="perm_avisos_historico" value="on" {% if u.has_permission('avisos_historico') %}checked{% endif %} class="rounded text-purple-600 focus:ring-purple-500"> <span class="text-sm text-slate-700 dark:text-gray-300 group-hover:text-purple-600">Histórico de Envios de Alertas</span></label>
                         <label class="flex items-center gap-3 cursor-pointer group"><input id="perm_whatsapp_conversas" type="checkbox" name="perm_whatsapp_conversas" value="on" {% if u.has_permission('whatsapp_conversas') %}checked{% endif %} class="rounded text-purple-600 focus:ring-purple-500"> <span class="text-sm text-slate-700 dark:text-gray-300 group-hover:text-purple-600">WhatsApp Conversas</span></label>
                         <label class="flex items-center gap-3 cursor-pointer group"><input id="perm_whatsapp_evolution" type="checkbox" name="perm_whatsapp_evolution" value="on" {% if u.has_permission('whatsapp_evolution') %}checked{% endif %} class="rounded text-purple-600 focus:ring-purple-500"> <span class="text-sm text-slate-700 dark:text-gray-300 group-hover:text-purple-600">WhatsApp Configurações</span></label>
                     </div>
@@ -421,7 +430,7 @@
             <option value="manutencao">Manutenção</option>
           </select>
         </div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div>
             <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">E-mail</label>
             <input id="email" name="email" type="email" placeholder="ex@email.com" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl px-5 py-3 text-sm dark:text-white outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all">
@@ -429,6 +438,10 @@
           <div>
             <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Telefone</label>
             <input id="phone" name="phone" type="text" placeholder="(00) 00000-0000" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl px-5 py-3 text-sm dark:text-white outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all">
+          </div>
+          <div>
+            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">ID Telegram</label>
+            <input id="telegram_chat_id" name="telegram_chat_id" type="text" placeholder="Ex: 12345678" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl px-5 py-3 text-sm dark:text-white outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all">
           </div>
         </div>
         <div class="flex flex-col gap-3 pt-4">
@@ -446,6 +459,17 @@
     const q = this.value.toLowerCase();
     document.querySelectorAll('.user-row').forEach(row => {
       row.style.display = row.innerText.toLowerCase().includes(q) ? '' : 'none';
+    });
+  });
+
+  // Auto-sanitização dos campos de telefone (apenas números, DDD + número, limpa '55')
+  document.querySelectorAll('input[name="phone"]').forEach(input => {
+    input.addEventListener('input', function() {
+      let val = this.value.replace(/\D/g, '');
+      if (val.startsWith('55') && val.length > 11) {
+        val = val.substring(2);
+      }
+      this.value = val.substring(0, 11);
     });
   });
 </script>

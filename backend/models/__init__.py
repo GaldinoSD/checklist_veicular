@@ -20,6 +20,7 @@ class User(UserMixin, db.Model):
     role = db.Column(db.String(20), default=None)
     email = db.Column(db.String(120))
     phone = db.Column(db.String(20))
+    telegram_chat_id = db.Column(db.String(100))
     permissions = db.Column(db.Text) # JSON string
 
     def set_password(self, pwd: str):
@@ -593,6 +594,13 @@ class SystemRule(db.Model):
     name = db.Column(db.String(100))
     description = db.Column(db.String(255))
     is_enabled = db.Column(db.Boolean, default=True)
+    trigger_days = db.Column(db.Integer, default=7)
+    channels = db.Column(db.String(100), default="system,whatsapp")
+    msg_system = db.Column(db.Text)
+    msg_whatsapp = db.Column(db.Text)
+    msg_telegram = db.Column(db.Text)
+    msg_email = db.Column(db.Text)
+    silence_days = db.Column(db.Integer, default=1)
 
 
 class Company(db.Model):
@@ -769,6 +777,36 @@ class WhatsAppConfig(db.Model):
     recipients = db.Column(db.Text, default="")
 
 
+class TelegramConfig(db.Model):
+    __tablename__ = "telegram_config"
+    id = db.Column(db.Integer, primary_key=True)
+    bot_token = db.Column(db.String(255))
+    chat_id = db.Column(db.String(100))
+    is_enabled = db.Column(db.Boolean, default=False)
+
+
+class EmailConfig(db.Model):
+    __tablename__ = "email_config"
+    id = db.Column(db.Integer, primary_key=True)
+    smtp_server = db.Column(db.String(255))
+    smtp_port = db.Column(db.Integer, default=587)
+    smtp_user = db.Column(db.String(255))
+    smtp_password = db.Column(db.String(255))
+    from_email = db.Column(db.String(255))
+    use_ssl = db.Column(db.Boolean, default=False)
+    is_enabled = db.Column(db.Boolean, default=False)
+
+
+class WhatsAppLog(db.Model):
+    __tablename__ = "whatsapp_log"
+    id = db.Column(db.Integer, primary_key=True)
+    phone = db.Column(db.String(20), nullable=False)
+    message = db.Column(db.Text, nullable=False)
+    status_code = db.Column(db.Integer, nullable=True)
+    status_text = db.Column(db.String(50), default="SENT")  # SENT, ERROR
+    sent_at = db.Column(db.DateTime, default=agora)
+
+
 class NetworkNode(db.Model):
     __tablename__ = "network_node"
 
@@ -862,4 +900,21 @@ class GPSAlert(db.Model):
     longitude = db.Column(db.Float)
     timestamp = db.Column(db.DateTime, default=agora)
     is_dismissed = db.Column(db.Boolean, default=False)
+
+
+class SystemRuleLog(db.Model):
+    __tablename__ = "system_rule_logs"
+    id = db.Column(db.Integer, primary_key=True)
+    rule_slug = db.Column(db.String(50), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
+    channel = db.Column(db.String(20), nullable=False) # 'system', 'whatsapp', 'telegram', 'email'
+    recipient = db.Column(db.String(255), nullable=False) # phone, email, chat_id, or "system"
+    message = db.Column(db.Text, nullable=False)
+    status = db.Column(db.String(20), default="SENT") # 'SENT', 'FAILED', 'FAILED_RETRY'
+    error_message = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=agora)
+    retry_count = db.Column(db.Integer, default=0)
+
+    # Relationships
+    user = db.relationship("User", backref="rule_logs")
 

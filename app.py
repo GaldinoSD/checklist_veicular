@@ -12,7 +12,7 @@ from backend.models import (
     TrainingQuestion, TrainingAssignment, TrainingAttempt, Badge, Generator,
     RFO, Solicitacao, SupervisaoTecnica, RotaExata, Team, Task, Patio, Encerramento,
     Scale, Meeting, Note, Activity, SystemRule, Company, Contract, ExternalCollaborator,
-    AvariaOS, Log, Vistoria, VistoriaFoto, SystemConfig, WhatsAppConfig,
+    AvariaOS, Log, Vistoria, VistoriaFoto, SystemConfig, WhatsAppConfig, TelegramConfig, EmailConfig, SystemRuleLog,
     NetworkNode, NetworkSplitter, NetworkEdge, GPSDevice, GPSLog
 )
 
