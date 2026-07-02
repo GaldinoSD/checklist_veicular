@@ -505,7 +505,8 @@
       @media (max-width: 640px) {
         /* Bloqueio de scroll do body com modal aberto */
         body:has(dialog[open]),
-        body:has(.fixed.inset-0.flex:not(.hidden)) {
+        body:has(.fixed.inset-0.flex:not(.hidden)),
+        body:has(.fixed.inset-0.z-50:not(.hidden)) {
           overflow: hidden !important;
         }
 
@@ -513,23 +514,20 @@
         .fixed.inset-0.items-center.justify-center.flex,
         .fixed.inset-0.z-\[100\].flex,
         .fixed.inset-0.z-\[110\].flex,
-        .fixed.inset-0.z-50.flex {
+        .fixed.inset-0.z-50.flex,
+        .fixed.inset-0.z-50 > div.flex {
+          display: flex !important;
           align-items: flex-end !important;
           justify-content: center !important;
           padding: 0 !important;
+          min-height: 100vh !important;
         }
 
         /* 2. Alinhamento dos modais baseados em DIALOG no rodapé (Apenas ativos) */
         dialog[open] {
-          margin-bottom: 0 !important;
-          margin-top: auto !important;
-          margin-left: auto !important;
-          margin-right: auto !important;
           position: fixed !important;
-          bottom: 0 !important;
-          left: 0 !important;
-          right: 0 !important;
-          top: auto !important;
+          inset: auto 0 0 0 !important;
+          margin: 0 auto !important;
           max-width: 100vw !important;
           width: 100vw !important;
           height: 90vh !important;
@@ -537,9 +535,30 @@
           border-radius: 2rem 2rem 0 0 !important;
           display: flex !important;
           flex-direction: column !important;
-          padding: 0 !important;
           overflow: hidden !important;
+        }
+
+        /* Se o dialog for o próprio cartão (tem fundo definido) */
+        dialog[open].bg-white,
+        dialog[open].bg-slate-900,
+        dialog[open].dark\:bg-gray-900,
+        dialog[open].dark\:bg-slate-900,
+        dialog[open][class*="bg-white"],
+        dialog[open][class*="bg-slate-900"],
+        dialog[open][class*="bg-gray-900"],
+        dialog[open][class*="bg-slate-800"],
+        dialog[open][class*="dark:bg-gray-900"] {
+          padding: 1.5rem 1.25rem 2.5rem 1.25rem !important;
+          overflow-y: auto !important;
+          -webkit-overflow-scrolling: touch;
+          background-color: white !important;
+        }
+
+        /* Se o dialog for apenas um wrapper transparente contendo um div cartão */
+        dialog[open]:not(.bg-white):not(.bg-slate-900):not(.dark\:bg-gray-900):not(.dark\:bg-slate-900):not([class*="bg-white"]):not([class*="bg-slate-900"]):not([class*="bg-gray-900"]):not([class*="bg-slate-800"]) {
+          padding: 0 !important;
           background: transparent !important;
+          transform: none !important;
         }
 
         /* 3. Estilização do cartão de conteúdo visível (Bottom Sheet) */
@@ -547,16 +566,13 @@
         .fixed.inset-0.z-\[100\].flex > div:not(.absolute),
         .fixed.inset-0.z-\[110\].flex > div:not(.absolute),
         .fixed.inset-0.z-50.flex > div:not(.absolute),
-        dialog[open].bg-white,
-        dialog[open].bg-slate-900,
-        dialog[open].dark\:bg-gray-900,
-        dialog[open].dark\:bg-slate-900,
-        dialog[open] > div.bg-white,
-        dialog[open] > div.bg-white\/95,
-        dialog[open] > div.bg-white\/90,
-        dialog[open] > div.dark\:bg-slate-900,
-        dialog[open] > div.dark\:bg-slate-900\/95,
-        dialog[open] > div.dark\:bg-slate-900\/90 {
+        .fixed.inset-0.z-50 > div.flex > div.inline-block,
+        dialog[open]:not(#modalNovaVistoria):not(#modalVerVistoria) > div.bg-white,
+        dialog[open]:not(#modalNovaVistoria):not(#modalVerVistoria) > div.bg-white\/95,
+        dialog[open]:not(#modalNovaVistoria):not(#modalVerVistoria) > div.bg-white\/90,
+        dialog[open]:not(#modalNovaVistoria):not(#modalVerVistoria) > div.dark\:bg-slate-900,
+        dialog[open]:not(#modalNovaVistoria):not(#modalVerVistoria) > div.dark\:bg-slate-900\/95,
+        dialog[open]:not(#modalNovaVistoria):not(#modalVerVistoria) > div.dark\:bg-slate-900\/90 {
           width: 100vw !important;
           max-width: 100vw !important;
           height: 90vh !important;
@@ -577,7 +593,9 @@
         .dark .fixed.inset-0.z-\[100\].flex > div:not(.absolute),
         .dark .fixed.inset-0.z-\[110\].flex > div:not(.absolute),
         .dark .fixed.inset-0.z-50.flex > div:not(.absolute),
+        .dark .fixed.inset-0.z-50 > div.flex > div.inline-block,
         .dark dialog[open].bg-white,
+        .dark dialog[open][class*="bg-white"],
         .dark dialog[open] > div.bg-white,
         .dark dialog[open] > div.bg-white\/95,
         .dark dialog[open] > div.bg-white\/90 {
@@ -589,10 +607,14 @@
         .fixed.inset-0.z-\[100\].flex > div:not(.absolute)::before,
         .fixed.inset-0.z-\[110\].flex > div:not(.absolute)::before,
         .fixed.inset-0.z-50.flex > div:not(.absolute)::before,
+        .fixed.inset-0.z-50 > div.flex > div.inline-block::before,
         dialog[open].bg-white::before,
         dialog[open].bg-slate-900::before,
         dialog[open].dark\:bg-gray-900::before,
         dialog[open].dark\:bg-slate-900::before,
+        dialog[open][class*="bg-white"]::before,
+        dialog[open][class*="bg-slate-900"]::before,
+        dialog[open][class*="bg-gray-900"]::before,
         dialog[open] > div.bg-white::before,
         dialog[open] > div.bg-white\/95::before,
         dialog[open] > div.bg-white\/90::before,
@@ -609,10 +631,23 @@
           flex-shrink: 0 !important;
         }
 
-        /* 5. Animação de entrada fluida (slide-up) ao abrir */
+        /* 5. Animação de entrada fluida (slide-up) ao abrir (Apenas no cartão visível) */
         .fixed.inset-0.flex > div:not(.absolute),
-        dialog[open],
-        dialog[open] > div {
+        .fixed.inset-0.z-50 > div.flex > div.inline-block,
+        dialog[open].bg-white,
+        dialog[open].bg-slate-900,
+        dialog[open].dark\:bg-gray-900,
+        dialog[open].dark\:bg-slate-900,
+        dialog[open][class*="bg-white"],
+        dialog[open][class*="bg-slate-900"],
+        dialog[open][class*="bg-gray-900"],
+        dialog[open][class*="bg-slate-800"],
+        dialog[open] > div.bg-white,
+        dialog[open] > div.bg-white\/95,
+        dialog[open] > div.bg-white\/90,
+        dialog[open] > div.dark\:bg-slate-900,
+        dialog[open] > div.dark\:bg-slate-900\/95,
+        dialog[open] > div.dark\:bg-slate-900\/90 {
           animation: slideUpModal 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
         }
 
@@ -620,12 +655,51 @@
         .fixed.inset-0.flex input,
         .fixed.inset-0.flex select,
         .fixed.inset-0.flex textarea,
+        .fixed.inset-0.z-50 input,
+        .fixed.inset-0.z-50 select,
+        .fixed.inset-0.z-50 textarea,
         dialog[open] input,
         dialog[open] select,
         dialog[open] textarea {
           font-size: 16px !important;
           padding-top: 0.625rem !important;
           padding-bottom: 0.625rem !important;
+        }
+
+        /* 7. Fix para modais de vistoria: a div cartão filha deve preencher o dialog pai */
+        dialog#modalNovaVistoria > div,
+        dialog#modalVerVistoria > div {
+          flex: 1 1 auto !important;
+          max-height: 100% !important;
+          height: 100% !important;
+          overflow: hidden !important;
+          display: flex !important;
+          flex-direction: column !important;
+          border-radius: 0 !important;
+          width: 100% !important;
+        }
+
+        /* O form dentro do cartão deve preencher o espaço restante */
+        dialog#modalNovaVistoria form,
+        dialog#modalVerVistoria form {
+          flex: 1 1 auto !important;
+          overflow: hidden !important;
+          display: flex !important;
+          flex-direction: column !important;
+        }
+
+        /* A área de conteúdo rolável (itens do checklist / mapa) fica com scroll */
+        dialog#modalNovaVistoria .overflow-y-auto,
+        dialog#modalVerVistoria .overflow-y-auto {
+          flex: 1 1 auto !important;
+          overflow-y: auto !important;
+          -webkit-overflow-scrolling: touch;
+          min-height: 0 !important;
+        }
+
+        /* #modal-vistoria (gestão técnica) - wrapper div based */
+        #modal-vistoria > div:not(.absolute) {
+          overflow-y: auto !important;
         }
       }
     </style>
@@ -1466,6 +1540,87 @@
           `;
         }
       }
+
+      // Gestão de arrastar para fechar (Swipe Down to Close)
+      (function() {
+        let startY = 0;
+        let currentY = 0;
+        let isDragging = false;
+        let activeCard = null;
+        let activeModalId = null;
+        let activeDialog = null;
+
+        document.addEventListener('touchstart', (e) => {
+          if (window.innerWidth > 640) return;
+
+          const card = e.target.closest('dialog[open] > div, dialog[open], .fixed.inset-0:not(.hidden) > div:not(.absolute)');
+          if (!card) return;
+
+          const scrollContainer = e.target.closest('.overflow-y-auto');
+          if (scrollContainer && scrollContainer.scrollTop > 0) {
+            return;
+          }
+
+          activeCard = card;
+          startY = e.touches[0].clientY;
+          isDragging = true;
+          activeCard.style.transition = 'none';
+
+          activeDialog = card.closest('dialog');
+          const modalWrapper = card.closest('.fixed.inset-0');
+          activeModalId = modalWrapper ? modalWrapper.id : null;
+        }, { passive: true });
+
+        document.addEventListener('touchmove', (e) => {
+          if (!isDragging || !activeCard) return;
+
+          currentY = e.touches[0].clientY;
+          const deltaY = currentY - startY;
+
+          if (deltaY > 0) {
+            if (e.cancelable) e.preventDefault();
+            activeCard.style.transform = `translateY(${deltaY}px)`;
+          } else {
+            activeCard.style.transform = '';
+          }
+        }, { passive: false });
+
+        document.addEventListener('touchend', (e) => {
+          if (!isDragging || !activeCard) return;
+
+          isDragging = false;
+          const deltaY = currentY - startY;
+
+          activeCard.style.transition = 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)';
+
+          if (deltaY > 120) {
+            activeCard.style.transform = 'translateY(100%)';
+            setTimeout(() => {
+              if (activeDialog) {
+                const dialogId = activeDialog.id;
+                if (dialogId === 'modalNovaVistoria' && typeof window.closeNovaVistoriaModal === 'function') {
+                  window.closeNovaVistoriaModal();
+                } else if (dialogId === 'modalVerVistoria' && typeof window.closeVerVistoriaModal === 'function') {
+                  window.closeVerVistoriaModal();
+                } else {
+                  activeDialog.close();
+                }
+              } else if (activeModalId) {
+                closeModal(activeModalId);
+              }
+              if (activeCard) activeCard.style.transform = '';
+            }, 300);
+          } else {
+            activeCard.style.transform = '';
+          }
+          
+          activeCard = null;
+          activeDialog = null;
+          activeModalId = null;
+          startY = 0;
+          currentY = 0;
+        });
+      })();
 
       // Inicializa na carga da página
       window.addEventListener('DOMContentLoaded', () => {
