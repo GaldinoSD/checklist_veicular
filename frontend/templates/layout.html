@@ -497,9 +497,9 @@
       /* =======================================================
          ✅ AJUSTES DOS MODAIS NO MOBILE (BOTTOM SHEET FIXO)
          ======================================================= */
-      @keyframes slideUpModal {
-        from { transform: translateY(100%); }
-        to { transform: translateY(0); }
+      @keyframes fadeInModal {
+        from { opacity: 0; }
+        to { opacity: 1; }
       }
 
       @media (max-width: 640px) {
@@ -602,53 +602,12 @@
           background-color: #0f172a !important;
         }
 
-        /* 4. Adição do indicador visual de puxar (Drag Handle) no topo */
-        .fixed.inset-0.items-center.justify-center.flex > div:not(.absolute)::before,
-        .fixed.inset-0.z-\[100\].flex > div:not(.absolute)::before,
-        .fixed.inset-0.z-\[110\].flex > div:not(.absolute)::before,
-        .fixed.inset-0.z-50.flex > div:not(.absolute)::before,
-        .fixed.inset-0.z-50 > div.flex > div.inline-block::before,
-        dialog[open].bg-white::before,
-        dialog[open].bg-slate-900::before,
-        dialog[open].dark\:bg-gray-900::before,
-        dialog[open].dark\:bg-slate-900::before,
-        dialog[open][class*="bg-white"]::before,
-        dialog[open][class*="bg-slate-900"]::before,
-        dialog[open][class*="bg-gray-900"]::before,
-        dialog[open] > div.bg-white::before,
-        dialog[open] > div.bg-white\/95::before,
-        dialog[open] > div.bg-white\/90::before,
-        dialog[open] > div.dark\:bg-slate-900::before,
-        dialog[open] > div.dark\:bg-slate-900\/95::before,
-        dialog[open] > div.dark\:bg-slate-900\/90::before {
-          content: '' !important;
-          display: block !important;
-          width: 40px !important;
-          height: 4px !important;
-          background-color: rgba(156, 163, 175, 0.4) !important;
-          border-radius: 9999px !important;
-          margin: 0 auto 1rem auto !important;
-          flex-shrink: 0 !important;
-        }
-
-        /* 5. Animação de entrada fluida (slide-up) ao abrir (Apenas no cartão visível) */
+        /* 4. Animação de entrada suave (fade-in sem transform) */
         .fixed.inset-0.flex > div:not(.absolute),
         .fixed.inset-0.z-50 > div.flex > div.inline-block,
-        dialog[open].bg-white,
-        dialog[open].bg-slate-900,
-        dialog[open].dark\:bg-gray-900,
-        dialog[open].dark\:bg-slate-900,
-        dialog[open][class*="bg-white"],
-        dialog[open][class*="bg-slate-900"],
-        dialog[open][class*="bg-gray-900"],
-        dialog[open][class*="bg-slate-800"],
-        dialog[open] > div.bg-white,
-        dialog[open] > div.bg-white\/95,
-        dialog[open] > div.bg-white\/90,
-        dialog[open] > div.dark\:bg-slate-900,
-        dialog[open] > div.dark\:bg-slate-900\/95,
-        dialog[open] > div.dark\:bg-slate-900\/90 {
-          animation: slideUpModal 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+        dialog[open],
+        dialog[open] > div {
+          animation: fadeInModal 0.25s ease-out both !important;
         }
 
         /* 6. Aumento no tamanho dos inputs e desativação do auto-zoom no iOS */
@@ -666,40 +625,147 @@
           padding-bottom: 0.625rem !important;
         }
 
-        /* 7. Fix para modais de vistoria: a div cartão filha deve preencher o dialog pai */
+        /* 7. Modais de vistoria: tela cheia no mobile com scroll único */
+        dialog#modalNovaVistoria[open],
+        dialog#modalVerVistoria[open] {
+          height: 100dvh !important;
+          height: 100vh !important;
+          max-height: 100dvh !important;
+          max-height: 100vh !important;
+          border-radius: 0 !important;
+          overflow: hidden !important;
+        }
+
         dialog#modalNovaVistoria > div,
         dialog#modalVerVistoria > div {
-          flex: 1 1 auto !important;
-          max-height: 100% !important;
-          height: 100% !important;
-          overflow: hidden !important;
-          display: flex !important;
-          flex-direction: column !important;
-          border-radius: 0 !important;
           width: 100% !important;
-        }
-
-        /* O form dentro do cartão deve preencher o espaço restante */
-        dialog#modalNovaVistoria form,
-        dialog#modalVerVistoria form {
-          flex: 1 1 auto !important;
-          overflow: hidden !important;
-          display: flex !important;
-          flex-direction: column !important;
-        }
-
-        /* A área de conteúdo rolável (itens do checklist / mapa) fica com scroll */
-        dialog#modalNovaVistoria .overflow-y-auto,
-        dialog#modalVerVistoria .overflow-y-auto {
-          flex: 1 1 auto !important;
+          height: 100% !important;
+          max-height: none !important;
           overflow-y: auto !important;
           -webkit-overflow-scrolling: touch;
-          min-height: 0 !important;
+          display: block !important;
+          border-radius: 0 !important;
+          padding: 1rem 1rem 2rem 1rem !important;
+          background-color: white !important;
+        }
+
+        .dark dialog#modalNovaVistoria > div,
+        .dark dialog#modalVerVistoria > div {
+          background-color: #0f172a !important;
+        }
+
+        dialog#modalNovaVistoria form,
+        dialog#modalVerVistoria form {
+          display: block !important;
+          overflow: visible !important;
+        }
+
+        dialog#modalNovaVistoria .overflow-hidden,
+        dialog#modalVerVistoria .overflow-hidden {
+          overflow: visible !important;
+        }
+
+        dialog#modalNovaVistoria .overflow-y-auto,
+        dialog#modalVerVistoria .overflow-y-auto {
+          overflow: visible !important;
+          height: auto !important;
+          max-height: none !important;
+        }
+
+        dialog#modalNovaVistoria .flex-1,
+        dialog#modalVerVistoria .flex-1 {
+          flex: none !important;
+        }
+
+        dialog#modalNovaVistoria .max-h-\[90vh\],
+        dialog#modalVerVistoria .max-h-\[90vh\] {
+          max-height: none !important;
+        }
+
+        dialog#modalNovaVistoria .shrink-0,
+        dialog#modalVerVistoria .shrink-0 {
+          flex-shrink: unset !important;
+        }
+
+        /* Animação apenas na div cartão dos modais de vistoria */
+        dialog#modalNovaVistoria[open] > div,
+        dialog#modalVerVistoria[open] > div {
+          animation: fadeInModal 0.25s ease-out both !important;
         }
 
         /* #modal-vistoria (gestão técnica) - wrapper div based */
         #modal-vistoria > div:not(.absolute) {
           overflow-y: auto !important;
+        }
+
+        /* 8. Ajustes de cabeçalhos premium (.glass-premium) e seus botões no mobile */
+        .glass-premium {
+          padding: 1rem !important;
+          border-radius: 1.25rem !important;
+          flex-direction: column !important;
+          align-items: flex-start !important;
+          gap: 1rem !important;
+        }
+
+        .glass-premium .absolute {
+          display: none !important;
+        }
+
+        .glass-premium h2,
+        .glass-premium h1 {
+          font-size: 1.125rem !important; /* text-lg */
+          line-height: 1.5rem !important;
+        }
+
+        .glass-premium p {
+          font-size: 0.75rem !important; /* text-xs */
+        }
+
+        .glass-premium .w-12.h-12,
+        .glass-premium .w-14.h-14 {
+          width: 2.25rem !important; /* w-9 */
+          height: 2.25rem !important; /* h-9 */
+          border-radius: 0.625rem !important;
+        }
+
+        .glass-premium .w-12.h-12 i,
+        .glass-premium .w-14.h-14 i {
+          font-size: 0.875rem !important; /* text-sm */
+        }
+
+        .glass-premium .flex.flex-wrap,
+        .glass-premium .flex-wrap {
+          width: 100% !important;
+          flex-direction: column !important;
+          gap: 0.5rem !important;
+        }
+
+        .glass-premium button,
+        .glass-premium a.btn,
+        .glass-premium .btn,
+        .glass-premium input,
+        .glass-premium .relative,
+        .glass-premium .group {
+          width: 100% !important;
+          flex: 1 1 auto !important;
+        }
+
+        .glass-premium button,
+        .glass-premium a.btn,
+        .glass-premium .btn {
+          padding: 0.5rem 0.75rem !important;
+          font-size: 9px !important;
+          border-radius: 0.75rem !important;
+          letter-spacing: 0.05em !important;
+          justify-content: center !important;
+          display: inline-flex !important;
+          align-items: center !important;
+        }
+
+        .glass-premium input {
+          padding-top: 0.5rem !important;
+          padding-bottom: 0.5rem !important;
+          font-size: 11px !important;
         }
       }
     </style>
@@ -1541,86 +1607,7 @@
         }
       }
 
-      // Gestão de arrastar para fechar (Swipe Down to Close)
-      (function() {
-        let startY = 0;
-        let currentY = 0;
-        let isDragging = false;
-        let activeCard = null;
-        let activeModalId = null;
-        let activeDialog = null;
 
-        document.addEventListener('touchstart', (e) => {
-          if (window.innerWidth > 640) return;
-
-          const card = e.target.closest('dialog[open] > div, dialog[open], .fixed.inset-0:not(.hidden) > div:not(.absolute)');
-          if (!card) return;
-
-          const scrollContainer = e.target.closest('.overflow-y-auto');
-          if (scrollContainer && scrollContainer.scrollTop > 0) {
-            return;
-          }
-
-          activeCard = card;
-          startY = e.touches[0].clientY;
-          isDragging = true;
-          activeCard.style.transition = 'none';
-
-          activeDialog = card.closest('dialog');
-          const modalWrapper = card.closest('.fixed.inset-0');
-          activeModalId = modalWrapper ? modalWrapper.id : null;
-        }, { passive: true });
-
-        document.addEventListener('touchmove', (e) => {
-          if (!isDragging || !activeCard) return;
-
-          currentY = e.touches[0].clientY;
-          const deltaY = currentY - startY;
-
-          if (deltaY > 0) {
-            if (e.cancelable) e.preventDefault();
-            activeCard.style.transform = `translateY(${deltaY}px)`;
-          } else {
-            activeCard.style.transform = '';
-          }
-        }, { passive: false });
-
-        document.addEventListener('touchend', (e) => {
-          if (!isDragging || !activeCard) return;
-
-          isDragging = false;
-          const deltaY = currentY - startY;
-
-          activeCard.style.transition = 'transform 0.3s cubic-bezier(0.16, 1, 0.3, 1)';
-
-          if (deltaY > 120) {
-            activeCard.style.transform = 'translateY(100%)';
-            setTimeout(() => {
-              if (activeDialog) {
-                const dialogId = activeDialog.id;
-                if (dialogId === 'modalNovaVistoria' && typeof window.closeNovaVistoriaModal === 'function') {
-                  window.closeNovaVistoriaModal();
-                } else if (dialogId === 'modalVerVistoria' && typeof window.closeVerVistoriaModal === 'function') {
-                  window.closeVerVistoriaModal();
-                } else {
-                  activeDialog.close();
-                }
-              } else if (activeModalId) {
-                closeModal(activeModalId);
-              }
-              if (activeCard) activeCard.style.transform = '';
-            }, 300);
-          } else {
-            activeCard.style.transform = '';
-          }
-          
-          activeCard = null;
-          activeDialog = null;
-          activeModalId = null;
-          startY = 0;
-          currentY = 0;
-        });
-      })();
 
       // Inicializa na carga da página
       window.addEventListener('DOMContentLoaded', () => {
