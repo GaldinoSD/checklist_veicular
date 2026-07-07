@@ -228,7 +228,12 @@ def api_frota_stats():
     ).scalar() or 0
 
     # 3. Checklists do Período e O.S Abertas
-    checklists_today = Checklist.query.filter(Checklist.date >= start_7d, Checklist.date <= now).count()
+    if periodo and " - " in periodo:
+        checklists_today = Checklist.query.filter(Checklist.date >= start_7d, Checklist.date <= now).count()
+    else:
+        start_today = now.replace(hour=0, minute=0, second=0, microsecond=0)
+        checklists_today = Checklist.query.filter(Checklist.date >= start_today, Checklist.date <= now).count()
+        
     open_os = AvariaOS.query.filter_by(status="aberta").count()
 
     # 4. Histórico de KM Rodados Reais Diários (Movimentação manual + Telemetria GPS + Odometer checklists)

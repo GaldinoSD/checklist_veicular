@@ -754,6 +754,49 @@ class SystemConfig(db.Model):
     pdf_footer = db.Column(db.Text)
     login_primary_color = db.Column(db.String(50), default="#10b981")
     powerbi_url = db.Column(db.String(500))
+    login_logo_height = db.Column(db.Integer, default=120)
+    sidebar_logo_height = db.Column(db.Integer, default=44)
+    pdf_logo_height = db.Column(db.Integer, default=30)
+    login_bg_zoom = db.Column(db.Integer, default=100)
+    login_bg_blur = db.Column(db.Integer, default=0)
+    login_bg_opacity = db.Column(db.Integer, default=15)
+
+    # Background image sizing & positioning per device
+    login_bg_size_desktop = db.Column(db.String(50), default="cover")
+    login_bg_size_mobile = db.Column(db.String(50), default="cover")
+    login_bg_position_desktop = db.Column(db.String(50), default="center")
+    login_bg_position_mobile = db.Column(db.String(50), default="center")
+
+    # Login card styling
+    login_card_opacity = db.Column(db.Integer, default=60)
+    login_card_blur = db.Column(db.Integer, default=12)
+    login_card_radius = db.Column(db.Integer, default=16)
+
+    # Login text customization
+    login_title_text = db.Column(db.String(100), default="Acesso ao Sistema")
+    login_subtitle_text = db.Column(db.String(150), default="")
+    login_username_placeholder = db.Column(db.String(100), default="Digite seu usuário")
+    login_password_placeholder = db.Column(db.String(100), default="Digite sua senha")
+    login_btn_text = db.Column(db.String(50), default="Entrar")
+    login_btn_radius = db.Column(db.Integer, default=12)
+    login_btn_padding_y = db.Column(db.Integer, default=12)
+    login_btn_font_size = db.Column(db.Integer, default=16)
+
+    # Overlay color (hex)
+    login_overlay_color = db.Column(db.String(20), default="#000000")
+
+    # Secondary color for gradients
+    login_secondary_color = db.Column(db.String(50), default="#064e3b")
+
+    # Sidebar customization
+    sidebar_bg_color = db.Column(db.String(50))
+    sidebar_text_color = db.Column(db.String(50))
+
+    # Custom favicon
+    favicon_custom = db.Column(db.String(255))
+
+    # Login card position
+    login_card_position = db.Column(db.String(20), default="right")
 
 
 class WhatsAppConfig(db.Model):

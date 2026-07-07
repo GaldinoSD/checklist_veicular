@@ -2,6 +2,101 @@
 {% set page_title = "Dashboard" %}
 {% block content %}
 
+<style>
+    /* Estilos Premium adicionais para o Dashboard */
+    .card-premium {
+        position: relative;
+        overflow: hidden;
+        border: 1px solid rgba(15, 23, 42, 0.04) !important;
+        background: rgba(255, 255, 255, 0.8) !important;
+        backdrop-filter: blur(12px);
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    }
+    
+    .dark .card-premium {
+        border: 1px solid rgba(255, 255, 255, 0.04) !important;
+        background: rgba(15, 23, 42, 0.4) !important;
+    }
+    
+    /* Efeito de hover suave para todos os cards */
+    .card-premium:hover {
+        transform: translateY(-4px) !important;
+        border-color: rgba(59, 130, 246, 0.15) !important;
+        box-shadow: 0 20px 40px -15px rgba(59, 130, 246, 0.08) !important;
+    }
+    
+    /* Indicador discreto na borda esquerda para os cards no hover */
+    .card-premium::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 4px;
+        height: 100%;
+        background: linear-gradient(to bottom, #3b82f6, #6366f1);
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+    .card-premium:hover::before {
+        opacity: 1;
+    }
+
+    /* Manter os comportamentos e cores específicas dos cards KPI superiores */
+    .card-kpi-emerald:hover {
+        border-color: rgba(16, 185, 129, 0.3) !important;
+        box-shadow: 0 20px 40px -15px rgba(16, 185, 129, 0.15) !important;
+    }
+    .card-kpi-emerald::before { background: #10b981 !important; }
+
+    .card-kpi-amber:hover {
+        border-color: rgba(245, 158, 11, 0.3) !important;
+        box-shadow: 0 20px 40px -15px rgba(245, 158, 11, 0.15) !important;
+    }
+    .card-kpi-amber::before { background: #f59e0b !important; }
+
+    .card-kpi-blue:hover {
+        border-color: rgba(59, 130, 246, 0.3) !important;
+        box-shadow: 0 20px 40px -15px rgba(59, 130, 246, 0.15) !important;
+    }
+    .card-kpi-blue::before { background: #3b82f6 !important; }
+
+    .card-kpi-rose:hover {
+        border-color: rgba(244, 63, 94, 0.3) !important;
+        box-shadow: 0 20px 40px -15px rgba(244, 63, 94, 0.15) !important;
+    }
+    .card-kpi-rose::before { background: #f43f5e !important; }
+
+    .card-kpi-teal:hover {
+        border-color: rgba(20, 184, 166, 0.3) !important;
+        box-shadow: 0 20px 40px -15px rgba(20, 184, 166, 0.15) !important;
+    }
+    .card-kpi-teal::before { background: #14b8a6 !important; }
+    
+    /* Animação nos ícones dos KPIs ao passar o mouse */
+    .card-premium:hover i {
+        animation: kpiBounce 0.6s ease-in-out;
+    }
+    
+    @keyframes kpiBounce {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.15) rotate(5deg); }
+    }
+
+    /* Estilos para as listagens dentro dos cards */
+    .card-premium .p-3 {
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    }
+    .card-premium .p-3:hover {
+        background: rgba(59, 130, 246, 0.04) !important;
+        border-color: rgba(59, 130, 246, 0.15) !important;
+        transform: translateX(4px);
+    }
+    .dark .card-premium .p-3:hover {
+        background: rgba(59, 130, 246, 0.08) !important;
+        border-color: rgba(59, 130, 246, 0.25) !important;
+    }
+</style>
+
 <!-- ✅ HEADER PREMIUM DASHBOARD COMPACT -->
 <div class="mb-8 animate-premium">
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 glass-premium p-6 rounded-[2rem] shadow-xl overflow-hidden relative">
@@ -72,7 +167,7 @@
 <div id="frota-dashboard-premium" class="animate-premium">
     <!-- Top KPIs -->
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <div class="card-premium p-6">
+        <div class="card-premium p-6 card-kpi-emerald">
             <div class="flex items-center justify-between mb-4">
                 <div class="w-12 h-12 rounded-2xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600 shadow-lg shadow-emerald-500/10">
                     <i class="fa-solid fa-shield-heart text-xl"></i>
@@ -86,7 +181,7 @@
             </div>
         </div>
 
-        <div class="card-premium p-6">
+        <div class="card-premium p-6 card-kpi-amber">
             <div class="flex items-center justify-between mb-4">
                 <div class="w-12 h-12 rounded-2xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-amber-600 shadow-lg shadow-amber-500/10">
                     <i class="fa-solid fa-hand-holding-dollar text-xl"></i>
@@ -97,18 +192,18 @@
             <p class="text-[9px] text-slate-400 mt-2">Ordens Finalizadas</p>
         </div>
 
-        <div class="card-premium p-6">
+        <div class="card-premium p-6 card-kpi-blue">
             <div class="flex items-center justify-between mb-4">
                 <div class="w-12 h-12 rounded-2xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 shadow-lg shadow-blue-500/10">
                     <i class="fa-solid fa-clipboard-list text-xl"></i>
                 </div>
             </div>
-            <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">Checklists Hoje</p>
+            <p id="label-frota-checklists" class="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">Checklists Hoje</p>
             <h3 id="stat-frota-checklists" class="text-3xl font-black text-slate-800 dark:text-white mt-1">0</h3>
             <p class="text-[9px] text-slate-400 mt-2">Novos Registros</p>
         </div>
 
-        <div class="card-premium p-6">
+        <div class="card-premium p-6 card-kpi-rose">
             <div class="flex items-center justify-between mb-4">
                 <div class="w-12 h-12 rounded-2xl bg-rose-100 dark:bg-rose-900/30 flex items-center justify-center text-rose-600 shadow-lg shadow-rose-500/10">
                     <i class="fa-solid fa-wrench text-xl"></i>
@@ -191,6 +286,29 @@
                         </div>
                         <p id="stat-manutencao-count" class="text-[9px] text-slate-400 font-bold">0 em oficina</p>
                     </div>
+
+                    <!-- Distribuição de Tipo de Veículos (Composição da Frota) -->
+                    <div class="mt-4 pt-4 border-t border-slate-900/5 dark:border-white/5 space-y-2">
+                        <p class="text-[9px] font-black text-slate-400 uppercase tracking-wider">Composição da Frota</p>
+                        <div class="grid grid-cols-2 gap-2 text-[10px] font-bold">
+                            <div class="flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
+                                <i class="fa-solid fa-car text-blue-500 w-4 text-center"></i>
+                                <span>Carro: <strong id="comp-carros" class="text-slate-800 dark:text-white">0</strong></span>
+                            </div>
+                            <div class="flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
+                                <i class="fa-solid fa-motorcycle text-emerald-500 w-4 text-center"></i>
+                                <span>Moto: <strong id="comp-motos" class="text-slate-800 dark:text-white">0</strong></span>
+                            </div>
+                            <div class="flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
+                                <i class="fa-solid fa-truck text-amber-500 w-4 text-center"></i>
+                                <span>Caminhão: <strong id="comp-caminhoes" class="text-slate-800 dark:text-white">0</strong></span>
+                            </div>
+                            <div class="flex items-center gap-1.5 text-slate-600 dark:text-slate-300">
+                                <i class="fa-solid fa-van-shuttle text-sky-500 w-4 text-center"></i>
+                                <span>Van: <strong id="comp-vans" class="text-slate-800 dark:text-white">0</strong></span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -229,11 +347,19 @@
         <h3 class="text-sm font-black text-slate-800 dark:text-white mb-6 uppercase tracking-widest flex items-center gap-2">
             <i class="fa-solid fa-users text-blue-500"></i> Checklist por Técnico
         </h3>
+        {% set max_total = 1 %}
+        {% if user_stats_list %}
+            {% if request.args.get('periodo') %}
+                {% set max_total = user_stats_list[0].semanal if user_stats_list[0].semanal > 0 else 1 %}
+            {% else %}
+                {% set max_total = user_stats_list[0].total if user_stats_list[0].total > 0 else 1 %}
+            {% endif %}
+        {% endif %}
         <div class="overflow-x-auto">
-            <table class="w-full text-left">
+            <table class="w-full text-left border-collapse">
                 <thead>
                     <tr class="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-900/5 dark:border-white/5">
-                        <th class="py-4 px-2">Técnico</th>
+                        <th class="py-4 px-2">Posição / Técnico</th>
                         {% if request.args.get('periodo') %}
                         <th class="py-4 px-2 text-center text-blue-500">Checklists no Período</th>
                         {% else %}
@@ -242,14 +368,29 @@
                         <th class="py-4 px-2 text-center">Ano</th>
                         {% endif %}
                         <th class="py-4 px-2 text-center">Total Geral</th>
+                        <th class="py-4 px-2 text-center hidden md:table-cell w-40">Produtividade</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for us in user_stats_list %}
+                    {% set current_val = us.semanal if request.args.get('periodo') else us.total %}
+                    {% set pct = ((current_val / max_total) * 100)|int %}
                     <tr class="border-b border-slate-900/5 dark:border-white/5 hover:bg-slate-50 dark:hover:bg-white/5 transition-all">
                         <td class="py-4 px-2">
                             <div class="flex items-center gap-3">
-                                <div class="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 font-bold text-xs">
+                                <!-- Ranking Badge / Medal -->
+                                <div class="flex items-center justify-center w-6 text-center font-black text-xs text-slate-400">
+                                    {% if loop.index == 1 %}
+                                        <span class="text-lg" title="1º Lugar - Líder">🥇</span>
+                                    {% elif loop.index == 2 %}
+                                        <span class="text-lg" title="2º Lugar">🥈</span>
+                                    {% elif loop.index == 3 %}
+                                        <span class="text-lg" title="3º Lugar">🥉</span>
+                                    {% else %}
+                                        {{ loop.index }}º
+                                    {% endif %}
+                                </div>
+                                <div class="w-8 h-8 rounded-full bg-gradient-to-br from-blue-600 to-indigo-500 text-white flex items-center justify-center font-bold text-xs shadow-md shadow-blue-500/10">
                                     {{ us.username[0]|upper }}
                                 </div>
                                 <span class="text-xs font-bold text-slate-700 dark:text-gray-200">{{ us.username }}</span>
@@ -263,6 +404,14 @@
                         <td class="py-4 px-2 text-center text-xs font-bold text-slate-600 dark:text-gray-400">{{ us.anual }}</td>
                         {% endif %}
                         <td class="py-4 px-2 text-center text-sm font-black text-slate-800 dark:text-white">{{ us.total }}</td>
+                        <td class="py-4 px-2 hidden md:table-cell align-middle">
+                            <div class="flex items-center gap-2">
+                                <div class="flex-1 h-1.5 bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden">
+                                    <div class="h-full bg-gradient-to-r from-blue-600 to-indigo-500 rounded-full transition-all duration-1000" style="width: {{ pct }}%"></div>
+                                </div>
+                                <span class="text-[9px] font-black text-slate-400 w-6 text-right">{{ pct }}%</span>
+                            </div>
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -278,7 +427,7 @@
 <div id="gestao-dashboard-premium" class="animate-premium">
     <!-- Top KPIs -->
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <div class="card-premium p-6 group">
+        <div class="card-premium p-6 card-kpi-teal">
             <div class="flex items-center justify-between mb-4">
                 <div class="w-12 h-12 rounded-2xl bg-teal-100 dark:bg-teal-900/30 flex items-center justify-center text-teal-600 shadow-lg shadow-teal-500/10">
                     <i class="fa-solid fa-graduation-cap text-xl"></i>
@@ -292,7 +441,7 @@
             </div>
         </div>
 
-        <div class="card-premium p-6">
+        <div class="card-premium p-6 card-kpi-blue">
             <div class="flex items-center justify-between mb-4">
                 <div class="w-12 h-12 rounded-2xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 shadow-lg shadow-blue-500/10">
                     <i class="fa-solid fa-clipboard-check text-xl"></i>
@@ -303,7 +452,7 @@
             <p class="text-[9px] text-slate-400 mt-2">Rota Exata + Supervisão</p>
         </div>
 
-        <div class="card-premium p-6">
+        <div class="card-premium p-6 card-kpi-emerald">
             <div class="flex items-center justify-between mb-4">
                 <div class="w-12 h-12 rounded-2xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600 shadow-lg shadow-emerald-500/10">
                     <i class="fa-solid fa-truck-medical text-xl"></i>
@@ -316,7 +465,7 @@
             </div>
         </div>
 
-        <div class="card-premium p-6">
+        <div class="card-premium p-6 card-kpi-rose">
             <div class="flex items-center justify-between mb-4">
                 <div class="w-12 h-12 rounded-2xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-600 shadow-lg shadow-red-500/10">
                     <i class="fa-solid fa-triangle-exclamation text-xl"></i>
@@ -324,7 +473,7 @@
             </div>
             <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">Pendências Críticas</p>
             <h3 id="stat-critical" class="text-3xl font-black text-slate-800 dark:text-white mt-1">0</h3>
-            <p class="text-[9px] text-red-400 mt-2">RFOs + Tarefas Atrasadas</p>
+            <p class="text-[9px] text-rose-400 mt-2">RFO Abertos + Tarefas</p>
         </div>
     </div>
 
@@ -423,6 +572,12 @@
             document.getElementById('stat-frota-checklists').textContent = data.checklists_today;
             document.getElementById('stat-frota-os').textContent = data.open_os;
 
+            // Rótulo dinâmico do card de checklists
+            const labelChecklist = document.getElementById('label-frota-checklists');
+            if (labelChecklist) {
+                labelChecklist.textContent = periodo ? 'Checklists no Período' : 'Checklists Hoje';
+            }
+
             const ctxKM = document.getElementById('chartKM').getContext('2d');
             if(chartKM) chartKM.destroy();
             chartKM = new Chart(ctxKM, {
@@ -433,7 +588,15 @@
                         label: 'KM Rodados',
                         data: data.km_history.values,
                         borderColor: '#3b82f6',
-                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        backgroundColor: function(context) {
+                            const chart = context.chart;
+                            const {ctx, chartArea} = chart;
+                            if (!chartArea) return null;
+                            const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+                            gradient.addColorStop(0, 'rgba(59, 130, 246, 0.25)');
+                            gradient.addColorStop(1, 'rgba(59, 130, 246, 0.0)');
+                            return gradient;
+                        },
                         fill: true,
                         tension: 0.4,
                         borderWidth: 3,
@@ -451,15 +614,19 @@
                 }
             });
 
+            // Mapeia chaves do status_dist para ordenar e aplicar as cores corretas
+            const orderedStatusKeys = ["OK", "Atenção", "Crítico"];
+            const orderedStatusVals = orderedStatusKeys.map(k => data.status_dist[k] || 0);
+
             const ctxStatus = document.getElementById('chartFrotaStatus').getContext('2d');
             if(chartFrotaStatus) chartFrotaStatus.destroy();
             chartFrotaStatus = new Chart(ctxStatus, {
                 type: 'doughnut',
                 data: {
-                    labels: Object.keys(data.status_dist),
+                    labels: orderedStatusKeys,
                     datasets: [{
-                        data: Object.values(data.status_dist),
-                        backgroundColor: ['#10b981', '#f43f5e', '#f59e0b', '#6366f1'],
+                        data: orderedStatusVals,
+                        backgroundColor: ['#10b981', '#f59e0b', '#f43f5e'], // OK (Verde), Atenção (Laranja), Crítico (Vermelho)
                         borderWidth: 0
                     }]
                 },
@@ -527,6 +694,18 @@
 
             const barManutencao = document.getElementById('bar-manutencao');
             if (barManutencao) barManutencao.style.width = maintenancePerc + '%';
+
+            // Composição da Frota (Tipos)
+            if (data.types_dist) {
+                const compCarros = document.getElementById('comp-carros');
+                if (compCarros) compCarros.textContent = data.types_dist.carro || 0;
+                const compMotos = document.getElementById('comp-motos');
+                if (compMotos) compMotos.textContent = data.types_dist.moto || 0;
+                const compCaminhoes = document.getElementById('comp-caminhoes');
+                if (compCaminhoes) compCaminhoes.textContent = data.types_dist.caminhao || 0;
+                const compVans = document.getElementById('comp-vans');
+                if (compVans) compVans.textContent = data.types_dist.van || 0;
+            }
 
         } catch (e) { console.error("Erro dashboard frota:", e); }
     }

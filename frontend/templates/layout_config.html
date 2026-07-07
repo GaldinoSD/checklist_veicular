@@ -7,282 +7,1080 @@
   <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/60 dark:bg-slate-900/40 backdrop-blur-md border border-slate-200/50 dark:border-white/10 rounded-2xl p-6 shadow-sm">
     <div>
       <h1 class="text-2xl font-black text-slate-800 dark:text-white flex items-center gap-2">
-        <i class="fa-solid fa-palette text-emerald-500"></i> Customização de Layout
+        <i class="fa-solid fa-palette text-emerald-500 animate-pulse"></i> Customização de Layout
       </h1>
       <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">
-        Personalize a identidade visual do sistema, alterando imagens de fundo, logotipos e cabeçalhos/rodapés de relatórios PDF.
+        Personalize a identidade visual completa da plataforma — cores, imagens, textos, efeitos e muito mais.
       </p>
     </div>
     <div class="flex flex-wrap items-center gap-3">
       <a href="{{ url_for('preview_layout') }}" target="_blank"
-         class="inline-flex items-center gap-2 px-5 py-3 rounded-xl font-bold text-sm bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-600/20 transition-all duration-300 transform active:scale-95">
-        <i class="fa-solid fa-eye"></i> Visualizar Tela de Login
+         class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm bg-blue-600/90 hover:bg-blue-600 text-white shadow-lg shadow-blue-600/20 transition-all duration-300 transform active:scale-95">
+        <i class="fa-solid fa-eye"></i> Pré-visualizar Login
       </a>
       <a href="{{ url_for('test_layout_pdf') }}" target="_blank"
-         class="inline-flex items-center gap-2 px-5 py-3 rounded-xl font-bold text-sm bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-600/20 transition-all duration-300 transform active:scale-95">
-        <i class="fa-solid fa-file-pdf"></i> Testar & Visualizar PDF
+         class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm bg-emerald-600/90 hover:bg-emerald-600 text-white shadow-lg shadow-emerald-600/20 transition-all duration-300 transform active:scale-95">
+        <i class="fa-solid fa-file-pdf"></i> Pré-visualizar PDF
       </a>
     </div>
   </div>
 
-  <!-- MAIN CONFIGURATION FORM -->
-  <form id="layoutForm" method="post" enctype="multipart/form-data" class="space-y-6">
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+  <!-- MAIN TABBED CONTAINER -->
+  <div class="flex flex-col lg:flex-row gap-6">
 
-      <!-- CARD 1: TELA DE LOGIN -->
-      <div class="bg-white/60 dark:bg-slate-900/40 backdrop-blur-md border border-slate-200/50 dark:border-white/10 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
-        <div>
-          <h2 class="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2 mb-4 border-b border-slate-200 dark:border-white/5 pb-3">
-            <i class="fa-solid fa-right-to-bracket text-emerald-500"></i> Tela de Login
-          </h2>
-
-          <div class="space-y-5">
-            <!-- Background Desktop -->
-            <div>
-              <div class="flex items-center justify-between mb-2">
-                <label class="text-sm font-semibold text-slate-700 dark:text-slate-300">Fundo Desktop (Computadores)</label>
-                <span class="text-xs text-slate-400">Recomendado: 1920x1080 (Máx: 2MB)</span>
-              </div>
-              <div class="relative group border-2 border-dashed border-slate-200 dark:border-white/10 rounded-xl p-3 flex flex-col items-center justify-center transition-all duration-300 hover:border-emerald-500 dark:hover:border-emerald-500">
-                <input id="login_bg_desktop" type="file" name="login_bg_desktop" accept="image/*" class="absolute inset-0 opacity-0 cursor-pointer" onchange="previewImage(this, 'preview_bg_desktop')">
-                <div class="w-full h-32 rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-950 flex items-center justify-center relative">
-                  <button type="button" onclick="openVisualizer('preview_bg_desktop', 'Fundo Desktop (Computadores)')" class="absolute top-2 right-2 w-8 h-8 rounded-lg bg-slate-900/60 hover:bg-slate-900 text-white flex items-center justify-center transition-all shadow-md z-10" title="Visualizar Ampliado">
-                    <i class="fa-solid fa-expand text-xs"></i>
-                  </button>
-                  <img id="preview_bg_desktop" 
-                       src="{% if config and config.login_bg_desktop %}{{ url_for('static', filename='uploads/layout/' ~ config.login_bg_desktop) }}{% else %}{{ url_for('static', filename='img.png') }}{% endif %}" 
-                       class="w-full h-full object-cover" alt="Desktop Preview">
-                </div>
-                <div class="mt-2 text-xs font-semibold text-emerald-500 dark:text-emerald-400 group-hover:underline">Clique para alterar a imagem</div>
-              </div>
-            </div>
-
-            <!-- Background Mobile -->
-            <div>
-              <div class="flex items-center justify-between mb-2">
-                <label class="text-sm font-semibold text-slate-700 dark:text-slate-300">Fundo Mobile (Celulares)</label>
-                <span class="text-xs text-slate-400">Recomendado: 1080x1920 (Máx: 2MB)</span>
-              </div>
-              <div class="relative group border-2 border-dashed border-slate-200 dark:border-white/10 rounded-xl p-3 flex flex-col items-center justify-center transition-all duration-300 hover:border-emerald-500 dark:hover:border-emerald-500">
-                <input id="login_bg_mobile" type="file" name="login_bg_mobile" accept="image/*" class="absolute inset-0 opacity-0 cursor-pointer" onchange="previewImage(this, 'preview_bg_mobile')">
-                <div class="w-full h-32 rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-950 flex items-center justify-center relative">
-                  <button type="button" onclick="openVisualizer('preview_bg_mobile', 'Fundo Mobile (Celulares)')" class="absolute top-2 right-2 w-8 h-8 rounded-lg bg-slate-900/60 hover:bg-slate-900 text-white flex items-center justify-center transition-all shadow-md z-10" title="Visualizar Ampliado">
-                    <i class="fa-solid fa-expand text-xs"></i>
-                  </button>
-                  <img id="preview_bg_mobile" 
-                       src="{% if config and config.login_bg_mobile %}{{ url_for('static', filename='uploads/layout/' ~ config.login_bg_mobile) }}{% else %}{{ url_for('static', filename='imgmbl.png') }}{% endif %}" 
-                       class="w-full h-full object-cover" alt="Mobile Preview">
-                </div>
-                <div class="mt-2 text-xs font-semibold text-emerald-500 dark:text-emerald-400 group-hover:underline">Clique para alterar a imagem</div>
-              </div>
-            </div>
-
-            <!-- Central Logo -->
-            <div>
-              <div class="flex items-center justify-between mb-2">
-                <label class="text-sm font-semibold text-slate-700 dark:text-slate-300">Logo Central do Login</label>
-                <span class="text-xs text-slate-400">Recomendado: 300x150 (Transparente)</span>
-              </div>
-              <div class="relative group border-2 border-dashed border-slate-200 dark:border-white/10 rounded-xl p-3 flex flex-col items-center justify-center transition-all duration-300 hover:border-emerald-500 dark:hover:border-emerald-500">
-                <input id="login_logo" type="file" name="login_logo" accept="image/*" class="absolute inset-0 opacity-0 cursor-pointer" onchange="previewImage(this, 'preview_login_logo')">
-                <div class="w-full h-24 rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-950 flex items-center justify-center p-4 relative">
-                  <button type="button" onclick="openVisualizer('preview_login_logo', 'Logo Central do Login')" class="absolute top-2 right-2 w-8 h-8 rounded-lg bg-slate-900/60 hover:bg-slate-900 text-white flex items-center justify-center transition-all shadow-md z-10" title="Visualizar Ampliado">
-                    <i class="fa-solid fa-expand text-xs"></i>
-                  </button>
-                  <img id="preview_login_logo" 
-                       src="{% if config and config.login_logo %}{{ url_for('static', filename='uploads/layout/' ~ config.login_logo) }}{% else %}{{ url_for('static', filename='logo.png') }}{% endif %}" 
-                       class="max-w-full max-h-full object-contain" alt="Login Logo Preview">
-                </div>
-                <div class="mt-2 text-xs font-semibold text-emerald-500 dark:text-emerald-400 group-hover:underline">Clique para alterar a imagem</div>
-              </div>
-            </div>
-
-            <!-- Cor Primária da Marca (Login) -->
-            <div class="border-t border-slate-200 dark:border-white/5 pt-4">
-              <label class="text-sm font-semibold text-slate-700 dark:text-slate-300 block mb-2">Cor Primária do Login (Acentos & Botão)</label>
-              <div class="flex items-center gap-3">
-                <div class="relative w-12 h-10 rounded-xl overflow-hidden border border-slate-200 dark:border-white/10 shadow-sm cursor-pointer transition hover:scale-105">
-                  <input type="color" id="login_primary_color_picker" 
-                         value="{{ config.login_primary_color or '#10b981' }}" 
-                         class="absolute inset-0 w-full h-full p-0 border-0 cursor-pointer bg-transparent"
-                         oninput="syncColorPickerToText(this.value)">
-                </div>
-                <input type="text" name="login_primary_color" id="login_primary_color_text"
-                       value="{{ config.login_primary_color or '#10b981' }}"
-                       placeholder="#10b981"
-                       class="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-white/10 rounded-xl px-3.5 py-2 text-sm font-bold text-slate-800 dark:text-slate-100 w-32 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
-                       oninput="syncColorTextToPicker(this.value)">
-                <div class="text-[10px] text-slate-400 font-medium leading-tight">
-                  Selecione no picker ou digite o código Hexadecimal da sua marca (Ex: #3b82f6)
-                </div>
-              </div>
-
-              <!-- Paleta de Cores Recomendadas -->
-              <div class="mt-3 flex flex-wrap gap-2 items-center">
-                <span class="text-[10px] font-black uppercase tracking-wider text-slate-400 mr-1">Sugeridas:</span>
-                <button aria-label="Esmeralda" type="button" onclick="selectPaletteColor('#10b981')" class="w-6 h-6 rounded-full border border-white/20 bg-[#10b981] transition hover:scale-110 shadow" title="Esmeralda"></button>
-                <button aria-label="Azul Imperial" type="button" onclick="selectPaletteColor('#3b82f6')" class="w-6 h-6 rounded-full border border-white/20 bg-[#3b82f6] transition hover:scale-110 shadow" title="Azul Imperial"></button>
-                <button aria-label="Laranja Quente" type="button" onclick="selectPaletteColor('#f97316')" class="w-6 h-6 rounded-full border border-white/20 bg-[#f97316] transition hover:scale-110 shadow" title="Laranja Quente"></button>
-                <button aria-label="Vermelho Vibrante" type="button" onclick="selectPaletteColor('#ef4444')" class="w-6 h-6 rounded-full border border-white/20 bg-[#ef4444] transition hover:scale-110 shadow" title="Vermelho Vibrante"></button>
-                <button aria-label="Roxo Profundo" type="button" onclick="selectPaletteColor('#8b5cf6')" class="w-6 h-6 rounded-full border border-white/20 bg-[#8b5cf6] transition hover:scale-110 shadow" title="Roxo Profundo"></button>
-                <button aria-label="Âmbar" type="button" onclick="selectPaletteColor('#eab308')" class="w-6 h-6 rounded-full border border-white/20 bg-[#eab308] transition hover:scale-110 shadow" title="Âmbar"></button>
-              </div>
-            </div>
-
-          </div>
-        </div>
-
-        <div class="mt-6 flex flex-wrap gap-2 justify-end border-t border-slate-200 dark:border-white/5 pt-4">
-          <button type="button" onclick="triggerReset('login_bg_desktop')" class="px-3.5 py-2 text-xs font-medium text-slate-500 hover:text-red-500 bg-slate-100 dark:bg-white/5 hover:bg-red-500/10 rounded-xl transition-all duration-200">
-            <i class="fa-solid fa-undo"></i> Resetar Desktop
+    <!-- TAB NAVIGATION -->
+    <div class="w-full lg:w-72 shrink-0 flex flex-col gap-4">
+      <div class="bg-white/60 dark:bg-slate-900/40 backdrop-blur-md border border-slate-200/50 dark:border-white/10 rounded-2xl p-4 shadow-sm">
+        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest px-3 mb-3">Seções de Layout</p>
+        <nav class="space-y-1">
+          <button type="button" onclick="switchTab('geral')" id="tabBtn-geral"
+                  class="tab-btn w-full text-left px-4 py-3 rounded-xl font-bold text-sm transition-all duration-300 flex items-center gap-3 border-l-4 active-tab">
+            <i class="fa-solid fa-sliders text-emerald-500"></i>
+            <span>Geral & Cores</span>
           </button>
-          <button type="button" onclick="triggerReset('login_bg_mobile')" class="px-3.5 py-2 text-xs font-medium text-slate-500 hover:text-red-500 bg-slate-100 dark:bg-white/5 hover:bg-red-500/10 rounded-xl transition-all duration-200">
-            <i class="fa-solid fa-undo"></i> Resetar Mobile
+          
+          <button type="button" onclick="switchTab('login')" id="tabBtn-login"
+                  class="tab-btn w-full text-left px-4 py-3 rounded-xl font-bold text-sm transition-all duration-300 flex items-center gap-3 border-l-4 inactive-tab">
+            <i class="fa-solid fa-right-to-bracket text-emerald-500"></i>
+            <span>Tela de Login</span>
           </button>
-          <button type="button" onclick="triggerReset('login_logo')" class="px-3.5 py-2 text-xs font-medium text-slate-500 hover:text-red-500 bg-slate-100 dark:bg-white/5 hover:bg-red-500/10 rounded-xl transition-all duration-200">
-            <i class="fa-solid fa-undo"></i> Resetar Logo
+
+          <button type="button" onclick="switchTab('efeitos')" id="tabBtn-efeitos"
+                  class="tab-btn w-full text-left px-4 py-3 rounded-xl font-bold text-sm transition-all duration-300 flex items-center gap-3 border-l-4 inactive-tab">
+            <i class="fa-solid fa-wand-magic-sparkles text-emerald-500"></i>
+            <span>Efeitos Visuais</span>
           </button>
-          <button type="button" onclick="triggerReset('login_primary_color')" class="px-3.5 py-2 text-xs font-medium text-slate-500 hover:text-red-500 bg-slate-100 dark:bg-white/5 hover:bg-red-500/10 rounded-xl transition-all duration-200">
-            <i class="fa-solid fa-undo"></i> Resetar Cor
+
+          <button type="button" onclick="switchTab('identidade')" id="tabBtn-identidade"
+                  class="tab-btn w-full text-left px-4 py-3 rounded-xl font-bold text-sm transition-all duration-300 flex items-center gap-3 border-l-4 inactive-tab">
+            <i class="fa-solid fa-fingerprint text-emerald-500"></i>
+            <span>Identidade & Textos</span>
           </button>
-        </div>
+          
+          <button type="button" onclick="switchTab('sidebar')" id="tabBtn-sidebar"
+                  class="tab-btn w-full text-left px-4 py-3 rounded-xl font-bold text-sm transition-all duration-300 flex items-center gap-3 border-l-4 inactive-tab">
+            <i class="fa-solid fa-desktop text-emerald-500"></i>
+            <span>Menu Lateral</span>
+          </button>
+          
+          <button type="button" onclick="switchTab('pdf')" id="tabBtn-pdf"
+                  class="tab-btn w-full text-left px-4 py-3 rounded-xl font-bold text-sm transition-all duration-300 flex items-center gap-3 border-l-4 inactive-tab">
+            <i class="fa-solid fa-file-pdf text-emerald-500"></i>
+            <span>Relatórios PDF</span>
+          </button>
+        </nav>
       </div>
 
-      <!-- CARD 2: PLATAFORMA & RELATÓRIOS PDF -->
-      <div class="space-y-6 flex flex-col justify-between">
-        
-        <!-- Bloco Plataforma -->
-        <div class="bg-white/60 dark:bg-slate-900/40 backdrop-blur-md border border-slate-200/50 dark:border-white/10 rounded-2xl p-6 shadow-sm">
-          <h2 class="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2 mb-4 border-b border-slate-200 dark:border-white/5 pb-3">
-            <i class="fa-solid fa-desktop text-emerald-500"></i> Plataforma (Sidebar)
-          </h2>
+      <!-- TIP BOX -->
+      <div class="hidden lg:block bg-gradient-to-br from-emerald-500/5 to-teal-500/5 dark:from-emerald-500/10 dark:to-teal-500/10 border border-emerald-500/20 rounded-2xl p-5">
+        <h4 class="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-2 mb-2">
+          <i class="fa-solid fa-lightbulb"></i> Dica de Designer
+        </h4>
+        <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+          Logotipos com fundo transparente (.png ou .svg) garantem um visual muito mais limpo e profissional, integrando-se suavemente ao layout do sistema.
+        </p>
+      </div>
 
-          <div>
-            <div class="flex items-center justify-between mb-2">
-              <label class="text-sm font-semibold text-slate-700 dark:text-slate-300">Logo do Menu Lateral (Sidebar)</label>
-              <span class="text-xs text-slate-400">Recomendado: 240x80 (PNG Transparente)</span>
-            </div>
-            <div class="relative group border-2 border-dashed border-slate-200 dark:border-white/10 rounded-xl p-3 flex flex-col items-center justify-center transition-all duration-300 hover:border-emerald-500 dark:hover:border-emerald-500">
-              <input id="sidebar_logo" type="file" name="sidebar_logo" accept="image/*" class="absolute inset-0 opacity-0 cursor-pointer" onchange="previewImage(this, 'preview_sidebar_logo')">
-              <div class="w-full h-24 rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-950 flex items-center justify-center p-4 relative">
-                <button type="button" onclick="openVisualizer('preview_sidebar_logo', 'Logo do Menu Lateral (Sidebar)')" class="absolute top-2 right-2 w-8 h-8 rounded-lg bg-slate-900/60 hover:bg-slate-900 text-white flex items-center justify-center transition-all shadow-md z-10" title="Visualizar Ampliado">
-                  <i class="fa-solid fa-expand text-xs"></i>
-                </button>
-                <img id="preview_sidebar_logo" 
-                     src="{% if config and config.sidebar_logo %}{{ url_for('static', filename='uploads/layout/' ~ config.sidebar_logo) }}{% else %}{{ url_for('static', filename='imgsidebar.png') }}{% endif %}" 
-                     class="max-w-full max-h-full object-contain" alt="Sidebar Logo Preview">
-              </div>
-              <div class="mt-2 text-xs font-semibold text-emerald-500 dark:text-emerald-400 group-hover:underline">Clique para alterar a imagem</div>
-            </div>
-            <div class="mt-4 flex justify-end">
-              <button type="button" onclick="triggerReset('sidebar_logo')" class="px-3.5 py-2 text-xs font-medium text-slate-500 hover:text-red-500 bg-slate-100 dark:bg-white/5 hover:bg-red-500/10 rounded-xl transition-all duration-200">
-                <i class="fa-solid fa-undo"></i> Restaurar Padrão
-              </button>
+      <!-- QUICK STATS -->
+      <div class="hidden lg:block bg-white/60 dark:bg-slate-900/40 backdrop-blur-md border border-slate-200/50 dark:border-white/10 rounded-2xl p-5 space-y-3">
+        <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Resumo Atual</h4>
+        <div class="space-y-2 text-xs">
+          <div class="flex items-center justify-between">
+            <span class="text-slate-500 dark:text-slate-400">Cor Primária</span>
+            <div class="flex items-center gap-1.5">
+              <div class="w-4 h-4 rounded-full border border-white/20 shadow-sm" style="background: {{ config.login_primary_color or '#10b981' }}"></div>
+              <span class="font-mono font-bold text-slate-700 dark:text-slate-200">{{ config.login_primary_color or '#10b981' }}</span>
             </div>
           </div>
+          <div class="flex items-center justify-between">
+            <span class="text-slate-500 dark:text-slate-400">BG Desktop</span>
+            <span class="font-bold text-slate-700 dark:text-slate-200">{{ 'Personalizado' if config.login_bg_desktop else 'Padrão' }}</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-slate-500 dark:text-slate-400">BG Mobile</span>
+            <span class="font-bold text-slate-700 dark:text-slate-200">{{ 'Personalizado' if config.login_bg_mobile else 'Padrão' }}</span>
+          </div>
+          <div class="flex items-center justify-between">
+            <span class="text-slate-500 dark:text-slate-400">Zoom</span>
+            <span class="font-mono font-bold text-slate-700 dark:text-slate-200">{{ config.login_bg_zoom or 100 }}%</span>
+          </div>
         </div>
+      </div>
+    </div>
 
-        <!-- Bloco PDF -->
-        <div class="bg-white/60 dark:bg-slate-900/40 backdrop-blur-md border border-slate-200/50 dark:border-white/10 rounded-2xl p-6 shadow-sm flex-1 flex flex-col justify-between">
-          <div>
-            <h2 class="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2 mb-4 border-b border-slate-200 dark:border-white/5 pb-3">
-              <i class="fa-solid fa-file-pdf text-emerald-500"></i> Relatórios PDF
-            </h2>
+    <!-- TAB PANEL CONTENT -->
+    <div class="flex-1">
+      <form id="layoutForm" method="post" enctype="multipart/form-data" class="space-y-6">
+        
+        <div class="flex flex-col xl:flex-row gap-6 items-start">
+          
+          <!-- Coluna Esquerda: Formulários de Ajustes -->
+          <div class="flex-1 space-y-6 w-full">
+            
+            <!-- ================= TAB: GERAL ================= -->
+            <div id="tabPanel-geral" class="tab-panel bg-white/60 dark:bg-slate-900/40 backdrop-blur-md border border-slate-200/50 dark:border-white/10 rounded-2xl p-6 shadow-sm space-y-6">
+              <div class="border-b border-slate-200 dark:border-white/5 pb-3">
+                <h2 class="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                  <i class="fa-solid fa-palette text-emerald-500"></i> Identidade Visual & Integrações
+                </h2>
+                <p class="text-xs text-slate-400 mt-1">Configure cores, gradientes e links externos da plataforma.</p>
+              </div>
 
-            <div class="space-y-4">
-              <!-- PDF Logo -->
-              <div>
-                <div class="flex items-center justify-between mb-2">
-                  <label class="text-sm font-semibold text-slate-700 dark:text-slate-300">Logo dos Relatórios PDF (Cabeçalho)</label>
-                  <span class="text-xs text-slate-400">Restrição: Max 120x50px (Auto-fit)</span>
+              <!-- Primary Color Picker -->
+              <div class="space-y-3">
+                <div>
+                  <label class="text-sm font-semibold text-slate-700 dark:text-slate-300 block">Cor Primária (Acentos & Botões)</label>
+                  <p class="text-xs text-slate-400 mt-0.5">Define a cor principal na tela de Login, botões de ação e elementos de destaque visual do sistema.</p>
                 </div>
-                <div class="relative group border-2 border-dashed border-slate-200 dark:border-white/10 rounded-xl p-3 flex flex-col items-center justify-center transition-all duration-300 hover:border-emerald-500 dark:hover:border-emerald-500">
-                  <input id="pdf_logo" type="file" name="pdf_logo" accept="image/*" class="absolute inset-0 opacity-0 cursor-pointer" onchange="previewImage(this, 'preview_pdf_logo')">
-                  <div class="w-full h-24 rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-950 flex items-center justify-center p-4 relative">
-                    <button type="button" onclick="openVisualizer('preview_pdf_logo', 'Logo dos Relatórios PDF (Cabeçalho)')" class="absolute top-2 right-2 w-8 h-8 rounded-lg bg-slate-900/60 hover:bg-slate-900 text-white flex items-center justify-center transition-all shadow-md z-10" title="Visualizar Ampliado">
-                      <i class="fa-solid fa-expand text-xs"></i>
-                    </button>
-                    <img id="preview_pdf_logo" 
-                         src="{% if config and config.pdf_logo %}{{ url_for('static', filename='uploads/layout/' ~ config.pdf_logo) }}{% else %}{{ url_for('static', filename='logo.png') }}{% endif %}" 
-                         class="max-w-full max-h-full object-contain" alt="PDF Logo Preview">
+                
+                <div class="flex items-center gap-3">
+                  <div class="relative w-12 h-10 rounded-xl overflow-hidden border border-slate-200 dark:border-white/10 shadow-sm cursor-pointer transition hover:scale-105">
+                    <input type="color" id="login_primary_color_picker" 
+                           value="{{ config.login_primary_color or '#10b981' }}" 
+                           class="absolute inset-0 w-full h-full p-0 border-0 cursor-pointer bg-transparent"
+                           oninput="syncColorPickerToText(this.value)">
                   </div>
-                  <div class="mt-2 text-xs font-semibold text-emerald-500 dark:text-emerald-400 group-hover:underline">Clique para alterar a imagem</div>
+                  <input type="text" name="login_primary_color" id="login_primary_color_text"
+                         value="{{ config.login_primary_color or '#10b981' }}"
+                         placeholder="#10b981"
+                         class="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-white/10 rounded-xl px-3.5 py-2 text-sm font-bold text-slate-800 dark:text-slate-100 w-32 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
+                         oninput="syncColorTextToPicker(this.value)">
+                  <button type="button" onclick="triggerReset('login_primary_color')" 
+                          class="px-3.5 py-2 text-xs font-medium text-slate-500 hover:text-red-500 bg-slate-100 dark:bg-white/5 hover:bg-red-500/10 rounded-xl transition-all duration-200">
+                    <i class="fa-solid fa-undo"></i> Resetar
+                  </button>
+                </div>
+
+                <!-- Palette Selection -->
+                <div class="flex flex-wrap gap-2 items-center pt-1">
+                  <span class="text-[10px] font-black uppercase tracking-wider text-slate-400 mr-1">Paletas Recomendadas:</span>
+                  <button aria-label="Esmeralda" type="button" onclick="selectPaletteColor('#10b981')" class="w-6 h-6 rounded-full border border-white/20 bg-[#10b981] transition hover:scale-110 shadow" title="Esmeralda"></button>
+                  <button aria-label="Azul Imperial" type="button" onclick="selectPaletteColor('#2563eb')" class="w-6 h-6 rounded-full border border-white/20 bg-[#2563eb] transition hover:scale-110 shadow" title="Azul Imperial"></button>
+                  <button aria-label="Laranja Quente" type="button" onclick="selectPaletteColor('#f97316')" class="w-6 h-6 rounded-full border border-white/20 bg-[#f97316] transition hover:scale-110 shadow" title="Laranja Quente"></button>
+                  <button aria-label="Vermelho Vibrante" type="button" onclick="selectPaletteColor('#ef4444')" class="w-6 h-6 rounded-full border border-white/20 bg-[#ef4444] transition hover:scale-110 shadow" title="Vermelho Vibrante"></button>
+                  <button aria-label="Indigo" type="button" onclick="selectPaletteColor('#6366f1')" class="w-6 h-6 rounded-full border border-white/20 bg-[#6366f1] transition hover:scale-110 shadow" title="Indigo"></button>
+                  <button aria-label="Rose" type="button" onclick="selectPaletteColor('#e11d48')" class="w-6 h-6 rounded-full border border-white/20 bg-[#e11d48] transition hover:scale-110 shadow" title="Rose"></button>
+                  <button aria-label="Teal" type="button" onclick="selectPaletteColor('#14b8a6')" class="w-6 h-6 rounded-full border border-white/20 bg-[#14b8a6] transition hover:scale-110 shadow" title="Teal"></button>
+                  <button aria-label="Amber" type="button" onclick="selectPaletteColor('#f59e0b')" class="w-6 h-6 rounded-full border border-white/20 bg-[#f59e0b] transition hover:scale-110 shadow" title="Amber"></button>
                 </div>
               </div>
 
-              <!-- PDF Footer -->
-              <div>
-                <div class="flex items-center justify-between mb-2">
-                  <label class="text-sm font-semibold text-slate-700 dark:text-slate-300">Rodapé dos Relatórios PDF (Multilinha)</label>
-                  <span class="text-xs text-slate-400">Insira o texto do rodapé. Caso em branco, usará o padrão AdaptLink.</span>
+              <!-- Secondary Color Picker -->
+              <div class="border-t border-slate-200 dark:border-white/5 pt-5 space-y-3">
+                <div>
+                  <label class="text-sm font-semibold text-slate-700 dark:text-slate-300 block">Cor Secundária (Gradientes)</label>
+                  <p class="text-xs text-slate-400 mt-0.5">Usada para compor gradientes premium em botões de login e efeitos visuais do sistema.</p>
                 </div>
-                <textarea name="pdf_footer" rows="6" 
-                          class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-white/10 rounded-xl p-3.5 text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all duration-200 resize-none font-mono"
-                          placeholder="Insira as linhas do rodapé aqui...">{% if config and config.pdf_footer %}{{ config.pdf_footer }}{% else %}ADAPT LINK SERVIÇOS EM COMUNICAÇÃO MULTIMÍDIA EIRELI
+                <div class="flex items-center gap-3">
+                  <div class="relative w-12 h-10 rounded-xl overflow-hidden border border-slate-200 dark:border-white/10 shadow-sm cursor-pointer transition hover:scale-105">
+                    <input type="color" id="login_secondary_color_picker" 
+                           value="{{ config.login_secondary_color or '#064e3b' }}" 
+                           class="absolute inset-0 w-full h-full p-0 border-0 cursor-pointer bg-transparent"
+                           oninput="document.getElementById('login_secondary_color_text').value = this.value; updateEffectsPreview()">
+                  </div>
+                  <input type="text" name="login_secondary_color" id="login_secondary_color_text"
+                         value="{{ config.login_secondary_color or '#064e3b' }}"
+                         placeholder="#064e3b"
+                         class="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-white/10 rounded-xl px-3.5 py-2 text-sm font-bold text-slate-800 dark:text-slate-100 w-32 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
+                         oninput="if(/^#[0-9A-Fa-f]{6}$/.test(this.value)) { document.getElementById('login_secondary_color_picker').value = this.value; updateEffectsPreview(); }">
+                  <button type="button" onclick="triggerReset('login_secondary_color')" 
+                          class="px-3.5 py-2 text-xs font-medium text-slate-500 hover:text-red-500 bg-slate-100 dark:bg-white/5 hover:bg-red-500/10 rounded-xl transition-all duration-200">
+                    <i class="fa-solid fa-undo"></i> Resetar
+                  </button>
+                </div>
+                <!-- Gradient Preview -->
+                <div class="flex items-center gap-3 pt-2">
+                  <span class="text-[10px] font-black uppercase tracking-wider text-slate-400">Preview do Gradiente:</span>
+                  <div id="gradientPreview" class="h-8 w-48 rounded-xl shadow-sm border border-white/10" 
+                       style="background: linear-gradient(135deg, {{ config.login_primary_color or '#10b981' }}, {{ config.login_secondary_color or '#064e3b' }})"></div>
+                </div>
+              </div>
+
+              <!-- Power BI Integration -->
+              <div class="border-t border-slate-200 dark:border-white/5 pt-5 space-y-3">
+                <div>
+                  <label class="text-sm font-semibold text-slate-700 dark:text-slate-300 block">Dashboard Power BI</label>
+                  <p class="text-xs text-slate-400 mt-0.5">Insira a URL pública ("Publish to Web") gerada no Power BI Service para incorporar relatórios e gráficos gerenciais no Dashboard principal.</p>
+                </div>
+                <div class="flex gap-2">
+                  <input id="powerbi_url" type="text" name="powerbi_url" 
+                         value="{{ config.powerbi_url or '' }}" 
+                         placeholder="https://app.powerbi.com/view?r=eyJrIj..." 
+                         class="flex-1 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all duration-200">
+                  <button type="button" onclick="triggerReset('powerbi_url')" 
+                          class="px-4 py-3 text-xs font-semibold text-slate-500 hover:text-red-500 bg-slate-100 dark:bg-white/5 hover:bg-red-500/10 rounded-xl transition-all duration-200">
+                    <i class="fa-solid fa-undo"></i> Resetar
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- ================= TAB: LOGIN ================= -->
+            <div id="tabPanel-login" class="tab-panel hidden bg-white/60 dark:bg-slate-900/40 backdrop-blur-md border border-slate-200/50 dark:border-white/10 rounded-2xl p-6 shadow-sm space-y-6">
+              <div class="border-b border-slate-200 dark:border-white/5 pb-3">
+                <h2 class="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                  <i class="fa-solid fa-right-to-bracket text-emerald-500"></i> Tela de Login — Imagens de Fundo
+                </h2>
+                <p class="text-xs text-slate-400 mt-1">Configure imagens, tamanhos, posicionamento e exibição dos fundos para Desktop e Mobile.</p>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Background Desktop -->
+                <div class="space-y-3">
+                  <div class="flex items-center justify-between">
+                    <label class="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                      <i class="fa-solid fa-display text-blue-400"></i> Fundo Desktop
+                    </label>
+                    <span class="text-[10px] text-slate-400 font-medium">Recomendado: 1920x1080</span>
+                  </div>
+                  <div class="relative group border-2 border-dashed border-slate-200 dark:border-white/10 rounded-xl p-3 flex flex-col items-center justify-center transition-all duration-300 hover:border-emerald-500 dark:hover:border-emerald-500">
+                    <input id="login_bg_desktop" type="file" name="login_bg_desktop" accept="image/*" class="absolute inset-0 opacity-0 cursor-pointer" onchange="previewImage(this, 'preview_bg_desktop')">
+                    <div class="w-full h-36 rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-950 flex items-center justify-center relative shadow-inner">
+                      <button type="button" onclick="openVisualizer('preview_bg_desktop', 'Fundo Desktop (Computadores)')" class="absolute top-2 right-2 w-8 h-8 rounded-lg bg-slate-900/60 hover:bg-slate-900 text-white flex items-center justify-center transition-all shadow-md z-10" title="Visualizar Ampliado">
+                        <i class="fa-solid fa-expand text-xs"></i>
+                      </button>
+                      <img id="preview_bg_desktop" 
+                           src="{% if config and config.login_bg_desktop %}{{ url_for('static', filename='uploads/layout/' ~ config.login_bg_desktop) }}{% else %}{{ url_for('static', filename='img.png') }}{% endif %}" 
+                           class="w-full h-full object-cover" alt="Desktop Preview">
+                    </div>
+                    <div class="mt-2 text-xs font-semibold text-emerald-500 dark:text-emerald-400 group-hover:underline">Clique para alterar</div>
+                  </div>
+                  
+                  <!-- Desktop BG Size -->
+                  <div class="grid grid-cols-2 gap-3">
+                    <div>
+                      <label class="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-1">Tamanho (Size)</label>
+                      <select name="login_bg_size_desktop" id="login_bg_size_desktop" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 focus:outline-none focus:border-emerald-500 transition-all" onchange="updateEffectsPreview()">
+                        {% set current_size_d = config.login_bg_size_desktop or 'cover' %}
+                        <option value="cover" {{ 'selected' if current_size_d == 'cover' }}>Cover (Preencher)</option>
+                        <option value="contain" {{ 'selected' if current_size_d == 'contain' }}>Contain (Ajustar)</option>
+                        <option value="auto" {{ 'selected' if current_size_d == 'auto' }}>Auto (Original)</option>
+                        <option value="100% 100%" {{ 'selected' if current_size_d == '100% 100%' }}>Esticar 100%</option>
+                        <option value="100% auto" {{ 'selected' if current_size_d == '100% auto' }}>Largura 100%</option>
+                        <option value="auto 100%" {{ 'selected' if current_size_d == 'auto 100%' }}>Altura 100%</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label class="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-1">Posição</label>
+                      <select name="login_bg_position_desktop" id="login_bg_position_desktop" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 focus:outline-none focus:border-emerald-500 transition-all" onchange="updateEffectsPreview()">
+                        {% set current_pos_d = config.login_bg_position_desktop or 'center' %}
+                        <option value="center" {{ 'selected' if current_pos_d == 'center' }}>Centro</option>
+                        <option value="top" {{ 'selected' if current_pos_d == 'top' }}>Topo</option>
+                        <option value="bottom" {{ 'selected' if current_pos_d == 'bottom' }}>Inferior</option>
+                        <option value="left" {{ 'selected' if current_pos_d == 'left' }}>Esquerda</option>
+                        <option value="right" {{ 'selected' if current_pos_d == 'right' }}>Direita</option>
+                        <option value="top left" {{ 'selected' if current_pos_d == 'top left' }}>Topo Esquerda</option>
+                        <option value="top right" {{ 'selected' if current_pos_d == 'top right' }}>Topo Direita</option>
+                        <option value="bottom left" {{ 'selected' if current_pos_d == 'bottom left' }}>Inferior Esquerda</option>
+                        <option value="bottom right" {{ 'selected' if current_pos_d == 'bottom right' }}>Inferior Direita</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="flex justify-end">
+                    <button type="button" onclick="triggerReset('login_bg_desktop')" class="text-[11px] font-medium text-slate-500 hover:text-red-500 transition-colors">
+                      <i class="fa-solid fa-undo"></i> Restaurar Padrão
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Background Mobile -->
+                <div class="space-y-3">
+                  <div class="flex items-center justify-between">
+                    <label class="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                      <i class="fa-solid fa-mobile-screen text-green-400"></i> Fundo Mobile
+                    </label>
+                    <span class="text-[10px] text-slate-400 font-medium">Recomendado: 1080x1920</span>
+                  </div>
+                  <div class="relative group border-2 border-dashed border-slate-200 dark:border-white/10 rounded-xl p-3 flex flex-col items-center justify-center transition-all duration-300 hover:border-emerald-500 dark:hover:border-emerald-500">
+                    <input id="login_bg_mobile" type="file" name="login_bg_mobile" accept="image/*" class="absolute inset-0 opacity-0 cursor-pointer" onchange="previewImage(this, 'preview_bg_mobile')">
+                    <div class="w-full h-36 rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-950 flex items-center justify-center relative shadow-inner">
+                      <button type="button" onclick="openVisualizer('preview_bg_mobile', 'Fundo Mobile (Celulares)')" class="absolute top-2 right-2 w-8 h-8 rounded-lg bg-slate-900/60 hover:bg-slate-900 text-white flex items-center justify-center transition-all shadow-md z-10" title="Visualizar Ampliado">
+                        <i class="fa-solid fa-expand text-xs"></i>
+                      </button>
+                      <img id="preview_bg_mobile" 
+                           src="{% if config and config.login_bg_mobile %}{{ url_for('static', filename='uploads/layout/' ~ config.login_bg_mobile) }}{% else %}{{ url_for('static', filename='imgmbl.png') }}{% endif %}" 
+                           class="w-full h-full object-cover" alt="Mobile Preview">
+                    </div>
+                    <div class="mt-2 text-xs font-semibold text-emerald-500 dark:text-emerald-400 group-hover:underline">Clique para alterar</div>
+                  </div>
+
+                  <!-- Mobile BG Size -->
+                  <div class="grid grid-cols-2 gap-3">
+                    <div>
+                      <label class="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-1">Tamanho (Size)</label>
+                      <select name="login_bg_size_mobile" id="login_bg_size_mobile" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 focus:outline-none focus:border-emerald-500 transition-all" onchange="updateEffectsPreview()">
+                        {% set current_size_m = config.login_bg_size_mobile or 'cover' %}
+                        <option value="cover" {{ 'selected' if current_size_m == 'cover' }}>Cover (Preencher)</option>
+                        <option value="contain" {{ 'selected' if current_size_m == 'contain' }}>Contain (Ajustar)</option>
+                        <option value="auto" {{ 'selected' if current_size_m == 'auto' }}>Auto (Original)</option>
+                        <option value="100% 100%" {{ 'selected' if current_size_m == '100% 100%' }}>Esticar 100%</option>
+                        <option value="100% auto" {{ 'selected' if current_size_m == '100% auto' }}>Largura 100%</option>
+                        <option value="auto 100%" {{ 'selected' if current_size_m == 'auto 100%' }}>Altura 100%</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label class="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider block mb-1">Posição</label>
+                      <select name="login_bg_position_mobile" id="login_bg_position_mobile" class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 focus:outline-none focus:border-emerald-500 transition-all" onchange="updateEffectsPreview()">
+                        {% set current_pos_m = config.login_bg_position_mobile or 'center' %}
+                        <option value="center" {{ 'selected' if current_pos_m == 'center' }}>Centro</option>
+                        <option value="top" {{ 'selected' if current_pos_m == 'top' }}>Topo</option>
+                        <option value="bottom" {{ 'selected' if current_pos_m == 'bottom' }}>Inferior</option>
+                        <option value="left" {{ 'selected' if current_pos_m == 'left' }}>Esquerda</option>
+                        <option value="right" {{ 'selected' if current_pos_m == 'right' }}>Direita</option>
+                        <option value="top left" {{ 'selected' if current_pos_m == 'top left' }}>Topo Esquerda</option>
+                        <option value="top right" {{ 'selected' if current_pos_m == 'top right' }}>Topo Direita</option>
+                        <option value="bottom left" {{ 'selected' if current_pos_m == 'bottom left' }}>Inferior Esquerda</option>
+                        <option value="bottom right" {{ 'selected' if current_pos_m == 'bottom right' }}>Inferior Direita</option>
+                      </select>
+                    </div>
+                  </div>
+                  <div class="flex justify-end">
+                    <button type="button" onclick="triggerReset('login_bg_mobile')" class="text-[11px] font-medium text-slate-500 hover:text-red-500 transition-colors">
+                      <i class="fa-solid fa-undo"></i> Restaurar Padrão
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Logo Central Upload -->
+              <div class="border-t border-slate-200 dark:border-white/5 pt-5 space-y-4">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div class="space-y-1">
+                    <label class="text-sm font-bold text-slate-700 dark:text-slate-300">Logo Central do Login</label>
+                    <p class="text-xs text-slate-400">Envie um arquivo PNG com fundo transparente para ser centralizado no topo do cartão de formulário.</p>
+                  </div>
+                  
+                  <!-- Height Adjustment Slider -->
+                  <div class="w-full md:w-80 space-y-1">
+                    <div class="flex items-center justify-between">
+                      <label class="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">Ajuste de Altura</label>
+                      <span id="login_logo_height_val" class="text-xs font-mono font-black text-emerald-500">
+                        {{ config.login_logo_height or 120 }}px
+                      </span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <input type="range" name="login_logo_height" id="login_logo_height" min="40" max="240" 
+                             value="{{ config.login_logo_height or 120 }}" 
+                             class="w-full accent-emerald-500 cursor-pointer h-1.5 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none" 
+                             oninput="updateLoginLogoPreview(this.value)">
+                    </div>
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+                  <div class="md:col-span-2 relative group border-2 border-dashed border-slate-200 dark:border-white/10 rounded-xl p-3 flex flex-col items-center justify-center transition-all duration-300 hover:border-emerald-500 dark:hover:border-emerald-500">
+                    <input id="login_logo" type="file" name="login_logo" accept="image/*" class="absolute inset-0 opacity-0 cursor-pointer" onchange="previewImage(this, 'preview_login_logo')">
+                    <div class="w-full h-28 rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-950 flex items-center justify-center relative p-3">
+                      <span class="absolute bottom-2 left-2 text-[9px] bg-slate-900/60 text-slate-300 rounded px-1.5 py-0.5">Área de Visualização Real</span>
+                      <img id="preview_login_logo" 
+                           src="{% if config and config.login_logo %}{{ url_for('static', filename='uploads/layout/' ~ config.login_logo) }}{% else %}{{ url_for('static', filename='logo.png') }}{% endif %}" 
+                           class="max-w-full object-contain transition-all duration-200" 
+                           style="max-height: {{ config.login_logo_height or 120 }}px;"
+                           alt="Login Logo Preview">
+                    </div>
+                    <div class="mt-2 text-xs font-semibold text-emerald-500 dark:text-emerald-400 group-hover:underline">Clique para alterar a imagem</div>
+                  </div>
+
+                  <div class="flex flex-col gap-2">
+                    <button type="button" onclick="triggerReset('login_logo')" class="w-full px-3.5 py-2 text-xs font-semibold text-slate-600 hover:text-red-500 bg-slate-100 dark:bg-white/5 hover:bg-red-500/10 rounded-xl transition-all duration-200 flex items-center justify-center gap-2">
+                      <i class="fa-solid fa-undo"></i> Restaurar Imagem Padrão
+                    </button>
+                    <button type="button" onclick="triggerReset('login_logo_height')" class="w-full px-3.5 py-2 text-xs font-semibold text-slate-600 hover:text-red-500 bg-slate-100 dark:bg-white/5 hover:bg-red-500/10 rounded-xl transition-all duration-200 flex items-center justify-center gap-2">
+                      <i class="fa-solid fa-ruler-combined"></i> Resetar Altura (120px)
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ================= TAB: EFEITOS VISUAIS ================= -->
+            <div id="tabPanel-efeitos" class="tab-panel hidden bg-white/60 dark:bg-slate-900/40 backdrop-blur-md border border-slate-200/50 dark:border-white/10 rounded-2xl p-6 shadow-sm space-y-6">
+              <div class="border-b border-slate-200 dark:border-white/5 pb-3">
+                <h2 class="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                  <i class="fa-solid fa-wand-magic-sparkles text-emerald-500"></i> Efeitos Visuais do Login
+                </h2>
+                <p class="text-xs text-slate-400 mt-1">Ajuste o zoom do fundo, desfoque da imagem, opacidade do overlay e o estilo translúcido (Glassmorphic) do cartão de login.</p>
+              </div>
+
+              <!-- Zoom Slider -->
+              <div class="space-y-2">
+                <div class="flex items-center justify-between">
+                  <label class="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                    <i class="fa-solid fa-magnifying-glass-plus text-blue-400"></i> Zoom da Imagem de Fundo
+                  </label>
+                  <div class="flex items-center gap-2">
+                    <span id="login_bg_zoom_val" class="text-xs font-mono font-black text-emerald-500">{{ config.login_bg_zoom or 100 }}%</span>
+                    <button type="button" onclick="triggerReset('login_bg_zoom')" class="text-[10px] text-slate-400 hover:text-red-500 transition-colors"><i class="fa-solid fa-undo"></i></button>
+                  </div>
+                </div>
+                <input type="range" name="login_bg_zoom" id="login_bg_zoom" min="80" max="150" 
+                       value="{{ config.login_bg_zoom or 100 }}" 
+                       class="w-full accent-emerald-500 cursor-pointer h-1.5 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none"
+                       oninput="updateEffectsPreview()">
+              </div>
+
+              <!-- Blur Slider -->
+              <div class="space-y-2">
+                <div class="flex items-center justify-between">
+                  <label class="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                    <i class="fa-solid fa-droplet text-cyan-400"></i> Desfoque do Fundo (Blur)
+                  </label>
+                  <div class="flex items-center gap-2">
+                    <span id="login_bg_blur_val" class="text-xs font-mono font-black text-emerald-500">{{ config.login_bg_blur or 0 }}px</span>
+                    <button type="button" onclick="triggerReset('login_bg_blur')" class="text-[10px] text-slate-400 hover:text-red-500 transition-colors"><i class="fa-solid fa-undo"></i></button>
+                  </div>
+                </div>
+                <input type="range" name="login_bg_blur" id="login_bg_blur" min="0" max="20" 
+                       value="{{ config.login_bg_blur or 0 }}" 
+                       class="w-full accent-emerald-500 cursor-pointer h-1.5 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none"
+                       oninput="updateEffectsPreview()">
+              </div>
+
+              <!-- Overlay Opacity Slider -->
+              <div class="space-y-2">
+                <div class="flex items-center justify-between">
+                  <label class="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                    <i class="fa-solid fa-circle-half-stroke text-amber-400"></i> Escurecimento do Fundo (Opacidade do Overlay)
+                  </label>
+                  <div class="flex items-center gap-2">
+                    <span id="login_bg_opacity_val" class="text-xs font-mono font-black text-emerald-500">{{ config.login_bg_opacity or 15 }}%</span>
+                    <button type="button" onclick="triggerReset('login_bg_opacity')" class="text-[10px] text-slate-400 hover:text-red-500 transition-colors"><i class="fa-solid fa-undo"></i></button>
+                  </div>
+                </div>
+                <input type="range" name="login_bg_opacity" id="login_bg_opacity" min="0" max="90" 
+                       value="{{ config.login_bg_opacity or 15 }}" 
+                       class="w-full accent-emerald-500 cursor-pointer h-1.5 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none"
+                       oninput="updateEffectsPreview()">
+              </div>
+
+              <!-- Overlay Color -->
+              <div class="space-y-2">
+                <div class="flex items-center justify-between">
+                  <label class="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                    <i class="fa-solid fa-fill-drip text-rose-400"></i> Cor do Overlay de Fundo
+                  </label>
+                  <button type="button" onclick="triggerReset('login_overlay_color')" class="text-[10px] text-slate-400 hover:text-red-500 transition-colors"><i class="fa-solid fa-undo"></i> Resetar</button>
+                </div>
+                <div class="flex items-center gap-3">
+                  <div class="relative w-12 h-10 rounded-xl overflow-hidden border border-slate-200 dark:border-white/10 shadow-sm cursor-pointer">
+                    <input type="color" id="login_overlay_color_picker" 
+                           value="{{ config.login_overlay_color or '#000000' }}" 
+                           class="absolute inset-0 w-full h-full p-0 border-0 cursor-pointer bg-transparent"
+                           oninput="document.getElementById('login_overlay_color_text').value = this.value; updateEffectsPreview()">
+                  </div>
+                  <input type="text" name="login_overlay_color" id="login_overlay_color_text"
+                         value="{{ config.login_overlay_color or '#000000' }}"
+                         class="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-white/10 rounded-xl px-3.5 py-2 text-sm font-bold text-slate-800 dark:text-slate-100 w-32 focus:outline-none focus:border-emerald-500 transition-all"
+                         oninput="if(/^#[0-9A-Fa-f]{6}$/.test(this.value)){document.getElementById('login_overlay_color_picker').value=this.value; updateEffectsPreview()}">
+                  <div class="flex flex-wrap gap-1.5">
+                    <button type="button" onclick="setOverlayColor('#000000')" class="w-6 h-6 rounded-full bg-black border border-white/20 transition hover:scale-110" title="Preto"></button>
+                    <button type="button" onclick="setOverlayColor('#0f172a')" class="w-6 h-6 rounded-full bg-[#0f172a] border border-white/20 transition hover:scale-110" title="Slate 900"></button>
+                    <button type="button" onclick="setOverlayColor('#1e1b4b')" class="w-6 h-6 rounded-full bg-[#1e1b4b] border border-white/20 transition hover:scale-110" title="Indigo Escuro"></button>
+                    <button type="button" onclick="setOverlayColor('#042f2e')" class="w-6 h-6 rounded-full bg-[#042f2e] border border-white/20 transition hover:scale-110" title="Teal Escuro"></button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Card Styling Section -->
+              <div class="border-t border-slate-200 dark:border-white/5 pt-5 space-y-4">
+                <h3 class="text-sm font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                  <i class="fa-solid fa-square text-emerald-400"></i> Estilo do Cartão de Login (Glassmorphism)
+                </h3>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <!-- Card Opacity -->
+                  <div class="space-y-1">
+                    <div class="flex items-center justify-between">
+                      <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Opacidade do Cartão</label>
+                      <span id="login_card_opacity_val" class="text-[10px] font-mono font-black text-emerald-500">{{ config.login_card_opacity or 60 }}%</span>
+                    </div>
+                    <input type="range" name="login_card_opacity" id="login_card_opacity" min="10" max="100"
+                           value="{{ config.login_card_opacity or 60 }}"
+                           class="w-full accent-emerald-500 cursor-pointer h-1.5 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none"
+                           oninput="updateEffectsPreview()">
+                  </div>
+
+                  <!-- Card Blur -->
+                  <div class="space-y-1">
+                    <div class="flex items-center justify-between">
+                      <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Blur (Desfoque de Fundo)</label>
+                      <span id="login_card_blur_val" class="text-[10px] font-mono font-black text-emerald-500">{{ config.login_card_blur or 12 }}px</span>
+                    </div>
+                    <input type="range" name="login_card_blur" id="login_card_blur" min="0" max="30"
+                           value="{{ config.login_card_blur or 12 }}"
+                           class="w-full accent-emerald-500 cursor-pointer h-1.5 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none"
+                           oninput="updateEffectsPreview()">
+                  </div>
+
+                  <!-- Card Radius -->
+                  <div class="space-y-1">
+                    <div class="flex items-center justify-between">
+                      <label class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Arredondamento das Bordas</label>
+                      <span id="login_card_radius_val" class="text-[10px] font-mono font-black text-emerald-500">{{ config.login_card_radius or 16 }}px</span>
+                    </div>
+                    <input type="range" name="login_card_radius" id="login_card_radius" min="0" max="40"
+                           value="{{ config.login_card_radius or 16 }}"
+                           class="w-full accent-emerald-500 cursor-pointer h-1.5 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none"
+                           oninput="updateEffectsPreview()">
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ================= TAB: IDENTIDADE & TEXTOS ================= -->
+            <div id="tabPanel-identidade" class="tab-panel hidden bg-white/60 dark:bg-slate-900/40 backdrop-blur-md border border-slate-200/50 dark:border-white/10 rounded-2xl p-6 shadow-sm space-y-6">
+              <div class="border-b border-slate-200 dark:border-white/5 pb-3">
+                <h2 class="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                  <i class="fa-solid fa-fingerprint text-emerald-500"></i> Identidade & Textos do Login
+                </h2>
+                <p class="text-xs text-slate-400 mt-1">Personalize textos exibidos na tela de login, posição do card e favicon do navegador.</p>
+              </div>
+
+              <!-- 1. Textos da Tela de Login -->
+              <div class="space-y-4">
+                <h3 class="text-sm font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                  <i class="fa-solid fa-font text-emerald-500"></i> Textos do Formulário
+                </h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <!-- Title Text -->
+                  <div class="space-y-1.5">
+                    <label class="text-xs font-semibold text-slate-600 dark:text-slate-400">Título Principal</label>
+                    <div class="flex gap-2">
+                      <input type="text" name="login_title_text" id="login_title_text"
+                             value="{{ config.login_title_text or 'Acesso ao Sistema' }}"
+                             maxlength="100"
+                             placeholder="Acesso ao Sistema"
+                             class="flex-1 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-xs text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
+                             oninput="updateEffectsPreview()">
+                      <button type="button" onclick="triggerReset('login_title_text')" 
+                              class="px-2.5 py-2 text-xs font-medium text-slate-500 hover:text-red-500 bg-slate-100 dark:bg-white/5 hover:bg-red-500/10 rounded-xl transition-all" title="Resetar">
+                        <i class="fa-solid fa-undo"></i>
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Subtitle Text -->
+                  <div class="space-y-1.5">
+                    <label class="text-xs font-semibold text-slate-600 dark:text-slate-400">Subtítulo / Descrição</label>
+                    <div class="flex gap-2">
+                      <input type="text" name="login_subtitle_text" id="login_subtitle_text"
+                             value="{{ config.login_subtitle_text or '' }}"
+                             maxlength="150"
+                             placeholder="Ex: Digite suas credenciais para continuar"
+                             class="flex-1 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-xs text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
+                             oninput="updateEffectsPreview()">
+                      <button type="button" onclick="triggerReset('login_subtitle_text')" 
+                              class="px-2.5 py-2 text-xs font-medium text-slate-500 hover:text-red-500 bg-slate-100 dark:bg-white/5 hover:bg-red-500/10 rounded-xl transition-all" title="Resetar">
+                        <i class="fa-solid fa-undo"></i>
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Username Placeholder -->
+                  <div class="space-y-1.5">
+                    <label class="text-xs font-semibold text-slate-600 dark:text-slate-400">Placeholder de Usuário</label>
+                    <div class="flex gap-2">
+                      <input type="text" name="login_username_placeholder" id="login_username_placeholder"
+                             value="{{ config.login_username_placeholder or 'Digite seu usuário' }}"
+                             maxlength="100"
+                             placeholder="Digite seu usuário"
+                             class="flex-1 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-xs text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
+                             oninput="updateEffectsPreview()">
+                      <button type="button" onclick="triggerReset('login_username_placeholder')" 
+                              class="px-2.5 py-2 text-xs font-medium text-slate-500 hover:text-red-500 bg-slate-100 dark:bg-white/5 hover:bg-red-500/10 rounded-xl transition-all" title="Resetar">
+                        <i class="fa-solid fa-undo"></i>
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Password Placeholder -->
+                  <div class="space-y-1.5">
+                    <label class="text-xs font-semibold text-slate-600 dark:text-slate-400">Placeholder de Senha</label>
+                    <div class="flex gap-2">
+                      <input type="text" name="login_password_placeholder" id="login_password_placeholder"
+                             value="{{ config.login_password_placeholder or 'Digite sua senha' }}"
+                             maxlength="100"
+                             placeholder="Digite sua senha"
+                             class="flex-1 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-xs text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
+                             oninput="updateEffectsPreview()">
+                      <button type="button" onclick="triggerReset('login_password_placeholder')" 
+                              class="px-2.5 py-2 text-xs font-medium text-slate-500 hover:text-red-500 bg-slate-100 dark:bg-white/5 hover:bg-red-500/10 rounded-xl transition-all" title="Resetar">
+                        <i class="fa-solid fa-undo"></i>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 2. Personalização do Botão de Entrada -->
+              <div class="border-t border-slate-200 dark:border-white/5 pt-5 space-y-4">
+                <h3 class="text-sm font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                  <i class="fa-solid fa-square-minus text-emerald-500"></i> Botão "Entrar" (Estilo e Tamanhos)
+                </h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <!-- Text do Botão -->
+                  <div class="space-y-1.5">
+                    <label class="text-xs font-semibold text-slate-600 dark:text-slate-400 block">Texto do Botão</label>
+                    <div class="flex gap-2">
+                      <input type="text" name="login_btn_text" id="login_btn_text"
+                             value="{{ config.login_btn_text or 'Entrar' }}"
+                             maxlength="50"
+                             placeholder="Entrar"
+                             class="flex-1 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 text-xs text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all"
+                             oninput="updateEffectsPreview()">
+                      <button type="button" onclick="triggerReset('login_btn_text')" 
+                              class="px-2.5 py-2 text-xs font-medium text-slate-500 hover:text-red-500 bg-slate-100 dark:bg-white/5 hover:bg-red-500/10 rounded-xl transition-all" title="Resetar">
+                        <i class="fa-solid fa-undo"></i>
+                      </button>
+                    </div>
+                  </div>
+
+                  <!-- Button Radius Slider -->
+                  <div class="space-y-1.5">
+                    <div class="flex items-center justify-between">
+                      <label class="text-xs font-semibold text-slate-600 dark:text-slate-400">Arredondamento das Bordas</label>
+                      <span id="login_btn_radius_val" class="text-xs font-mono font-black text-emerald-500">{{ config.login_btn_radius or 12 }}px</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <input type="range" name="login_btn_radius" id="login_btn_radius" min="0" max="30"
+                             value="{{ config.login_btn_radius or 12 }}"
+                             class="w-full accent-emerald-500 cursor-pointer h-1.5 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none"
+                             oninput="document.getElementById('login_btn_radius_val').textContent = this.value + 'px'; updateEffectsPreview()">
+                      <button type="button" onclick="triggerReset('login_btn_radius')" class="text-xs text-slate-400 hover:text-red-500 transition-colors"><i class="fa-solid fa-undo"></i></button>
+                    </div>
+                  </div>
+
+                  <!-- Button Padding/Height Slider -->
+                  <div class="space-y-1.5">
+                    <div class="flex items-center justify-between">
+                      <label class="text-xs font-semibold text-slate-600 dark:text-slate-400">Altura / Espaçamento (Padding Y)</label>
+                      <span id="login_btn_padding_y_val" class="text-xs font-mono font-black text-emerald-500">{{ config.login_btn_padding_y or 12 }}px</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <input type="range" name="login_btn_padding_y" id="login_btn_padding_y" min="6" max="24"
+                             value="{{ config.login_btn_padding_y or 12 }}"
+                             class="w-full accent-emerald-500 cursor-pointer h-1.5 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none"
+                             oninput="document.getElementById('login_btn_padding_y_val').textContent = this.value + 'px'; updateEffectsPreview()">
+                      <button type="button" onclick="triggerReset('login_btn_padding_y')" class="text-xs text-slate-400 hover:text-red-500 transition-colors"><i class="fa-solid fa-undo"></i></button>
+                    </div>
+                  </div>
+
+                  <!-- Button Font Size Slider -->
+                  <div class="space-y-1.5">
+                    <div class="flex items-center justify-between">
+                      <label class="text-xs font-semibold text-slate-600 dark:text-slate-400">Tamanho do Texto (Fonte)</label>
+                      <span id="login_btn_font_size_val" class="text-xs font-mono font-black text-emerald-500">{{ config.login_btn_font_size or 16 }}px</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <input type="range" name="login_btn_font_size" id="login_btn_font_size" min="12" max="24"
+                             value="{{ config.login_btn_font_size or 16 }}"
+                             class="w-full accent-emerald-500 cursor-pointer h-1.5 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none"
+                             oninput="document.getElementById('login_btn_font_size_val').textContent = this.value + 'px'; updateEffectsPreview()">
+                      <button type="button" onclick="triggerReset('login_btn_font_size')" class="text-xs text-slate-400 hover:text-red-500 transition-colors"><i class="fa-solid fa-undo"></i></button>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Button Preview -->
+                <div class="flex items-center gap-4 pt-2">
+                  <span class="text-[10px] font-black uppercase tracking-wider text-slate-400">Preview do Botão:</span>
+                  <button type="button" id="btnPreview" class="px-8 text-white font-bold transition-all shadow-md" 
+                          style="background: {{ config.login_primary_color or '#10b981' }}; border-radius: {{ config.login_btn_radius or 12 }}px; padding-top: {{ config.login_btn_padding_y or 12 }}px; padding-bottom: {{ config.login_btn_padding_y or 12 }}px; font-size: {{ config.login_btn_font_size or 16 }}px;"
+                          onclick="return false">
+                    {{ config.login_btn_text or 'Entrar' }}
+                  </button>
+                </div>
+              </div>
+
+              <!-- Card Position -->
+              <div class="border-t border-slate-200 dark:border-white/5 pt-5 space-y-3">
+                <label class="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                  <i class="fa-solid fa-arrows-left-right text-cyan-400"></i> Posicionamento do Card de Login (Apenas Desktop)
+                </label>
+                <p class="text-xs text-slate-400">Escolha onde o cartão de login se posiciona no Desktop. O visual se adapta com recuos e alinhamentos fluidos de alta qualidade.</p>
+                <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                  {% set card_pos = config.login_card_position or 'right' %}
+                  
+                  <label class="cursor-pointer">
+                    <input type="radio" name="login_card_position" value="left" {{ 'checked' if card_pos == 'left' }} class="peer sr-only">
+                    <div class="peer-checked:border-emerald-500 peer-checked:bg-emerald-500/10 border-2 border-slate-200 dark:border-white/10 rounded-xl p-3 text-center transition-all hover:border-emerald-400 h-full flex flex-col items-center justify-center">
+                      <i class="fa-solid fa-align-left text-lg text-slate-500 peer-checked:text-emerald-500 mb-1.5"></i>
+                      <p class="text-[10px] font-black text-slate-600 dark:text-slate-300 uppercase tracking-tight">Total Esquerda</p>
+                    </div>
+                  </label>
+
+                  <label class="cursor-pointer">
+                    <input type="radio" name="login_card_position" value="left-center" {{ 'checked' if card_pos == 'left-center' }} class="peer sr-only">
+                    <div class="peer-checked:border-emerald-500 peer-checked:bg-emerald-500/10 border-2 border-slate-200 dark:border-white/10 rounded-xl p-3 text-center transition-all hover:border-emerald-400 h-full flex flex-col items-center justify-center">
+                      <i class="fa-solid fa-indent text-lg text-slate-500 peer-checked:text-emerald-500 mb-1.5"></i>
+                      <p class="text-[10px] font-black text-slate-600 dark:text-slate-300 uppercase tracking-tight">Leve Esquerda</p>
+                    </div>
+                  </label>
+
+                  <label class="cursor-pointer">
+                    <input type="radio" name="login_card_position" value="center" {{ 'checked' if card_pos == 'center' }} class="peer sr-only">
+                    <div class="peer-checked:border-emerald-500 peer-checked:bg-emerald-500/10 border-2 border-slate-200 dark:border-white/10 rounded-xl p-3 text-center transition-all hover:border-emerald-400 h-full flex flex-col items-center justify-center">
+                      <i class="fa-solid fa-align-center text-lg text-slate-500 peer-checked:text-emerald-500 mb-1.5"></i>
+                      <p class="text-[10px] font-black text-slate-600 dark:text-slate-300 uppercase tracking-tight">Centro</p>
+                    </div>
+                  </label>
+
+                  <label class="cursor-pointer">
+                    <input type="radio" name="login_card_position" value="right-center" {{ 'checked' if card_pos == 'right-center' }} class="peer sr-only">
+                    <div class="peer-checked:border-emerald-500 peer-checked:bg-emerald-500/10 border-2 border-slate-200 dark:border-white/10 rounded-xl p-3 text-center transition-all hover:border-emerald-400 h-full flex flex-col items-center justify-center">
+                      <i class="fa-solid fa-outdent text-lg text-slate-500 peer-checked:text-emerald-500 mb-1.5"></i>
+                      <p class="text-[10px] font-black text-slate-600 dark:text-slate-300 uppercase tracking-tight">Leve Direita</p>
+                    </div>
+                  </label>
+
+                  <label class="cursor-pointer">
+                    <input type="radio" name="login_card_position" value="right" {{ 'checked' if card_pos == 'right' }} class="peer sr-only">
+                    <div class="peer-checked:border-emerald-500 peer-checked:bg-emerald-500/10 border-2 border-slate-200 dark:border-white/10 rounded-xl p-3 text-center transition-all hover:border-emerald-400 h-full flex flex-col items-center justify-center">
+                      <i class="fa-solid fa-align-right text-lg text-slate-500 peer-checked:text-emerald-500 mb-1.5"></i>
+                      <p class="text-[10px] font-black text-slate-600 dark:text-slate-300 uppercase tracking-tight">Total Direita</p>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              <!-- Favicon Upload -->
+              <div class="border-t border-slate-200 dark:border-white/5 pt-5 space-y-3">
+                <div class="flex items-center justify-between">
+                  <div>
+                    <label class="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                      <i class="fa-solid fa-globe text-orange-400"></i> Favicon Personalizado
+                    </label>
+                    <p class="text-xs text-slate-400 mt-0.5">Ícone exibido na aba do navegador. Use .ico, .png ou .svg (32x32px recomendado).</p>
+                  </div>
+                  <button type="button" onclick="triggerReset('favicon_custom')" class="text-[11px] font-medium text-slate-500 hover:text-red-500 transition-colors">
+                    <i class="fa-solid fa-undo"></i> Restaurar
+                  </button>
+                </div>
+                <div class="flex items-center gap-4">
+                  <div class="relative group w-16 h-16 border-2 border-dashed border-slate-200 dark:border-white/10 rounded-xl flex items-center justify-center transition-all hover:border-emerald-500 overflow-hidden">
+                    <input type="file" name="favicon_custom" accept=".ico,.png,.svg" class="absolute inset-0 opacity-0 cursor-pointer" onchange="previewImage(this, 'preview_favicon')">
+                    <img id="preview_favicon" 
+                         src="{% if config and config.favicon_custom %}{{ url_for('static', filename='uploads/layout/' ~ config.favicon_custom) }}{% else %}{{ url_for('static', filename='favicon.ico') }}{% endif %}" 
+                         class="w-10 h-10 object-contain" alt="Favicon">
+                  </div>
+                  <div class="text-xs text-slate-400">
+                    <p>Atual: <span class="font-bold text-slate-600 dark:text-slate-300">{{ config.favicon_custom or 'Padrão do sistema' }}</span></p>
+                    <p class="mt-0.5">Formatos aceitos: .ico, .png, .svg</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ================= TAB: SIDEBAR ================= -->
+            <div id="tabPanel-sidebar" class="tab-panel hidden bg-white/60 dark:bg-slate-900/40 backdrop-blur-md border border-slate-200/50 dark:border-white/10 rounded-2xl p-6 shadow-sm space-y-6">
+              <div class="border-b border-slate-200 dark:border-white/5 pb-3">
+                <h2 class="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                  <i class="fa-solid fa-desktop text-emerald-500"></i> Menu Lateral (Sidebar)
+                </h2>
+                <p class="text-xs text-slate-400 mt-1">Configure o logotipo e as cores do menu lateral do painel operacional.</p>
+              </div>
+
+              <div class="space-y-5">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div class="space-y-1">
+                    <label class="text-sm font-semibold text-slate-700 dark:text-slate-300 block">Logo da Sidebar</label>
+                    <span class="text-xs text-slate-400">Recomendado: 240x80 pixels (PNG transparente)</span>
+                  </div>
+                  
+                  <!-- Sidebar Height Slider -->
+                  <div class="w-full md:w-80 space-y-1">
+                    <div class="flex items-center justify-between">
+                      <label class="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">Ajuste de Altura</label>
+                      <span id="sidebar_logo_height_val" class="text-xs font-mono font-black text-emerald-500">
+                        {{ config.sidebar_logo_height or 44 }}px
+                      </span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <input type="range" name="sidebar_logo_height" id="sidebar_logo_height" min="20" max="80" 
+                             value="{{ config.sidebar_logo_height or 44 }}" 
+                             class="w-full accent-emerald-500 cursor-pointer h-1.5 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none" 
+                             oninput="updateSidebarLogoPreview(this.value)">
+                    </div>
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+                  <div class="md:col-span-2 relative group border-2 border-dashed border-slate-200 dark:border-white/10 rounded-xl p-3 flex flex-col items-center justify-center transition-all duration-300 hover:border-emerald-500 dark:hover:border-emerald-500">
+                    <input id="sidebar_logo" type="file" name="sidebar_logo" accept="image/*" class="absolute inset-0 opacity-0 cursor-pointer" onchange="previewImage(this, 'preview_sidebar_logo')">
+                    <div class="w-full h-28 rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-950 flex items-center justify-center relative p-3">
+                      <span class="absolute bottom-2 left-2 text-[9px] bg-slate-900/60 text-slate-300 rounded px-1.5 py-0.5">Área de Visualização Real</span>
+                      <img id="preview_sidebar_logo" 
+                           src="{% if config and config.sidebar_logo %}{{ url_for('static', filename='uploads/layout/' ~ config.sidebar_logo) }}{% else %}{{ url_for('static', filename='imgsidebar.png') }}{% endif %}" 
+                           class="max-w-full object-contain transition-all duration-200" 
+                           style="height: {{ config.sidebar_logo_height or 44 }}px;"
+                           alt="Sidebar Logo Preview">
+                    </div>
+                    <div class="mt-2 text-xs font-semibold text-emerald-500 dark:text-emerald-400 group-hover:underline">Clique para alterar a imagem</div>
+                  </div>
+
+                  <div class="flex flex-col gap-2">
+                    <button type="button" onclick="triggerReset('sidebar_logo')" class="w-full px-3.5 py-2 text-xs font-semibold text-slate-600 hover:text-red-500 bg-slate-100 dark:bg-white/5 hover:bg-red-500/10 rounded-xl transition-all duration-200 flex items-center justify-center gap-2">
+                      <i class="fa-solid fa-undo"></i> Restaurar Imagem Padrão
+                    </button>
+                    <button type="button" onclick="triggerReset('sidebar_logo_height')" class="w-full px-3.5 py-2 text-xs font-semibold text-slate-600 hover:text-red-500 bg-slate-100 dark:bg-white/5 hover:bg-red-500/10 rounded-xl transition-all duration-200 flex items-center justify-center gap-2">
+                      <i class="fa-solid fa-ruler-combined"></i> Resetar Altura (44px)
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Sidebar Colors -->
+                <div class="border-t border-slate-200 dark:border-white/5 pt-5 space-y-4">
+                  <h3 class="text-sm font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                    <i class="fa-solid fa-paint-roller text-emerald-400"></i> Cores da Sidebar
+                    <span class="text-[10px] font-medium text-slate-400 ml-2">(Deixe em branco para usar as cores padrão do tema)</span>
+                  </h3>
+                  
+                  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Sidebar BG Color -->
+                    <div class="space-y-2">
+                      <label class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Cor de Fundo da Sidebar</label>
+                      <div class="flex items-center gap-3">
+                        <div class="relative w-10 h-8 rounded-lg overflow-hidden border border-slate-200 dark:border-white/10 shadow-sm cursor-pointer">
+                          <input type="color" id="sidebar_bg_color_picker" 
+                                 value="{{ config.sidebar_bg_color or '#0f172a' }}" 
+                                 class="absolute inset-0 w-full h-full p-0 border-0 cursor-pointer bg-transparent">
+                        </div>
+                        <input type="text" name="sidebar_bg_color" id="sidebar_bg_color_text"
+                               value="{{ config.sidebar_bg_color or '' }}"
+                               placeholder="Padrão do tema"
+                               class="flex-1 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 focus:outline-none focus:border-emerald-500 transition-all">
+                        <button type="button" onclick="triggerReset('sidebar_bg_color')" class="text-[10px] text-slate-400 hover:text-red-500 transition-colors"><i class="fa-solid fa-undo"></i></button>
+                      </div>
+                    </div>
+
+                    <!-- Sidebar Text Color -->
+                    <div class="space-y-2">
+                      <label class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Cor do Texto da Sidebar</label>
+                      <div class="flex items-center gap-3">
+                        <div class="relative w-10 h-8 rounded-lg overflow-hidden border border-slate-200 dark:border-white/10 shadow-sm cursor-pointer">
+                          <input type="color" id="sidebar_text_color_picker" 
+                                 value="{{ config.sidebar_text_color or '#e2e8f0' }}" 
+                                 class="absolute inset-0 w-full h-full p-0 border-0 cursor-pointer bg-transparent">
+                        </div>
+                        <input type="text" name="sidebar_text_color" id="sidebar_text_color_text"
+                               value="{{ config.sidebar_text_color or '' }}"
+                               placeholder="Padrão do tema"
+                               class="flex-1 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 focus:outline-none focus:border-emerald-500 transition-all">
+                        <button type="button" onclick="triggerReset('sidebar_text_color')" class="text-[10px] text-slate-400 hover:text-red-500 transition-colors"><i class="fa-solid fa-undo"></i></button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Sidebar Preview -->
+                  <div class="mt-3">
+                    <span class="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-2">Preview da Sidebar:</span>
+                    <div id="sidebarPreview" class="w-48 h-32 rounded-xl border border-white/10 shadow-lg p-4 flex flex-col gap-2 transition-all"
+                         style="background: {{ config.sidebar_bg_color or '#0f172a' }};">
+                      <div class="w-24 h-3 rounded-full" style="background: {{ config.sidebar_text_color or '#e2e8f0' }}; opacity: 0.8"></div>
+                      <div class="w-20 h-2 rounded-full" style="background: {{ config.sidebar_text_color or '#e2e8f0' }}; opacity: 0.4"></div>
+                      <div class="w-16 h-2 rounded-full" style="background: {{ config.sidebar_text_color or '#e2e8f0' }}; opacity: 0.4"></div>
+                      <div class="w-22 h-2 rounded-full mt-2" style="background: {{ config.sidebar_text_color or '#e2e8f0' }}; opacity: 0.3"></div>
+                      <div class="w-18 h-2 rounded-full" style="background: {{ config.sidebar_text_color or '#e2e8f0' }}; opacity: 0.3"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ================= TAB: PDF ================= -->
+            <div id="tabPanel-pdf" class="tab-panel hidden bg-white/60 dark:bg-slate-900/40 backdrop-blur-md border border-slate-200/50 dark:border-white/10 rounded-2xl p-6 shadow-sm space-y-6">
+              <div class="border-b border-slate-200 dark:border-white/5 pb-3">
+                <h2 class="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                  <i class="fa-solid fa-file-pdf text-emerald-500"></i> Relatórios PDF
+                </h2>
+                <p class="text-xs text-slate-400 mt-1">Configure o cabeçalho e rodapé institucional dos PDFs exportados pelo sistema.</p>
+              </div>
+
+              <div class="space-y-6">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div class="space-y-1">
+                    <label class="text-sm font-semibold text-slate-700 dark:text-slate-300 block">Logo do Cabeçalho do PDF</label>
+                    <span class="text-xs text-slate-400">Recomendado: Proporção horizontal, fundo branco ou transparente</span>
+                  </div>
+                  
+                  <!-- PDF Height Slider -->
+                  <div class="w-full md:w-80 space-y-1">
+                    <div class="flex items-center justify-between">
+                      <label class="text-xs font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">Ajuste de Altura no PDF</label>
+                      <span id="pdf_logo_height_val" class="text-xs font-mono font-black text-emerald-500">
+                        {{ config.pdf_logo_height or 30 }}pt
+                      </span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <input type="range" name="pdf_logo_height" id="pdf_logo_height" min="15" max="60" 
+                             value="{{ config.pdf_logo_height or 30 }}" 
+                             class="w-full accent-emerald-500 cursor-pointer h-1.5 bg-slate-200 dark:bg-slate-800 rounded-lg appearance-none" 
+                             oninput="updatePdfLogoPreview(this.value)">
+                    </div>
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+                  <div class="md:col-span-2 relative group border-2 border-dashed border-slate-200 dark:border-white/10 rounded-xl p-3 flex flex-col items-center justify-center transition-all duration-300 hover:border-emerald-500 dark:hover:border-emerald-500">
+                    <input id="pdf_logo" type="file" name="pdf_logo" accept="image/*" class="absolute inset-0 opacity-0 cursor-pointer" onchange="previewImage(this, 'preview_pdf_logo')">
+                    <div class="w-full h-28 rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-950 flex items-center justify-center relative p-3">
+                      <span class="absolute bottom-2 left-2 text-[9px] bg-slate-900/60 text-slate-300 rounded px-1.5 py-0.5">Área de Visualização Estimada</span>
+                      <img id="preview_pdf_logo" 
+                           src="{% if config and config.pdf_logo %}{{ url_for('static', filename='uploads/layout/' ~ config.pdf_logo) }}{% else %}{{ url_for('static', filename='logo.png') }}{% endif %}" 
+                           class="max-w-full object-contain transition-all duration-200" 
+                           style="height: {{ ((config.pdf_logo_height or 30) * 1.33) | int }}px;"
+                           alt="PDF Logo Preview">
+                    </div>
+                    <div class="mt-2 text-xs font-semibold text-emerald-500 dark:text-emerald-400 group-hover:underline">Clique para alterar a imagem</div>
+                  </div>
+
+                  <div class="flex flex-col gap-2">
+                    <button type="button" onclick="triggerReset('pdf_logo')" class="w-full px-3.5 py-2 text-xs font-semibold text-slate-600 hover:text-red-500 bg-slate-100 dark:bg-white/5 hover:bg-red-500/10 rounded-xl transition-all duration-200 flex items-center justify-center gap-2">
+                      <i class="fa-solid fa-undo"></i> Restaurar Imagem Padrão
+                    </button>
+                    <button type="button" onclick="triggerReset('pdf_logo_height')" class="w-full px-3.5 py-2 text-xs font-semibold text-slate-600 hover:text-red-500 bg-slate-100 dark:bg-white/5 hover:bg-red-500/10 rounded-xl transition-all duration-200 flex items-center justify-center gap-2">
+                      <i class="fa-solid fa-ruler-combined"></i> Resetar Altura (30pt)
+                    </button>
+                  </div>
+                </div>
+
+                <!-- PDF Footer -->
+                <div class="border-t border-slate-200 dark:border-white/5 pt-5 space-y-2">
+                  <div class="flex items-center justify-between">
+                    <label class="text-sm font-semibold text-slate-700 dark:text-slate-300 block">Texto do Rodapé dos PDFs</label>
+                    <button type="button" onclick="triggerReset('pdf_footer')" class="text-xs font-bold text-red-500 hover:underline">
+                      <i class="fa-solid fa-undo"></i> Resetar Rodapé
+                    </button>
+                  </div>
+                  <p class="text-xs text-slate-400">Insira as informações corporativas, endereços, contatos ou dados fiscais (CNPJ) para serem impressos nas páginas do PDF.</p>
+                  <textarea name="pdf_footer" rows="5" 
+                            class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-white/10 rounded-xl p-3.5 text-xs text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all duration-200 resize-none font-mono"
+                            placeholder="Nome da Empresa&#10;CNPJ: 00.000.000/0001-00&#10;Endereço comercial...">{% if config and config.pdf_footer %}{{ config.pdf_footer }}{% else %}ADAPT LINK SERVIÇOS EM COMUNICAÇÃO MULTIMÍDIA EIRELI
 CNPJ: 08.980.148/0001-41       Inscr. Est.: 78.342.480
 Rua Waldir Pedro de Medeiros, 253 – São Miguel – Seropédica – RJ
 CEP: 23.893-725
 Tel.: (21) 3812-5900 / (21) 2682-7822
 WWW.ADAPTLINK.COM.BR{% endif %}</textarea>
+                </div>
               </div>
             </div>
-          </div>
+            
+          </div> <!-- Fim da Coluna Esquerda -->
 
-          <div class="mt-6 flex justify-end gap-2 border-t border-slate-200 dark:border-white/5 pt-4">
-            <button type="button" onclick="triggerReset('pdf_logo')" class="px-3.5 py-2 text-xs font-medium text-slate-500 hover:text-red-500 bg-slate-100 dark:bg-white/5 hover:bg-red-500/10 rounded-xl transition-all duration-200">
-              <i class="fa-solid fa-undo"></i> Resetar Logo
-            </button>
-            <button type="button" onclick="triggerReset('pdf_footer')" class="px-3.5 py-2 text-xs font-medium text-slate-500 hover:text-red-500 bg-slate-100 dark:bg-white/5 hover:bg-red-500/10 rounded-xl transition-all duration-200">
-              <i class="fa-solid fa-undo"></i> Resetar Rodapé
-            </button>
-          </div>
-        </div>
-
-        <!-- Bloco Power BI -->
-        <div class="bg-white/60 dark:bg-slate-900/40 backdrop-blur-md border border-slate-200/50 dark:border-white/10 rounded-2xl p-6 shadow-sm">
-          <h2 class="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2 mb-4 border-b border-slate-200 dark:border-white/5 pb-3">
-            <i class="fa-solid fa-chart-pie text-emerald-500"></i> Dashboard Power BI
-          </h2>
-
-          <div class="space-y-4">
-            <div>
-              <div class="flex items-center justify-between mb-2">
-                <label class="text-sm font-semibold text-slate-700 dark:text-slate-300">URL do Relatório (Publish to Web)</label>
-                <span class="text-xs text-slate-400">Ex: https://app.powerbi.com/view?r=eyJrIjoi...</span>
+          <!-- Coluna Direita: Simulador de Dispositivo -->
+          <div class="w-full xl:w-[380px] shrink-0 xl:sticky xl:top-6 space-y-4">
+            
+            <!-- Simulator Control Header -->
+            <div class="bg-white/60 dark:bg-slate-900/40 backdrop-blur-md border border-slate-200/50 dark:border-white/10 rounded-2xl p-4 shadow-sm flex items-center justify-between">
+              <span class="text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">Simulador de Login</span>
+              <div class="flex bg-slate-100 dark:bg-slate-950 p-1 rounded-xl border border-slate-200/30 dark:border-white/5">
+                <button type="button" onclick="setSimulatorMode('desktop')" id="simBtn-desktop" class="px-3.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all bg-white dark:bg-slate-900 text-slate-800 dark:text-white shadow-sm border border-slate-200/20 dark:border-white/5">
+                  <i class="fa-solid fa-display mr-1"></i> Desktop
+                </button>
+                <button type="button" onclick="setSimulatorMode('mobile')" id="simBtn-mobile" class="px-3.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all text-slate-500 dark:text-slate-400">
+                  <i class="fa-solid fa-mobile-screen mr-1"></i> Mobile
+                </button>
               </div>
-              <input id="powerbi_url" type="text" name="powerbi_url" 
-                     value="{{ config.powerbi_url or '' }}" 
-                     placeholder="Insira a URL pública gerada no Power BI Service" 
-                     class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-white/10 rounded-xl px-4 py-3 text-sm text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all duration-200">
+            </div>
+
+            <!-- Device Frame Wrapper -->
+            <div id="simDeviceFrame" class="relative w-full overflow-hidden border border-slate-200 dark:border-white/10 shadow-2xl transition-all duration-300 rounded-[2rem] bg-slate-950 flex flex-col" style="aspect-ratio: 16/10; height: auto;">
+              
+              <!-- Mac-style Window header (only shown in Desktop mode) -->
+              <div id="simWindowHeader" class="h-6 bg-slate-900 border-b border-white/5 flex items-center px-3 gap-1.5 shrink-0 select-none">
+                <div class="w-1.5 h-1.5 rounded-full bg-red-500"></div>
+                <div class="w-1.5 h-1.5 rounded-full bg-yellow-500"></div>
+                <div class="w-1.5 h-1.5 rounded-full bg-green-500"></div>
+                <div class="flex-1 bg-white/5 text-[7px] text-slate-400 rounded-md text-center py-0.5 max-w-xs mx-auto truncate font-mono">http://localhost:8000/login</div>
+              </div>
+
+              <!-- Smartphone status bar / Dynamic Island (only shown in Mobile mode) -->
+              <div id="simMobileHeader" class="h-6 bg-black/80 flex items-center justify-between px-5 shrink-0 select-none hidden">
+                <span class="text-[8px] text-white font-bold font-mono">09:41</span>
+                <div class="w-12 h-3 rounded-full bg-black mx-auto"></div>
+                <div class="flex items-center gap-1">
+                  <i class="fa-solid fa-signal text-[8px] text-white"></i>
+                  <i class="fa-solid fa-wifi text-[8px] text-white"></i>
+                  <i class="fa-solid fa-battery-three-quarters text-[8px] text-white"></i>
+                </div>
+              </div>
+
+              <!-- Simulator Screen Content -->
+              <div id="simScreen" class="flex-1 overflow-hidden relative flex items-center">
+                
+                <!-- Background Image -->
+                <div id="simBgImage" class="absolute inset-0 bg-cover bg-center transition-all duration-200" 
+                     style="background-image: url('{% if config and config.login_bg_desktop %}{{ url_for('static', filename='uploads/layout/' ~ config.login_bg_desktop) }}{% else %}{{ url_for('static', filename='img.png') }}{% endif %}');">
+                </div>
+                
+                <!-- Overlay Color -->
+                <div id="simOverlay" class="absolute inset-0 transition-all duration-200"></div>
+
+                <!-- Real-time Login Card inside screen -->
+                <div id="simLoginCardContainer" class="absolute inset-0 flex items-center p-6 w-full h-full transition-all duration-300">
+                  <div id="simLoginCard" class="w-36 bg-black/60 border border-white/10 p-3 flex flex-col justify-between shrink-0 shadow-2xl transition-all duration-300" style="aspect-ratio: 5/6.5;">
+                    
+                    <!-- Logo -->
+                    <div class="flex justify-center mb-1">
+                      <img id="simLogo" src="{% if config and config.login_logo %}{{ url_for('static', filename='uploads/layout/' ~ config.login_logo) }}{% else %}{{ url_for('static', filename='logo.png') }}{% endif %}" class="object-contain" style="max-height: 40px; max-width: 100%;">
+                    </div>
+
+                    <!-- Title -->
+                    <div class="text-center my-1 select-none">
+                      <p id="simTitleText" class="text-[7px] font-bold text-white tracking-wide truncate"></p>
+                      <p id="simSubtitleText" class="text-[5px] text-slate-300 tracking-tight mt-0.5 truncate"></p>
+                    </div>
+
+                    <!-- Dummy Form Fields -->
+                    <div class="space-y-1 my-1">
+                      <div class="h-4 rounded bg-white/10 border border-white/5 flex items-center px-1.5 select-none overflow-hidden">
+                        <span id="simUserPlaceholder" class="text-[5.5px] text-slate-400 truncate">Usuário</span>
+                      </div>
+                      <div class="h-4 rounded bg-white/10 border border-white/5 flex items-center px-1.5 select-none overflow-hidden">
+                        <span id="simPassPlaceholder" class="text-[5.5px] text-slate-400 truncate">Senha</span>
+                      </div>
+                    </div>
+
+                    <!-- Submit Button -->
+                    <button id="simBtnSubmit" type="button" class="w-full text-[7px] font-bold text-white transition-all shadow-md mt-1" onclick="return false;">
+                      Entrar
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="bg-gradient-to-br from-blue-500/5 to-indigo-500/5 dark:from-blue-500/10 dark:to-indigo-500/10 border border-blue-500/15 rounded-2xl p-4">
+              <p class="text-[10px] font-black uppercase text-blue-600 dark:text-blue-400 tracking-wider mb-1">Simulador Ativo</p>
+              <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                Qualquer alteração em cores, tamanhos, posições, arredondamentos ou textos reflete instantaneamente neste mockup, permitindo visualizar com precisão como a tela de login ficará antes de salvar.
+              </p>
             </div>
           </div>
+          
+        </div> <!-- Fim do flex container de duas colunas -->
 
-          <div class="mt-6 flex justify-end border-t border-slate-200 dark:border-white/5 pt-4">
-            <button type="button" onclick="triggerReset('powerbi_url')" class="px-3.5 py-2 text-xs font-medium text-slate-500 hover:text-red-500 bg-slate-100 dark:bg-white/5 hover:bg-red-500/10 rounded-xl transition-all duration-200">
-              <i class="fa-solid fa-undo"></i> Resetar para o Padrão
-            </button>
-          </div>
+        <!-- SAVE BUTTON BAR -->
+        <div class="flex items-center justify-between bg-white/60 dark:bg-slate-900/40 backdrop-blur-md border border-slate-200/50 dark:border-white/10 rounded-2xl p-4 shadow-sm mt-6">
+          <p class="text-xs text-slate-400 px-2 hidden sm:block">Clique para salvar todas as abas de configurações modificadas de uma só vez.</p>
+          <button type="submit" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 py-3 rounded-xl font-bold text-sm bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-600/20 transition-all duration-300 transform active:scale-95">
+            <i class="fa-solid fa-floppy-disk"></i> Salvar Todas as Configurações
+          </button>
         </div>
 
-      </div>
+      </form>
     </div>
-
-    <!-- SAVE BUTTON -->
-    <div class="flex items-center justify-end bg-white/60 dark:bg-slate-900/40 backdrop-blur-md border border-slate-200/50 dark:border-white/10 rounded-2xl p-4 shadow-sm">
-      <button type="submit" class="inline-flex items-center gap-2 px-6 py-3 rounded-xl font-bold text-sm bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-600/20 transition-all duration-300 transform active:scale-95">
-        <i class="fa-solid fa-check"></i> Salvar Todas as Configurações
-      </button>
-    </div>
-
-  </form>
+  </div>
 
   <!-- HIDDEN RESET FORMS -->
   <form id="resetForm" method="post" action="" class="hidden"></form>
 
-  <!-- ✅ PREVIEW VISUALIZER MODAL -->
+  <!-- PREVIEW VISUALIZER MODAL -->
   <div id="previewVisualizerModal" class="fixed inset-0 hidden items-center justify-center z-[200] p-4">
       <div class="absolute inset-0 bg-slate-950/80 backdrop-blur-md" onclick="closeVisualizer()"></div>
-      <div class="relative w-full max-w-4xl rounded-[2.5rem] bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+      <div class="relative w-full max-w-4xl rounded-[2.5rem] bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 shadow-2xl overflow-hidden flex flex-col max-h-[90vh] transition-all duration-300 transform scale-95 opacity-0" id="visualizerModalCard">
           <div class="p-6 border-b border-slate-200 dark:border-white/5 bg-slate-500/5 flex items-center justify-between">
               <div class="flex items-center gap-3">
                   <div class="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-500">
@@ -305,59 +1103,395 @@ WWW.ADAPTLINK.COM.BR{% endif %}</textarea>
 
 </div>
 
+<!-- CSS ADICIONAL PARA GERENCIAMENTO DE ABAS E ACCENT -->
+<style>
+  .tab-btn.active-tab {
+    background-color: rgba(16, 185, 129, 0.08);
+    color: #10b981;
+    border-color: #10b981;
+  }
+  .dark .tab-btn.active-tab {
+    background-color: rgba(16, 185, 129, 0.04);
+    color: #34d399;
+    border-color: #34d399;
+  }
+  .tab-btn.inactive-tab {
+    border-color: transparent;
+    color: #64748b;
+  }
+  .dark .tab-btn.inactive-tab {
+    color: #94a3b8;
+  }
+  .tab-btn.inactive-tab:hover {
+    background-color: rgba(100, 116, 139, 0.05);
+    color: #1e293b;
+  }
+  .dark .tab-btn.inactive-tab:hover {
+    background-color: rgba(255, 255, 255, 0.02);
+    color: #f1f5f9;
+  }
+  /* Radio card visual fix */
+  input[type="radio"]:checked + div {
+    border-color: #10b981 !important;
+    background-color: rgba(16, 185, 129, 0.1) !important;
+  }
+  input[type="radio"]:checked + div i {
+    color: #10b981 !important;
+  }
+</style>
+
 <script>
+  // TAB SYSTEM
+  document.addEventListener("DOMContentLoaded", function() {
+    const lastTab = sessionStorage.getItem("active_layout_tab") || "geral";
+    switchTab(lastTab);
+  });
+
+  function switchTab(tabId) {
+    sessionStorage.setItem("active_layout_tab", tabId);
+    
+    document.querySelectorAll(".tab-panel").forEach(panel => {
+      panel.classList.add("hidden");
+    });
+    document.querySelectorAll(".tab-btn").forEach(btn => {
+      btn.classList.remove("active-tab");
+      btn.classList.add("inactive-tab");
+    });
+
+    const activePanel = document.getElementById("tabPanel-" + tabId);
+    const activeBtn = document.getElementById("tabBtn-" + tabId);
+    if (activePanel && activeBtn) {
+      activePanel.classList.remove("hidden");
+      activeBtn.classList.remove("inactive-tab");
+      activeBtn.classList.add("active-tab");
+    }
+  }
+
+  // REAL-TIME PREVIEW CONTROLS
+  function updateLoginLogoPreview(val) {
+    document.getElementById('login_logo_height_val').textContent = val + 'px';
+    document.getElementById('preview_login_logo').style.maxHeight = val + 'px';
+    updateEffectsPreview();
+  }
+
+  function updateSidebarLogoPreview(val) {
+    document.getElementById('sidebar_logo_height_val').textContent = val + 'px';
+    document.getElementById('preview_sidebar_logo').style.height = val + 'px';
+    updateEffectsPreview();
+  }
+
+  function updatePdfLogoPreview(val) {
+    document.getElementById('pdf_logo_height_val').textContent = val + 'pt';
+    document.getElementById('preview_pdf_logo').style.height = Math.round(val * 1.33) + 'px';
+  }
+
+  // EFFECTS PREVIEW (Live)
+  function updateEffectsPreview() {
+    const zoom = document.getElementById('login_bg_zoom').value;
+    const blur = document.getElementById('login_bg_blur').value;
+    const opacity = document.getElementById('login_bg_opacity').value;
+    const overlayColor = document.getElementById('login_overlay_color_text').value;
+    const cardOpacity = document.getElementById('login_card_opacity').value;
+    const cardBlur = document.getElementById('login_card_blur').value;
+    const cardRadius = document.getElementById('login_card_radius').value;
+    const primaryColor = document.getElementById('login_primary_color_text').value;
+    const secondaryColor = document.getElementById('login_secondary_color_text').value;
+    const titleText = document.getElementById('login_title_text').value;
+    const subtitleText = document.getElementById('login_subtitle_text').value;
+    const usernamePlaceholder = document.getElementById('login_username_placeholder').value;
+    const passwordPlaceholder = document.getElementById('login_password_placeholder').value;
+    const btnText = document.getElementById('login_btn_text').value;
+    const btnRadius = document.getElementById('login_btn_radius').value;
+    const btnPaddingY = document.getElementById('login_btn_padding_y').value;
+    const btnFontSize = document.getElementById('login_btn_font_size').value;
+    const logoHeight = document.getElementById('login_logo_height').value;
+
+    // Update labels
+    document.getElementById('login_bg_zoom_val').textContent = zoom + '%';
+    document.getElementById('login_bg_blur_val').textContent = blur + 'px';
+    document.getElementById('login_bg_opacity_val').textContent = opacity + '%';
+    document.getElementById('login_card_opacity_val').textContent = cardOpacity + '%';
+    document.getElementById('login_card_blur_val').textContent = cardBlur + 'px';
+    document.getElementById('login_card_radius_val').textContent = cardRadius + 'px';
+    document.getElementById('login_btn_radius_val').textContent = btnRadius + 'px';
+    document.getElementById('login_btn_padding_y_val').textContent = btnPaddingY + 'px';
+    document.getElementById('login_btn_font_size_val').textContent = btnFontSize + 'px';
+
+    // Update Button & Gradients in Settings Form
+    const btnPreview = document.getElementById('btnPreview');
+    if (btnPreview) {
+      btnPreview.style.background = `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`;
+      btnPreview.style.borderRadius = btnRadius + 'px';
+      btnPreview.style.paddingTop = btnPaddingY + 'px';
+      btnPreview.style.paddingBottom = btnPaddingY + 'px';
+      btnPreview.style.fontSize = btnFontSize + 'px';
+      btnPreview.textContent = btnText;
+    }
+    const gradPreview = document.getElementById('gradientPreview');
+    if (gradPreview) {
+      gradPreview.style.background = `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`;
+    }
+
+    // Update Device Simulator
+    const simBg = document.getElementById('simBgImage');
+    const simOverlay = document.getElementById('simOverlay');
+    const simCard = document.getElementById('simLoginCard');
+    const simTitle = document.getElementById('simTitleText');
+    const simSubtitle = document.getElementById('simSubtitleText');
+    const simUserP = document.getElementById('simUserPlaceholder');
+    const simPassP = document.getElementById('simPassPlaceholder');
+    const simBtn = document.getElementById('simBtnSubmit');
+    const simLogo = document.getElementById('simLogo');
+    const simCardContainer = document.getElementById('simLoginCardContainer');
+
+    if (simBg) {
+      simBg.style.filter = `blur(${Math.round(blur / 2.0)}px)`;
+      simBg.style.transform = `scale(${zoom / 100})`;
+    }
+    if (simOverlay) {
+      simOverlay.style.backgroundColor = overlayColor;
+      simOverlay.style.opacity = opacity / 100;
+    }
+    if (simCard) {
+      simCard.style.borderRadius = Math.round(cardRadius / 1.5) + 'px';
+      simCard.style.backdropFilter = `blur(${Math.round(cardBlur / 2.0)}px)`;
+      simCard.style.background = `rgba(0, 0, 0, ${cardOpacity / 100})`;
+    }
+    if (simTitle) {
+      simTitle.textContent = titleText;
+    }
+    if (simSubtitle) {
+      simSubtitle.textContent = subtitleText;
+      if (subtitleText.trim() === '') {
+        simSubtitle.classList.add('hidden');
+      } else {
+        simSubtitle.classList.remove('hidden');
+      }
+    }
+    if (simUserP) {
+      simUserP.textContent = usernamePlaceholder;
+    }
+    if (simPassP) {
+      simPassP.textContent = passwordPlaceholder;
+    }
+    if (simBtn) {
+      simBtn.style.background = `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`;
+      simBtn.style.borderRadius = Math.round(btnRadius / 1.5) + 'px';
+      simBtn.style.paddingTop = Math.round(btnPaddingY / 1.5) + 'px';
+      simBtn.style.paddingBottom = Math.round(btnPaddingY / 1.5) + 'px';
+      simBtn.style.fontSize = Math.round(btnFontSize / 1.5) + 'px';
+      simBtn.textContent = btnText;
+    }
+    if (simLogo) {
+      simLogo.style.maxHeight = Math.round(logoHeight / 3.0) + 'px';
+    }
+
+    // Position Alignment (Desktop Simulator Mode only)
+    if (currentSimMode === 'desktop') {
+      let cardPos = 'right';
+      const radios = document.getElementsByName('login_card_position');
+      for (const r of radios) {
+        if (r.checked) {
+          cardPos = r.value;
+          break;
+        }
+      }
+
+      if (cardPos === 'left') {
+        simCardContainer.style.justifyContent = 'flex-start';
+        simCardContainer.style.paddingLeft = '1.5rem';
+        simCardContainer.style.paddingRight = '0';
+      } else if (cardPos === 'left-center') {
+        simCardContainer.style.justifyContent = 'flex-start';
+        simCardContainer.style.paddingLeft = '4.5rem';
+        simCardContainer.style.paddingRight = '0';
+      } else if (cardPos === 'center') {
+        simCardContainer.style.justifyContent = 'center';
+        simCardContainer.style.paddingLeft = '0';
+        simCardContainer.style.paddingRight = '0';
+      } else if (cardPos === 'right-center') {
+        simCardContainer.style.justifyContent = 'flex-end';
+        simCardContainer.style.paddingRight = '4.5rem';
+        simCardContainer.style.paddingLeft = '0';
+      } else { // right
+        simCardContainer.style.justifyContent = 'flex-end';
+        simCardContainer.style.paddingRight = '1.5rem';
+        simCardContainer.style.paddingLeft = '0';
+      }
+    } else {
+      // Mobile simulator always centers the card
+      simCardContainer.style.justifyContent = 'center';
+      simCardContainer.style.paddingLeft = '0';
+      simCardContainer.style.paddingRight = '0';
+    }
+  }
+
+  // Overlay color helpers
+  function setOverlayColor(color) {
+    document.getElementById('login_overlay_color_picker').value = color;
+    document.getElementById('login_overlay_color_text').value = color;
+    updateEffectsPreview();
+  }
+
+  // IMAGE PREVIEW
   function previewImage(input, previewId) {
     const file = input.files[0];
     const preview = document.getElementById(previewId);
-    if (file) {
+    if (file && preview) {
       const reader = new FileReader();
       reader.onload = function(e) {
         preview.src = e.target.result;
+        // Update device simulator backgrounds in real-time
+        if (previewId === 'preview_bg_desktop' && currentSimMode === 'desktop') {
+          document.getElementById('simBgImage').style.backgroundImage = `url('${e.target.result}')`;
+        } else if (previewId === 'preview_bg_mobile' && currentSimMode === 'mobile') {
+          document.getElementById('simBgImage').style.backgroundImage = `url('${e.target.result}')`;
+        } else if (previewId === 'preview_login_logo') {
+          document.getElementById('simLogo').src = e.target.result;
+        }
       };
       reader.readAsDataURL(file);
     }
   }
 
+  // COLOR SYNC
+  function syncColorPickerToText(val) {
+    document.getElementById('login_primary_color_text').value = val;
+    updateEffectsPreview();
+  }
+  function syncColorTextToPicker(val) {
+    if (/^#[0-9A-F]{6}$/i.test(val)) {
+      document.getElementById('login_primary_color_picker').value = val;
+      updateEffectsPreview();
+    }
+  }
+  function selectPaletteColor(val) {
+    document.getElementById('login_primary_color_picker').value = val;
+    document.getElementById('login_primary_color_text').value = val;
+    updateEffectsPreview();
+  }
+
+  // RESET HANDLER
   function triggerReset(field) {
     if (confirm('Tem certeza de que deseja restaurar esta configuração para o padrão do sistema?')) {
       const form = document.getElementById('resetForm');
       form.action = `/configuracoes/layout/reset/${field}`;
+      // form.submit() does NOT fire the DOM "submit" event,
+      // so the global CSRF injector from layout.html never runs.
+      // We must inject the token manually here.
+      if (!form.querySelector('input[name="csrf_token"]')) {
+        const tokenMeta = document.querySelector('meta[name="csrf-token"]');
+        if (tokenMeta) {
+          const input = document.createElement('input');
+          input.type = 'hidden';
+          input.name = 'csrf_token';
+          input.value = tokenMeta.content;
+          form.appendChild(input);
+        }
+      }
       form.submit();
     }
   }
 
-  function syncColorPickerToText(val) {
-    document.getElementById('login_primary_color_text').value = val;
-  }
-
-  function syncColorTextToPicker(val) {
-    if (/^#[0-9A-F]{6}$/i.test(val)) {
-      document.getElementById('login_primary_color_picker').value = val;
-    }
-  }
-
-  function selectPaletteColor(val) {
-    document.getElementById('login_primary_color_picker').value = val;
-    document.getElementById('login_primary_color_text').value = val;
-  }
-
-  // ✅ PREVIEW VISUALIZER LOGIC
+  // VISUALIZER MODAL
   function openVisualizer(imgId, title) {
     const src = document.getElementById(imgId).src;
     document.getElementById('visualizerImg').src = src;
     document.getElementById('visualizerTitle').textContent = title;
     
     const modal = document.getElementById('previewVisualizerModal');
+    const card = document.getElementById('visualizerModalCard');
+    
     modal.classList.remove('hidden');
     modal.classList.add('flex');
+    
+    setTimeout(() => {
+      card.classList.remove('scale-95', 'opacity-0');
+      card.classList.add('scale-100', 'opacity-100');
+    }, 10);
   }
 
   function closeVisualizer() {
     const modal = document.getElementById('previewVisualizerModal');
-    modal.classList.remove('flex');
-    modal.classList.add('hidden');
+    const card = document.getElementById('visualizerModalCard');
+    
+    card.classList.remove('scale-100', 'opacity-100');
+    card.classList.add('scale-95', 'opacity-0');
+    
+    setTimeout(() => {
+      modal.classList.remove('flex');
+      modal.classList.add('hidden');
+    }, 200);
   }
+
+  // DEVICE SIMULATOR LOGIC
+  let currentSimMode = 'desktop';
+  function setSimulatorMode(mode) {
+    currentSimMode = mode;
+    
+    const btnD = document.getElementById('simBtn-desktop');
+    const btnM = document.getElementById('simBtn-mobile');
+    const headerDesktop = document.getElementById('simWindowHeader');
+    const headerMobile = document.getElementById('simMobileHeader');
+    const frame = document.getElementById('simDeviceFrame');
+    
+    if (mode === 'desktop') {
+      btnD.className = "px-3.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all bg-white dark:bg-slate-900 text-slate-800 dark:text-white shadow-sm border border-slate-200/20 dark:border-white/5";
+      btnM.className = "px-3.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all text-slate-500 dark:text-slate-400";
+      
+      headerDesktop.classList.remove('hidden');
+      headerMobile.classList.add('hidden');
+      
+      frame.style.aspectRatio = "16/10";
+      frame.style.maxWidth = "100%";
+      frame.style.margin = "0";
+      
+      // Update background with Desktop Image
+      const bgImgSrc = document.getElementById('preview_bg_desktop').src;
+      document.getElementById('simBgImage').style.backgroundImage = `url('${bgImgSrc}')`;
+    } else {
+      btnM.className = "px-3.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all bg-white dark:bg-slate-900 text-slate-800 dark:text-white shadow-sm border border-slate-200/20 dark:border-white/5";
+      btnD.className = "px-3.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all text-slate-500 dark:text-slate-400";
+      
+      headerDesktop.classList.add('hidden');
+      headerMobile.classList.remove('hidden');
+      
+      frame.style.aspectRatio = "9/16";
+      frame.style.maxWidth = "280px";
+      frame.style.margin = "0 auto";
+      
+      // Update background with Mobile Image
+      const bgImgSrc = document.getElementById('preview_bg_mobile').src;
+      document.getElementById('simBgImage').style.backgroundImage = `url('${bgImgSrc}')`;
+    }
+    
+    updateEffectsPreview();
+  }
+
+  // DOM Event Listeners Registration
+  document.addEventListener("DOMContentLoaded", function() {
+    const inputsToWatch = [
+      'login_bg_zoom', 'login_bg_blur', 'login_bg_opacity', 'login_overlay_color_text',
+      'login_card_opacity', 'login_card_blur', 'login_card_radius',
+      'login_primary_color_text', 'login_secondary_color_text',
+      'login_title_text', 'login_subtitle_text', 'login_username_placeholder', 'login_password_placeholder',
+      'login_btn_text', 'login_btn_radius', 'login_btn_padding_y', 'login_btn_font_size', 'login_logo_height'
+    ];
+    
+    inputsToWatch.forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.addEventListener('input', updateEffectsPreview);
+      }
+    });
+
+    // Watch position radios
+    document.getElementsByName('login_card_position').forEach(radio => {
+      radio.addEventListener('change', updateEffectsPreview);
+    });
+
+    // Initial load
+    setSimulatorMode('desktop');
+  });
 </script>
 {% endblock %}
-
-{# accessibility helper: onkeydown= handler present #}

@@ -45,7 +45,7 @@ from backend.utils import (
     supervisor_allowed, manutencao_only, count_files, list_reports,
     km_alert, iso_week, weekly_km_series, save_photos, _check_rate_limit,
     _record_attempt, _clear_attempts, _cleanup_old_attempts, parse_periodo,
-    make_premium_pdf, allowed_file
+    make_premium_pdf, allowed_file, br_datetime
 )
 
 
@@ -482,6 +482,25 @@ from flask_login import current_user
 
 
 
+def safe_float(val):
+    if not val:
+        return None
+    if isinstance(val, str):
+        val = val.strip()
+        if not val:
+            return None
+        val = val.replace("R$", "").replace(" ", "")
+        if "," in val:
+            if "." in val:
+                val = val.replace(".", "")
+            val = val.replace(",", ".")
+    try:
+        return float(val)
+    except ValueError:
+        return None
+
+
+
 # ----------------- AVARIAS / ORDENS DE SERVIÇO -----------------
 @fleet_bp.route("/avarias/registro", methods=["GET", "POST"])
 @supervisor_allowed
@@ -507,7 +526,8 @@ def avarias_registro():
                 descricao=request.form.get("descricao"),
                 km=request.form.get("km"),
                 status="aberta",
-                foto=saved_filename
+                foto=saved_filename,
+                data_abertura=agora()
             )
             db.session.add(nova)
             db.session.commit()
@@ -539,11 +559,11 @@ def avarias_registro():
             os_finalizar = AvariaOS.query.get(os_id)
 
             if os_finalizar:
-                os_finalizar.valor_gasto = request.form.get("valor")
+                os_finalizar.valor_gasto = safe_float(request.form.get("valor"))
                 os_finalizar.pecas_trocadas = request.form.get("pecas")
                 os_finalizar.servico_realizado = request.form.get("servico")
                 os_finalizar.status = "finalizada"
-                os_finalizar.data_fechamento = datetime.utcnow()
+                os_finalizar.data_fechamento = agora()
                 
                 # Sume com o comunicado de O.S atrasada da Central de Notificações
                 ann_title = f"⚠️ O.S. Atrasada: #{os_finalizar.id}"
@@ -645,13 +665,14 @@ def avaria_pdf(avaria_id):
     os_detail = AvariaOS.query.get_or_404(avaria_id)
     buffer = io.BytesIO()
 
-    # Formatar data de abertura e fechamento
-    data_abertura_str = os_detail.data_abertura.strftime("%d/%m/%Y %H:%M") if os_detail.data_abertura else "N/A"
-    data_fechamento_str = os_detail.data_fechamento.strftime("%d/%m/%Y %H:%M") if os_detail.data_fechamento else "N/A"
+    # Formatar data de abertura e fechamento usando br_datetime
+    data_abertura_str = br_datetime(os_detail.data_abertura)
+    data_fechamento_str = br_datetime(os_detail.data_fechamento)
     
     # Metadados
     metadata = {
-        "ID O.S.": f"#{os_detail.id}",
+        "ID": f"OS-{os_detail.id}",  # Ajustado para seguir o padrão com hífen (ex: OS-21)
+        "ID O.S.": f"OS-{os_detail.id}",
         "Veículo": f"{os_detail.vehicle.brand} {os_detail.vehicle.model} ({os_detail.vehicle.plate})" if os_detail.vehicle else "N/A",
         "Gravidade": (os_detail.gravidade or "baixa").upper(),
         "KM Registro": f"{os_detail.km or 0} KM",
@@ -675,14 +696,14 @@ def avaria_pdf(avaria_id):
         if p_path.exists():
             image_paths.append(p_path)
 
-    make_premium_pdf(buffer, f"Ordem de Serviço #{os_detail.id}", metadata, content, image_paths=image_paths)
+    make_premium_pdf(buffer, f"Ordem de Serviço OS-{os_detail.id}", metadata, content, image_paths=image_paths)
     buffer.seek(0)
     
     return send_file(
         buffer,
         mimetype="application/pdf",
         as_attachment=False,
-        download_name=f"ordem_servico_{os_detail.id}.pdf"
+        download_name=f"ordem_servico_os-{os_detail.id}.pdf"
     )
 
 
@@ -701,11 +722,11 @@ def manutencao_os():
             os_finalizar = AvariaOS.query.get(os_id)
 
             if os_finalizar:
-                os_finalizar.valor_gasto = request.form.get("valor")
+                os_finalizar.valor_gasto = safe_float(request.form.get("valor"))
                 os_finalizar.pecas_trocadas = request.form.get("pecas")
                 os_finalizar.servico_realizado = request.form.get("servico")
                 os_finalizar.status = "finalizada"
-                os_finalizar.data_fechamento = datetime.utcnow()
+                os_finalizar.data_fechamento = agora()
                 
                 # Sume com o comunicado de O.S atrasada da Central de Notificações
                 ann_title = f"⚠️ O.S. Atrasada: #{os_finalizar.id}"
@@ -753,12 +774,12 @@ def manutencao_os():
                     gravidade=gravidade,
                     descricao=descricao,
                     km=int(km) if km else None,
-                    valor_gasto=float(valor) if valor else None,
+                    valor_gasto=safe_float(valor),
                     pecas_trocadas=pecas,
                     servico_realizado=servico,
                     status="finalizada",
-                    data_abertura=datetime.utcnow(),
-                    data_fechamento=datetime.utcnow()
+                    data_abertura=agora(),
+                    data_fechamento=agora()
                 )
                 db.session.add(new_os)
                 db.session.commit()
@@ -1196,8 +1217,9 @@ def reports_generate():
             try:
                 from reportlab.lib.utils import ImageReader
                 logo = ImageReader(logo_path)
-                # Bounding box: max width 90pt (120px), max height 37.5pt (50px)
-                c.drawImage(logo, 20, height - 60, width=90, height=37.5, preserveAspectRatio=True, mask="auto")
+                pdf_h = config.pdf_logo_height or 30
+                pdf_w = pdf_h * 2.4
+                c.drawImage(logo, 20, height - 22.5 - pdf_h, width=pdf_w, height=pdf_h, preserveAspectRatio=True, mask="auto")
             except Exception as e:
                 print("⚠️ Erro ao carregar logo no header frota:", e)
 
@@ -1591,9 +1613,88 @@ def config_layout():
                 return redirect(url_for("config_layout"))
             config.login_primary_color = color
 
+        # Processar tamanhos de imagens e filtros
+        try:
+            config.login_logo_height = int(request.form.get("login_logo_height", "120") or "120")
+            config.sidebar_logo_height = int(request.form.get("sidebar_logo_height", "44") or "44")
+            config.pdf_logo_height = int(request.form.get("pdf_logo_height", "30") or "30")
+            config.login_bg_zoom = int(request.form.get("login_bg_zoom", "100") or "100")
+            config.login_bg_blur = int(request.form.get("login_bg_blur", "0") or "0")
+            config.login_bg_opacity = int(request.form.get("login_bg_opacity", "15") or "15")
+            config.login_card_opacity = int(request.form.get("login_card_opacity", "60") or "60")
+            config.login_card_blur = int(request.form.get("login_card_blur", "12") or "12")
+            config.login_card_radius = int(request.form.get("login_card_radius", "16") or "16")
+            config.login_btn_radius = int(request.form.get("login_btn_radius", "12") or "12")
+            config.login_btn_padding_y = int(request.form.get("login_btn_padding_y", "12") or "12")
+            config.login_btn_font_size = int(request.form.get("login_btn_font_size", "16") or "16")
+        except ValueError:
+            flash("Valores de configuração de imagem inválidos. Por favor, insira números inteiros.", "error")
+            return redirect(url_for("config_layout"))
+
+        # Processar campos de texto do login
+        title_text = request.form.get("login_title_text", "").strip()
+        if title_text:
+            config.login_title_text = title_text[:100]
+        
+        subtitle_text = request.form.get("login_subtitle_text", "").strip()
+        config.login_subtitle_text = subtitle_text[:150]
+
+        username_placeholder = request.form.get("login_username_placeholder", "").strip()
+        config.login_username_placeholder = username_placeholder[:100] if username_placeholder else "Digite seu usuário"
+
+        password_placeholder = request.form.get("login_password_placeholder", "").strip()
+        config.login_password_placeholder = password_placeholder[:100] if password_placeholder else "Digite sua senha"
+
+        btn_text = request.form.get("login_btn_text", "").strip()
+        if btn_text:
+            config.login_btn_text = btn_text[:50]
+
+        # Processar background size e position por dispositivo
+        allowed_sizes = {"cover", "contain", "auto", "100% 100%", "100% auto", "auto 100%"}
+        allowed_positions = {"center", "top", "bottom", "left", "right", "top left", "top right", "bottom left", "bottom right"}
+        
+        bg_size_desktop = request.form.get("login_bg_size_desktop", "cover").strip()
+        if bg_size_desktop in allowed_sizes:
+            config.login_bg_size_desktop = bg_size_desktop
+        
+        bg_size_mobile = request.form.get("login_bg_size_mobile", "cover").strip()
+        if bg_size_mobile in allowed_sizes:
+            config.login_bg_size_mobile = bg_size_mobile
+
+        bg_pos_desktop = request.form.get("login_bg_position_desktop", "center").strip()
+        if bg_pos_desktop in allowed_positions:
+            config.login_bg_position_desktop = bg_pos_desktop
+
+        bg_pos_mobile = request.form.get("login_bg_position_mobile", "center").strip()
+        if bg_pos_mobile in allowed_positions:
+            config.login_bg_position_mobile = bg_pos_mobile
+
+        # Processar overlay color
+        overlay_color = request.form.get("login_overlay_color", "").strip()
+        if overlay_color and overlay_color.startswith("#"):
+            config.login_overlay_color = overlay_color
+
+        # Processar secondary color
+        secondary_color = request.form.get("login_secondary_color", "").strip()
+        if secondary_color and secondary_color.startswith("#"):
+            config.login_secondary_color = secondary_color
+
+        # Processar sidebar colors
+        sb_bg = request.form.get("sidebar_bg_color", "").strip()
+        config.sidebar_bg_color = sb_bg if sb_bg and sb_bg.startswith("#") else None
+        sb_text = request.form.get("sidebar_text_color", "").strip()
+        config.sidebar_text_color = sb_text if sb_text and sb_text.startswith("#") else None
+
+        # Processar posição do card
+        allowed_card_positions = {"left", "left-center", "center", "right-center", "right"}
+        card_pos = request.form.get("login_card_position", "right").strip()
+        if card_pos in allowed_card_positions:
+            config.login_card_position = card_pos
+
         # Processar uploads
-        ALLOWED_LAYOUT_EXT = {".png", ".jpg", ".jpeg", ".webp", ".svg"}
-        fields = ["login_bg_desktop", "login_bg_mobile", "login_logo", "sidebar_logo", "pdf_logo"]
+
+        ALLOWED_LAYOUT_EXT = {".png", ".jpg", ".jpeg", ".webp", ".svg", ".ico"}
+        fields = ["login_bg_desktop", "login_bg_mobile", "login_logo", "sidebar_logo", "pdf_logo", "favicon_custom"]
 
         for field in fields:
             file = request.files.get(field)
@@ -1636,24 +1737,76 @@ def reset_layout_field(field):
         flash("Nenhuma configuração encontrada.", "error")
         return redirect(url_for("config_layout"))
 
-    allowed_fields = {"login_bg_desktop", "login_bg_mobile", "login_logo", "sidebar_logo", "pdf_logo", "pdf_footer", "login_primary_color", "powerbi_url"}
+    allowed_fields = {
+        "login_bg_desktop", "login_bg_mobile", "login_logo", "sidebar_logo", "pdf_logo",
+        "pdf_footer", "login_primary_color", "powerbi_url", "login_logo_height",
+        "sidebar_logo_height", "pdf_logo_height", "login_bg_zoom", "login_bg_blur",
+        "login_bg_opacity", "login_bg_size_desktop", "login_bg_size_mobile",
+        "login_bg_position_desktop", "login_bg_position_mobile", "login_card_opacity",
+        "login_card_blur", "login_card_radius", "login_title_text", "login_btn_text",
+        "login_btn_radius", "login_overlay_color", "login_secondary_color",
+        "sidebar_bg_color", "sidebar_text_color", "favicon_custom", "login_card_position",
+        "login_btn_padding_y", "login_btn_font_size", "login_subtitle_text",
+        "login_username_placeholder", "login_password_placeholder",
+    }
     if field not in allowed_fields:
         flash("Campo inválido.", "error")
         return redirect(url_for("config_layout"))
 
-    if field == "login_primary_color":
-        if config.login_primary_color != "#10b981":
-            config.login_primary_color = "#10b981"
+    # Map fields to their default values for simple resets
+    simple_defaults = {
+        "login_primary_color": "#10b981",
+        "login_logo_height": 120,
+        "sidebar_logo_height": 44,
+        "pdf_logo_height": 30,
+        "login_bg_zoom": 100,
+        "login_bg_blur": 0,
+        "login_bg_opacity": 15,
+        "login_card_opacity": 60,
+        "login_card_blur": 12,
+        "login_card_radius": 16,
+        "login_btn_radius": 12,
+        "login_btn_padding_y": 12,
+        "login_btn_font_size": 16,
+        "login_bg_size_desktop": "cover",
+        "login_bg_size_mobile": "cover",
+        "login_bg_position_desktop": "center",
+        "login_bg_position_mobile": "center",
+        "login_title_text": "Acesso ao Sistema",
+        "login_subtitle_text": "",
+        "login_username_placeholder": "Digite seu usuário",
+        "login_password_placeholder": "Digite sua senha",
+        "login_btn_text": "Entrar",
+        "login_overlay_color": "#000000",
+        "login_secondary_color": "#064e3b",
+        "login_card_position": "right",
+    }
+
+    if field in simple_defaults:
+        default_val = simple_defaults[field]
+        current_val = getattr(config, field)
+        if current_val != default_val:
+            setattr(config, field, default_val)
             db.session.commit()
-            registrar_log("Configuração de layout restaurada para o padrão: login_primary_color")
+            registrar_log(f"Configuração de layout restaurada para o padrão: {field}")
             flash("A configuração foi restaurada para o padrão com sucesso.", "success")
         else:
             flash("Esta configuração já está usando o padrão.", "info")
         return redirect(url_for("config_layout"))
 
+    # Nullable fields (set to None to reset)
+    nullable_fields = {"sidebar_bg_color", "sidebar_text_color"}
+    if field in nullable_fields:
+        setattr(config, field, None)
+        db.session.commit()
+        registrar_log(f"Configuração de layout restaurada para o padrão: {field}")
+        flash("A configuração foi restaurada para o padrão com sucesso.", "success")
+        return redirect(url_for("config_layout"))
+
+    # File-based and text-based fields
     val = getattr(config, field)
     if val or (field == "pdf_footer" and config.pdf_footer is not None) or (field == "powerbi_url" and config.powerbi_url is not None):
-        # Se for um arquivo de imagem, exclui fisicamente
+        # If it's an image file, delete physically
         if field not in {"pdf_footer", "powerbi_url"}:
             try:
                 p = LAYOUT_UPLOAD_DIR / val
@@ -1669,6 +1822,7 @@ def reset_layout_field(field):
         flash("Esta configuração já está usando o padrão.", "info")
 
     return redirect(url_for("config_layout"))
+
 
 
 
@@ -1794,7 +1948,9 @@ def generate_checklist_pdf(checklist_obj: Checklist, raw: dict) -> str:
             width, height = A4
             if pdf_logo_path:
                 try:
-                    c.drawImage(pdf_logo_path, 15*mm, height-24*mm, 26*mm, 11*mm,
+                    pdf_h = config.pdf_logo_height or 30
+                    pdf_w = pdf_h * 2.36
+                    c.drawImage(pdf_logo_path, 15*mm, height - 13*mm - pdf_h, pdf_w, pdf_h,
                                 preserveAspectRatio=True, mask="auto")
                 except Exception:
                     pass
@@ -2351,7 +2507,9 @@ def generate_vistoria_pdf(vistoria_obj: Vistoria) -> str:
             width, height = A4
             if pdf_logo_path:
                 try:
-                    c.drawImage(pdf_logo_path, 15*mm, height-24*mm, 26*mm, 11*mm,
+                    pdf_h = config.pdf_logo_height or 30
+                    pdf_w = pdf_h * 2.36
+                    c.drawImage(pdf_logo_path, 15*mm, height - 13*mm - pdf_h, pdf_w, pdf_h,
                                 preserveAspectRatio=True, mask="auto")
                 except Exception:
                     pass

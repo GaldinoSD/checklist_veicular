@@ -1706,7 +1706,9 @@ def make_premium_pdf(buffer, title, metadata, content_table_data, image_paths=No
             try:
                 from reportlab.lib.utils import ImageReader
                 logo = ImageReader(logo_path)
-                c.drawImage(logo, 20, height - 60, width=90, height=37.5, preserveAspectRatio=True, mask="auto")
+                pdf_h = config.pdf_logo_height or 30
+                pdf_w = pdf_h * 2.4
+                c.drawImage(logo, 20, height - 22.5 - pdf_h, width=pdf_w, height=pdf_h, preserveAspectRatio=True, mask="auto")
             except Exception as e:
                 print("⚠️ Erro ao carregar logo no header:", e)
 
@@ -2110,7 +2112,9 @@ def atividade_pdf(id):
                 try:
                     from reportlab.lib.utils import ImageReader
                     logo = ImageReader(logo_path)
-                    c.drawImage(logo, 20, height - 60, width=90, height=37.5, preserveAspectRatio=True, mask="auto")
+                    pdf_h = config.pdf_logo_height or 30
+                    pdf_w = pdf_h * 2.4
+                    c.drawImage(logo, 20, height - 22.5 - pdf_h, width=pdf_w, height=pdf_h, preserveAspectRatio=True, mask="auto")
                 except Exception as e:
                     print("⚠️ Erro ao carregar logo no header do consolidado:", e)
 
@@ -2494,8 +2498,7 @@ def rota_exata_pdf(id):
         "__ref_id__": f"RE-{r.id}",
         "Supervisor": r.supervisor.username if r.supervisor else "N/A",
         "Data de Auditoria": r.date.strftime("%d/%m/%Y") if r.date else "N/A",
-        "Horário": r.time or "N/A",
-        "Ponto de Checagem": r.location or "N/A",
+        "Horário": r.date_created.strftime("%H:%M") if r.date_created else (r.time or "N/A"),
     }
 
     techs_str = ""

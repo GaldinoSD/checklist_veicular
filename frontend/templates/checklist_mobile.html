@@ -77,7 +77,7 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div class="space-y-2">
                     <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1" id="vehicle_id_select_label">Veículo Operacional</label>
-                    <div class="flex gap-2">
+                    <div class="flex flex-col md:flex-row gap-3">
                         <div class="relative flex-1">
                             <select name="vehicle_id" id="vehicle_id_select" aria-labelledby="vehicle_id_select_label" required
                                     onchange="onVehicleChange(this)"
@@ -91,8 +91,9 @@
                                 <i class="fa-solid fa-chevron-down text-xs"></i>
                             </div>
                         </div>
-                        <button type="button" onclick="startPlateOCR()" class="w-14 h-14 bg-gradient-to-br from-blue-600 to-blue-400 hover:from-blue-700 hover:to-blue-500 text-white rounded-2xl flex items-center justify-center hover:scale-105 active:scale-95 transition-all shadow-md" title="Escanear Placa por Foto" aria-label="Escanear placa do veículo usando a câmera">
+                        <button type="button" onclick="startPlateOCR()" class="w-full md:w-14 h-12 md:h-14 bg-gradient-to-br from-blue-600 to-blue-400 hover:from-blue-700 hover:to-blue-500 text-white rounded-2xl flex items-center justify-center gap-2 hover:scale-105 active:scale-95 transition-all shadow-md" title="Escanear Placa por Foto" aria-label="Escanear placa do veículo usando a câmera">
                             <i class="fa-solid fa-camera text-lg"></i>
+                            <span class="text-xs font-bold md:hidden">Escanear Placa</span>
                         </button>
                     </div>
                     <!-- Badge do tipo de veículo detectado -->
@@ -117,37 +118,37 @@
         <div class="space-y-4" id="checklist-items-wrapper">
 
             <!-- Estado inicial: nenhum veículo selecionado -->
-            <div id="no-vehicle-msg" class="card-premium p-10 text-center relative overflow-hidden flex flex-col items-center justify-center min-h-[320px] animate-premium">
+            <div id="no-vehicle-msg" class="card-premium p-10 text-center relative flex flex-col items-center justify-center animate-premium" style="min-height: 60vh; overflow: visible;">
                 <!-- Grid de Fundo Neon Técnico -->
-                <div class="absolute inset-0 bg-[linear-gradient(to_right,#e2e8f0_1px,transparent_1px),linear-gradient(to_bottom,#e2e8f0_1px,transparent_1px)] dark:bg-[linear-gradient(to_right,rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:20px_20px] opacity-40 [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] pointer-events-none"></div>
+                <div style="position:absolute;inset:0;background-image:linear-gradient(to right,#e2e8f0 1px,transparent 1px),linear-gradient(to bottom,#e2e8f0 1px,transparent 1px);background-size:20px 20px;opacity:0.3;mask-image:radial-gradient(ellipse 60% 50% at 50% 50%,#000 70%,transparent 100%);-webkit-mask-image:radial-gradient(ellipse 60% 50% at 50% 50%,#000 70%,transparent 100%);pointer-events:none;"></div>
 
                 <!-- Radar Scanner Circular -->
-                <div class="relative w-40 h-40 mb-6 flex items-center justify-center">
+                <div style="position:relative;width:160px;height:160px;margin-bottom:1.5rem;display:flex;align-items:center;justify-content:center;">
                     <!-- Glow de Fundo Pulsante -->
-                    <div class="absolute inset-0 bg-blue-500/10 dark:bg-blue-500/5 rounded-full blur-2xl animate-pulse"></div>
+                    <div style="position:absolute;inset:0;background:rgba(59,130,246,0.1);border-radius:50%;filter:blur(24px);animation:radarPulse 2s ease-in-out infinite;"></div>
                     
                     <!-- Círculos Concêntricos -->
-                    <div class="absolute inset-0 border-2 border-dashed border-blue-500/20 rounded-full scale-100 animate-ping-slow"></div>
-                    <div class="absolute inset-4 border border-blue-500/15 rounded-full"></div>
-                    <div class="absolute inset-10 border border-blue-500/10 rounded-full"></div>
+                    <div style="position:absolute;inset:0;border:2px dashed rgba(59,130,246,0.2);border-radius:50%;animation:radarPing 3s cubic-bezier(0,0,0.2,1) infinite;"></div>
+                    <div style="position:absolute;inset:16px;border:1px solid rgba(59,130,246,0.15);border-radius:50%;"></div>
+                    <div style="position:absolute;inset:40px;border:1px solid rgba(59,130,246,0.1);border-radius:50%;"></div>
                     
                     <!-- Linha de Varredura Laser Circular -->
-                    <div class="absolute inset-0 rounded-full bg-gradient-to-tr from-transparent via-transparent to-blue-500/20 border-r border-blue-500/30 animate-radar-sweep"></div>
+                    <div style="position:absolute;inset:0;border-radius:50%;background:linear-gradient(to top right,transparent,transparent 60%,rgba(59,130,246,0.2));border-right:1px solid rgba(59,130,246,0.3);animation:radarSweep 4s linear infinite;transform-origin:center;"></div>
                     
                     <!-- Centro do Scanner com Carrossel de Veículos -->
-                    <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-600 to-blue-500 flex items-center justify-center text-white shadow-xl shadow-blue-500/20 z-10">
-                        <div class="vehicle-carousel-icons relative w-8 h-8 flex items-center justify-center">
-                            <i class="fa-solid fa-car text-2xl absolute vehicle-fade-icon active"></i>
-                            <i class="fa-solid fa-motorcycle text-2xl absolute vehicle-fade-icon opacity-0"></i>
-                            <i class="fa-solid fa-truck text-2xl absolute vehicle-fade-icon opacity-0"></i>
-                            <i class="fa-solid fa-van-shuttle text-2xl absolute vehicle-fade-icon opacity-0"></i>
+                    <div style="width:64px;height:64px;border-radius:1rem;background:linear-gradient(135deg,#2563eb,#3b82f6);display:flex;align-items:center;justify-content:center;color:white;box-shadow:0 20px 40px -10px rgba(59,130,246,0.2);z-index:10;position:relative;">
+                        <div class="vehicle-carousel-icons" style="position:relative;width:32px;height:32px;display:flex;align-items:center;justify-content:center;">
+                            <i class="fa-solid fa-car vehicle-fade-icon active" style="font-size:1.5rem;position:absolute;"></i>
+                            <i class="fa-solid fa-motorcycle vehicle-fade-icon" style="font-size:1.5rem;position:absolute;opacity:0;"></i>
+                            <i class="fa-solid fa-truck vehicle-fade-icon" style="font-size:1.5rem;position:absolute;opacity:0;"></i>
+                            <i class="fa-solid fa-van-shuttle vehicle-fade-icon" style="font-size:1.5rem;position:absolute;opacity:0;"></i>
                         </div>
                     </div>
                 </div>
 
-                <div class="relative z-10 max-w-md">
-                    <h3 class="text-sm font-black text-slate-800 dark:text-white tracking-widest uppercase">Aguardando Seleção de Veículo</h3>
-                    <p class="text-xs text-slate-400 mt-2">Selecione o veículo operacional acima ou utilize a câmera para identificar a placa. O checklist adequado (Carro, Moto, Caminhão ou Van) será gerado dinamicamente.</p>
+                <div style="position:relative;z-index:10;max-width:28rem;">
+                    <h3 class="text-sm font-black text-slate-800 dark:text-white" style="letter-spacing:0.1em;text-transform:uppercase;">Aguardando Seleção de Veículo</h3>
+                    <p class="text-xs text-slate-400" style="margin-top:0.5rem;">Selecione o veículo operacional acima ou utilize a câmera para identificar a placa. O checklist adequado (Carro, Moto, Caminhão ou Van) será gerado dinamicamente.</p>
                 </div>
             </div>
 
@@ -316,14 +317,22 @@
         to { opacity: 1; transform: translateY(0); }
     }
 
-    /* Animações e transições do Radar de Veículos */
-    .animate-ping-slow {
-        animation: ping 3s cubic-bezier(0, 0, 0.2, 1) infinite;
+    /* Animações do Radar de Veículos */
+    @keyframes radarPulse {
+        0%, 100% { opacity: 0.6; transform: scale(1); }
+        50% { opacity: 1; transform: scale(1.1); }
     }
-    .animate-radar-sweep {
-        animation: sweep 4s linear infinite;
-        transform-origin: center;
+
+    @keyframes radarPing {
+        0% { transform: scale(1); opacity: 1; }
+        75%, 100% { transform: scale(2); opacity: 0; }
     }
+
+    @keyframes radarSweep {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+
     .vehicle-fade-icon {
         transition: opacity 0.6s ease-in-out, transform 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
         transform: scale(0.5);
@@ -331,11 +340,6 @@
     .vehicle-fade-icon.active {
         opacity: 1 !important;
         transform: scale(1);
-    }
-
-    @keyframes sweep {
-        from { transform: rotate(0deg); }
-        to { transform: rotate(360deg); }
     }
 </style>
 
@@ -389,7 +393,7 @@
 </div>
 
 <!-- ======================= MODAL SCANNER DE PLACA (LIVE CAMERA) ======================= -->
-<div id="ocrScannerModal" class="hidden fixed inset-0 z-50 overflow-hidden flex flex-col bg-black">
+<div id="ocrScannerModal" class="hidden fixed inset-0 z-50 overflow-hidden bg-black">
     <!-- Top Header -->
     <div class="absolute top-0 inset-x-0 p-6 z-20 flex items-center justify-between bg-gradient-to-b from-black/80 to-transparent">
         <div class="flex items-center gap-3">
@@ -408,7 +412,7 @@
 
     <!-- Live Video Viewport -->
     <div class="flex-1 w-full h-full relative flex items-center justify-center">
-        <video id="ocr-video" class="w-full h-full object-cover" autoplay playsinline muted></video>
+        <video id="ocr-video" class="w-full h-full object-cover" playsinline muted></video>
         
         <!-- Bounding Box Overlay -->
         <div class="absolute inset-0 pointer-events-none flex items-center justify-center">
@@ -555,7 +559,9 @@ async function initOCRWorker() {
 
 async function startPlateOCR() {
     // Abre o modal do scanner
-    document.getElementById('ocrScannerModal').classList.remove('hidden');
+    const modal = document.getElementById('ocrScannerModal');
+    modal.classList.remove('hidden');
+    modal.classList.add('flex', 'flex-col');
     document.getElementById('ocr-status').innerText = 'Iniciando câmera...';
     
     const video = document.getElementById('ocr-video');
@@ -591,7 +597,9 @@ function closeOCRScanner() {
         videoStream.getTracks().forEach(track => track.stop());
         videoStream = null;
     }
-    document.getElementById('ocrScannerModal').classList.add('hidden');
+    const modal = document.getElementById('ocrScannerModal');
+    modal.classList.add('hidden');
+    modal.classList.remove('flex', 'flex-col');
 }
 
 // Algoritmo de Distância Levenshtein para correspondência aproximada
