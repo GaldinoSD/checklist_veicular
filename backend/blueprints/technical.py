@@ -37,7 +37,8 @@ from backend.models import (
     RFO, Solicitacao, SupervisaoTecnica, RotaExata, Team, Task, CompletedActivity, Patio, Encerramento,
     Scale, Meeting, Note, Activity, SystemRule, Company, Contract, ExternalCollaborator, SystemRuleLog,
     AvariaOS, Log, Vistoria, VistoriaFoto, SystemConfig, WhatsAppConfig, TelegramConfig, EmailConfig,
-    NetworkNode, NetworkSplitter, NetworkEdge, GPSDevice, GPSLog, GPSGeofence, GPSAlert
+    NetworkNode, NetworkSplitter, NetworkEdge, GPSDevice, GPSLog, GPSGeofence, GPSAlert,
+    DocCategory, TechnicalDocument, DocumentFile, DocumentHistory
 )
 from backend.utils import (
     agora, br_datetime, haversine_distance, registrar_log, send_whatsapp_message, send_telegram_message, send_email_notification, admin_required,
@@ -7065,6 +7066,524 @@ def controle_ferramentas_relatorio_pdf(user_id):
         as_attachment=False,
         download_name=f"vistoria_ferramentas_{user.username}.pdf"
     )
+
+
+
+# =========================================================================
+# 📂 APIS DO MÓDULO DE GESTÃO DE DOCUMENTOS TÉCNICOS (GED)
+# =========================================================================
+
+def check_document_expirations_and_alert():
+    """Verifica vencimentos de documentos ativos e gera comunicados/avisos (Announcement) se necessário."""
+    try:
+        hoje = date.today()
+        docs = TechnicalDocument.query.filter(
+            TechnicalDocument.is_active == True,
+            TechnicalDocument.date_expired.isnot(None)
+        ).all()
+        
+        system_user = User.query.filter_by(username="admin").first()
+        created_by_id = system_user.id if system_user else None
+
+        for doc in docs:
+            dias_restantes = (doc.date_expired - hoje).days
+            title = None
+            msg = None
+            
+            if dias_restantes < 0:
+                title = f"Documento Vencido: {doc.name} - Técnico: {doc.user.username}"
+                msg = f"O documento '{doc.name}' (Categoria: {doc.category.name}) do técnico '{doc.user.username}' venceu em {doc.date_expired.strftime('%d/%m/%Y')}."
+            elif dias_restantes <= 15:
+                title = f"Documento Próximo do Vencimento: {doc.name} - Técnico: {doc.user.username}"
+                msg = f"O documento '{doc.name}' (Categoria: {doc.category.name}) do técnico '{doc.user.username}' vencerá em {dias_restantes} dias (vencimento: {doc.date_expired.strftime('%d/%m/%Y')})."
+            elif dias_restantes <= 30:
+                title = f"Aviso de Vencimento: {doc.name} - Técnico: {doc.user.username}"
+                msg = f"O documento '{doc.name}' (Categoria: {doc.category.name}) do técnico '{doc.user.username}' vencerá em {dias_restantes} dias (vencimento: {doc.date_expired.strftime('%d/%m/%Y')})."
+                
+            if title and msg:
+                # Evita duplicar alertas nos últimos 7 dias
+                um_dia_atras = datetime.now() - timedelta(days=7)
+                existente = Announcement.query.filter(
+                    Announcement.title == title,
+                    Announcement.created_at >= um_dia_atras
+                ).first()
+                
+                if not existente:
+                    novo_aviso = Announcement(
+                        title=title,
+                        content=msg,
+                        target_type="internal",
+                        target_role="supervisor",
+                        created_by=created_by_id,
+                        expires_at=datetime.now() + timedelta(days=30)
+                    )
+                    db.session.add(novo_aviso)
+        
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        print("Erro ao verificar vencimentos de documentos:", e)
+
+
+@technical_bp.route("/api/gestao/documentos/stats")
+@supervisor_allowed
+def api_gestao_documentos_stats():
+    check_document_expirations_and_alert()
+    
+    total_docs = TechnicalDocument.query.count()
+    total_tecnicos = User.query.filter(User.role == 'tech').count()
+    
+    hoje = date.today()
+    docs = TechnicalDocument.query.filter_by(is_active=True).all()
+    
+    validos = 0
+    vencidos = 0
+    vencendo = 0
+    
+    for d in docs:
+        if not d.date_expired:
+            validos += 1
+            continue
+        dias = (d.date_expired - hoje).days
+        if dias < 0:
+            vencidos += 1
+        elif dias <= 30:
+            vencendo += 1
+        else:
+            validos += 1
+            
+    from sqlalchemy import func
+    cat_counts = db.session.query(DocCategory.name, func.count(TechnicalDocument.id))\
+        .join(TechnicalDocument, DocCategory.id == TechnicalDocument.category_id)\
+        .group_by(DocCategory.name).all()
+        
+    categories_chart = {
+        "labels": [c[0] for c in cat_counts],
+        "values": [c[1] for c in cat_counts]
+    }
+    
+    # Distribuição de validade para o gráfico
+    validity_chart = {
+        "labels": ["Válidos", "Vencidos", "Vencendo (30 dias)"],
+        "values": [validos, vencidos, vencendo]
+    }
+    
+    ultimos_enviados = []
+    docs_recentes = TechnicalDocument.query.order_by(TechnicalDocument.created_at.desc()).limit(5).all()
+    for d in docs_recentes:
+        ultimos_enviados.append({
+            "id": d.id,
+            "name": d.name,
+            "tecnico": d.user.username,
+            "created_at": d.created_at.strftime("%d/%m/%Y %H:%M")
+        })
+        
+    ultimos_alterados = []
+    historico_recente = DocumentHistory.query.order_by(DocumentHistory.created_at.desc()).limit(5).all()
+    for h in historico_recente:
+        ultimos_alterados.append({
+            "id": h.id,
+            "document_name": h.document.name if h.document else "Excluído",
+            "operator": h.operator.username,
+            "action": h.action,
+            "created_at": h.created_at.strftime("%d/%m/%Y %H:%M"),
+            "details": h.details
+        })
+
+    return jsonify({
+        "total_docs": total_docs,
+        "total_tecnicos": total_tecnicos,
+        "validos": validos,
+        "vencidos": vencidos,
+        "vencendo": vencendo,
+        "categories_chart": categories_chart,
+        "validity_chart": validity_chart,
+        "ultimos_enviados": ultimos_enviados,
+        "ultimos_alterados": ultimos_alterados
+    })
+
+
+@technical_bp.route("/api/gestao/documentos/list")
+@supervisor_allowed
+def api_gestao_documentos_list():
+    tecnicos = User.query.filter(User.role == 'tech').all()
+    hoje = date.today()
+    
+    results = []
+    for t in tecnicos:
+        docs = TechnicalDocument.query.filter_by(user_id=t.id, is_active=True).all()
+        
+        count_total = len(docs)
+        count_vencidos = 0
+        count_vencendo = 0
+        
+        last_updated = "-"
+        last_dt = None
+        
+        for d in docs:
+            if not last_dt or d.updated_at > last_dt:
+                last_dt = d.updated_at
+                last_updated = d.updated_at.strftime("%d/%m/%Y %H:%M")
+                
+            if d.date_expired:
+                dias = (d.date_expired - hoje).days
+                if dias < 0:
+                    count_vencidos += 1
+                elif dias <= 30:
+                    count_vencendo += 1
+                    
+        if count_vencidos > 0:
+            status = "vencido"
+        elif count_vencendo > 0:
+            status = "vencendo"
+        elif count_total > 0:
+            status = "em_dia"
+        else:
+            status = "sem_documentos"
+            
+        results.append({
+            "id": t.id,
+            "username": t.username,
+            "email": t.email or "-",
+            "phone": t.phone or "-",
+            "role": t.role or "tech",
+            "count_total": count_total,
+            "count_vencidos": count_vencidos,
+            "count_vencendo": count_vencendo,
+            "status": status,
+            "last_updated": last_updated
+        })
+        
+    return jsonify(results)
+
+
+@technical_bp.route("/api/gestao/documentos/user/<int:uid>")
+@supervisor_allowed
+def api_gestao_documentos_user(uid):
+    user = User.query.get_or_404(uid)
+    docs = TechnicalDocument.query.filter_by(user_id=uid).all()
+    hoje = date.today()
+    
+    docs_json = []
+    for d in docs:
+        status = "valido"
+        if d.date_expired:
+            dias = (d.date_expired - hoje).days
+            if dias < 0:
+                status = "vencido"
+            elif dias <= 15:
+                status = "urgente"
+            elif dias <= 30:
+                status = "atencao"
+                
+        files_json = []
+        for f in d.files:
+            files_json.append({
+                "id": f.id,
+                "filename": f.filename,
+                "file_path": url_for("static", filename=f.file_path.replace("static/", ""))
+            })
+            
+        docs_json.append({
+            "id": d.id,
+            "name": d.name,
+            "category_id": d.category_id,
+            "category_name": d.category.name,
+            "doc_type": d.doc_type or "-",
+            "description": d.description or "",
+            "date_issued": d.date_issued.strftime("%Y-%m-%d") if d.date_issued else "",
+            "date_expired": d.date_expired.strftime("%Y-%m-%d") if d.date_expired else "",
+            "issuer": d.issuer or "",
+            "notes": d.notes or "",
+            "is_required": d.is_required,
+            "is_active": d.is_active,
+            "status": status,
+            "files": files_json
+        })
+        
+    history = DocumentHistory.query.join(TechnicalDocument)\
+        .filter(TechnicalDocument.user_id == uid)\
+        .order_by(DocumentHistory.created_at.desc()).limit(15).all()
+        
+    history_json = []
+    for h in history:
+        history_json.append({
+            "id": h.id,
+            "document_name": h.document.name if h.document else "Excluído",
+            "operator": h.operator.username,
+            "action": h.action,
+            "details": h.details,
+            "created_at": h.created_at.strftime("%d/%m/%Y %H:%M")
+        })
+        
+    return jsonify({
+        "tecnico": {
+            "id": user.id,
+            "username": user.username,
+            "email": user.email or "-",
+            "phone": user.phone or "-"
+        },
+        "documents": docs_json,
+        "history": history_json
+    })
+
+
+@technical_bp.route("/api/gestao/documentos", methods=["POST"])
+@supervisor_allowed
+def api_gestao_documentos_create():
+    user_id = request.form.get("user_id")
+    name = request.form.get("name")
+    category_id = request.form.get("category_id")
+    doc_type = request.form.get("doc_type")
+    description = request.form.get("description")
+    
+    date_issued_str = request.form.get("date_issued")
+    date_expired_str = request.form.get("date_expired")
+    
+    date_issued = datetime.strptime(date_issued_str, "%Y-%m-%d").date() if date_issued_str else None
+    date_expired = datetime.strptime(date_expired_str, "%Y-%m-%d").date() if date_expired_str else None
+    
+    issuer = request.form.get("issuer")
+    notes = request.form.get("notes")
+    
+    is_required = request.form.get("is_required") == "true"
+    is_active = request.form.get("is_active") != "false"
+    
+    doc = TechnicalDocument(
+        user_id=user_id,
+        name=name,
+        category_id=category_id,
+        doc_type=doc_type,
+        description=description,
+        date_issued=date_issued,
+        date_expired=date_expired,
+        issuer=issuer,
+        notes=notes,
+        is_required=is_required,
+        is_active=is_active
+    )
+    db.session.add(doc)
+    db.session.flush()
+    
+    history = DocumentHistory(
+        document_id=doc.id,
+        operator_id=current_user.id,
+        action="created",
+        details=f"Documento '{name}' criado."
+    )
+    db.session.add(history)
+    db.session.commit()
+    
+    uploaded_files = request.files.getlist("files[]")
+    tecnico = User.query.get(user_id)
+    category = DocCategory.query.get(category_id)
+    
+    save_document_files(doc, uploaded_files, tecnico, category)
+    
+    return jsonify({"success": True, "document_id": doc.id})
+
+
+@technical_bp.route("/api/gestao/documentos/<int:did>", methods=["POST", "PUT"])
+@supervisor_allowed
+def api_gestao_documentos_edit(did):
+    doc = TechnicalDocument.query.get_or_404(did)
+    
+    name = request.form.get("name")
+    category_id = request.form.get("category_id")
+    doc_type = request.form.get("doc_type")
+    description = request.form.get("description")
+    
+    date_issued_str = request.form.get("date_issued")
+    date_expired_str = request.form.get("date_expired")
+    
+    date_issued = datetime.strptime(date_issued_str, "%Y-%m-%d").date() if date_issued_str else None
+    date_expired = datetime.strptime(date_expired_str, "%Y-%m-%d").date() if date_expired_str else None
+    
+    issuer = request.form.get("issuer")
+    notes = request.form.get("notes")
+    
+    is_required = request.form.get("is_required") == "true"
+    is_active = request.form.get("is_active") != "false"
+    
+    mudancas = []
+    if doc.name != name:
+        mudancas.append(f"Nome de '{doc.name}' para '{name}'")
+    if doc.category_id != int(category_id):
+        new_cat = DocCategory.query.get(category_id)
+        mudancas.append(f"Categoria de '{doc.category.name}' para '{new_cat.name}'")
+    if doc.date_expired != date_expired:
+        old_exp = doc.date_expired.strftime("%d/%m/%Y") if doc.date_expired else "Nenhuma"
+        new_exp = date_expired.strftime("%d/%m/%Y") if date_expired else "Nenhuma"
+        mudancas.append(f"Vencimento de '{old_exp}' para '{new_exp}'")
+        
+    doc.name = name
+    doc.category_id = category_id
+    doc.doc_type = doc_type
+    doc.description = description
+    doc.date_issued = date_issued
+    doc.date_expired = date_expired
+    doc.issuer = issuer
+    doc.notes = notes
+    doc.is_required = is_required
+    doc.is_active = is_active
+    
+    details_str = ", ".join(mudancas) if mudancas else "Dados gerais atualizados."
+    history = DocumentHistory(
+        document_id=doc.id,
+        operator_id=current_user.id,
+        action="edited",
+        details=details_str
+    )
+    db.session.add(history)
+    db.session.commit()
+    
+    uploaded_files = request.files.getlist("files[]")
+    save_document_files(doc, uploaded_files, doc.user, doc.category)
+    
+    return jsonify({"success": True})
+
+
+def save_document_files(doc, files, tecnico, category):
+    if not files or len(files) == 0:
+        return
+        
+    safe_username = secure_filename(tecnico.username)
+    safe_category = secure_filename(category.name)
+    
+    upload_path = Path("/var/www/checklist_veicular/frontend/static/uploads/documentos") / safe_username / safe_category
+    upload_path.mkdir(parents=True, exist_ok=True)
+    
+    for f in files:
+        if f.filename == '':
+            continue
+            
+        orig_filename = secure_filename(f.filename)
+        unique_name = f"{uuid.uuid4().hex}_{orig_filename}"
+        file_dest = upload_path / unique_name
+        
+        f.save(str(file_dest))
+        
+        db_path = f"static/uploads/documentos/{safe_username}/{safe_category}/{unique_name}"
+        
+        doc_file = DocumentFile(
+            document_id=doc.id,
+            filename=orig_filename,
+            file_path=db_path
+        )
+        db.session.add(doc_file)
+        
+    db.session.commit()
+
+
+@technical_bp.route("/api/gestao/documentos/<int:did>", methods=["DELETE"])
+@supervisor_allowed
+def api_gestao_documentos_delete(did):
+    doc = TechnicalDocument.query.get_or_404(did)
+    
+    history = DocumentHistory(
+        operator_id=current_user.id,
+        action="deleted",
+        details=f"Documento '{doc.name}' (Técnico: {doc.user.username}) excluído definitivamente."
+    )
+    db.session.add(history)
+    
+    for f in doc.files:
+        try:
+            full_path = Path("/var/www/checklist_veicular/frontend") / f.file_path
+            if full_path.exists():
+                full_path.unlink()
+        except Exception as e:
+            print("Erro ao excluir arquivo físico:", e)
+            
+    db.session.delete(doc)
+    db.session.commit()
+    return jsonify({"success": True})
+
+
+@technical_bp.route("/api/gestao/documentos/file/<int:fid>", methods=["DELETE"])
+@supervisor_allowed
+def api_gestao_documentos_delete_file(fid):
+    f = DocumentFile.query.get_or_404(fid)
+    doc = f.document
+    
+    try:
+        full_path = Path("/var/www/checklist_veicular/frontend") / f.file_path
+        if full_path.exists():
+            full_path.unlink()
+    except Exception as e:
+        print("Erro ao excluir arquivo físico:", e)
+        
+    history = DocumentHistory(
+        document_id=doc.id,
+        operator_id=current_user.id,
+        action="edited",
+        details=f"Arquivo '{f.filename}' removido do documento."
+    )
+    db.session.add(history)
+    db.session.delete(f)
+    db.session.commit()
+    return jsonify({"success": True})
+
+
+@technical_bp.route("/api/gestao/documentos/categories", methods=["GET", "POST"])
+@supervisor_allowed
+def api_gestao_documentos_categories():
+    # Seed categorias iniciais caso a tabela esteja vazia
+    if DocCategory.query.count() == 0:
+        categorias_iniciais = [
+            "CNH", "RG", "CPF", "Carteira de Trabalho", "Contrato", "ASO",
+            "NR10", "NR35", "NR06", "NR12", "Treinamentos", "Certificados",
+            "Ficha de EPI", "Advertências", "Vacinação", "Outros"
+        ]
+        for cname in categorias_iniciais:
+            db.session.add(DocCategory(name=cname))
+        db.session.commit()
+
+    if request.method == "POST":
+        name = request.form.get("name").strip()
+        if not name:
+            return jsonify({"success": False, "message": "Nome da categoria obrigatório."}), 400
+            
+        existente = DocCategory.query.filter_by(name=name).first()
+        if existente:
+            return jsonify({"success": False, "message": "Uma categoria com este nome já existe."}), 400
+            
+        cat = DocCategory(name=name)
+        db.session.add(cat)
+        db.session.commit()
+        return jsonify({"success": True, "id": cat.id, "name": cat.name})
+        
+    categories = DocCategory.query.order_by(DocCategory.name.asc()).all()
+    return jsonify([{"id": c.id, "name": c.name} for c in categories])
+
+
+@technical_bp.route("/api/gestao/documentos/categories/<int:cid>", methods=["PUT", "DELETE"])
+@supervisor_allowed
+def api_gestao_documentos_categories_crud(cid):
+    cat = DocCategory.query.get_or_404(cid)
+    
+    if request.method == "PUT":
+        name = request.form.get("name").strip()
+        if not name:
+            return jsonify({"success": False, "message": "Nome inválido."}), 400
+            
+        existente = DocCategory.query.filter(DocCategory.name == name, DocCategory.id != cid).first()
+        if existente:
+            return jsonify({"success": False, "message": "Já existe outra categoria com esse nome."}), 400
+            
+        cat.name = name
+        db.session.commit()
+        return jsonify({"success": True})
+        
+    elif request.method == "DELETE":
+        has_docs = TechnicalDocument.query.filter_by(category_id=cid).first()
+        if has_docs:
+            return jsonify({"success": False, "message": "Não é possível remover a categoria, pois existem documentos vinculados a ela."}), 400
+            
+        db.session.delete(cat)
+        db.session.commit()
+        return jsonify({"success": True})
+
 
 
 

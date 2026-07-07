@@ -173,10 +173,10 @@
             <!-- Detalhes -->
             <td class="px-4 py-2 text-center">
               <div class="flex items-center justify-center gap-3">
-                <a class="w-8 h-8 flex items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 hover:bg-blue-500 hover:text-white transition-all shadow-sm"
-                   href="{{ url_for('checklist_detail', cid=c.id) }}" title="Ver Detalhes">
+                <button type="button" class="w-8 h-8 flex items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 hover:bg-blue-500 hover:text-white transition-all shadow-sm"
+                   onclick="showChecklistDetail({{ c.id }})" title="Ver Detalhes">
                    <i class="fa-solid fa-eye text-sm"></i>
-                </a>
+                </button>
                 
                 <form action="{{ url_for('checklist_delete', cid=c.id) }}" method="POST" onsubmit="return confirm('Tem certeza que deseja excluir este checklist?');">
                   <button type="submit" class="w-8 h-8 flex items-center justify-center rounded-xl bg-rose-500/10 text-rose-600 hover:bg-rose-500 hover:text-white transition-all shadow-sm" title="Excluir">
@@ -210,6 +210,68 @@
 
 </div>
 
+<!-- ✅ MODAL CHECKLIST DETAIL (PREMIUM BLUR) -->
+<div id="modalChecklistDetail" class="fixed inset-0 hidden items-center justify-center z-[100] p-4">
+  <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="closeModal('modalChecklistDetail')"></div>
+  <div class="relative w-full max-w-4xl rounded-[2rem] bg-white dark:bg-slate-900 border border-slate-900/10 dark:border-white/10 shadow-2xl overflow-hidden animate-premium flex flex-col max-h-[90vh]">
+    <!-- Header -->
+    <div class="p-6 border-b border-slate-900/5 dark:border-white/5 bg-slate-50 dark:bg-slate-900/20 flex items-center justify-between shrink-0">
+      <div>
+        <h3 id="modalChecklistTitle" class="text-2xl font-black text-slate-900 dark:text-white">Checklist #---</h3>
+        <p id="modalChecklistSubtitle" class="text-[10px] font-black text-blue-600 uppercase tracking-widest mt-1">Detalhes do checklist</p>
+      </div>
+      <button onclick="closeModal('modalChecklistDetail')" class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-slate-200 dark:hover:bg-white/10 text-slate-400 transition-all">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+    <!-- Content -->
+    <div class="flex-1 overflow-y-auto p-6 custom-scrollbar space-y-6">
+      <!-- Info Cards -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="p-4 bg-slate-50 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 rounded-2xl">
+          <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest text-slate-400/80">Data</p>
+          <p id="modalChecklistDate" class="text-xs font-bold text-slate-800 dark:text-white mt-1">-</p>
+        </div>
+        <div class="p-4 bg-slate-50 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 rounded-2xl">
+          <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest text-slate-400/80">Veículo (Placa)</p>
+          <p id="modalChecklistVehicle" class="text-xs font-bold text-slate-800 dark:text-white mt-1">-</p>
+        </div>
+        <div class="p-4 bg-slate-50 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 rounded-2xl">
+          <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest text-slate-400/80">Técnico</p>
+          <p id="modalChecklistTech" class="text-xs font-bold text-slate-800 dark:text-white mt-1">-</p>
+        </div>
+        <div class="p-4 bg-slate-50 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 rounded-2xl">
+          <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest text-slate-400/80">KM</p>
+          <p id="modalChecklistKM" class="text-xs font-bold text-slate-800 dark:text-white mt-1">-</p>
+        </div>
+      </div>
+
+      <!-- Checklist Items -->
+      <div>
+        <h4 class="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-3">Itens Verificados</h4>
+        <div id="modalChecklistItems" class="space-y-3">
+          <!-- Items dynamically loaded -->
+        </div>
+      </div>
+
+      <!-- Photos Gallery -->
+      <div id="modalChecklistPhotosContainer" class="hidden">
+        <h4 class="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-3">Galeria de Fotos</h4>
+        <div id="modalChecklistPhotos" class="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <!-- Photos dynamically loaded -->
+        </div>
+      </div>
+    </div>
+    <!-- Footer -->
+    <div class="p-6 border-t border-slate-900/5 dark:border-white/5 bg-slate-50/50 dark:bg-white/5 flex justify-end gap-3 shrink-0">
+      <a id="modalChecklistPdfBtn" href="#" target="_blank" class="px-5 py-2.5 bg-gradient-to-br from-rose-600 to-rose-800 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-rose-900/20 transition-all active:scale-95 flex items-center gap-2">
+        <i class="fa-solid fa-file-pdf text-xs"></i> PDF Completo
+      </a>
+      <button type="button" onclick="closeModal('modalChecklistDetail')" class="px-6 py-2.5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] hover:text-slate-600 transition-colors">Fechar</button>
+    </div>
+  </div>
+</div>
+
 <script>
 function toggleMonthGroup(index) {
     const tbody = document.getElementById(`tbody-group-${index}`);
@@ -217,6 +279,102 @@ function toggleMonthGroup(index) {
     if (tbody && chevron) {
         tbody.classList.toggle('hidden');
         chevron.classList.toggle('rotate-180');
+    }
+}
+
+async function showChecklistDetail(cid) {
+    try {
+        const response = await fetch(`/api/checklists/${cid}`);
+        if (!response.ok) throw new Error("Erro ao carregar detalhes");
+        const data = await response.json();
+        
+        // Fill header
+        document.getElementById('modalChecklistTitle').innerText = `Checklist #${data.id}`;
+        
+        // Set PDF Link
+        document.getElementById('modalChecklistPdfBtn').href = `/checklists/${data.id}/pdf`;
+        
+        // Fill Stats
+        document.getElementById('modalChecklistDate').innerText = data.date;
+        document.getElementById('modalChecklistVehicle').innerText = data.plate;
+        document.getElementById('modalChecklistTech').innerText = data.technician;
+        document.getElementById('modalChecklistKM').innerText = `${data.km} km`;
+        
+        // Fill Items
+        const itemsContainer = document.getElementById('modalChecklistItems');
+        itemsContainer.innerHTML = '';
+        
+        const items = data.items || {};
+        for (const [nome, val] of Object.entries(items)) {
+            const hasJustification = val.justificativa && val.justificativa.trim() !== '';
+            const respText = Array.isArray(val.resposta) ? val.resposta.join(', ') : val.resposta;
+            
+            let colorClasses = "bg-white text-slate-700 border border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700";
+            if (hasJustification) {
+                colorClasses = "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300";
+            } else if (respText === 'Sim' || respText === 'Bom' || respText === 'OK') {
+                colorClasses = "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300";
+            }
+            
+            const cardBorderClass = hasJustification 
+                ? "border-rose-500/30 bg-rose-50/50 dark:bg-rose-900/10 dark:border-rose-500/20"
+                : "border-slate-900/5 dark:border-white/5 bg-slate-50 dark:bg-white/5";
+            
+            let itemHtml = `
+                <div class="p-4 rounded-2xl border ${cardBorderClass}">
+                    <div class="flex items-center justify-between gap-4">
+                        <div class="flex-1">
+                            <h4 class="text-sm font-bold text-slate-800 dark:text-white">${nome}</h4>
+                        </div>
+                        <div class="shrink-0">
+                            <span class="inline-flex px-3 py-1.5 rounded-xl text-xs font-bold shadow-sm ${colorClasses}">
+                                ${respText || '-'}
+                            </span>
+                        </div>
+                    </div>
+            `;
+            
+            if (hasJustification) {
+                itemHtml += `
+                    <div class="mt-4 p-3 rounded-xl bg-white/60 dark:bg-slate-900/40 border border-rose-500/20 dark:border-rose-500/10">
+                        <p class="text-[10px] font-bold text-rose-600 dark:text-rose-400 uppercase tracking-widest mb-1 flex items-center gap-1.5">
+                            <i class="fa-solid fa-triangle-exclamation"></i> Justificativa / Observação
+                        </p>
+                        <p class="text-sm text-slate-700 dark:text-slate-300">${val.justificativa}</p>
+                    </div>
+                `;
+            }
+            
+            itemHtml += `</div>`;
+            itemsContainer.insertAdjacentHTML('beforeend', itemHtml);
+        }
+        
+        // Fill Photos
+        const photosContainer = document.getElementById('modalChecklistPhotosContainer');
+        const photosGrid = document.getElementById('modalChecklistPhotos');
+        photosGrid.innerHTML = '';
+        
+        if (data.photos && data.photos.length > 0) {
+            photosContainer.classList.remove('hidden');
+            data.photos.forEach(p => {
+                const photoHtml = `
+                    <a href="${p}" target="_blank" rel="noopener" class="group relative block overflow-hidden rounded-xl aspect-square border border-slate-900/10 dark:border-white/10">
+                        <img src="${p}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" alt="Foto checklist">
+                        <div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <i class="fa-solid fa-expand text-white text-base"></i>
+                        </div>
+                    </a>
+                `;
+                photosGrid.insertAdjacentHTML('beforeend', photoHtml);
+            });
+        } else {
+            photosContainer.classList.add('hidden');
+        }
+        
+        openModal('modalChecklistDetail');
+    } catch (e) {
+        console.error(e);
+        alert("Erro ao carregar detalhes do checklist.");
     }
 }
 </script>

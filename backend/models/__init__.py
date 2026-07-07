@@ -962,3 +962,64 @@ class SystemRuleLog(db.Model):
     # Relationships
     user = db.relationship("User", backref="rule_logs")
 
+
+# ==========================================
+# 📂 MÓDULO: GESTÃO DE DOCUMENTOS TÉCNICOS
+# ==========================================
+
+class DocCategory(db.Model):
+    __tablename__ = "doc_category"
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), unique=True, nullable=False)
+    created_at = db.Column(db.DateTime, default=lambda: agora())
+
+
+class TechnicalDocument(db.Model):
+    __tablename__ = "technical_document"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="CASCADE"), nullable=False)
+    user = db.relationship("User", backref=db.backref("technical_documents", lazy=True, cascade="all, delete-orphan"))
+
+    name = db.Column(db.String(150), nullable=False)
+    category_id = db.Column(db.Integer, db.ForeignKey("doc_category.id", ondelete="RESTRICT"), nullable=False)
+    category = db.relationship("DocCategory", backref="documents")
+
+    doc_type = db.Column(db.String(50)) # e.g. CNH, RG, contrato, etc.
+    description = db.Column(db.Text)
+    date_issued = db.Column(db.Date, nullable=True)
+    date_expired = db.Column(db.Date, nullable=True)
+    issuer = db.Column(db.String(150))
+    notes = db.Column(db.Text)
+
+    is_required = db.Column(db.Boolean, default=False)
+    is_active = db.Column(db.Boolean, default=True)
+
+    created_at = db.Column(db.DateTime, default=lambda: agora())
+    updated_at = db.Column(db.DateTime, default=lambda: agora(), onupdate=lambda: agora())
+
+
+class DocumentFile(db.Model):
+    __tablename__ = "document_file"
+    id = db.Column(db.Integer, primary_key=True)
+    document_id = db.Column(db.Integer, db.ForeignKey("technical_document.id", ondelete="CASCADE"), nullable=False)
+    document = db.relationship("TechnicalDocument", backref=db.backref("files", lazy=True, cascade="all, delete-orphan"))
+
+    filename = db.Column(db.String(255), nullable=False)
+    file_path = db.Column(db.String(512), nullable=False)
+    uploaded_at = db.Column(db.DateTime, default=lambda: agora())
+
+
+class DocumentHistory(db.Model):
+    __tablename__ = "document_history"
+    id = db.Column(db.Integer, primary_key=True)
+    document_id = db.Column(db.Integer, db.ForeignKey("technical_document.id", ondelete="CASCADE"), nullable=True)
+    document = db.relationship("TechnicalDocument")
+
+    operator_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    operator = db.relationship("User")
+
+    action = db.Column(db.String(50), nullable=False) # "created", "edited", "deleted"
+    details = db.Column(db.Text) # Descrição JSON ou texto plano
+    created_at = db.Column(db.DateTime, default=lambda: agora())
+
+

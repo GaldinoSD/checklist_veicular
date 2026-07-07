@@ -406,6 +406,7 @@ def supervisor_allowed(view):
         "checklist_detail": "checklists_view",
         "checklist_pdf_download": "checklists_view",
         "checklist_delete": "checklists_view",
+        "api_checklist_detail": "checklists_view",
         # Vistorias
         "vistorias_list": "vistorias_list",
         "vistorias_nova": "vistorias_nova",
@@ -458,6 +459,19 @@ def supervisor_allowed(view):
         "monitoramento_historico": "monitoramento_historico",
         "monitoramento_config": "monitoramento_config",
         "monitoramento_relatorio_pdf": "monitoramento_aparelhos",
+
+        # Documentação Técnica
+        "api_gestao_documentos_stats": "gestao_documentos",
+        "api_gestao_documentos_list": "gestao_documentos",
+        "api_gestao_documentos_user": "gestao_documentos",
+        "api_gestao_documentos_create": "gestao_documentos",
+        "api_gestao_documentos_edit": "gestao_documentos",
+        "api_gestao_documentos_delete": "gestao_documentos",
+        "api_gestao_documentos_upload": "gestao_documentos",
+        "api_gestao_documentos_delete_file": "gestao_documentos",
+        "api_gestao_documentos_categories": "gestao_documentos",
+        "api_gestao_documentos_categories_crud": "gestao_documentos",
+        "api_gestao_documentos_history": "gestao_documentos",
     }
 
     # Sub-permissões que dão acesso à página gestao_tecnica
@@ -466,7 +480,7 @@ def supervisor_allowed(view):
         "gestao_anotacoes", "gestao_atividades", "gestao_encerramento", "gestao_rfo",
         "gestao_tarefas", "gestao_geradores", "gestao_rota_exata", "gestao_supervisao",
         "gestao_treinamentos", "gestao_solicitacoes", "gestao_relatorios",
-        "gestao_mapas", "gestao_powerbi",
+        "gestao_mapas", "gestao_powerbi", "gestao_documentos",
     ]
 
     @wraps(view)

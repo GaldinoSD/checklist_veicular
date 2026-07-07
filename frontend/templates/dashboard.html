@@ -131,7 +131,7 @@
                       {% endif %}">
                 <i class="fa-solid fa-car-side"></i> Frota
             </a>
-            {% if current_user.username == 'admin' %}
+            {% if current_user.is_admin or current_user.is_supervisor %}
             <a href="{{ url_for('dashboard', view='gestao') }}" 
                class="px-6 py-2.5 rounded-2xl text-[12px] font-bold transition-all flex items-center gap-2
                       {% if view == 'gestao' %}

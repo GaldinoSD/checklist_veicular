@@ -1361,6 +1361,29 @@ def checklist_detail(cid):
 
 
 
+@fleet_bp.route("/api/checklists/<int:cid>")
+@supervisor_allowed
+def api_checklist_detail(cid):
+    c = Checklist.query.get_or_404(cid)
+    try:
+        data = json.loads(c.raw_json) if c.raw_json else {}
+    except Exception:
+        data = {}
+
+    return jsonify({
+        "id": c.id,
+        "date": c.date.strftime("%d/%m/%Y %H:%M"),
+        "plate": c.vehicle.plate if c.vehicle else "-",
+        "technician": c.technician or "-",
+        "km": c.km,
+        "status": c.status,
+        "notes": c.notes,
+        "photos": data.get("photos", []),
+        "items": data.get("items", {})
+    })
+
+
+
 @fleet_bp.route("/checklists/<int:cid>/pdf")
 @supervisor_allowed
 def checklist_pdf_download(cid):
