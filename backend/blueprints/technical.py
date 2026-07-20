@@ -352,7 +352,7 @@ def api_rfo(id=None):
 
 # --- SUPERVISÃO DE CAMPO ---
 @technical_bp.route("/api/gestao/supervisao", methods=["GET", "POST"])
-@technical_bp.route("/api/gestao/supervisao/<int:id>", methods=["PUT", "DELETE"])
+@technical_bp.route("/api/gestao/supervisao/<int:id>", methods=["GET", "PUT", "DELETE"])
 @supervisor_allowed
 def api_supervisao(id=None):
     if request.method == "DELETE" or (request.method == "POST" and id):
@@ -362,8 +362,28 @@ def api_supervisao(id=None):
         db.session.commit()
         return jsonify({"status": "ok", "success": True})
 
+    if id and request.method == "GET":
+        i = SupervisaoTecnica.query.get_or_404(id)
+        return jsonify({
+            "id": i.id,
+            "supervisor_id": i.supervisor_id,
+            "supervisor_name": i.supervisor.username if i.supervisor else "N/A",
+            "date": str(i.date) if i.date else "",
+            "time": i.time,
+            "irregularities": i.irregularities,
+            "action": i.action,
+            "obs": i.obs,
+            "checklist_json": i.checklist_json,
+            "techs_data": i.techs_data,
+            "photos_json": i.photos_json
+        })
+
     if request.method in ["POST", "PUT"]:
-        data = request.json or {}
+        if request.is_json:
+            data = request.json or {}
+        else:
+            data = request.form or {}
+
         sid = id or data.get("id")
         if sid:
             s = SupervisaoTecnica.query.get(sid)
@@ -385,7 +405,10 @@ def api_supervisao(id=None):
 
         date_str = data.get("date")
         if date_str:
-            s.date = datetime.strptime(date_str, "%Y-%m-%d").date()
+            try:
+                s.date = datetime.strptime(date_str, "%Y-%m-%d").date()
+            except Exception:
+                pass
         else:
             if isinstance(s.techs_data, list) and len(s.techs_data) > 0:
                 first_date = s.techs_data[0].get("supervision_date")
@@ -401,7 +424,64 @@ def api_supervisao(id=None):
         s.irregularities = data.get("irregularities") or (s.techs_data[0].get("activity") if (isinstance(s.techs_data, list) and len(s.techs_data) > 0) else None)
         s.action = data.get("action") or (s.techs_data[0].get("conclusion") if (isinstance(s.techs_data, list) and len(s.techs_data) > 0) else None)
         s.obs = data.get("obs")
-        s.checklist_json = json.dumps(data.get("checklist", {}))
+        s.checklist_json = json.dumps(data.get("checklist", {})) if isinstance(data.get("checklist"), dict) else (data.get("checklist") if isinstance(data.get("checklist"), str) else "{}")
+
+        # Processar upload de fotos por técnico
+        if isinstance(s.techs_data, list):
+            for idx, t in enumerate(s.techs_data):
+                if not isinstance(t, dict):
+                    continue
+                t_photos = []
+                ex_photos = t.get("existing_photos") or t.get("photos")
+                if ex_photos:
+                    if isinstance(ex_photos, list):
+                        t_photos = ex_photos
+                    elif isinstance(ex_photos, str):
+                        try:
+                            t_photos = json.loads(ex_photos)
+                        except Exception:
+                            t_photos = [ex_photos]
+                
+                # Fotos enviadas via upload para este técnico específico (key tech_photos_0, tech_photos_1, etc.)
+                files = request.files.getlist(f"tech_photos_{idx}") or request.files.getlist(f"tech_photos_row_{idx}")
+                for p in files:
+                    if p and allowed_file(p.filename):
+                        ext = os.path.splitext(p.filename.lower())[1]
+                        fn = f"sup_t{idx}_{uuid.uuid4().hex}{ext}"
+                        p.save(VISTORIAS_UPLOAD_DIR / fn)
+                        t_photos.append(fn)
+                
+                t["photos"] = t_photos
+
+        # Processar fotos gerais recebidas (raiz)
+        existing_photos_raw = data.get("existing_photos")
+        filenames = []
+        if existing_photos_raw:
+            if isinstance(existing_photos_raw, str):
+                try:
+                    filenames = json.loads(existing_photos_raw)
+                except Exception:
+                    filenames = [existing_photos_raw]
+            elif isinstance(existing_photos_raw, list):
+                filenames = existing_photos_raw
+        elif s.photos_json:
+            try:
+                filenames = json.loads(s.photos_json)
+            except Exception:
+                filenames = []
+
+        photos = request.files.getlist("photos") or request.files.getlist("photos[]")
+        for p in photos:
+            if p and allowed_file(p.filename):
+                ext = os.path.splitext(p.filename.lower())[1]
+                fn = f"sup_{uuid.uuid4().hex}{ext}"
+                p.save(VISTORIAS_UPLOAD_DIR / fn)
+                filenames.append(fn)
+
+        if filenames:
+            s.photos_json = json.dumps(filenames)
+        else:
+            s.photos_json = None
 
         db.session.commit()
         return jsonify({"status": "ok", "success": True, "id": s.id})
@@ -419,7 +499,8 @@ def api_supervisao(id=None):
             "action": i.action,
             "obs": i.obs,
             "checklist_json": i.checklist_json,
-            "techs_data": i.techs_data
+            "techs_data": i.techs_data,
+            "photos_json": i.photos_json
         })
     return jsonify(res)
 
@@ -1381,11 +1462,44 @@ def anotacao_pdf(id):
 
 # --- ATIVIDADES TÉCNICAS ---
 @technical_bp.route("/api/gestao/atividades", methods=["GET", "POST"])
-@technical_bp.route("/api/gestao/atividades/<int:id>", methods=["PUT", "DELETE"])
+@technical_bp.route("/api/gestao/atividades/<int:id>", methods=["GET", "PUT", "DELETE"])
 @supervisor_allowed
 def api_atividades(id=None):
+    if request.method == "GET" and id:
+        a = Activity.query.get_or_404(id)
+        photos = []
+        if a.photos_json:
+            try:
+                photos = json.loads(a.photos_json)
+            except Exception:
+                photos = []
+        blocks = []
+        if a.description and a.description.startswith("[") and a.description.endswith("]"):
+            try:
+                blocks = json.loads(a.description)
+            except Exception:
+                pass
+        return jsonify({
+            "id": a.id,
+            "type": a.type,
+            "location": a.location,
+            "date": str(a.date) if a.date else "",
+            "time": a.time,
+            "tech_responsible": a.tech_responsible,
+            "client_name": a.client_name,
+            "client_code": a.client_code,
+            "quality_rating": a.quality_rating,
+            "client_feedback": a.client_feedback,
+            "os_closure": a.os_closure,
+            "conclusion": a.conclusion,
+            "obs": a.obs,
+            "photos_json": a.photos_json,
+            "photos": photos,
+            "blocks": blocks
+        })
+
     if request.method == "DELETE" or (request.method == "POST" and id):
-        target_id = id or request.json.get("id")
+        target_id = id or (request.json.get("id") if request.is_json else request.form.get("id"))
         a = Activity.query.get_or_404(target_id)
         db.session.delete(a)
         db.session.commit()
@@ -1395,17 +1509,22 @@ def api_atividades(id=None):
         if request.is_json:
             data = request.json
         else:
-            data = request.form
+            data_raw = request.form.get("data")
+            if data_raw:
+                try:
+                    data = json.loads(data_raw)
+                except Exception:
+                    data = request.form
+            else:
+                data = request.form
             
-        # Suporta salvamento em lote (lista de objetos) ou item individual
         is_list = isinstance(data, list)
         items = data if is_list else [data]
         
         if not items:
             return jsonify({"error": "Nenhum dado enviado"}), 400
             
-        # Determina o ID do registro principal a ser salvo ou atualizado
-        aid = id or items[0].get("id")
+        aid = id or items[0].get("id") or (request.form.get("id") if not request.is_json else None)
         if aid:
             a = Activity.query.get(aid)
             if not a:
@@ -1414,50 +1533,69 @@ def api_atividades(id=None):
             a = Activity(user_id=current_user.id)
             db.session.add(a)
             
-        # Sempre salva a lista completa de blocos serializada como JSON em description
-        a.description = json.dumps(items)
+        a.description = json.dumps(items, ensure_ascii=False)
         
-        # Agrega e concatena dados dos blocos para preenchimento das colunas principais
-        unique_techs = list(dict.fromkeys([x.get("tech_responsible", "").strip() for x in items if x.get("tech_responsible")]))
-        a.tech_responsible = ", ".join(unique_techs) if unique_techs else items[0].get("tech_responsible")
+        unique_techs = list(dict.fromkeys([x.get("tech_responsible", "").strip() for x in items if isinstance(x, dict) and x.get("tech_responsible")]))
+        a.tech_responsible = ", ".join(unique_techs) if unique_techs else (items[0].get("tech_responsible") if isinstance(items[0], dict) else "")
         
-        unique_clients = list(dict.fromkeys([x.get("client_name", "").strip() for x in items if x.get("client_name")]))
-        a.client_name = ", ".join(unique_clients) if unique_clients else items[0].get("client_name")
+        unique_clients = list(dict.fromkeys([x.get("client_name", "").strip() for x in items if isinstance(x, dict) and x.get("client_name")]))
+        a.client_name = ", ".join(unique_clients) if unique_clients else (items[0].get("client_name") if isinstance(items[0], dict) else "")
         
-        unique_codes = list(dict.fromkeys([x.get("client_code", "").strip() for x in items if x.get("client_code")]))
-        a.client_code = ", ".join(unique_codes) if unique_codes else items[0].get("client_code")
+        unique_codes = list(dict.fromkeys([x.get("client_code", "").strip() for x in items if isinstance(x, dict) and x.get("client_code")]))
+        a.client_code = ", ".join(unique_codes) if unique_codes else (items[0].get("client_code") if isinstance(items[0], dict) else "")
         
-        unique_types = list(dict.fromkeys([x.get("type", "").strip() for x in items if x.get("type")]))
-        a.type = ", ".join(unique_types) if unique_types else items[0].get("type")
+        unique_types = list(dict.fromkeys([x.get("type", "").strip() for x in items if isinstance(x, dict) and x.get("type")]))
+        a.type = ", ".join(unique_types) if unique_types else (items[0].get("type") if isinstance(items[0], dict) else "")
         
-        a.location = items[0].get("location")
-        a.time = items[0].get("time")
-        a.status = items[0].get("status", "ABERTO")
-        a.obs = items[0].get("obs")
+        first_item = items[0] if isinstance(items[0], dict) else {}
+        a.location = first_item.get("location")
+        a.time = first_item.get("time")
+        a.status = first_item.get("status", "ABERTO")
+        a.obs = first_item.get("obs")
         
-        date_str = items[0].get("date")
+        date_str = first_item.get("date")
         if date_str:
-            a.date = datetime.strptime(date_str, "%Y-%m-%d").date()
+            try:
+                a.date = datetime.strptime(date_str, "%Y-%m-%d").date()
+            except Exception:
+                a.date = agora().date()
         else:
             a.date = agora().date()
             
-        a.quality_rating = items[0].get("quality_rating")
-        a.client_feedback = items[0].get("client_feedback")
-        a.os_closure = items[0].get("os_closure")
-        a.conclusion = items[0].get("conclusion")
+        a.quality_rating = first_item.get("quality_rating")
+        a.client_feedback = first_item.get("client_feedback")
+        a.os_closure = first_item.get("os_closure")
+        a.conclusion = first_item.get("conclusion")
         
-        # Upload de fotos (apenas se enviado como form-data tradicional, não lote JSON)
-        if not is_list:
+        # Upload de fotos
+        existing_photos_raw = request.form.get("existing_photos") if not request.is_json else None
+        filenames = []
+        if existing_photos_raw:
+            try:
+                filenames = json.loads(existing_photos_raw)
+            except Exception:
+                filenames = []
+        elif a.photos_json:
+            try:
+                filenames = json.loads(a.photos_json)
+            except Exception:
+                filenames = []
+
+        if not request.is_json:
             photos = request.files.getlist("photos") or request.files.getlist("photos[]")
-            filenames = json.loads(a.photos_json) if a.photos_json else []
+            for idx in range(len(items)):
+                photos.extend(request.files.getlist(f"photos_{idx}"))
             for p in photos:
                 if p and allowed_file(p.filename):
                     ext = os.path.splitext(p.filename.lower())[1]
                     fn = f"act_{uuid.uuid4().hex}{ext}"
                     p.save(VISTORIAS_UPLOAD_DIR / fn)
                     filenames.append(fn)
-            if filenames:
-                a.photos_json = json.dumps(filenames)
+
+        if filenames:
+            a.photos_json = json.dumps(filenames)
+        else:
+            a.photos_json = None
             
         db.session.commit()
         return jsonify({"status": "ok", "id": a.id})
@@ -1465,7 +1603,6 @@ def api_atividades(id=None):
     items = Activity.query.order_by(Activity.date.desc().nullslast()).all()
     res = []
     for i in items:
-        # Tenta decodificar o array de blocos caso description seja JSON
         blocks = []
         if i.description and i.description.startswith("[") and i.description.endswith("]"):
             try:
@@ -1473,7 +1610,6 @@ def api_atividades(id=None):
             except Exception:
                 pass
         if not blocks:
-            # Fallback para registro legado de bloco único
             blocks = [{
                 "type": i.type,
                 "location": i.location,
@@ -1489,6 +1625,13 @@ def api_atividades(id=None):
                 "obs": i.obs
             }]
             
+        photos = []
+        if i.photos_json:
+            try:
+                photos = json.loads(i.photos_json)
+            except Exception:
+                photos = []
+
         res.append({
             "id": i.id,
             "user_id": i.user_id,
@@ -1500,18 +1643,19 @@ def api_atividades(id=None):
             "description": i.description,
             "status": i.status,
             "photos_json": i.photos_json,
+            "photos": photos,
             "obs": i.obs,
             "tech_responsible": i.tech_responsible,
-            "tech": i.tech_responsible,  # Compatibilidade retroativa
+            "tech": i.tech_responsible,
             "client_name": i.client_name,
             "client_code": i.client_code,
             "quality_rating": i.quality_rating,
-            "quality": i.quality_rating,  # Compatibilidade retroativa
+            "quality": i.quality_rating,
             "client_feedback": i.client_feedback,
-            "feedback": i.client_feedback,  # Compatibilidade retroativa
+            "feedback": i.client_feedback,
             "os_closure": i.os_closure,
             "conclusion": i.conclusion,
-            "blocks": blocks  # Lista estruturada de blocos unificados
+            "blocks": blocks
         })
     return jsonify(res)
 
@@ -1665,7 +1809,7 @@ def make_premium_pdf(buffer, title, metadata, content_table_data, image_paths=No
         text_str = str(text)
         import re
         # Split by allowed ReportLab XML/HTML tags (case-insensitive)
-        allowed_tags_pattern = r'(</?(?:b|i|u|strong|em|font(?:\s+color=(?:\'[^\']*\'|"[^\"]*")|\s+face=(?:\'[^\']*\'|"[^\"]*")|\s+size=(?:\'[^\']*\'|"[^\"]*"))*|br\s*/?)>)'
+        allowed_tags_pattern = r'(</?(?:b|i|u|strong|em|font(?:\s+[^>]+)*|img(?:\s+[^>]+)*|br\s*/?)>)'
         parts = re.split(allowed_tags_pattern, text_str, flags=re.IGNORECASE)
         for i in range(len(parts)):
             if i % 2 == 0:
@@ -1845,21 +1989,48 @@ def make_premium_pdf(buffer, title, metadata, content_table_data, image_paths=No
     story.append(Paragraph("<b>Detalhamento do Registro</b>", styles["Heading3"]))
     story.append(Spacer(1, 3*mm))
 
+    from reportlab.platypus import Flowable
     content_rows = []
-    for k, v in content_table_data:
-        content_rows.append([
-            Paragraph(f"<b>{format_html_text(k)}</b>", label_style),
-            Paragraph(format_html_text(v), value_style)
-        ])
+    table_spans = []
+
+    for idx, item in enumerate(content_table_data):
+        if not item:
+            continue
+        k, v = item[0], item[1]
+
+        if k is None or k == "":
+            if isinstance(v, (Flowable, list)):
+                col_elem = v
+            else:
+                col_elem = Paragraph(format_html_text(v), value_style)
+            content_rows.append([col_elem, ""])
+            table_spans.append(('SPAN', (0, idx), (1, idx)))
+        else:
+            if isinstance(k, Flowable):
+                col1 = k
+            else:
+                col1 = Paragraph(f"<b>{format_html_text(k)}</b>", label_style)
+
+            if isinstance(v, (Flowable, list)):
+                col2 = v
+            else:
+                col2 = Paragraph(format_html_text(v), value_style)
+
+            content_rows.append([col1, col2])
 
     content_table = Table(content_rows, colWidths=[45*mm, 125*mm])
-    content_table.setStyle(TableStyle([
+    content_table.hAlign = 'LEFT'
+    t_style = [
         ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
         ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('LEFTPADDING', (0, 0), (-1, -1), 0),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 0),
         ('TOPPADDING', (0, 0), (-1, -1), 8),
         ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
         ('LINEBELOW', (0, 0), (-1, -1), 0.5, colors.HexColor("#F1F5F9")),
-    ]))
+    ]
+    t_style.extend(table_spans)
+    content_table.setStyle(TableStyle(t_style))
     story.append(content_table)
 
     # Seção 3: Registros Fotográficos
@@ -1893,9 +2064,12 @@ def make_premium_pdf(buffer, title, metadata, content_table_data, image_paths=No
                 table_data.append(row)
             
             photos_table = Table(table_data, colWidths=[85*mm, 85*mm])
+            photos_table.hAlign = 'LEFT'
             photos_table.setStyle(TableStyle([
                 ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
                 ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('LEFTPADDING', (0, 0), (-1, -1), 0),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 4),
                 ('TOPPADDING', (0, 0), (-1, -1), 6),
                 ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
             ]))
@@ -2040,7 +2214,6 @@ def atividade_pdf(id):
     if not blocks:
         blocks = [{
             "type": a.type,
-            "location": a.location,
             "date": str(a.date) if a.date else "",
             "time": a.time,
             "tech_responsible": a.tech_responsible,
@@ -2058,28 +2231,38 @@ def atividade_pdf(id):
         metadata = {
             "__ref_id__": f"AT-{a.id}",
             "Tipo de Atividade": a.type or "N/A",
-            "Localização": a.location or "N/A",
             "Data": a.date.strftime("%d/%m/%Y") if a.date else "N/A",
             "Horário": a.time or "N/A",
             "Técnico Responsável": a.tech_responsible or "N/A"
         }
 
+        obs_text = blocks[0].get("conclusion") or blocks[0].get("description") or a.conclusion or a.obs or "Sem observações"
+
         content = [
             ("Cliente", f"{a.client_name or 'N/A'} (Cód: {a.client_code or 'N/A'})"),
-            ("Status da O.S.", a.os_closure or "N/A"),
-            ("Descrição dos Serviços", blocks[0].get("description") or a.conclusion or "Sem descrição"),
-            ("Conclusão Técnica", a.conclusion or "N/A"),
+            ("Verificado encerramento de O.S.", a.os_closure or "N/A"),
             ("Avaliação de Qualidade", a.quality_rating or "N/A"),
             ("Feedback do Cliente", a.client_feedback or "Sem feedback"),
-            ("Observações", a.obs or "Sem observações")
+            ("Observações", obs_text)
         ]
 
-        make_premium_pdf(buffer, "Relatório de Atividade Técnica", metadata, content)
+        image_paths = []
+        if a.photos_json:
+            try:
+                filenames = json.loads(a.photos_json)
+                if isinstance(filenames, list):
+                    for fn in filenames:
+                        p_path = VISTORIAS_UPLOAD_DIR / fn
+                        if p_path.exists():
+                            image_paths.append(p_path)
+            except Exception as ex:
+                print("⚠️ Erro ao carregar fotos da atividade:", ex)
+
+        make_premium_pdf(buffer, "Relatório de Atividade Técnica", metadata, content, image_paths=image_paths)
     else:
         # ==========================================
         # 🔥 LAYOUT PREMIUM CONSOLIDADO MULTITÉCNICO 🔥
         # ==========================================
-        # Configuração dinâmica de layout a partir do SystemConfig para padronizar cabeçalho e rodapé
         config = SystemConfig.query.first()
         
         logo_path_custom = None
@@ -2230,10 +2413,10 @@ def atividade_pdf(id):
         
         # 2. Metadados Gerais do Registro
         meta_data = [
-            [Paragraph("<b>Localização Geral:</b>", label_style), Paragraph(a.location or "N/A", value_style),
-             Paragraph("<b>Data de Registro:</b>", label_style), Paragraph(a.date.strftime("%d/%m/%Y") if a.date else "N/A", value_style)],
             [Paragraph("<b>Total de Vistorias:</b>", label_style), Paragraph(f"{len(blocks)} atividades", value_style),
-             Paragraph("<b>Técnicos Escalados:</b>", label_style), Paragraph(a.tech_responsible or "N/A", value_style)]
+             Paragraph("<b>Data de Registro:</b>", label_style), Paragraph(a.date.strftime("%d/%m/%Y") if a.date else "N/A", value_style)],
+            [Paragraph("<b>Técnicos Escalados:</b>", label_style), Paragraph(a.tech_responsible or "N/A", value_style),
+             Paragraph("<b>Status Geral:</b>", label_style), Paragraph(a.status or "CONCLUÍDO", value_style)]
         ]
         meta_table = Table(meta_data, colWidths=[35*mm, 50*mm, 35*mm, 50*mm])
         meta_table.setStyle(TableStyle([
@@ -2255,7 +2438,7 @@ def atividade_pdf(id):
             Paragraph("CLIENTE", th_style),
             Paragraph("ATIVIDADE", th_style),
             Paragraph("AVALIAÇÃO", th_style),
-            Paragraph("O.S. FECHADA", th_style)
+            Paragraph("VERIFICADO ENCERRAMENTO O.S.", th_style)
         ]]
         
         for idx, b in enumerate(blocks):
@@ -2267,7 +2450,7 @@ def atividade_pdf(id):
                 Paragraph(b.get("os_closure") or "N/A", td_style)
             ])
             
-        summary_table = Table(summary_rows, colWidths=[35*mm, 55*mm, 35*mm, 25*mm, 20*mm])
+        summary_table = Table(summary_rows, colWidths=[35*mm, 50*mm, 35*mm, 20*mm, 30*mm])
         
         # Estilização da tabela de resumo com visual premium slate
         t_style = [
@@ -2317,10 +2500,10 @@ def atividade_pdf(id):
                 [Paragraph("<b>Cliente:</b>", label_style), Paragraph(f"{b.get('client_name') or 'N/A'} (Cód: {b.get('client_code') or 'N/A'})", value_style),
                  Paragraph("<b>Horário/Tipo:</b>", label_style), Paragraph(f"{b.get('time') or 'N/D'} - {b.get('type') or 'Vistoria'}", value_style)],
                 [Paragraph("<b>Avaliação:</b>", label_style), Paragraph(b.get("quality_rating") or "N/A", value_style),
-                 Paragraph("<b>O.S. Fechada:</b>", label_style), Paragraph(b.get("os_closure") or "N/A", value_style)]
+                 Paragraph("<b>Verificado encerramento de O.S.:</b>", label_style), Paragraph(b.get("os_closure") or "N/A", value_style)]
             ]
             
-            details_table = Table(details, colWidths=[30*mm, 55*mm, 30*mm, 55*mm])
+            details_table = Table(details, colWidths=[30*mm, 55*mm, 45*mm, 40*mm])
             details_table.setStyle(TableStyle([
                 ('VALIGN', (0, 0), (-1, -1), 'TOP'),
                 ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
@@ -2329,17 +2512,18 @@ def atividade_pdf(id):
             story.append(details_table)
             story.append(Spacer(1, 3*mm))
             
-            # Feedback e Conclusão
+            # Feedback e Observações
             text_blocks = []
             if b.get("client_feedback"):
                 text_blocks.append([
                     Paragraph("<b>Feedback do Cliente:</b>", label_style),
                     Paragraph(b.get("client_feedback").replace("\n", "<br/>"), value_style)
                 ])
-            if b.get("conclusion"):
+            obs_block_text = b.get("conclusion") or b.get("description") or b.get("obs")
+            if obs_block_text:
                 text_blocks.append([
-                    Paragraph("<b>Conclusão / Observações:</b>", label_style),
-                    Paragraph(b.get("conclusion").replace("\n", "<br/>"), value_style)
+                    Paragraph("<b>Observações:</b>", label_style),
+                    Paragraph(obs_block_text.replace("\n", "<br/>"), value_style)
                 ])
                 
             if text_blocks:
@@ -2354,6 +2538,54 @@ def atividade_pdf(id):
                 story.append(tb_table)
                 
             story.append(Spacer(1, 5*mm))
+
+        # Fotos de Evidências em Consolidado
+        if a.photos_json:
+            try:
+                filenames = json.loads(a.photos_json)
+                if isinstance(filenames, list) and len(filenames) > 0:
+                    valid_photo_elements = []
+                    for fn in filenames:
+                        p_path = VISTORIAS_UPLOAD_DIR / fn
+                        if p_path.exists():
+                            try:
+                                from PIL import Image as PILImage
+                                with PILImage.open(p_path) as test_img:
+                                    test_img.verify()
+                                from reportlab.platypus import Image as RLImage
+                                img = RLImage(str(p_path), width=75*mm, height=55*mm)
+                                img.hAlign = 'LEFT'
+                                valid_photo_elements.append(img)
+                            except Exception as ex:
+                                print("⚠️ Erro foto consolidado:", ex)
+
+                    if valid_photo_elements:
+                        story.append(Spacer(1, 4*mm))
+                        story.append(Paragraph("<b>Registro Fotográfico (Evidências em Campo)</b>", section_heading))
+                        story.append(Spacer(1, 2*mm))
+
+                        photo_rows = []
+                        for p_idx in range(0, len(valid_photo_elements), 2):
+                            p_row = [valid_photo_elements[p_idx]]
+                            if p_idx + 1 < len(valid_photo_elements):
+                                p_row.append(valid_photo_elements[p_idx+1])
+                            else:
+                                p_row.append("")
+                            photo_rows.append(p_row)
+
+                        p_table = Table(photo_rows, colWidths=[82*mm, 82*mm])
+                        p_table.hAlign = 'LEFT'
+                        p_table.setStyle(TableStyle([
+                            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                            ('LEFTPADDING', (0, 0), (-1, -1), 0),
+                            ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+                            ('TOPPADDING', (0, 0), (-1, -1), 2),
+                            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+                        ]))
+                        story.append(p_table)
+            except Exception as ex:
+                print("⚠️ Erro ao renderizar fotos no PDF consolidado:", ex)
             
         doc.build(story, onFirstPage=draw_background, onLaterPages=draw_background)
         
@@ -2599,49 +2831,118 @@ def supervisao_pdf(id):
             return '<font color="#059669"><b>Baixo</b></font>'
         return val
 
-    techs_str = ""
-    if s.techs_data:
+    from reportlab.platypus import Paragraph, Spacer, Table, TableStyle, Image as RLImage
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib import colors
+    from reportlab.lib.units import mm
+
+    styles = getSampleStyleSheet()
+    val_style = ParagraphStyle(
+        name="SupValueStyle",
+        parent=styles["Normal"],
+        fontName="Helvetica",
+        fontSize=10,
+        textColor=colors.HexColor("#1E293B"),
+        leading=14
+    )
+    subhead_style = ParagraphStyle(
+        name="SupSubheadStyle",
+        parent=styles["Normal"],
+        fontName="Helvetica-Bold",
+        fontSize=10,
+        textColor=colors.HexColor("#475569"),
+        leading=14
+    )
+
+    content = []
+    orphaned_image_paths = []
+
+    if s.techs_data and isinstance(s.techs_data, list):
+        for i, t in enumerate(s.techs_data, 1):
+            tech_name = t.get('tech_name') or f"Técnico ID {t.get('tech_id')}"
+            
+            epi = map_status_pdf(t.get('epi'))
+            epc = map_status_pdf(t.get('epc'))
+            ladder = map_status_pdf(t.get('ladder_position'))
+            car = map_status_pdf(t.get('car_position'))
+            uniform = map_status_pdf(t.get('uniform'))
+            risk = map_risk_pdf(t.get('risk_level'))
+            obs_colab = t.get('conclusion') or t.get('obs') or 'N/A'
+            info_html = (
+                f"• <b>Local da Auditoria:</b> {t.get('location') or 'N/A'}<br/>"
+                f"• <b>Horário:</b> {t.get('supervision_time') or 'N/A'}<br/>"
+                f"• <b>Atividade Desenvolvida:</b> {t.get('activity') or 'N/A'}<br/>"
+                f"• <b>Grau de Risco:</b> {risk}<br/>"
+                f"• <b>Observações:</b> {obs_colab}<br/><br/>"
+                f"• <b>Checklist de Conformidades:</b><br/>"
+                f"&nbsp;&nbsp;&nbsp;&nbsp;EPI: {epi} &nbsp;|&nbsp; EPC: {epc}<br/>"
+                f"&nbsp;&nbsp;&nbsp;&nbsp;Escada: {ladder} &nbsp;|&nbsp; Carro: {car}<br/>"
+                f"&nbsp;&nbsp;&nbsp;&nbsp;Uniforme/ID: {uniform}"
+            )
+
+            label_title = f"SUPERVISÃO {i}:<br/><b>{tech_name.upper()}</b>"
+            content.append((label_title, Paragraph(info_html, val_style)))
+
+            # Fotos deste técnico específico (Linha de largura total alinhada à margem esquerda!)
+            t_photos = t.get('photos') or []
+            if isinstance(t_photos, list) and len(t_photos) > 0:
+                valid_photo_elements = []
+                for fn in t_photos:
+                    p_path = VISTORIAS_UPLOAD_DIR / fn
+                    if p_path.exists():
+                        try:
+                            from PIL import Image as PILImage
+                            with PILImage.open(p_path) as test_img:
+                                test_img.verify()
+                            img = RLImage(str(p_path), width=75*mm, height=55*mm)
+                            img.hAlign = 'LEFT'
+                            valid_photo_elements.append(img)
+                        except Exception as ex:
+                            print(f"⚠️ Erro ao carregar foto do técnico no PDF ({p_path}):", ex)
+                
+                if valid_photo_elements:
+                    photo_flowables = []
+                    photo_flowables.append(Paragraph(f"<b>Registro Fotográfico - Auditoria ({len(valid_photo_elements)} foto(s)):</b>", subhead_style))
+                    photo_flowables.append(Spacer(1, 2*mm))
+
+                    photo_rows = []
+                    for p_idx in range(0, len(valid_photo_elements), 2):
+                        p_row = [valid_photo_elements[p_idx]]
+                        if p_idx + 1 < len(valid_photo_elements):
+                            p_row.append(valid_photo_elements[p_idx+1])
+                        else:
+                            p_row.append("")
+                        photo_rows.append(p_row)
+
+                    p_table = Table(photo_rows, colWidths=[80*mm, 80*mm])
+                    p_table.hAlign = 'LEFT'
+                    p_table.setStyle(TableStyle([
+                        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                        ('LEFTPADDING', (0, 0), (-1, -1), 0),
+                        ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+                        ('TOPPADDING', (0, 0), (-1, -1), 2),
+                        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+                    ]))
+                    photo_flowables.append(p_table)
+
+                    content.append(("", photo_flowables))
+    else:
+        content.append(("Auditoria de Técnicos em Campo", "Nenhuma supervisão registrada"))
+
+    # Fotos raiz legado (se houverem no nível da supervisão)
+    if s.photos_json:
         try:
-            if isinstance(s.techs_data, list):
-                lines = []
-                for i, t in enumerate(s.techs_data, 1):
-                    tech_name = t.get('tech_name') or f"Técnico ID {t.get('tech_id')}"
-                    
-                    epi = map_status_pdf(t.get('epi'))
-                    epc = map_status_pdf(t.get('epc'))
-                    ladder = map_status_pdf(t.get('ladder_position'))
-                    car = map_status_pdf(t.get('car_position'))
-                    uniform = map_status_pdf(t.get('uniform'))
-                    risk = map_risk_pdf(t.get('risk_level'))
-
-                    lines.append(f"<b>SUPERVISÃO {i}: {tech_name.upper()}</b>")
-                    lines.append(f"  • <b>Local da Auditoria:</b> {t.get('location') or 'N/A'}")
-                    lines.append(f"  • <b>Horário:</b> {t.get('supervision_time') or 'N/A'}")
-                    lines.append(f"  • <b>Atividade Desenvolvida:</b> {t.get('activity') or 'N/A'}")
-                    lines.append(f"  • <b>Conclusão / Ação:</b> {t.get('conclusion') or 'N/A'}")
-                    lines.append(f"  • <b>Grau de Risco:</b> {risk}")
-                    lines.append("")
-                    lines.append(f"  • <b>Checklist de Conformidades:</b>")
-                    lines.append(f"    EPI: {epi}  |  EPC: {epc}")
-                    lines.append(f"    Posicionamento da Escada: {ladder}")
-                    lines.append(f"    Posicionamento do Carro: {car}")
-                    lines.append(f"    Uniforme e Identificação: {uniform}")
-                    lines.append("")
-                    if i < len(s.techs_data):
-                        lines.append("__________________________________________________________________")
-                        lines.append("")
-                techs_str = "\n".join(lines)
-            else:
-                techs_str = str(s.techs_data)
+            filenames = json.loads(s.photos_json)
+            if isinstance(filenames, list):
+                for fn in filenames:
+                    p_path = VISTORIAS_UPLOAD_DIR / fn
+                    if p_path.exists():
+                        orphaned_image_paths.append(p_path)
         except Exception as ex:
-            techs_str = f"Erro ao processar dados de técnicos: {str(ex)}"
+            print("⚠️ Erro ao carregar fotos gerais da supervisão para o PDF:", ex)
 
-    content = [
-        ("Auditoria de Técnicos em Campo", techs_str or "Nenhuma supervisão registrada"),
-        ("Observações do Supervisor", s.obs or "Sem observações gerais registradas")
-    ]
-
-    make_premium_pdf(buffer, "Relatório de Supervisão Técnica em Campo", metadata, content)
+    make_premium_pdf(buffer, "Relatório de Supervisão Técnica em Campo", metadata, content, image_paths=orphaned_image_paths)
     buffer.seek(0)
     
     return send_file(

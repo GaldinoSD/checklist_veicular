@@ -3973,20 +3973,26 @@ function renderSupervisaoTable(data) {
         const techList = i.techs_data || [];
         const techNames = techList.map(t => t.tech_name || 'N/A').join(', ');
         
-        // Conformidade geral e Risco
-        let epiIncorreto = 0;
-        let epcIncorreto = 0;
+        // Conformidade geral e Risco (ignora N/A - Não Aplicável)
+        let temNaoConformidade = false;
         let maxRisk = 'Baixo';
         
+        const isIrregular = (val) => {
+            if (!val) return false;
+            const v = String(val).toUpperCase().trim();
+            return v === 'IRR' || v === 'IRREGULAR' || v === 'NÃO OK' || v === 'NAO OK' || v === 'NOK';
+        };
+
         techList.forEach(t => {
-            if (t.epi !== 'OK') epiIncorreto++;
-            if (t.epc !== 'OK') epcIncorreto++;
+            if (isIrregular(t.epi) || isIrregular(t.epc) || isIrregular(t.ladder_position) || isIrregular(t.car_position) || isIrregular(t.uniform)) {
+                temNaoConformidade = true;
+            }
             if (t.risk_level === 'Alto') maxRisk = 'Alto';
             else if (t.risk_level === 'Médio' && maxRisk !== 'Alto') maxRisk = 'Médio';
         });
 
         let statusHtml = '';
-        if (epiIncorreto > 0 || epcIncorreto > 0) {
+        if (temNaoConformidade) {
             statusHtml += `<span class="inline-block text-[9px] font-bold bg-rose-50 text-rose-600 border border-rose-500/20 px-2 py-0.5 rounded mr-1.5"><i class="fa-solid fa-shield-halved"></i> Não Conformidades</span>`;
         } else {
             statusHtml += `<span class="inline-block text-[9px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-500/20 px-2 py-0.5 rounded mr-1.5"><i class="fa-solid fa-shield-halved"></i> 100% Conforme</span>`;
@@ -4365,13 +4371,25 @@ function showSupervisaoModal(id) {
                 <span class="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Auditorias de Campo</span>
                 <div class="space-y-3 max-h-60 overflow-y-auto pr-1">
                     ${techList.map(t => `
-                        <div class="border-l-2 border-slate-300 dark:border-slate-700 pl-3">
+                        <div class="border-l-2 border-slate-300 dark:border-slate-700 pl-3 space-y-1">
                             <h5 class="text-xs font-bold text-slate-700 dark:text-gray-200">${t.tech_name || 'Técnico'}</h5>
-                            <p class="text-[10px] text-slate-500 mt-0.5">
+                            <p class="text-[10px] text-slate-500">
                                 <strong>Local:</strong> ${t.location || 'N/A'} | <strong>Horário:</strong> ${t.supervision_time || 'N/A'} <br>
                                 <strong>Atividade:</strong> ${t.activity || 'N/A'} <br>
-                                <strong>Ação / Conclusão:</strong> ${t.conclusion || 'N/A'}
+                                <strong>Observações:</strong> ${t.conclusion || t.obs || 'N/A'}
                             </p>
+                            ${t.photos && t.photos.length > 0 ? `
+                                <div class="pt-1">
+                                    <span class="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Evidências do Colaborador (${t.photos.length}):</span>
+                                    <div class="flex flex-wrap gap-2">
+                                        ${t.photos.map(p => `
+                                            <a href="/static/vistorias_fotos/${p}" target="_blank" class="block w-16 h-16 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 hover:opacity-90 transition-all shadow-sm">
+                                                <img src="/static/vistorias_fotos/${p}" class="w-full h-full object-cover">
+                                            </a>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            ` : ''}
                         </div>
                     `).join('')}
                 </div>
@@ -4382,11 +4400,21 @@ function showSupervisaoModal(id) {
                     <span class="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-2">Checklist de Segurança & Risco</span>
                     <div class="space-y-2 max-h-40 overflow-y-auto">
                         ${techList.map(t => {
-                            const epiStatus = t.epi === 'OK' ? `<span class="text-slate-500">EPI: OK</span>` : `<span class="text-red-500 font-bold">EPI: INCORRETO</span>`;
-                            const epcStatus = t.epc === 'OK' ? `<span class="text-slate-500">EPC: OK</span>` : `<span class="text-red-500 font-bold">EPC: INCORRETO</span>`;
-                            const ladder = t.ladder_position === 'OK' ? `<span class="text-slate-500">Escada: OK</span>` : `<span class="text-red-500 font-bold">Escada: INCORRETA</span>`;
-                            const car = t.car_position === 'OK' ? `<span class="text-slate-500">Carro: OK</span>` : `<span class="text-red-500 font-bold">Carro: INCORRETO</span>`;
-                            const uniform = t.uniform === 'OK' ? `<span class="text-slate-500">Uniforme: OK</span>` : `<span class="text-red-500 font-bold">Uniforme: INCORRETO</span>`;
+                            const formatItem = (label, val) => {
+                                const v = val ? String(val).toUpperCase().trim() : '';
+                                if (v === 'OK') {
+                                    return `<span class="text-slate-500">${label}: OK</span>`;
+                                } else if (v === 'NA' || v === 'N/A') {
+                                    return `<span class="text-slate-400 font-medium">${label}: N/A</span>`;
+                                } else {
+                                    return `<span class="text-red-500 font-bold">${label}: INCORRETO</span>`;
+                                }
+                            };
+                            const epiStatus = formatItem('EPI', t.epi);
+                            const epcStatus = formatItem('EPC', t.epc);
+                            const ladder = formatItem('Escada', t.ladder_position);
+                            const car = formatItem('Carro', t.car_position);
+                            const uniform = formatItem('Uniforme', t.uniform);
                             const risk = t.risk_level === 'Alto' ? `<span class="px-1.5 py-0.5 bg-slate-100 text-slate-700 rounded text-[9px] font-black">Alto Risco</span>` : t.risk_level === 'Médio' ? `<span class="px-1.5 py-0.5 bg-slate-100 text-slate-700 rounded text-[9px] font-black">Médio Risco</span>` : `<span class="px-1.5 py-0.5 bg-slate-100 text-slate-700 rounded text-[9px] font-black">Baixo Risco</span>`;
                             
                             return `
@@ -4402,6 +4430,27 @@ function showSupervisaoModal(id) {
                     <span class="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Observações Gerais</span>
                     <p class="text-xs text-slate-700 dark:text-gray-300 leading-relaxed font-medium">${i.obs || 'Nenhuma observação geral registrada.'}</p>
                 </div>
+                ${(() => {
+                    if (!i.photos_json) return '';
+                    try {
+                        const photos = typeof i.photos_json === 'string' ? JSON.parse(i.photos_json) : i.photos_json;
+                        if (photos && photos.length > 0) {
+                            return `
+                                <div class="border-t border-slate-100 dark:border-slate-800 pt-3">
+                                    <span class="text-[9px] font-bold text-slate-400 uppercase tracking-wider block mb-2">Registro Fotográfico (${photos.length} foto(s))</span>
+                                    <div class="grid grid-cols-3 md:grid-cols-4 gap-2">
+                                        ${photos.map(p => `
+                                            <a href="/static/vistorias_fotos/${p}" target="_blank" class="block rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 hover:opacity-90 transition-all shadow-sm">
+                                                <img src="/static/vistorias_fotos/${p}" class="w-full h-20 object-cover">
+                                            </a>
+                                        `).join('')}
+                                    </div>
+                                </div>
+                            `;
+                        }
+                    } catch(e) {}
+                    return '';
+                })()}
             </div>
         </div>
     `;
@@ -7297,10 +7346,16 @@ function openModalVistoria() {
     openModal('modal-vistoria');
 }
 
+let vistoriaBlockCounter = 0;
+
 function addVistoriaBlock() {
+    vistoriaBlockCounter++;
+    const blockId = `block_${vistoriaBlockCounter}`;
+
     const container = document.getElementById('vistoria-blocks');
     const block = document.createElement('div');
-    block.className = 'bg-slate-50 dark:bg-white/5 p-6 rounded-2xl border border-slate-900/10 dark:border-white/10 relative animate-premium';
+    block.id = blockId;
+    block.className = 'bg-slate-50 dark:bg-white/5 p-6 rounded-2xl border border-slate-900/10 dark:border-white/10 relative animate-premium space-y-4';
     
     const options = globalTecnicos.map(t => `<option value="${t.username}">${t.username}</option>`).join('');
     
@@ -7308,37 +7363,37 @@ function addVistoriaBlock() {
         <button type="button" onclick="this.parentElement.remove()" class="btn-remove-block absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:bg-red-50 hover:text-red-500 transition-all">
             <i class="fa-solid fa-trash"></i>
         </button>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-                <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Técnico Responsável</label>
-                <select name="tech_responsible" required class="w-full bg-white dark:bg-gray-900 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2 text-sm text-slate-900 dark:text-white outline-none">
+                <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Técnico Responsável *</label>
+                <select name="tech_responsible" required class="w-full bg-white dark:bg-gray-900 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white outline-none">
                     <option value="" disabled selected>Selecione o técnico</option>
                     ${options}
                 </select>
             </div>
             <div>
-                <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Cliente</label>
-                <input id="client_name" type="text" name="client_name" required class="w-full bg-white dark:bg-gray-900 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500/20 outline-none">
+                <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Cliente *</label>
+                <input id="client_name" type="text" name="client_name" required class="w-full bg-white dark:bg-gray-900 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500/20 outline-none">
             </div>
             <div>
                 <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Código Cliente</label>
-                <input id="client_code" type="text" name="client_code" class="w-full bg-white dark:bg-gray-900 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500/20 outline-none">
+                <input id="client_code" type="text" name="client_code" class="w-full bg-white dark:bg-gray-900 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500/20 outline-none">
             </div>
         </div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-                <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Atividade Realizada</label>
-                <input id="type" type="text" name="type" required class="w-full bg-white dark:bg-gray-900 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500/20 outline-none" placeholder="Ex: Fusão de Fibra">
+                <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Atividade Realizada *</label>
+                <input id="type" type="text" name="type" required class="w-full bg-white dark:bg-gray-900 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500/20 outline-none" placeholder="Ex: Fusão de Fibra">
             </div>
             <div>
                 <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Horário da Visita</label>
-                <input id="time" type="time" name="time" required class="w-full bg-white dark:bg-gray-900 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500/20 outline-none">
+                <input id="time" type="time" name="time" class="w-full bg-white dark:bg-gray-900 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500/20 outline-none">
             </div>
         </div>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
                 <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Qualidade do Serviço</label>
-                <select name="quality_rating" class="w-full bg-white dark:bg-gray-900 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2 text-sm text-slate-900 dark:text-white outline-none">
+                <select name="quality_rating" class="w-full bg-white dark:bg-gray-900 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white outline-none">
                     <option value="Excelente">Excelente</option>
                     <option value="Bom">Bom</option>
                     <option value="Regular">Regular</option>
@@ -7347,19 +7402,25 @@ function addVistoriaBlock() {
             </div>
             <div>
                 <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Validação Encerramento O.S</label>
-                <select name="os_closure" class="w-full bg-white dark:bg-gray-900 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2 text-sm text-slate-900 dark:text-white outline-none">
+                <select name="os_closure" class="w-full bg-white dark:bg-gray-900 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white outline-none">
                     <option value="Sim">Sim</option>
                     <option value="Não">Não</option>
                 </select>
             </div>
         </div>
-        <div class="mb-4">
+        <div>
             <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Feedback do Cliente</label>
-            <textarea name="client_feedback" rows="2" class="w-full bg-white dark:bg-gray-900 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500/20 outline-none"></textarea>
+            <textarea name="client_feedback" rows="2" class="w-full bg-white dark:bg-gray-900 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500/20 outline-none resize-none"></textarea>
         </div>
         <div>
             <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Conclusão / Observações Finais</label>
-            <textarea name="conclusion" rows="2" class="w-full bg-white dark:bg-gray-900 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500/20 outline-none"></textarea>
+            <textarea name="conclusion" rows="2" class="w-full bg-white dark:bg-gray-900 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm text-slate-900 dark:text-white focus:ring-2 focus:ring-purple-500/20 outline-none resize-none"></textarea>
+        </div>
+        <div class="p-4 rounded-xl border border-slate-900/10 dark:border-white/10 bg-white/50 dark:bg-gray-900/50">
+            <label class="block text-[10px] font-bold text-slate-400 uppercase mb-2 tracking-widest flex items-center gap-2">
+                <i class="fa-solid fa-camera text-purple-600"></i> Registro Fotográfico (Evidências de Vistoria)
+            </label>
+            <input type="file" name="photos" multiple accept="image/*" class="w-full bg-white dark:bg-gray-900 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2 text-xs font-bold text-slate-900 dark:text-white file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[10px] file:font-black file:bg-purple-500/10 file:text-purple-600 hover:file:bg-purple-500/20 cursor-pointer transition-all">
         </div>
     `;
     container.appendChild(block);
@@ -7369,26 +7430,40 @@ async function submitVistorias() {
     const blocks = document.getElementById('vistoria-blocks').children;
     if(blocks.length === 0) return alert("Adicione pelo menos uma vistoria.");
     
-    const data = [];
+    const formData = new FormData();
+    const items = [];
+    
     for(let b of blocks) {
         const item = {};
         b.querySelectorAll('input, select, textarea').forEach(el => {
-            item[el.name] = el.value;
+            if(el.type !== 'file') {
+                item[el.name] = el.value;
+            }
         });
-        data.push(item);
+        items.push(item);
+        
+        const fileInput = b.querySelector('input[type="file"]');
+        if(fileInput && fileInput.files) {
+            for(let f = 0; f < fileInput.files.length; f++) {
+                formData.append('photos', fileInput.files[f]);
+            }
+        }
     }
+    
+    formData.append('data', JSON.stringify(items));
     
     try {
         const res = await fetch('/api/gestao/atividades', {
             method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(data)
+            body: formData
         });
-        if(res.ok) {
+        const resData = await res.json();
+        if(res.ok && resData.status === 'ok') {
             closeModal('modal-vistoria');
             loadItems('atividades');
+            if(typeof showToast === 'function') showToast("Vistoria salva com sucesso!", "success");
         } else {
-            alert("Erro ao salvar vistorias.");
+            alert(resData.error || "Erro ao salvar vistorias.");
         }
     } catch(e) {
         console.error(e);
@@ -7428,7 +7503,6 @@ function editAtividade(id) {
         block.querySelector('textarea[name="client_feedback"]').value = b.client_feedback || '';
         block.querySelector('textarea[name="conclusion"]').value = b.conclusion || '';
         
-        // Se houver apenas 1 bloco, esconde o botão de remover
         if (blocks.length === 1) {
             block.querySelector('.btn-remove-block').classList.add('hidden');
         }
@@ -7438,7 +7512,6 @@ function editAtividade(id) {
     submitBtn.onclick = () => saveEditAtividade(id);
     submitBtn.innerHTML = '<i class="fa-solid fa-save"></i> Salvar Alteração';
     
-    // Permite adicionar mais blocos/técnicos na edição
     document.querySelector('#modal-vistoria button[onclick="addVistoriaBlock()"]').classList.remove('hidden');
     openModal('modal-vistoria');
 }
@@ -7447,29 +7520,49 @@ async function saveEditAtividade(id) {
     const blocks = document.getElementById('vistoria-blocks').children;
     if(blocks.length === 0) return alert("Adicione pelo menos uma vistoria.");
     
-    const data = [];
+    const formData = new FormData();
+    formData.append('id', id);
+    
+    const items = [];
+    let existingPhotos = [];
+    const itemOrig = currentAtividades.find(a => a.id === id);
+    if(itemOrig && itemOrig.photos) existingPhotos = itemOrig.photos;
+    
     for(let b of blocks) {
         const item = {};
         b.querySelectorAll('input, select, textarea').forEach(el => {
-            item[el.name] = el.value;
+            if(el.type !== 'file') {
+                item[el.name] = el.value;
+            }
         });
-        data.push(item);
+        items.push(item);
+        
+        const fileInput = b.querySelector('input[type="file"]');
+        if(fileInput && fileInput.files) {
+            for(let f = 0; f < fileInput.files.length; f++) {
+                formData.append('photos', fileInput.files[f]);
+            }
+        }
     }
+    
+    formData.append('data', JSON.stringify(items));
+    formData.append('existing_photos', JSON.stringify(existingPhotos));
     
     try {
         const res = await fetch(`/api/gestao/atividades/${id}`, {
             method: 'PUT',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(data)
+            body: formData
         });
-        if(res.ok) {
+        const resData = await res.json();
+        if(res.ok && resData.status === 'ok') {
             closeModal('modal-vistoria');
             loadItems('atividades');
+            if(typeof showToast === 'function') showToast("Atividade atualizada com sucesso!", "success");
         } else {
-            alert("Erro ao salvar alterações da vistoria.");
+            alert(resData.error || "Erro ao atualizar atividade.");
         }
-    } catch(e) { 
-        console.error(e); 
+    } catch(e) {
+        console.error(e);
         alert("Erro de conexão.");
     }
 }
@@ -7733,6 +7826,43 @@ function downloadRotaPDF(id) {
 
 // --- SUPERVISÃO DE CAMPO JS ---
 let supervisaoData = [];
+let currentSupervisaoPhotos = [];
+
+function previewSupervisaoPhotos(input) {
+    const previewContainer = document.getElementById('supervisao_photos_preview');
+    if (!previewContainer) return;
+    
+    let html = currentSupervisaoPhotos.map((p, idx) => `
+        <div class="relative group rounded-2xl overflow-hidden border border-slate-900/10 dark:border-white/10 shadow-sm">
+            <img src="/static/vistorias_fotos/${p}" class="w-full h-24 object-cover">
+            <button type="button" onclick="removeExistingSupervisaoPhoto(${idx})" class="absolute top-1 right-1 w-7 h-7 bg-red-500 text-white rounded-xl flex items-center justify-center opacity-90 hover:opacity-100 shadow-md">
+                <i class="fa-solid fa-xmark text-xs"></i>
+            </button>
+            <span class="absolute bottom-1 left-1 bg-black/60 text-white text-[8px] font-black px-1.5 py-0.5 rounded">Salva</span>
+        </div>
+    `).join('');
+
+    if (input && input.files) {
+        const newFiles = Array.from(input.files);
+        html += newFiles.map(file => {
+            const url = URL.createObjectURL(file);
+            return `
+                <div class="relative group rounded-2xl overflow-hidden border border-emerald-500/30 shadow-sm">
+                    <img src="${url}" class="w-full h-24 object-cover">
+                    <span class="absolute bottom-1 left-1 bg-emerald-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded">Nova</span>
+                </div>
+            `;
+        }).join('');
+    }
+
+    previewContainer.innerHTML = html;
+}
+
+function removeExistingSupervisaoPhoto(idx) {
+    currentSupervisaoPhotos.splice(idx, 1);
+    const fileInput = document.getElementById('supervisao_photos');
+    previewSupervisaoPhotos(fileInput);
+}
 
 async function openModalSupervisao(id = null) {
     console.log('[Supervisao] openModalSupervisao() called with id:', id);
@@ -7773,6 +7903,7 @@ function addSupervisaoRow(data = null) {
     const div = document.createElement('div');
     div.id = rowId;
     div.className = "bg-white dark:bg-white/5 p-8 rounded-[2rem] border border-slate-900/10 dark:border-white/10 relative group/row animate-premium shadow-xl mb-8";
+    div.dataset.existingPhotos = JSON.stringify(data && data.photos ? data.photos : []);
     
     const techOptions = tecnicos_js.map(t => `<option value="${t.id}" ${data && data.tech_id == t.id ? 'selected' : ''}>${t.username}</option>`).join('');
 
@@ -7786,14 +7917,14 @@ function addSupervisaoRow(data = null) {
                 <i class="fa-solid fa-user-gear text-xl"></i>
             </div>
             <div>
-                <h3 class="text-lg font-black text-slate-800 dark:text-white tracking-tight">Dados da Vistoria</h3>
-                <p class="text-[10px] text-slate-400 uppercase font-black tracking-[0.2em]">Auditoria Individual</p>
+                <h3 class="text-lg font-black text-slate-800 dark:text-white tracking-tight">Avaliação do Colaborador</h3>
+                <p class="text-[10px] text-slate-400 uppercase font-black tracking-[0.2em]">Auditoria Individual & Evidências</p>
             </div>
         </div>
 
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
             <div>
-                <label class="block text-[10px] font-black text-slate-400 uppercase mb-2 tracking-widest">Técnico</label>
+                <label class="block text-[10px] font-black text-slate-400 uppercase mb-2 tracking-widest">Colaborador / Técnico</label>
                 <select name="tech_id" required class="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-900/5 dark:border-white/5 rounded-2xl px-5 py-4 text-sm font-bold text-slate-900 dark:text-white outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all">
                     <option value="">Selecione...</option>
                     ${techOptions}
@@ -7844,7 +7975,7 @@ function addSupervisaoRow(data = null) {
             </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-6">
             <div>
                 <label class="block text-[10px] font-black text-slate-400 uppercase mb-2 tracking-widest">Grau de Risco Observado</label>
                 <select name="risk_level" class="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-900/5 dark:border-white/5 rounded-2xl px-5 py-4 text-sm font-bold text-slate-900 dark:text-white outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all">
@@ -7854,13 +7985,72 @@ function addSupervisaoRow(data = null) {
                 </select>
             </div>
             <div>
-                <label class="block text-[10px] font-black text-slate-400 uppercase mb-2 tracking-widest">Conclusão e Recomendações</label>
-                <textarea name="conclusion" required placeholder="Observações finais para este técnico..." class="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-900/5 dark:border-white/5 rounded-2xl px-5 py-4 text-sm font-medium text-slate-900 dark:text-white outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all h-20 resize-none">${data ? data.conclusion || '' : ''}</textarea>
+                <label class="block text-[10px] font-black text-slate-400 uppercase mb-2 tracking-widest">Observações</label>
+                <textarea name="conclusion" required placeholder="Observações específicas para este colaborador..." class="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-900/5 dark:border-white/5 rounded-2xl px-5 py-4 text-sm font-medium text-slate-900 dark:text-white outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all h-20 resize-none">${data ? data.conclusion || data.obs || '' : ''}</textarea>
             </div>
+        </div>
+
+        <div class="p-4 rounded-2xl border border-slate-900/5 dark:border-white/5 bg-slate-50/50 dark:bg-white/5">
+            <label class="block text-[10px] font-black text-slate-400 uppercase mb-2 tracking-widest flex items-center gap-2">
+                <i class="fa-solid fa-camera text-emerald-500"></i> Registro Fotográfico do Colaborador
+            </label>
+            <input type="file" name="tech_photos" multiple accept="image/*" onchange="previewTechRowPhotos(this, '${rowId}')" class="w-full bg-white dark:bg-slate-800/50 border border-slate-900/5 dark:border-white/5 rounded-xl px-4 py-2 text-xs font-bold text-slate-900 dark:text-white file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-[10px] file:font-black file:bg-emerald-500/10 file:text-emerald-600 hover:file:bg-emerald-500/20 cursor-pointer transition-all">
+            <div id="photos_preview_${rowId}" class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-3"></div>
         </div>
     `;
     
     container.appendChild(div);
+    previewTechRowPhotos(div.querySelector('input[type="file"]'), rowId);
+}
+
+function previewTechRowPhotos(input, rowId) {
+    const rowEl = document.getElementById(rowId);
+    if (!rowEl) return;
+    const previewContainer = document.getElementById(`photos_preview_${rowId}`);
+    if (!previewContainer) return;
+
+    let existingPhotos = [];
+    try {
+        existingPhotos = JSON.parse(rowEl.dataset.existingPhotos || '[]');
+    } catch(e){}
+
+    let html = existingPhotos.map((p, idx) => `
+        <div class="relative group rounded-2xl overflow-hidden border border-slate-900/10 dark:border-white/10 shadow-sm">
+            <img src="/static/vistorias_fotos/${p}" class="w-full h-20 object-cover">
+            <button type="button" onclick="removeTechRowExistingPhoto('${rowId}', ${idx})" class="absolute top-1 right-1 w-6 h-6 bg-red-500 text-white rounded-xl flex items-center justify-center opacity-90 hover:opacity-100 shadow-md">
+                <i class="fa-solid fa-xmark text-[10px]"></i>
+            </button>
+            <span class="absolute bottom-1 left-1 bg-black/60 text-white text-[8px] font-black px-1.5 py-0.5 rounded">Salva</span>
+        </div>
+    `).join('');
+
+    if (input && input.files) {
+        const newFiles = Array.from(input.files);
+        html += newFiles.map(file => {
+            const url = URL.createObjectURL(file);
+            return `
+                <div class="relative group rounded-2xl overflow-hidden border border-emerald-500/30 shadow-sm">
+                    <img src="${url}" class="w-full h-20 object-cover">
+                    <span class="absolute bottom-1 left-1 bg-emerald-600 text-white text-[8px] font-black px-1.5 py-0.5 rounded">Nova</span>
+                </div>
+            `;
+        }).join('');
+    }
+
+    previewContainer.innerHTML = html;
+}
+
+function removeTechRowExistingPhoto(rowId, idx) {
+    const rowEl = document.getElementById(rowId);
+    if (!rowEl) return;
+    let existingPhotos = [];
+    try {
+        existingPhotos = JSON.parse(rowEl.dataset.existingPhotos || '[]');
+    } catch(e){}
+    existingPhotos.splice(idx, 1);
+    rowEl.dataset.existingPhotos = JSON.stringify(existingPhotos);
+    const input = rowEl.querySelector('input[type="file"]');
+    previewTechRowPhotos(input, rowId);
 }
 
 function removeSupervisaoRow(rowId) {
@@ -7876,35 +8066,61 @@ async function submitSupervisaoBulk() {
     const container = document.getElementById('supervisao_rows_container');
     const rows = container.querySelectorAll('.group\\/row');
     
-    const payload = {
-        id: document.getElementById('supervisao_id')?.value || null,
-        techs: []
-    };
+    const formData = new FormData();
+    const idVal = document.getElementById('supervisao_id')?.value;
+    if (idVal) formData.append('id', idVal);
     
-    for (const row of rows) {
+    formData.append('obs', document.getElementById('supervisao_obs')?.value || "");
+    formData.append('existing_photos', JSON.stringify(currentSupervisaoPhotos));
+    
+    const techs = [];
+    rows.forEach((row, idx) => {
         const rowId = row.id;
         const techSelect = row.querySelector('[name="tech_id"]');
         const tech_id = techSelect.value;
         const tech_name = techSelect.options[techSelect.selectedIndex]?.text || "N/A";
-        if (!tech_id) continue;
+        if (!tech_id) return;
         
-        payload.techs.push({
+        let existingPhotos = [];
+        try {
+            existingPhotos = JSON.parse(row.dataset.existingPhotos || '[]');
+        } catch(e){}
+
+        techs.push({
             tech_id: tech_id,
             tech_name: tech_name,
             location: row.querySelector('[name="location"]').value,
             supervision_time: row.querySelector('[name="supervision_time"]').value,
             activity: row.querySelector('[name="activity"]').value,
             conclusion: row.querySelector('[name="conclusion"]').value,
+            obs: row.querySelector('[name="conclusion"]').value,
             epi: row.querySelector(`[name="epi-${rowId}"]:checked`)?.value || 'OK',
             epc: row.querySelector(`[name="epc-${rowId}"]:checked`)?.value || 'OK',
             ladder_position: row.querySelector(`[name="ladder_position-${rowId}"]:checked`)?.value || 'OK',
             car_position: row.querySelector(`[name="car_position-${rowId}"]:checked`)?.value || 'OK',
             uniform: row.querySelector(`[name="uniform-${rowId}"]:checked`)?.value || 'OK',
-            risk_level: row.querySelector('[name="risk_level"]').value
+            risk_level: row.querySelector('[name="risk_level"]').value,
+            existing_photos: existingPhotos
         });
-    }
+
+        // Anexa os arquivos de fotos deste técnico específico
+        const fileInput = row.querySelector('input[type="file"]');
+        if (fileInput && fileInput.files) {
+            for (let f = 0; f < fileInput.files.length; f++) {
+                formData.append(`tech_photos_${idx}`, fileInput.files[f]);
+            }
+        }
+    });
     
-    if (payload.techs.length === 0) return showToast("Adicione ao menos um técnico.", "error");
+    if (techs.length === 0) return showToast("Adicione ao menos um técnico.", "error");
+    formData.append('techs', JSON.stringify(techs));
+
+    const photoInput = document.getElementById('supervisao_photos');
+    if (photoInput && photoInput.files) {
+        for (let i = 0; i < photoInput.files.length; i++) {
+            formData.append('photos', photoInput.files[i]);
+        }
+    }
     
     const btn = document.getElementById('btn-save-supervisao');
     const originalText = btn.innerHTML;
@@ -7914,12 +8130,11 @@ async function submitSupervisaoBulk() {
     try {
         const res = await fetch('/api/gestao/supervisao', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
+            body: formData
         });
         const resData = await res.json();
-        if (resData.success) {
-            showToast("Supervisão única salva com sucesso!");
+        if (resData.success || resData.status === 'ok') {
+            showToast("Supervisão salva com sucesso!");
             closeModal('modal-supervisao');
             loadItems('supervisao');
         } else {

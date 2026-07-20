@@ -27,7 +27,7 @@
         </div>
 
         <div class="flex items-center gap-4 relative z-10">
-            {% if current_user.username == 'admin' %}
+            {% if current_user.is_admin or current_user.has_permission('usuarios') %}
             <button onclick="openModal('modalNovoUsuario')"
                     class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-emerald-500/20 transition-all active:scale-95 flex items-center gap-2">
                 <i class="fa-solid fa-plus text-xs"></i> Novo Colaborador
@@ -177,56 +177,6 @@
         {% endfor %}
       </tbody>
     </table>
-  </div>
-</div>
-
-<!-- Modal Novo -->
-<div id="modalNovoUsuario" class="fixed inset-0 hidden items-center justify-center z-[100] p-4">
-  <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="closeModal('modalNovoUsuario')"></div>
-  <div class="relative w-full max-w-md rounded-[2rem] bg-white dark:bg-slate-900 border border-slate-900/10 dark:border-white/10 shadow-2xl overflow-hidden animate-premium">
-    <div class="p-8 border-b border-slate-900/5 dark:border-white/5 bg-emerald-500/5">
-      <h3 class="text-2xl font-black text-slate-900 dark:text-white">Novo Colaborador</h3>
-      <p class="text-[10px] font-black text-emerald-600 uppercase tracking-widest mt-1">Adicionar técnico ou administrativo</p>
-    </div>
-    <div class="p-8">
-      <form method="post" action="{{ url_for('users_new') }}" class="space-y-6">
-        <div>
-          <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Nome de Usuário</label>
-          <input id="username" name="username" required placeholder="Ex: joao.silva" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl px-5 py-3.5 text-sm dark:text-white outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all">
-        </div>
-        <div>
-          <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Senha Inicial</label>
-          <input id="password" name="password" type="password" required placeholder="••••••••" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl px-5 py-3.5 text-sm dark:text-white outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all">
-        </div>
-        <div>
-          <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Perfil de Acesso</label>
-          <select name="role" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl px-5 py-3.5 text-sm dark:text-white outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all cursor-pointer">
-            <option value="tech">Técnico</option>
-            <option value="supervisor">Supervisor</option>
-            <option value="admin">Administrador</option>
-            <option value="manutencao">Manutenção</option>
-          </select>
-        </div>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">E-mail</label>
-            <input id="email" name="email" type="email" placeholder="ex@email.com" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl px-5 py-3 text-sm dark:text-white outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all">
-          </div>
-          <div>
-            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">Telefone</label>
-            <input id="phone" name="phone" type="text" placeholder="(00) 00000-0000" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl px-5 py-3 text-sm dark:text-white outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all">
-          </div>
-          <div>
-            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 block">ID Telegram</label>
-            <input id="telegram_chat_id" name="telegram_chat_id" type="text" placeholder="Ex: 12345678" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-2xl px-5 py-3 text-sm dark:text-white outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all">
-          </div>
-        </div>
-        <div class="flex flex-col gap-3 pt-4">
-          <button class="w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-widest rounded-2xl shadow-xl shadow-emerald-500/30 transition-all active:scale-95">Criar Colaborador</button>
-          <button type="button" onclick="closeModal('modalNovoUsuario')" class="w-full py-3 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] hover:text-slate-600 transition-colors">Cancelar</button>
-        </div>
-      </form>
-    </div>
   </div>
 </div>
 
