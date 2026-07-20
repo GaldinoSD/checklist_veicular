@@ -1340,7 +1340,11 @@ def api_reunioes(id=None):
         m.location = data.get("location")
         m.obs = data.get("obs")
         m.status = data.get("status", "AGENDADA")
-        m.responsible = data.get("responsible")
+        resp_input = data.get("responsible")
+        if resp_input:
+            m.responsible = resp_input
+        elif not m.responsible:
+            m.responsible = getattr(current_user, "username", None) or "Não especificado"
         m.objective = data.get("objective")
         m.summary = data.get("summary")
         m.actions = data.get("actions")
@@ -2654,8 +2658,7 @@ def reuniao_pdf(id):
         ("Objetivo da Reunião", m.objective or "Sem objetivo cadastrado"),
         ("Participantes", parts_str),
         ("Resumo / Ata", m.summary or "Sem resumo cadastrado"),
-        ("Ações / Próximos Passos", m.actions or "Sem ações mapeadas"),
-        ("Observações Gerais", m.obs or "Sem observações")
+        ("Ações / Próximos Passos", m.actions or "Sem ações mapeadas")
     ]
 
     make_premium_pdf(buffer, f"Ata de Reunião: {m.title}", metadata, content)

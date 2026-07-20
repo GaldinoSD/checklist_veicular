@@ -2134,7 +2134,7 @@
 <div id="modal-reuniao" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden items-center justify-center z-[60] p-4">
     <div class="bg-white dark:bg-gray-900 w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden max-h-[95vh] flex flex-col">
         <div class="px-6 py-4 border-b border-slate-900/10 dark:border-white/10 flex justify-between items-center">
-            <h3 class="text-lg font-bold text-slate-800 dark:text-white">Agendar Reunião</h3>
+            <h3 class="text-lg font-bold text-slate-800 dark:text-white">Registrar Reunião</h3>
             <button onclick="closeModal('modal-reuniao')" class="text-slate-400 hover:text-slate-600"><i class="fa-solid fa-xmark"></i></button>
         </div>
         <form id="form-reuniao" class="p-6 space-y-4 overflow-y-auto flex-1">
@@ -2144,6 +2144,7 @@
                     <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Título / Categoria</label>
                     <select name="title" class="w-full bg-slate-50 dark:bg-gray-800 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2 text-sm">
                         <option value="Alinhamento Semanal">Alinhamento Semanal</option>
+                        <option value="Alinhamento Técnico">Alinhamento Técnico</option>
                         <option value="Treinamento Técnico">Treinamento Técnico</option>
                         <option value="Feedback de Equipe">Feedback de Equipe</option>
                         <option value="Planejamento Mensal">Planejamento Mensal</option>
@@ -2169,10 +2170,7 @@
                     <input id="location" type="text" name="location" placeholder="Sala ou Link" class="w-full bg-slate-50 dark:bg-gray-800 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2 text-sm">
                 </div>
             </div>
-            <div>
-                <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Responsável pela Reunião</label>
-                <input id="responsible" type="text" name="responsible" placeholder="Nome do condutor" class="w-full bg-slate-50 dark:bg-gray-800 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2 text-sm">
-            </div>
+
             <div class="bg-slate-50 dark:bg-gray-800/50 p-4 rounded-2xl border border-slate-900/10 dark:border-white/10">
                 <label class="block text-xs font-bold text-slate-500 uppercase mb-3">Técnicos Participantes</label>
                 <div class="grid grid-cols-3 gap-2 max-h-32 overflow-y-auto" id="reuniao-users-list">
@@ -2197,7 +2195,7 @@
                 <textarea name="actions" rows="2" class="w-full bg-slate-50 dark:bg-gray-800 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2 text-sm" placeholder="O que deve ser feito e por quem?"></textarea>
             </div>
             <div class="pt-4">
-                <button type="submit" class="w-full py-3 bg-purple-600 text-white rounded-xl font-bold shadow-lg shadow-purple-500/30">Agendar Reunião</button>
+                <button type="submit" class="w-full py-3 bg-purple-600 text-white rounded-xl font-bold shadow-lg shadow-purple-500/30">Registrar Reunião</button>
             </div>
         </form>
     </div>
@@ -6848,7 +6846,6 @@ async function editReuniao(id) {
     form.querySelector('[name="date"]').value = item.date;
     form.querySelector('[name="time"]').value = item.time;
     form.querySelector('[name="location"]').value = item.location || '';
-    form.querySelector('[name="responsible"]').value = item.responsible || '';
     form.querySelector('[name="objective"]').value = item.objective || '';
     form.querySelector('[name="summary"]').value = item.summary || '';
     form.querySelector('[name="actions"]').value = item.actions || '';
