@@ -82,6 +82,12 @@ class User(UserMixin, db.Model):
         return self.role == "manutencao"
 
 
+@db.event.listens_for(User, "before_insert")
+@db.event.listens_for(User, "before_update")
+def _user_normalize_username(mapper, connection, target):
+    if target.username and isinstance(target.username, str):
+        target.username = target.username.upper()
+
 class Vehicle(db.Model):
     __tablename__ = "vehicle"
 

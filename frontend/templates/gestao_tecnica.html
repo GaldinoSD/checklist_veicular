@@ -122,6 +122,153 @@
             from { transform: translateX(-50%) rotate(0deg); }
             to { transform: translateX(-50%) rotate(360deg); }
         }
+        /* Custom Styling para FullCalendar (Modern & Clean) */
+        .fc {
+            font-family: inherit !important;
+        }
+        .fc .fc-toolbar-title {
+            font-size: 1.25rem !important;
+            font-weight: 800 !important;
+            letter-spacing: -0.025em !important;
+            color: #1e293b !important;
+        }
+        .dark .fc .fc-toolbar-title {
+            color: #f8fafc !important;
+        }
+        .fc .fc-button {
+            border-radius: 0.75rem !important;
+            font-size: 0.75rem !important;
+            font-weight: 700 !important;
+            padding: 0.4rem 0.85rem !important;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1) !important;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        }
+        .fc .fc-button-primary {
+            background-color: rgba(139, 92, 246, 0.1) !important;
+            color: #7c3aed !important;
+            border: 1px solid rgba(139, 92, 246, 0.2) !important;
+        }
+        .dark .fc .fc-button-primary {
+            background-color: rgba(139, 92, 246, 0.2) !important;
+            color: #c4b5fd !important;
+            border-color: rgba(167, 139, 250, 0.3) !important;
+        }
+        .fc .fc-button-primary:hover, .fc .fc-button-primary:focus {
+            background-color: #7c3aed !important;
+            color: #ffffff !important;
+            border-color: #7c3aed !important;
+        }
+        .fc .fc-button-active {
+            background-color: #7c3aed !important;
+            color: #ffffff !important;
+            border-color: #7c3aed !important;
+        }
+        .fc .fc-fullScreenBtn-button {
+            background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%) !important;
+            color: #ffffff !important;
+            border: none !important;
+            box-shadow: 0 4px 14px 0 rgba(124, 58, 237, 0.35) !important;
+        }
+        .fc .fc-fullScreenBtn-button:hover {
+            transform: translateY(-1px) !important;
+            box-shadow: 0 6px 20px 0 rgba(124, 58, 237, 0.45) !important;
+        }
+
+        /* Modo Tela Cheia Nativa (PC / HTML5 Fullscreen) — Tabela Operacional */
+        #pane-calendario:fullscreen,
+        #pane-calendario:-webkit-full-screen,
+        .calendar-native-fullscreen,
+        .calendar-fullscreen-active {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            z-index: 99999 !important;
+            background: #f8fafc !important;
+            padding: 1.25rem !important;
+            box-sizing: border-box !important;
+            display: flex !important;
+            flex-direction: column !important;
+            overflow-y: auto !important;
+        }
+        .dark #pane-calendario:fullscreen,
+        .dark #pane-calendario:-webkit-full-screen,
+        .dark .calendar-native-fullscreen,
+        .dark .calendar-fullscreen-active {
+            background: #090d16 !important;
+        }
+        #pane-calendario:fullscreen #calendar,
+        #pane-calendario:-webkit-full-screen #calendar,
+        .calendar-native-fullscreen #calendar,
+        .calendar-fullscreen-active #calendar {
+            background: #ffffff !important;
+            border: 1px solid rgba(15, 23, 42, 0.08) !important;
+            border-radius: 2rem !important;
+            padding: 1.5rem !important;
+            box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.1) !important;
+            height: 100% !important;
+            flex: 1 1 0% !important;
+        }
+        .dark #pane-calendario:fullscreen #calendar,
+        .dark #pane-calendario:-webkit-full-screen #calendar,
+        .dark .calendar-native-fullscreen #calendar,
+        .dark .calendar-fullscreen-active #calendar {
+            background: rgba(15, 23, 42, 0.95) !important;
+            border-color: rgba(255, 255, 255, 0.08) !important;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7) !important;
+        }
+
+        /* Estilização da Tabela Operacional (FullCalendar List View) */
+        .fc-list-day-cushion {
+            background: #f1f5f9 !important;
+            padding: 10px 18px !important;
+        }
+        .dark .fc-list-day-cushion {
+            background: #1e293b !important;
+        }
+        .fc-list-day-text,
+        .fc-list-day-side-text {
+            font-weight: 800 !important;
+            font-size: 0.9rem !important;
+            color: #1e293b !important;
+            text-transform: uppercase !important;
+            letter-spacing: 0.025em !important;
+        }
+        .dark .fc-list-day-text,
+        .dark .fc-list-day-side-text {
+            color: #f1f5f9 !important;
+        }
+        .fc-list-event {
+            transition: all 0.15s ease !important;
+            cursor: pointer !important;
+        }
+        .fc-list-event:hover {
+            background: rgba(139, 92, 246, 0.06) !important;
+        }
+        .fc-list-event-title {
+            font-size: 0.95rem !important;
+            font-weight: 700 !important;
+            color: #0f172a !important;
+            padding: 12px 18px !important;
+        }
+        .dark .fc-list-event-title {
+            color: #f8fafc !important;
+        }
+        .fc-list-event-graphic {
+            padding-left: 18px !important;
+        }
+        .fc-list-event-dot {
+            border-width: 6px !important;
+        }
+        .fc-list-empty {
+            background: transparent !important;
+            font-size: 1rem !important;
+            font-weight: 600 !important;
+            color: #64748b !important;
+        }
     </style>
 
     <!-- ÁREA DE CONTEÚDO (DINÂMICA) -->
@@ -7263,6 +7410,64 @@ async function loadScaleConfig() {
 
 // --- CALENDÁRIO ---
 let calendar = null;
+let isCalendarFullScreen = false;
+
+function toggleCalendarFullScreen() {
+    const pane = document.getElementById('pane-calendario');
+    if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+        if (pane.requestFullscreen) {
+            pane.requestFullscreen().catch(err => {
+                showToast("Erro ao abrir tela cheia: " + err.message, "error");
+            });
+        } else if (pane.webkitRequestFullscreen) {
+            pane.webkitRequestFullscreen();
+        } else if (pane.msRequestFullscreen) {
+            pane.msRequestFullscreen();
+        }
+    } else {
+        if (document.exitFullscreen) {
+            document.exitFullscreen();
+        } else if (document.webkitExitFullscreen) {
+            document.webkitExitFullscreen();
+        } else if (document.msExitFullscreen) {
+            document.msExitFullscreen();
+        }
+    }
+}
+
+// Event Listener para eventos de Tela Cheia Nativa do Navegador / PC
+['fullscreenchange', 'webkitfullscreenchange', 'mozfullscreenchange', 'MSFullscreenChange'].forEach(evt => {
+    document.addEventListener(evt, onCalendarFullscreenChange);
+});
+
+function onCalendarFullscreenChange() {
+    const pane = document.getElementById('pane-calendario');
+    const isFS = !!(document.fullscreenElement || document.webkitFullscreenElement);
+    isCalendarFullScreen = isFS;
+
+    if (isFS) {
+        pane.classList.add('calendar-native-fullscreen');
+        if (calendar) {
+            calendar.changeView('listMonth'); // Alterna para Tabela / Lista Operacional em Tela Cheia Nativa
+            calendar.setOption('height', '100%');
+            calendar.updateSize();
+        }
+    } else {
+        pane.classList.remove('calendar-native-fullscreen');
+        if (calendar) {
+            calendar.changeView('dayGridMonth'); // Retorna ao Grid Mensal no modo normal
+            calendar.setOption('dayMaxEvents', true);
+            calendar.setOption('height', 'auto');
+            calendar.updateSize();
+        }
+    }
+
+    const fcBtn = document.querySelector('.fc-fullScreenBtn-button');
+    if (fcBtn) {
+        fcBtn.innerHTML = isFS ? 'Sair da Tela Cheia ✖' : 'Tela Cheia ⛶';
+    }
+}
+
 function initCalendar() {
     if(calendar) return;
     const calendarEl = document.getElementById('calendar');
@@ -7277,10 +7482,18 @@ function initCalendar() {
             day: 'Dia',
             list: 'Lista'
         },
+        customButtons: {
+            fullScreenBtn: {
+                text: 'Tela Cheia ⛶',
+                click: function() {
+                    toggleCalendarFullScreen();
+                }
+            }
+        },
         headerToolbar: {
-            left: 'prev,next today',
+            left: 'prev,next today fullScreenBtn',
             center: 'title',
-            right: 'dayGridMonth,timeGridWeek'
+            right: 'dayGridMonth,timeGridWeek,listMonth'
         },
         events: '/api/gestao/escalas',
         dayMaxEvents: true,
@@ -7304,8 +7517,11 @@ function initCalendar() {
             }
         },
         eventDidMount: function(info) {
-            // Adiciona efeitos premium nos eventos
-            info.el.classList.add('rounded-lg', 'border-none', 'px-2', 'py-0.5', 'text-[10px]', 'font-bold', 'shadow-sm');
+            info.el.classList.add('rounded-lg', 'border-none', 'px-2', 'py-1', 'text-[11px]', 'font-bold', 'shadow-sm', 'whitespace-normal');
+            if (info.event.extendedProps && info.event.extendedProps.is_past) {
+                info.el.classList.add('opacity-65', 'border-l-4', 'border-l-slate-400');
+                info.el.style.filter = 'grayscale(25%)';
+            }
         }
     });
     calendar.render();

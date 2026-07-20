@@ -290,6 +290,14 @@
         --card-shadow-hover: 0 20px 60px -15px rgba(0,0,0,0.5);
       }
 
+      /* Padronização global: nomes de usuários sempre em MAIÚSCULAS */
+      .nome-upper,
+      td[data-field="nome"], td[data-field="responsavel"], td[data-field="tecnico"],
+      td[data-field="supervisor"], td[data-field="motorista"], td[data-field="cliente"],
+      td[data-field="colaborador"], td[data-field="participante"] {
+        text-transform: uppercase !important;
+      }
+
       .card-premium {
         background: white;
         border-radius: 2rem;

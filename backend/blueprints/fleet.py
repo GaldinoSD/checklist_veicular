@@ -1862,7 +1862,7 @@ def test_layout_pdf():
     metadata = {
         "ID": "TST-9999",
         "Ambiente": "Homologação de Layout",
-        "Emitente": current_user.username,
+        "Emitente": current_user.username.upper(),
         "Data": agora().strftime("%d/%m/%Y %H:%M")
     }
 
@@ -2019,7 +2019,7 @@ def generate_checklist_pdf(checklist_obj: Checklist, raw: dict) -> str:
     # Cabeçalho / meta
     elements.append(Paragraph("<b>Informações do Checklist</b>", styles["SectionTitle"]))
     meta_data = [
-        ["Técnico:", checklist_obj.technician or "-", "Placa:", plate],
+        ["Técnico:", (checklist_obj.technician or "-").upper(), "Placa:", plate],
         ["Veículo:", f"{checklist_obj.vehicle.brand or ''} {checklist_obj.vehicle.model or ''}".strip(), "KM:", str(checklist_obj.km)],
         ["Data:", dt_brt.strftime("%d/%m/%Y %H:%M"), "Status:", checklist_obj.status],
     ]
@@ -2582,7 +2582,7 @@ def generate_vistoria_pdf(vistoria_obj: Vistoria) -> str:
     turno_formatted = "Início do Expediente" if vistoria_obj.turno == "inicio" else ("Durante Expediente" if vistoria_obj.turno == "durante" else "Fim do Expediente")
     
     meta_data = [
-        ["Vistoria ID:", f"#{vistoria_obj.id}", "Supervisor/Técnico:", vistoria_obj.created_by_user.username if vistoria_obj.created_by_user else "-"],
+        ["Vistoria ID:", f"#{vistoria_obj.id}", "Supervisor/Técnico:", (vistoria_obj.created_by_user.username if vistoria_obj.created_by_user else "-").upper()],
         ["Veículo:", f"{vistoria_obj.vehicle.brand or ''} {vistoria_obj.vehicle.model or ''}".strip(), "Placa:", plate],
         ["KM:", str(vistoria_obj.km or "-"), "Turno:", turno_formatted],
         ["Data:", dt_brt.strftime("%d/%m/%Y %H:%M"), "Status Geral:", status_text],

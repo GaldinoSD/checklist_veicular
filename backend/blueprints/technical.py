@@ -918,7 +918,7 @@ def atividade_realizada_pdf(id):
         "__ref_id__": f"AR-{a.id}",
         "Título": a.title or "N/A",
         "Data": a.date.strftime("%d/%m/%Y") if a.date else "N/A",
-        "Responsável": a.responsible.username if a.responsible else "N/A",
+        "Responsável": (a.responsible.username if a.responsible else "N/A").upper(),
         "Emissão": agora().strftime("%d/%m/%Y %H:%M")
     }
 
@@ -1042,6 +1042,7 @@ def api_escalas(id=None):
         
     items = query.all()
     manual_dates = set()
+    today_date = agora().date()
     
     for s in items:
         manual_dates.add(s.date)
@@ -1049,10 +1050,13 @@ def api_escalas(id=None):
         if s.technician_ids:
             try:
                 ids = [int(x) for x in s.technician_ids.split(",") if x.strip().isdigit()]
-                tech_names = ", ".join([u.username for u in User.query.filter(User.id.in_(ids))])
+                tech_names = ", ".join([u.username.upper() for u in User.query.filter(User.id.in_(ids))])
             except Exception:
-                tech_names = "Técnicos"
+                tech_names = "TÉCNICOS"
                 
+        is_past = s.date < today_date
+        prefix = "✔ REALIZADO: " if is_past else ""
+        
         # Define cores premium específicas para cada tipo de escala manual
         m_color = "#10B981"  # Padrão: Emerald para Sábado
         if s.type == "domingo":
@@ -1060,16 +1064,20 @@ def api_escalas(id=None):
         elif s.type == "feriado":
             m_color = "#F59E0B"  # Amber/Orange para Feriado
             
+        if is_past:
+            m_color = "#64748B"  # Slate elegante para plantões já realizados
+            
         events.append({
             "id": f"m_{s.id}",
-            "title": f"{s.type.upper()}: {tech_names or 'Plantonistas'}",
+            "title": f"{prefix}{s.type.upper()}: {tech_names or 'PLANTONISTAS'}",
             "start": s.date.isoformat(),
             "allDay": True,
             "color": m_color,
             "extendedProps": {
                 "type": "manual",
                 "scale_type": s.type,
-                "obs": s.obs
+                "obs": s.obs,
+                "is_past": is_past
             }
         })
         
@@ -1090,15 +1098,30 @@ def api_escalas(id=None):
                         
                         team = Team.query.get(team_id)
                         if team:
+                            member_names = ""
+                            if team.members:
+                                member_names = ", ".join([u.username.upper() for u in team.members])
+                            
+                            is_past = curr_date < today_date
+                            prefix = "✔ REALIZADO: " if is_past else ""
+                            auto_color = "#64748B" if is_past else (team.color or "#8B5CF6")
+                            
+                            title_str = f"Plantão: {team.name.upper()}"
+                            if member_names:
+                                title_str += f" ({member_names})"
+                                
                             events.append({
                                 "id": f"auto_{curr_date.isoformat()}",
-                                "title": f"Plantão: {team.name}",
+                                "title": f"{prefix}{title_str}",
                                 "start": curr_date.isoformat(),
                                 "allDay": True,
-                                "color": team.color or "#8B5CF6", # Premium Violet/custom
+                                "color": auto_color,
                                 "extendedProps": {
                                     "type": "automatico",
-                                    "team_id": team.id
+                                    "team_id": team.id,
+                                    "team_name": team.name.upper(),
+                                    "technicians_names": member_names,
+                                    "is_past": is_past
                                 }
                             })
                 curr_date += timedelta(days=1)
@@ -1431,7 +1454,7 @@ def anotacao_pdf(id):
 
     metadata = {
         "__ref_id__": f"AN-{n.id}",
-        "Autor": n.user.username if n.user else "N/A",
+        "Autor": (n.user.username if n.user else "N/A").upper(),
         "Data de Criação": n.date.strftime("%d/%m/%Y %H:%M") if n.date else "N/A",
         "Categoria": n.category or "Geral",
         "Prioridade": n.priority or "MEDIA",
@@ -1803,12 +1826,21 @@ def make_premium_pdf(buffer, title, metadata, content_table_data, image_paths=No
     import os
     from html import escape
 
+    NAME_KEYWORDS = ("nome", "responsável", "responsavel", "técnico", "tecnico", "cliente", "colaborador", "supervisor", "motorista", "usuário", "usuario", "solicitante", "criador", "organizador", "participante")
+
+    def maybe_upper_val(key_name, val):
+        if not val or not isinstance(val, str):
+            return val
+        k_str = str(key_name).lower()
+        if any(kw in k_str for kw in NAME_KEYWORDS):
+            return val.upper()
+        return val
+
     def format_html_text(text):
         if not text:
             return ""
         text_str = str(text)
         import re
-        # Split by allowed ReportLab XML/HTML tags (case-insensitive)
         allowed_tags_pattern = r'(</?(?:b|i|u|strong|em|font(?:\s+[^>]+)*|img(?:\s+[^>]+)*|br\s*/?)>)'
         parts = re.split(allowed_tags_pattern, text_str, flags=re.IGNORECASE)
         for i in range(len(parts)):
@@ -1817,7 +1849,6 @@ def make_premium_pdf(buffer, title, metadata, content_table_data, image_paths=No
                 parts[i] = parts[i].replace('\n', '<br/>')
         return "".join(parts)
 
-    # Dynamic layout configuration from SystemConfig
     config = SystemConfig.query.first()
     
     logo_path_custom = None
@@ -1846,7 +1877,6 @@ def make_premium_pdf(buffer, title, metadata, content_table_data, image_paths=No
     def draw_background(c, doc):
         width, height = A4
         
-        # 1. Cabeçalho / Logotipo
         if logo_path and os.path.exists(logo_path):
             try:
                 from reportlab.lib.utils import ImageReader
@@ -1857,7 +1887,6 @@ def make_premium_pdf(buffer, title, metadata, content_table_data, image_paths=No
             except Exception as e:
                 print("⚠️ Erro ao carregar logo no header:", e)
 
-        # 2. Título e Subtítulo dinâmicos com Paragraph para evitar estouro
         title_len = len(title)
         if title_len > 60:
             font_size = 10
@@ -1878,7 +1907,7 @@ def make_premium_pdf(buffer, title, metadata, content_table_data, image_paths=No
         )
         
         p_title = Paragraph(title.upper(), header_title_style)
-        avail_width = width - 145  # width - logo_width(90) - margin_left(20) - margin_right(20) - gap(15)
+        avail_width = width - 145
         _, h_title = p_title.wrap(avail_width, 40)
         
         y_pos = height - 22.5 - h_title
@@ -1888,7 +1917,6 @@ def make_premium_pdf(buffer, title, metadata, content_table_data, image_paths=No
         c.setFillColor(colors.HexColor("#475569"))
         c.drawString(125, y_pos - 10, "Registro Formal – AdaptLink")
 
-        # 3. Linha Azul Divisória Premium
         offset = 12 if h_title > 18 else 0
         divider_y = height - 65 - offset
         
@@ -1896,7 +1924,6 @@ def make_premium_pdf(buffer, title, metadata, content_table_data, image_paths=No
         c.setLineWidth(2)
         c.line(20, divider_y, width - 20, divider_y)
 
-        # 4. Metadados do topo: Emitido em / Número do Relatório
         c.setFont("Helvetica", 8)
         c.setFillColor(colors.HexColor("#475569"))
         now_str = agora().strftime("%d/%m/%Y %H:%M")
@@ -1905,7 +1932,6 @@ def make_premium_pdf(buffer, title, metadata, content_table_data, image_paths=No
         doc_ref = ref_id or metadata.get("ID") or metadata.get("Código") or metadata.get("Placa") or metadata.get("Nº") or "N/A"
         c.drawRightString(width - 25, divider_y - 10, f"Doc Ref: {doc_ref}")
 
-        # 5. Rodapé Institucional AdaptLink
         c.setStrokeColor(colors.HexColor("#E2E8F0"))
         c.setLineWidth(0.8)
         c.line(25, 90, width - 25, 90)
@@ -1917,7 +1943,6 @@ def make_premium_pdf(buffer, title, metadata, content_table_data, image_paths=No
             c.drawCentredString(width / 2, y_footer, linha)
             y_footer -= 9
         
-        # Paginação
         c.setFont("Helvetica-Oblique", 8)
         c.drawRightString(width - 25, 30, f"Página {c.getPageNumber()}")
 
@@ -1930,7 +1955,6 @@ def make_premium_pdf(buffer, title, metadata, content_table_data, image_paths=No
 
     styles = getSampleStyleSheet()
     
-    # Custom styles
     label_style = ParagraphStyle(
         name="PremiumLabel",
         parent=styles["Normal"],
@@ -1949,7 +1973,6 @@ def make_premium_pdf(buffer, title, metadata, content_table_data, image_paths=No
 
     story = []
 
-    # Seção 1: Metadados do Documento (Tabela formatada com Grid moderno)
     story.append(Paragraph("<b>Metadados do Registro</b>", styles["Heading3"]))
     story.append(Spacer(1, 3*mm))
 
@@ -1957,14 +1980,14 @@ def make_premium_pdf(buffer, title, metadata, content_table_data, image_paths=No
     keys = list(metadata.keys())
     for i in range(0, len(keys), 2):
         k1 = keys[i]
-        v1 = metadata[k1]
+        v1 = maybe_upper_val(k1, metadata[k1])
         row = [
             Paragraph(f"<b>{k1}:</b>", label_style),
             Paragraph(format_html_text(v1), value_style)
         ]
         if i + 1 < len(keys):
             k2 = keys[i+1]
-            v2 = metadata[k2]
+            v2 = maybe_upper_val(k2, metadata[k2])
             row.extend([
                 Paragraph(f"<b>{k2}:</b>", label_style),
                 Paragraph(format_html_text(v2), value_style)
@@ -1997,6 +2020,7 @@ def make_premium_pdf(buffer, title, metadata, content_table_data, image_paths=No
         if not item:
             continue
         k, v = item[0], item[1]
+        v = maybe_upper_val(k, v)
 
         if k is None or k == "":
             if isinstance(v, (Flowable, list)):
@@ -2126,11 +2150,11 @@ def encerramento_pdf(id):
             if isinstance(techs, list):
                 if len(techs) > 0 and isinstance(techs[0], dict):
                     # Formato novo: [{"user_id": "...", "username": "...", "arrival_time": "..."}]
-                    techs_str = ", ".join([f"{t.get('username')} ({t.get('arrival_time')})" for t in techs])
+                    techs_str = ", ".join([f"{str(t.get('username') or '').upper()} ({t.get('arrival_time')})" for t in techs])
                 else:
                     # Formato antigo: [1, 2, 3]
                     tech_users = User.query.filter(User.id.in_([int(x) for x in techs])).all()
-                    techs_str = ", ".join([u.username for u in tech_users])
+                    techs_str = ", ".join([u.username.upper() for u in tech_users])
         except Exception:
             techs_str = str(e.technicians_json)
 
@@ -2230,16 +2254,16 @@ def atividade_pdf(id):
         # Layout individual legado/simplificado
         metadata = {
             "__ref_id__": f"AT-{a.id}",
-            "Tipo de Atividade": a.type or "N/A",
+            "Tipo de Atividade": (a.type or "N/A").upper(),
             "Data": a.date.strftime("%d/%m/%Y") if a.date else "N/A",
             "Horário": a.time or "N/A",
-            "Técnico Responsável": a.tech_responsible or "N/A"
+            "Técnico Responsável": (a.tech_responsible or "N/A").upper()
         }
 
         obs_text = blocks[0].get("conclusion") or blocks[0].get("description") or a.conclusion or a.obs or "Sem observações"
 
         content = [
-            ("Cliente", f"{a.client_name or 'N/A'} (Cód: {a.client_code or 'N/A'})"),
+            ("Cliente", f"{(a.client_name or 'N/A').upper()} (Cód: {a.client_code or 'N/A'})"),
             ("Verificado encerramento de O.S.", a.os_closure or "N/A"),
             ("Avaliação de Qualidade", a.quality_rating or "N/A"),
             ("Feedback do Cliente", a.client_feedback or "Sem feedback"),
@@ -2415,7 +2439,7 @@ def atividade_pdf(id):
         meta_data = [
             [Paragraph("<b>Total de Vistorias:</b>", label_style), Paragraph(f"{len(blocks)} atividades", value_style),
              Paragraph("<b>Data de Registro:</b>", label_style), Paragraph(a.date.strftime("%d/%m/%Y") if a.date else "N/A", value_style)],
-            [Paragraph("<b>Técnicos Escalados:</b>", label_style), Paragraph(a.tech_responsible or "N/A", value_style),
+            [Paragraph("<b>Técnicos Escalados:</b>", label_style), Paragraph((a.tech_responsible or "N/A").upper(), value_style),
              Paragraph("<b>Status Geral:</b>", label_style), Paragraph(a.status or "CONCLUÍDO", value_style)]
         ]
         meta_table = Table(meta_data, colWidths=[35*mm, 50*mm, 35*mm, 50*mm])
@@ -2443,8 +2467,8 @@ def atividade_pdf(id):
         
         for idx, b in enumerate(blocks):
             summary_rows.append([
-                Paragraph(b.get("tech_responsible") or "N/A", td_style),
-                Paragraph(f"{b.get('client_name') or 'N/A'} ({b.get('client_code') or 'N/A'})", td_style),
+                Paragraph(str(b.get("tech_responsible") or "N/A").upper(), td_style),
+                Paragraph(f"{str(b.get('client_name') or 'N/A').upper()} ({b.get('client_code') or 'N/A'})", td_style),
                 Paragraph(b.get("type") or "Vistoria", td_style),
                 Paragraph(b.get("quality_rating") or "N/A", td_style),
                 Paragraph(b.get("os_closure") or "N/A", td_style)
@@ -2480,7 +2504,7 @@ def atividade_pdf(id):
             story.append(Spacer(1, 2*mm))
             # Sub-barra de cabeçalho do técnico
             header_data = [[
-                Paragraph(f"<b>Atividade #{idx+1} — Técnico: {b.get('tech_responsible') or 'N/A'}</b>", ParagraphStyle(
+                Paragraph(f"<b>Atividade #{idx+1} — Técnico: {str(b.get('tech_responsible') or 'N/A').upper()}</b>", ParagraphStyle(
                     name=f"HText_{idx}", parent=styles["Normal"], fontName="Helvetica-Bold", fontSize=10, textColor=colors.HexColor("#0F172A")
                 ))
             ]]
@@ -2497,7 +2521,7 @@ def atividade_pdf(id):
             
             # Grid de Detalhes
             details = [
-                [Paragraph("<b>Cliente:</b>", label_style), Paragraph(f"{b.get('client_name') or 'N/A'} (Cód: {b.get('client_code') or 'N/A'})", value_style),
+                [Paragraph("<b>Cliente:</b>", label_style), Paragraph(f"{str(b.get('client_name') or 'N/A').upper()} (Cód: {b.get('client_code') or 'N/A'})", value_style),
                  Paragraph("<b>Horário/Tipo:</b>", label_style), Paragraph(f"{b.get('time') or 'N/D'} - {b.get('type') or 'Vistoria'}", value_style)],
                 [Paragraph("<b>Avaliação:</b>", label_style), Paragraph(b.get("quality_rating") or "N/A", value_style),
                  Paragraph("<b>Verificado encerramento de O.S.:</b>", label_style), Paragraph(b.get("os_closure") or "N/A", value_style)]
@@ -2613,7 +2637,7 @@ def reuniao_pdf(id):
     if m.participants:
         try:
             pids = [int(x) for x in m.participants.split(",") if x.strip().isdigit()]
-            parts_str = ", ".join([u.username for u in User.query.filter(User.id.in_(pids))])
+            parts_str = ", ".join([u.username.upper() for u in User.query.filter(User.id.in_(pids))])
         except Exception:
             parts_str = m.participants
 
@@ -2623,7 +2647,7 @@ def reuniao_pdf(id):
         "Data": m.date.strftime("%d/%m/%Y") if m.date else "N/A",
         "Horário": m.time or "N/A",
         "Local/Link": m.location or "N/A",
-        "Responsável": m.responsible or "N/A"
+        "Responsável": (m.responsible or "N/A").upper()
     }
 
     content = [
@@ -2660,7 +2684,7 @@ def rfo_pdf(id):
         try:
             techs = json.loads(r.technicians_json)
             if isinstance(techs, list):
-                techs_str = ", ".join([u.username for u in User.query.filter(User.id.in_([int(x) for x in techs]))])
+                techs_str = ", ".join([u.username.upper() for u in User.query.filter(User.id.in_([int(x) for x in techs]))])
         except Exception:
             techs_str = str(r.technicians_json)
 
@@ -2682,7 +2706,7 @@ def rfo_pdf(id):
         "Cidade / Bairro": f"{r.city or 'N/A'} / {r.neighborhood or 'N/A'}",
         "Data": r.date.strftime("%d/%m/%Y") if r.date else "N/A",
         "Horário": f"{start_formatted} até {end_formatted}",
-        "Técnico Responsável": r.tech_responsible or "N/A"
+        "Técnico Responsável": (r.tech_responsible or "N/A").upper()
     }
 
     content = [
@@ -2729,7 +2753,7 @@ def rota_exata_pdf(id):
 
     metadata = {
         "__ref_id__": f"RE-{r.id}",
-        "Supervisor": r.supervisor.username if r.supervisor else "N/A",
+        "Supervisor": (r.supervisor.username if r.supervisor else "N/A").upper(),
         "Data de Auditoria": r.date.strftime("%d/%m/%Y") if r.date else "N/A",
         "Horário": r.date_created.strftime("%H:%M") if r.date_created else (r.time or "N/A"),
     }
@@ -2802,7 +2826,7 @@ def supervisao_pdf(id):
 
     metadata = {
         "__ref_id__": f"SV-{s.id}",
-        "Supervisor": s.supervisor.username if s.supervisor else "N/A",
+        "Supervisor": (s.supervisor.username if s.supervisor else "N/A").upper(),
         "Data de Auditoria": s.date.strftime("%d/%m/%Y") if s.date else "N/A",
         "Horário": s.time or "N/A",
     }
@@ -3009,7 +3033,7 @@ def gestao_relatorios_gerar():
         passed_count = 0
         for att in attempts:
             t_title = att.assignment.course.title if att.assignment and att.assignment.course else "N/A"
-            u_name = att.assignment.user.username if att.assignment and att.assignment.user else "N/A"
+            u_name = (att.assignment.user.username if att.assignment and att.assignment.user else "N/A").upper()
             passing_grade = att.assignment.course.passing_grade or 70 if att.assignment and att.assignment.course else 70
             is_passed = (att.score or 0) >= passing_grade
             res = "Aprovado" if is_passed else "Reprovado"
@@ -3045,12 +3069,12 @@ def gestao_relatorios_gerar():
         col_widths = [25*mm, 35*mm, 50*mm, 40*mm, 30*mm]
         
         for s in sups:
-            supervisor_name = s.supervisor.username if s.supervisor else "N/A"
+            supervisor_name = (s.supervisor.username if s.supervisor else "N/A").upper()
             techs = "N/A"
             if s.techs_data:
                 try:
                     if isinstance(s.techs_data, list):
-                        techs = ", ".join([f"{t.get('name', '')} ({t.get('status', '')})" for t in s.techs_data])
+                        techs = ", ".join([f"{str(t.get('name', '')).upper()} ({t.get('status', '')})" for t in s.techs_data])
                     else:
                         techs = str(s.techs_data)
                 except Exception:
@@ -3090,12 +3114,12 @@ def gestao_relatorios_gerar():
                 f"{r.title or 'Sem Título'}\n({r.problem_type or 'N/A'})",
                 r.root_cause or "N/A",
                 r.impact or "N/A",
-                r.tech_responsible or "N/A"
+                (r.tech_responsible or "N/A").upper()
             ])
             
         summary_metrics = {
             "Total de RFOs": len(rfos),
-            "Filtro Técnico": User.query.get(user_id).username if user_id else "Todos"
+            "Filtro Técnico": (User.query.get(user_id).username.upper() if user_id else "Todos")
         }
 
     elif report_type == "atividades":
@@ -3112,11 +3136,11 @@ def gestao_relatorios_gerar():
         col_widths = [30*mm, 35*mm, 45*mm, 50*mm, 20*mm]
         
         for a in acts:
-            u_name = a.user.username if a.user else (a.tech_responsible or "N/A")
+            u_name = (a.user.username if a.user else (a.tech_responsible or "N/A")).upper()
             rows.append([
                 f"{a.date.strftime('%d/%m/%Y')} {a.time or ''}",
                 u_name,
-                f"{a.type or 'N/A'}\nCli: {a.client_name or 'N/A'}",
+                f"{a.type or 'N/A'}\nCli: {(a.client_name or 'N/A').upper()}",
                 a.location or "N/A",
                 a.status or "ABERTO"
             ])
@@ -3142,12 +3166,12 @@ def gestao_relatorios_gerar():
         col_widths = [25*mm, 35*mm, 45*mm, 55*mm, 20*mm]
         
         for r in rotas:
-            sup_name = r.supervisor.username if r.supervisor else "N/A"
+            sup_name = (r.supervisor.username if r.supervisor else "N/A").upper()
             techs = "N/A"
             if r.techs_data:
                 try:
                     if isinstance(r.techs_data, list):
-                        techs = ", ".join([f"{t.get('name', '')}" for t in r.techs_data])
+                        techs = ", ".join([f"{str(t.get('name', '')).upper()}" for t in r.techs_data])
                     else:
                         techs = str(r.techs_data)
                 except Exception:
@@ -3163,7 +3187,7 @@ def gestao_relatorios_gerar():
             
         summary_metrics = {
             "Total de Rotas Auditadas": len(rotas),
-            "Filtro Supervisor": User.query.get(user_id).username if user_id else "Todos"
+            "Filtro Supervisor": (User.query.get(user_id).username.upper() if user_id else "Todos")
         }
 
     elif report_type == "reunioes":
@@ -3182,7 +3206,7 @@ def gestao_relatorios_gerar():
                 f"{m.date.strftime('%d/%m/%Y')} {m.time or ''}",
                 f"{m.title}\nAssunto: {m.subject or 'N/A'}",
                 m.location or "N/A",
-                m.responsible or "N/A",
+                (m.responsible or "N/A").upper(),
                 m.status or "AGENDADA"
             ])
             
@@ -3207,7 +3231,7 @@ def gestao_relatorios_gerar():
                 try:
                     ids = [int(x.strip()) for x in s.technician_ids.split(",") if x.strip().isdigit()]
                     if ids:
-                        techs = ", ".join([u.username for u in User.query.filter(User.id.in_(ids))])
+                        techs = ", ".join([u.username.upper() for u in User.query.filter(User.id.in_(ids))])
                 except Exception:
                     techs = s.technician_ids
             
