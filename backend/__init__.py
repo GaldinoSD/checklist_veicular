@@ -425,7 +425,7 @@ def create_app():
     ]
 
     def seed_defaults():
-        if not User.query.filter_by(username="admin").first():
+        if not User.query.filter_by(username="ADMIN").first():
             _admin_pwd = secrets.token_urlsafe(16)
             u = User(username="admin", role="admin")
             u.set_password(_admin_pwd)
@@ -474,4 +474,13 @@ def create_app():
             print("⚠️ Erro na inicialização concorrente do banco de dados:", startup_err)
             db.session.rollback()
 
+    if not is_testing:
+        try:
+            from backend.scheduler import start_audit_scheduler
+            start_audit_scheduler(app)
+        except Exception as sched_err:
+            print("⚠️ Erro ao iniciar scheduler de auditoria automática:", sched_err)
+
     return app
+
+

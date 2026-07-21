@@ -285,25 +285,31 @@
             {% endfor %}
         </div>
 
-        <!-- MANUAL AUDIT TRIGGER -->
+        <!-- MANUAL & AUTOMATIC AUDIT TRIGGER -->
         <div class="mt-12 glass-premium p-8 rounded-[2rem] border border-blue-500/20 flex flex-col md:flex-row items-center justify-between gap-6">
             <div class="flex items-center gap-6">
-                <div class="w-16 h-16 rounded-full bg-blue-600 flex items-center justify-center text-white shadow-2xl shadow-blue-500/40 animate-pulse">
+                <div class="w-16 h-16 rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-2xl shadow-blue-500/40 animate-pulse shrink-0">
                     <i class="fa-solid fa-robot text-2xl"></i>
                 </div>
                 <div>
-                    <h3 class="text-xl font-black text-slate-800 dark:text-white tracking-tight">Executar Auditoria de Sistema</h3>
-                    <p class="text-sm text-slate-500 mt-1">Varre o banco de dados agora em busca de técnicos atrasados e O.S fora do prazo.</p>
+                    <div class="flex flex-wrap items-center gap-3 mb-1">
+                        <h3 class="text-xl font-black text-slate-800 dark:text-white tracking-tight">Diagnóstico & Auditoria de Sistema</h3>
+                        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
+                            <i class="fa-regular fa-clock text-[10px]"></i> Agendado: Todos os dias às 07:00h
+                        </span>
+                    </div>
+                    <p class="text-sm text-slate-500 mt-1">Varre o banco de dados automaticamente todo dia às 07:00h (ou sob demanda abaixo) em busca de checklists pendentes, alertas de plantão, treinamentos e O.S fora do prazo.</p>
                 </div>
             </div>
-            <div class="flex gap-2">
+            <div class="flex flex-wrap gap-2 shrink-0">
                 {% if current_user.is_admin or current_user.has_permission('avisos_historico') %}
                 <button type="button" onclick="openModal('modalLogsAuditoria'); loadRuleLogs(1);" class="px-6 py-4 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 rounded-2xl font-black text-xs uppercase tracking-widest transition-all active:scale-95 flex items-center gap-2">
                     <i class="fa-solid fa-clock-rotate-left"></i> Logs de Envios
                 </button>
                 {% endif %}
                 <button onclick="runAudit()" id="audit-btn" class="px-8 py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl transition-all active:scale-95 flex items-center gap-3">
-                    <i class="fa-solid fa-play"></i> Rodar Diagnóstico
+                    <i class="fa-solid fa-play"></i> Rodar Diagnóstico Agora
                 </button>
             </div>
         </div>

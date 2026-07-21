@@ -11,9 +11,10 @@ class TestAvisosCleanup(unittest.TestCase):
         self.app_context.push()
         
         # Garante que temos um usuário para associar aos avisos, se necessário
-        self.user = User.query.filter_by(username="admin").first()
+        self.user = User.query.filter_by(username="ADMIN").first()
         if not self.user:
-            self.user = User(username="admin", password="pbkdf2:sha256:...", role="admin")
+            self.user = User(username="ADMIN", role="admin")
+            self.user.set_password("admin123")
             db.session.add(self.user)
             db.session.commit()
 

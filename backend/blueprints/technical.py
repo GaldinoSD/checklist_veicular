@@ -45,7 +45,7 @@ from backend.utils import (
     supervisor_allowed, manutencao_only, count_files, list_reports,
     km_alert, iso_week, weekly_km_series, save_photos, _check_rate_limit,
     _record_attempt, _clear_attempts, _cleanup_old_attempts, make_premium_pdf,
-    allowed_file
+    allowed_file, get_premium_pdf_draw_background
 )
 import io
 
@@ -218,6 +218,159 @@ def api_geradores(id=None):
             "reserve_liters": g.reserve_liters
         })
     return jsonify(res)
+
+
+@technical_bp.route("/api/gestao/geradores/pdf", methods=["GET"])
+@supervisor_allowed
+def geradores_pdf():
+    import io
+    from flask import send_file
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.units import mm
+    from reportlab.lib import colors
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, KeepTogether
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from datetime import datetime
+
+    gens = Generator.query.order_by(Generator.name.asc()).all()
+
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        rightMargin=15*mm, leftMargin=15*mm,
+        topMargin=45*mm, bottomMargin=40*mm
+    )
+
+    styles = getSampleStyleSheet()
+
+    title = "Relatório do Status de Geradores e Combustível"
+    now_dt = agora()
+    emission_str = now_dt.strftime("%d/%m/%Y às %H:%M:%S")
+
+    total_gens = len(gens)
+    cap_total = sum(g.capacity_total or 0.0 for g in gens)
+    curr_total = sum(g.current_qty or 0.0 for g in gens)
+    pct_global = (curr_total / cap_total * 100) if cap_total > 0 else 0.0
+
+    criticos = sum(1 for g in gens if g.capacity_total and ((g.current_qty or 0.0) / g.capacity_total) <= 0.3)
+
+    label_style = ParagraphStyle(
+        name="GenMetaLabel", parent=styles["Normal"], fontName="Helvetica-Bold", fontSize=9, textColor=colors.HexColor("#475569")
+    )
+    value_style = ParagraphStyle(
+        name="GenMetaVal", parent=styles["Normal"], fontName="Helvetica", fontSize=9, textColor=colors.HexColor("#0F172A")
+    )
+
+    cell_style = ParagraphStyle(
+        name="GenTableCell", parent=styles["Normal"], fontName="Helvetica", fontSize=7.5, leading=9.5, textColor=colors.HexColor("#334155")
+    )
+    cell_bold_style = ParagraphStyle(
+        name="GenTableCellBold", parent=styles["Normal"], fontName="Helvetica-Bold", fontSize=7.5, leading=9.5, textColor=colors.HexColor("#0F172A")
+    )
+    header_cell_style = ParagraphStyle(
+        name="GenTableHeaderCell", parent=styles["Normal"], fontName="Helvetica-Bold", fontSize=8, leading=10, textColor=colors.white
+    )
+
+    story = []
+
+    # Metadados e Resumo Operacional
+    story.append(Paragraph("<b>Metadados e Resumo Operacional</b>", styles["Heading3"]))
+    story.append(Spacer(1, 2*mm))
+
+    user_name = getattr(current_user, 'username', 'N/A').upper() if hasattr(current_user, 'username') else 'SISTEMA'
+
+    meta_table_data = [
+        [
+            Paragraph("<b>Data/Hora Emissão:</b>", label_style),
+            Paragraph(emission_str, value_style),
+            Paragraph("<b>Solicitado por:</b>", label_style),
+            Paragraph(user_name, value_style)
+        ],
+        [
+            Paragraph("<b>Total de Geradores:</b>", label_style),
+            Paragraph(f"{total_gens} unidade(s)", value_style),
+            Paragraph("<b>Status Crítico (≤30%):</b>", label_style),
+            Paragraph(f"<font color=\"{'#DC2626' if criticos > 0 else '#16A34A'}\"><b>{criticos} gerador(es)</b></font>", value_style)
+        ]
+    ]
+
+    meta_table = Table(meta_table_data, colWidths=[38*mm, 52*mm, 38*mm, 52*mm])
+    meta_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor("#F8FAFC")),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+        ('TOPPADDING', (0, 0), (-1, -1), 5),
+        ('LINEBELOW', (0, 0), (-1, -1), 0.5, colors.HexColor("#E2E8F0")),
+    ]))
+    story.append(meta_table)
+    story.append(Spacer(1, 6*mm))
+
+    # Detalhamento
+    story.append(Paragraph("<b>Detalhamento dos Geradores Cadastrados</b>", styles["Heading3"]))
+    story.append(Spacer(1, 2*mm))
+
+    headers = ["Gerador", "Localização", "Combustível", "Capacidade", "Nível Atual", "Reservas", "Últ. Abastec."]
+    col_widths = [36*mm, 34*mm, 22*mm, 22*mm, 24*mm, 22*mm, 20*mm]
+
+    formatted_table_data = [[Paragraph(h, header_cell_style) for h in headers]]
+
+    for g in gens:
+        cap = g.capacity_total or 0.0
+        curr = g.current_qty or 0.0
+        pct = (curr / cap * 100) if cap > 0 else 0.0
+
+        status_color = "#16A34A" if pct > 50 else ("#D97706" if pct > 30 else "#DC2626")
+        refill_str = g.last_refill_date.strftime("%d/%m/%Y") if g.last_refill_date else "N/A"
+
+        reserve_liters_val = g.reserve_liters or 0.0
+        reserve_str = f"{reserve_liters_val:.1f} L" if reserve_liters_val > 0 else "0 L"
+
+        gen_info = f"<b>{g.name}</b>"
+        if g.status:
+            gen_info += f"<br/><font color=\"#64748B\">[{g.status}]</font>"
+
+        fuel_lvl_str = f"<b>{curr:.1f} L</b><br/><font color=\"{status_color}\"><b>({pct:.0f}%)</b></font>"
+
+        formatted_table_data.append([
+            Paragraph(gen_info, cell_bold_style),
+            Paragraph(g.location or "N/A", cell_style),
+            Paragraph(g.fuel_type or "Diesel", cell_style),
+            Paragraph(f"{cap:.1f} L", cell_style),
+            Paragraph(fuel_lvl_str, cell_style),
+            Paragraph(reserve_str, cell_style),
+            Paragraph(refill_str, cell_style),
+        ])
+
+    data_table = Table(formatted_table_data, colWidths=col_widths, repeatRows=1)
+    t_style = [
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#1F3C78")),
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ('TOPPADDING', (0, 0), (-1, -1), 4),
+        ('LEFTPADDING', (0, 0), (-1, -1), 4),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 4),
+        ('LINEBELOW', (0, 0), (-1, -1), 0.5, colors.HexColor("#F1F5F9")),
+        ('LINEBELOW', (0, 0), (-1, 0), 1.5, colors.HexColor("#0F172A")),
+    ]
+    for row_idx in range(1, len(formatted_table_data)):
+        if row_idx % 2 == 0:
+            t_style.append(('BACKGROUND', (0, row_idx), (-1, row_idx), colors.HexColor("#F8FAFC")))
+
+    data_table.setStyle(TableStyle(t_style))
+    story.append(data_table)
+
+    draw_bg = get_premium_pdf_draw_background(title, extra_right_text=f"Emissão: {now_dt.strftime('%d/%m/%Y %H:%M')}")
+    doc.build(story, onFirstPage=draw_bg, onLaterPages=draw_bg)
+    buffer.seek(0)
+
+    return send_file(
+        buffer,
+        mimetype="application/pdf",
+        as_attachment=False,
+        download_name=f"relatorio_geradores_{now_dt.strftime('%Y%m%d_%H%M')}.pdf"
+    )
+
 
 
 
@@ -2980,6 +3133,43 @@ def supervisao_pdf(id):
     )
 
 
+def _format_tech_names_from_json(techs_data, include_status=False):
+    if not techs_data:
+        return "N/A"
+    data_list = techs_data
+    if isinstance(data_list, str):
+        try:
+            data_list = json.loads(data_list)
+        except Exception:
+            return str(techs_data)
+    if not isinstance(data_list, list):
+        return str(techs_data)
+
+    names = []
+    for t in data_list:
+        if isinstance(t, dict):
+            name = t.get('tech_name') or t.get('name') or t.get('collaborator') or t.get('username')
+            if not name:
+                tid = t.get('tech_id') or t.get('user_id') or t.get('id')
+                if tid:
+                    try:
+                        u = User.query.get(int(tid))
+                        if u:
+                            name = u.username
+                    except Exception:
+                        pass
+            if name:
+                status_val = t.get('status')
+                status_str = f" ({status_val})" if (include_status and status_val) else ""
+                names.append(f"{str(name).upper()}{status_str}")
+            elif t.get('tech_id'):
+                names.append(f"TÉCNICO #{t.get('tech_id')}")
+        elif isinstance(t, (str, int)):
+            names.append(str(t).upper())
+
+    return ", ".join(names) if names else "N/A"
+
+
 @technical_bp.route("/api/gestao/relatorios/gerar", methods=["GET"])
 @supervisor_allowed
 def gestao_relatorios_gerar():
@@ -3064,25 +3254,45 @@ def gestao_relatorios_gerar():
             SupervisaoTecnica.date >= start_date,
             SupervisaoTecnica.date <= end_date
         )
-        if user_id:
-            query = query.filter(SupervisaoTecnica.supervisor_id == user_id)
         sups = query.order_by(SupervisaoTecnica.date.desc()).all()
-        
+
+        user_obj = User.query.get(user_id) if user_id else None
+        username = user_obj.username if user_obj else None
+
+        if user_id:
+            filtered_sups = []
+            for s in sups:
+                is_match = False
+                if s.supervisor_id == user_id:
+                    is_match = True
+                elif s.techs_data:
+                    try:
+                        techs = s.techs_data
+                        if isinstance(techs, str):
+                            techs = json.loads(techs)
+                        if isinstance(techs, list):
+                            for t in techs:
+                                tid = t.get('tech_id') or t.get('user_id') or t.get('id')
+                                tname = t.get('tech_name') or t.get('name') or t.get('collaborator') or t.get('username')
+                                if tid and int(tid) == user_id:
+                                    is_match = True
+                                    break
+                                if username and tname and str(tname).lower() == username.lower():
+                                    is_match = True
+                                    break
+                    except Exception:
+                        pass
+                if is_match:
+                    filtered_sups.append(s)
+            sups = filtered_sups
+
         headers = ["Data/Hora", "Supervisor", "Colaboradores Supervisionados", "Ações/Plano", "Irregularidades"]
         col_widths = [25*mm, 35*mm, 50*mm, 40*mm, 30*mm]
-        
+
         for s in sups:
             supervisor_name = (s.supervisor.username if s.supervisor else "N/A").upper()
-            techs = "N/A"
-            if s.techs_data:
-                try:
-                    if isinstance(s.techs_data, list):
-                        techs = ", ".join([f"{str(t.get('name', '')).upper()} ({t.get('status', '')})" for t in s.techs_data])
-                    else:
-                        techs = str(s.techs_data)
-                except Exception:
-                    techs = str(s.techs_data)
-            
+            techs = _format_tech_names_from_json(s.techs_data)
+
             rows.append([
                 f"{s.date.strftime('%d/%m/%Y')} {s.time or ''}",
                 supervisor_name,
@@ -3090,11 +3300,12 @@ def gestao_relatorios_gerar():
                 s.action or "Nenhuma",
                 s.irregularities or "Nenhuma"
             ])
-            
+
         summary_metrics = {
             "Total de Supervisões": len(sups),
             "Período Analisado": f"{start_date.strftime('%d/%m/%Y')} a {end_date.strftime('%d/%m/%Y')}"
         }
+
 
     elif report_type == "rfo":
         title = "Relatório Consolidado de Ocorrências (RFO)"
@@ -3170,15 +3381,7 @@ def gestao_relatorios_gerar():
         
         for r in rotas:
             sup_name = (r.supervisor.username if r.supervisor else "N/A").upper()
-            techs = "N/A"
-            if r.techs_data:
-                try:
-                    if isinstance(r.techs_data, list):
-                        techs = ", ".join([f"{str(t.get('name', '')).upper()}" for t in r.techs_data])
-                    else:
-                        techs = str(r.techs_data)
-                except Exception:
-                    techs = str(r.techs_data)
+            techs = _format_tech_names_from_json(r.techs_data)
             
             rows.append([
                 r.date.strftime("%d/%m/%Y") if r.date else "N/A",
@@ -3379,25 +3582,25 @@ def gestao_relatorios_gerar():
     doc = SimpleDocTemplate(
         buffer,
         pagesize=A4,
-        rightMargin=12*mm, leftMargin=12*mm,
+        rightMargin=20*mm, leftMargin=20*mm,
         topMargin=45*mm, bottomMargin=40*mm
     )
 
     styles = getSampleStyleSheet()
-    
+
     label_style = ParagraphStyle(
         name="ConsolidatedLabel",
         parent=styles["Normal"],
         fontName="Helvetica-Bold",
-        fontSize=8.5,
+        fontSize=10,
         textColor=colors.HexColor("#475569")
     )
-    
+
     value_style = ParagraphStyle(
         name="ConsolidatedValue",
         parent=styles["Normal"],
         fontName="Helvetica",
-        fontSize=8.5,
+        fontSize=10,
         textColor=colors.HexColor("#1E293B")
     )
 
@@ -3421,17 +3624,18 @@ def gestao_relatorios_gerar():
 
     story = []
 
-    # 2. General metadata and metrics grid
+    # 1. Section: Metadados do Registro (same as make_premium_pdf)
+    story.append(Paragraph("<b>Metadados do Registro</b>", styles["Heading3"]))
+    story.append(Spacer(1, 3*mm))
+
     meta_table_data = []
-    # Row 1: Period and total records
     meta_table_data.append([
         Paragraph("<b>Período:</b>", label_style),
         Paragraph(f"{start_date.strftime('%d/%m/%Y')} até {end_date.strftime('%d/%m/%Y')}", value_style),
         Paragraph("<b>Emissão:</b>", label_style),
         Paragraph(datetime.now().strftime("%d/%m/%Y %H:%M"), value_style)
     ])
-    
-    # Row 2: dynamic metrics
+
     metric_keys = list(summary_metrics.keys())
     for idx in range(0, len(metric_keys), 2):
         k1 = metric_keys[idx]
@@ -3451,21 +3655,20 @@ def gestao_relatorios_gerar():
             row.extend(["", ""])
         meta_table_data.append(row)
 
-    meta_table = Table(meta_table_data, colWidths=[35*mm, 58*mm, 35*mm, 58*mm])
+    meta_table = Table(meta_table_data, colWidths=[35*mm, 50*mm, 35*mm, 50*mm])
     meta_table.setStyle(TableStyle([
         ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor("#F8FAFC")),
         ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
         ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
-        ('TOPPADDING', (0, 0), (-1, -1), 4),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+        ('TOPPADDING', (0, 0), (-1, -1), 6),
         ('LINEBELOW', (0, 0), (-1, -1), 0.5, colors.HexColor("#E2E8F0")),
-        ('BOX', (0, 0), (-1, -1), 1, colors.HexColor("#E2E8F0")),
     ]))
     story.append(meta_table)
     story.append(Spacer(1, 8*mm))
 
-    # 3. Main Data Table
-    story.append(Paragraph("<b>Registros no Período</b>", styles["Heading2"]))
+    # 2. Section: Detalhamento do Registro (data table)
+    story.append(Paragraph("<b>Detalhamento do Registro</b>", styles["Heading3"]))
     story.append(Spacer(1, 3*mm))
 
     if not rows:
@@ -3473,10 +3676,8 @@ def gestao_relatorios_gerar():
         story.append(Paragraph("Nenhum registro encontrado para os filtros selecionados.", styles["Normal"]))
     else:
         formatted_table_data = []
-        # Header row
         formatted_table_data.append([Paragraph(h, header_cell_style) for h in headers])
-        
-        # Data rows
+
         for r in rows:
             formatted_row = []
             for item in r:
@@ -3485,9 +3686,9 @@ def gestao_relatorios_gerar():
             formatted_table_data.append(formatted_row)
 
         data_table = Table(formatted_table_data, colWidths=col_widths, repeatRows=1)
-        
+
         t_style = [
-            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#4F46E5")),
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#1F3C78")),
             ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
             ('VALIGN', (0, 0), (-1, -1), 'TOP'),
             ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
@@ -3495,26 +3696,26 @@ def gestao_relatorios_gerar():
             ('LEFTPADDING', (0, 0), (-1, -1), 5),
             ('RIGHTPADDING', (0, 0), (-1, -1), 5),
             ('LINEBELOW', (0, 0), (-1, -1), 0.5, colors.HexColor("#F1F5F9")),
-            ('LINEBELOW', (0, 0), (-1, 0), 1.5, colors.HexColor("#312E81")),
+            ('LINEBELOW', (0, 0), (-1, 0), 1.5, colors.HexColor("#0F172A")),
         ]
-        
+
         for row_idx in range(1, len(formatted_table_data)):
             if row_idx % 2 == 0:
                 t_style.append(('BACKGROUND', (0, row_idx), (-1, row_idx), colors.HexColor("#F8FAFC")))
-                
+
         data_table.setStyle(TableStyle(t_style))
         story.append(data_table)
 
     story.append(Spacer(1, 15*mm))
 
-    # Signature validation
+    # 3. Signature validation block
     story.append(KeepTogether([
         Spacer(1, 8*mm),
         Table([
             ["", ""],
             ["_________________________________________", "_________________________________________"],
             ["Gestão Operacional / Coordenação", "Validação Digital do Sistema (Auditado)"],
-        ], colWidths=[93*mm, 93*mm], style=TableStyle([
+        ], colWidths=[85*mm, 85*mm], style=TableStyle([
             ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
             ('FONTNAME', (0, 2), (-1, 2), 'Helvetica-Bold'),
@@ -3523,75 +3724,19 @@ def gestao_relatorios_gerar():
         ]))
     ]))
 
-    logo_path = "logo.png"
-    if not os.path.exists(logo_path):
-        logo_path = "/var/www/checklist_veicular/logo.png"
-
-    RODAPE_LINHAS = [
-        "ADAPT LINK SERVIÇOS EM COMUNICAÇÃO MULTIMÍDIA EIRELI",
-        "CNPJ: 08.980.148/0001-41       Inscr. Est.: 78.342.480",
-        "Rua Waldir Pedro de Medeiros, 253 – São Miguel – Seropédica – RJ",
-        "CEP: 23.893-725",
-        "Tel.: (21) 3812-5900 / (21) 2682-7822",
-        "WWW.ADAPTLINK.COM.BR",
-    ]
-
-    def draw_background(c, doc_obj):
-        width, height = A4
-        
-        # 1. Cabeçalho / Logotipo
-        if os.path.exists(logo_path):
-            try:
-                from reportlab.lib.utils import ImageReader
-                logo = ImageReader(logo_path)
-                c.drawImage(logo, 20, height - 60, width=60, height=25, preserveAspectRatio=True, mask="auto")
-            except Exception as e:
-                print("⚠️ Erro ao carregar logo no header consolidado:", e)
-
-        # 2. Título Centralizado
-        c.setFont("Helvetica-Bold", 14)
-        c.setFillColor(colors.HexColor("#0F172A"))
-        c.drawCentredString(width / 2, height - 40, title.upper())
-        c.setFont("Helvetica", 11)
-        c.drawCentredString(width / 2, height - 55, "Registro Formal – AdaptLink")
-
-        # 3. Linha Azul Divisória Premium
-        c.setStrokeColor(colors.HexColor("#1F3C78"))
-        c.setLineWidth(2)
-        c.line(20, height - 65, width - 20, height - 65)
-
-        # 4. Metadados do topo: Emitido em / Período
-        c.setFont("Helvetica", 8)
-        c.setFillColor(colors.HexColor("#475569"))
-        now_str = datetime.now().strftime("%d/%m/%Y %H:%M")
-        c.drawString(25, height - 75, f"Emitido em: {now_str}")
-        c.drawRightString(width - 25, height - 75, f"Período: {start_date.strftime('%d/%m/%Y')} a {end_date.strftime('%d/%m/%Y')}")
-
-        # 5. Rodapé Institucional AdaptLink
-        c.setStrokeColor(colors.HexColor("#E2E8F0"))
-        c.setLineWidth(0.8)
-        c.line(25, 90, width - 25, 90)
-        
-        c.setFont("Helvetica", 7)
-        c.setFillColor(colors.HexColor("#475569"))
-        y_footer = 75
-        for linha in RODAPE_LINHAS:
-            c.drawCentredString(width / 2, y_footer, linha)
-            y_footer -= 9
-        
-        # Paginação
-        c.setFont("Helvetica-Oblique", 8)
-        c.drawRightString(width - 25, 30, f"Página {c.getPageNumber()}")
-
-    doc.build(story, onFirstPage=draw_background, onLaterPages=draw_background)
+    # 4. Build PDF using standard premium header/footer
+    period_text = f"Período: {start_date.strftime('%d/%m/%Y')} a {end_date.strftime('%d/%m/%Y')}"
+    draw_bg = get_premium_pdf_draw_background(title, extra_right_text=period_text)
+    doc.build(story, onFirstPage=draw_bg, onLaterPages=draw_bg)
     buffer.seek(0)
-    
+
     return send_file(
         buffer,
         mimetype="application/pdf",
         as_attachment=False,
         download_name=f"relatorio_consolidado_{report_type}.pdf"
     )
+
 
 
 
@@ -3702,16 +3847,7 @@ def gestao_relatorios_preview():
         irregular_count = 0
         for s in filtered_sups:
             supervisor_name = s.supervisor.username if s.supervisor else "N/A"
-            techs_summary = "N/A"
-            if s.techs_data:
-                try:
-                    techs = s.techs_data
-                    if isinstance(techs, str):
-                        techs = json.loads(techs)
-                    if isinstance(techs, list):
-                        techs_summary = ", ".join([f"{t.get('name') or t.get('tech_name', '')}" for t in techs])
-                except Exception:
-                    techs_summary = str(s.techs_data)
+            techs_summary = _format_tech_names_from_json(s.techs_data)
 
             has_irr = bool(s.irregularities and s.irregularities.strip() and s.irregularities.lower() != "nenhuma")
             if has_irr:
@@ -3862,7 +3998,7 @@ def gestao_relatorios_preview():
                     if isinstance(techs, str):
                         techs = json.loads(techs)
                     if isinstance(techs, list):
-                        techs_summary = ", ".join([f"{t.get('name') or t.get('tech_name', '')}" for t in techs])
+                        techs_summary = _format_tech_names_from_json(r.techs_data)
                         for t in techs:
                             if t.get("delay_reason") or t.get("yard_departure_time_delayed") == True:
                                 has_delay = True
@@ -4478,10 +4614,7 @@ def api_comunicados_read(aid):
     return jsonify({"status": "ok"})
 
 
-
-@technical_bp.route("/api/system/audit")
-@login_required
-def api_system_audit():
+def execute_system_audit():
     cleanup_old_announcements()
     
     # Garantir que as regras padrão existam no banco de dados
@@ -5010,13 +5143,22 @@ def api_system_audit():
             print(f"⚠️ Erro ao reenviar alerta ID {flog.id}: {retry_err}")
 
     db.session.commit()
-    return jsonify({
+    return {
         "checklists_reminded": checklists_reminded,
         "os_overdue": os_overdue,
         "scales_notified": scales_notified,
         "trainings_notified": trainings_notified,
         "inactive_techs_notified": inactive_techs_notified
-    })
+    }
+
+
+@technical_bp.route("/api/system/audit")
+@login_required
+def api_system_audit():
+    result = execute_system_audit()
+    return jsonify(result)
+
+
 @technical_bp.route("/api/manuais/help")
 @login_required
 def api_manuais_help():

@@ -690,16 +690,98 @@
         </div>
 
         <!-- Geradores -->
-        <div id="pane-geradores" class="tab-pane hidden">
-            <div class="flex flex-wrap justify-between items-center gap-4 mb-8">
-                <div>
-                    <h2 class="text-2xl font-bold text-slate-800 dark:text-white">Gerenciamento de Geradores</h2>
-                    <p class="text-xs text-slate-500 mt-1">Monitoramento de combustível e manutenção de grupos geradores</p>
+        <div id="pane-geradores" class="tab-pane hidden font-sans">
+            <!-- ✅ HEADER PREMIUM GERADORES COMPACT -->
+            <div class="mb-8 animate-premium">
+                <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-4 border-b border-slate-200 dark:border-white/5 mb-6">
+
+                    <!-- Title & Breadcrumb -->
+                    <div class="flex items-center gap-5 relative z-10">
+                        <div class="w-12 h-12 rounded-[1.25rem] bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white shadow-2xl shadow-orange-500/25 flex-shrink-0">
+                            <i class="fa-solid fa-bolt-lightning text-xl"></i>
+                        </div>
+                        <div>
+                            <nav class="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-0.5">
+                                <span>Gestão Técnica</span>
+                                <i class="fa-solid fa-chevron-right text-[8px] opacity-30"></i>
+                                <span class="text-orange-500">Controle de Geradores</span>
+                            </nav>
+                            <h2 class="text-2xl font-black text-slate-800 dark:text-white tracking-tight">Monitoramento de Geradores</h2>
+                        </div>
+                    </div>
+
+                    <!-- Search & Action Buttons -->
+                    <div class="flex flex-wrap items-center gap-4 relative z-10">
+                        <!-- BUSCA GERADORES -->
+                        <div class="flex items-center gap-2 group">
+                            <div class="relative">
+                                <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-orange-500 transition-colors text-xs"></i>
+                                <input id="search-geradores" oninput="filterGeradores()" placeholder="Buscar por gerador, local..." 
+                                       class="bg-slate-900/5 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 rounded-xl pl-10 pr-4 py-2.5 text-xs font-bold text-slate-700 dark:text-white placeholder:text-slate-400 outline-none focus:border-orange-500/50 transition-all w-56">
+                            </div>
+                        </div>
+
+                        <!-- GERAR PDF PADRONIZADO -->
+                        <button onclick="downloadGeradoresPDF()" class="px-5 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-rose-500/20 transition-all active:scale-95 flex items-center gap-2">
+                            <i class="fa-solid fa-file-pdf text-xs"></i> Gerar PDF Padronizado
+                        </button>
+
+                        <!-- NOVO GERADOR -->
+                        <button onclick="openModalGerador()" class="px-5 py-2.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-orange-500/25 transition-all active:scale-95 flex items-center gap-2">
+                            <i class="fa-solid fa-plus text-xs"></i> Novo Gerador
+                        </button>
+                    </div>
                 </div>
-                <button onclick="openModalGerador()" class="px-5 py-2.5 bg-orange-600 hover:bg-orange-700 text-white rounded-2xl text-sm font-bold flex items-center gap-2 shadow-lg shadow-orange-500/20 transition-all active:scale-95">
-                    <i class="fa-solid fa-plus"></i> Novo Gerador
-                </button>
+
+                <!-- KPI DASHBOARD CARDS -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                    <!-- Card 1: Total Geradores -->
+                    <div class="bg-white dark:bg-slate-900/80 border border-slate-200/80 dark:border-white/10 rounded-2xl p-4 shadow-sm flex items-center gap-4 hover:border-orange-500/30 transition-all">
+                        <div class="w-11 h-11 rounded-2xl bg-orange-500/10 text-orange-500 flex items-center justify-center text-xl shrink-0">
+                            <i class="fa-solid fa-bolt-lightning"></i>
+                        </div>
+                        <div>
+                            <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider block">Total de Geradores</span>
+                            <span class="text-xl font-black text-slate-800 dark:text-white" id="kpi-total-geradores">0</span>
+                        </div>
+                    </div>
+
+                    <!-- Card 2: Armazenamento Total -->
+                    <div class="bg-white dark:bg-slate-900/80 border border-slate-200/80 dark:border-white/10 rounded-2xl p-4 shadow-sm flex items-center gap-4 hover:border-blue-500/30 transition-all">
+                        <div class="w-11 h-11 rounded-2xl bg-blue-500/10 text-blue-500 flex items-center justify-center text-xl shrink-0">
+                            <i class="fa-solid fa-gas-pump"></i>
+                        </div>
+                        <div>
+                            <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider block">Volume Atual</span>
+                            <span class="text-xl font-black text-slate-800 dark:text-white" id="kpi-volume-total">0 L</span>
+                        </div>
+                    </div>
+
+                    <!-- Card 3: Status Crítico -->
+                    <div class="bg-white dark:bg-slate-900/80 border border-slate-200/80 dark:border-white/10 rounded-2xl p-4 shadow-sm flex items-center gap-4 hover:border-rose-500/30 transition-all">
+                        <div class="w-11 h-11 rounded-2xl bg-rose-500/10 text-rose-500 flex items-center justify-center text-xl shrink-0">
+                            <i class="fa-solid fa-triangle-exclamation"></i>
+                        </div>
+                        <div>
+                            <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider block">Nível Crítico (≤30%)</span>
+                            <span class="text-xl font-black text-rose-600 dark:text-rose-400" id="kpi-criticos">0</span>
+                        </div>
+                    </div>
+
+                    <!-- Card 4: Reserva Total -->
+                    <div class="bg-white dark:bg-slate-900/80 border border-slate-200/80 dark:border-white/10 rounded-2xl p-4 shadow-sm flex items-center gap-4 hover:border-emerald-500/30 transition-all">
+                        <div class="w-11 h-11 rounded-2xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center text-xl shrink-0">
+                            <i class="fa-solid fa-fill-drip"></i>
+                        </div>
+                        <div>
+                            <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider block">Reserva Total</span>
+                            <span class="text-xl font-black text-emerald-600 dark:text-emerald-400" id="kpi-reserva-total">0 L</span>
+                        </div>
+                    </div>
+                </div>
             </div>
+
+            <!-- CARDS CONTAINER -->
             <div class="space-y-4" id="list-geradores">
                 <!-- Injetado via JS -->
             </div>
@@ -1346,7 +1428,7 @@
                             </select>
                         </div>
 
-                        <button onclick="gerarRelatorioPDF()" class="w-full py-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-2xl font-black uppercase tracking-[0.2em] text-[11px] shadow-xl shadow-purple-500/30 transition-all active:scale-95 flex items-center justify-center gap-2">
+                        <button id="btn-gerar-relatorio-pdf" onclick="gerarRelatorioPDF()" class="w-full py-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-2xl font-black uppercase tracking-[0.2em] text-[11px] shadow-xl shadow-purple-500/30 transition-all active:scale-95 flex items-center justify-center gap-2">
                             <i class="fa-solid fa-file-pdf text-lg"></i> Gerar Relatório PDF
                         </button>
                     </div>
@@ -1391,6 +1473,7 @@
                             <div>
                                 <h3 class="text-base font-black text-slate-800 dark:text-white flex items-center gap-2">
                                     <i class="fa-solid fa-magnifying-glass-chart text-purple-500"></i> Pré-visualização dos Dados
+                                    <span id="report-record-count" class="hidden px-2.5 py-1 bg-purple-500/10 text-purple-600 dark:text-purple-400 rounded-full text-[9px] font-black"></span>
                                 </h3>
                                 <p class="text-[10px] text-slate-500 mt-1 uppercase font-bold tracking-widest">Registros correspondentes aos filtros selecionados</p>
                             </div>
@@ -2441,6 +2524,11 @@
                     <input id="reserve_liters" type="number" name="reserve_liters" placeholder="0" class="w-full bg-slate-50 dark:bg-gray-800 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-orange-500/20">
                 </div>
             </div>
+
+            <div>
+                <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Data do Último Abastecimento</label>
+                <input id="last_refill_date" type="date" name="last_refill_date" class="w-full bg-slate-50 dark:bg-gray-800 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-orange-500/20">
+            </div>
         </form>
         <div class="p-8 border-t border-slate-900/10 dark:border-white/10 bg-slate-50/50 dark:bg-white/5 flex justify-end gap-3">
             <button onclick="closeModal('modal-gerador')" class="px-6 py-3 text-slate-600 dark:text-gray-400 font-bold text-sm">Cancelar</button>
@@ -2473,6 +2561,10 @@
                     <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">L Reserva</label>
                     <input id="reserve_liters" type="number" name="reserve_liters" class="w-full bg-slate-50 dark:bg-gray-800 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2 text-sm outline-none">
                 </div>
+            </div>
+            <div>
+                <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Data do Abastecimento</label>
+                <input id="abastecer_last_refill_date" type="date" name="last_refill_date" required class="w-full bg-slate-50 dark:bg-gray-800 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-700 dark:text-white outline-none">
             </div>
             <button type="submit" class="w-full py-3 bg-orange-600 text-white rounded-xl font-bold shadow-lg shadow-orange-500/20 mt-2">Atualizar Níveis</button>
         </form>
@@ -5218,7 +5310,9 @@ function filterReunioes() {
     const filtered = currentReunioes.filter(i => {
         const title = (i.title || '').toLowerCase();
         const subject = (i.subject || '').toLowerCase();
-        return title.includes(query) || subject.includes(query);
+        const participants = (i.participant_names || '').toLowerCase();
+        const responsible = (i.responsible || '').toLowerCase();
+        return title.includes(query) || subject.includes(query) || participants.includes(query) || responsible.includes(query);
     });
     renderReunioesTable(filtered);
 }
@@ -5255,7 +5349,8 @@ function renderReunioesTable(data) {
                         <tr class="text-slate-600 dark:text-gray-300 border-b border-slate-900/10 dark:border-white/10 text-left font-bold">
                             <th class="px-4 py-2 w-42">Data</th>
                             <th class="px-4 py-2 w-64">Título</th>
-                            <th class="px-4 py-2 w-96">Pauta Principal</th>
+                            <th class="px-4 py-2 w-80">Pauta Principal</th>
+                            <th class="px-4 py-2 w-64">Técnico(s) / Participantes</th>
                             <th class="px-4 py-2 w-32 text-center">Ações</th>
                         </tr>
                     </thead>
@@ -5293,7 +5388,7 @@ function renderReunioesTable(data) {
                 <tbody>
                     <tr class="bg-slate-900/5 dark:bg-white/5 cursor-pointer hover:bg-slate-900/10 dark:hover:bg-white/10 transition-all select-none" 
                         onclick="toggleMonthGroup(${groupIndex})">
-                        <td colspan="4" class="px-4 py-3 text-blue-700 dark:text-blue-300 font-black uppercase tracking-wider text-xs">
+                        <td colspan="5" class="px-4 py-3 text-blue-700 dark:text-blue-300 font-black uppercase tracking-wider text-xs">
                             <div class="flex items-center justify-between">
                                 <span class="flex items-center gap-2">
                                     <i class="fa-solid fa-calendar-days text-blue-500"></i>
@@ -5311,6 +5406,8 @@ function renderReunioesTable(data) {
             isFirst = false;
         }
 
+        const techDisplay = i.participant_names || i.responsible || '-';
+
         tableHtml += `
             <tr class="border-b border-slate-900/10 dark:border-white/10 hover:bg-slate-900/5 dark:hover:bg-white/5 transition">
                 <!-- Data -->
@@ -5324,8 +5421,16 @@ function renderReunioesTable(data) {
                 </td>
 
                 <!-- Pauta -->
-                <td class="px-4 py-2 text-slate-655 dark:text-gray-300 leading-snug">
+                <td class="px-4 py-2 text-slate-600 dark:text-gray-300 leading-snug">
                     ${i.subject || '-'}
+                </td>
+
+                <!-- Técnico(s) / Participantes -->
+                <td class="px-4 py-2 text-slate-700 dark:text-gray-300 leading-snug">
+                    <span class="inline-flex items-center gap-1.5 font-bold text-xs text-blue-600 dark:text-blue-400 bg-blue-500/10 px-2.5 py-1 rounded-lg">
+                        <i class="fa-solid fa-user-gear text-[10px]"></i>
+                        ${techDisplay}
+                    </span>
                 </td>
 
                 <!-- Ações -->
@@ -5927,73 +6032,9 @@ async function loadItems(slug) {
         currentRFOs = data;
         filterRFOs();
     } else if(slug === 'geradores') {
-        container.innerHTML = data.map(i => {
-            const perc = Math.min(100, Math.round((i.current_qty / i.capacity_total) * 100));
-            let colorClass = 'bg-orange-500';
-            if(perc < 25) colorClass = 'bg-red-500';
-            else if(perc < 50) colorClass = 'bg-amber-500';
-            else colorClass = 'bg-emerald-500';
-            
-            return `
-            <div class="bg-white dark:bg-gray-900 rounded-2xl border border-slate-900/10 dark:border-white/10 p-4 shadow-sm hover:shadow-md hover:border-orange-500/20 dark:hover:border-orange-500/20 transition-all duration-300 flex flex-wrap md:flex-nowrap items-center justify-between gap-4 group relative overflow-hidden animate-premium">
-                <!-- Left: Glowing Icon + Identity -->
-                <div class="flex items-center gap-3.5 min-w-[240px] flex-1">
-                    <div class="w-11 h-11 rounded-2xl bg-orange-50 dark:bg-orange-950/20 text-orange-500 flex items-center justify-center text-base shadow-inner shrink-0 group-hover:scale-105 transition-transform duration-300">
-                        <i class="fa-solid fa-bolt"></i>
-                    </div>
-                    <div class="min-w-0">
-                        <h4 class="font-extrabold text-slate-800 dark:text-white text-sm truncate leading-tight">${i.name}</h4>
-                        <p class="text-[10px] text-slate-400 font-bold flex items-center gap-1 mt-1 leading-none"><i class="fa-solid fa-location-dot text-slate-300 dark:text-gray-600"></i> ${i.location}</p>
-                    </div>
-                </div>
-
-                <!-- Middle 1: Fuel Tank Capacity & Slider -->
-                <div class="flex flex-col min-w-[180px] md:w-64">
-                    <div class="flex justify-between items-end mb-1.5 text-[10px] font-bold">
-                        <span class="text-slate-400 uppercase tracking-widest">Combustível</span>
-                        <span class="text-slate-700 dark:text-gray-300">${i.current_qty}L <span class="text-slate-400">/ ${i.capacity_total}L</span></span>
-                    </div>
-                    <div class="w-full h-2.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden flex relative border border-slate-200/20">
-                        <div class="h-full rounded-full transition-all duration-500 ${colorClass}" style="width: ${perc}%"></div>
-                    </div>
-                    <span class="text-[9px] font-black tracking-wider uppercase mt-1 ${perc < 25 ? 'text-red-500' : perc < 50 ? 'text-amber-500' : 'text-emerald-500'}">${perc}% de autonomia</span>
-                </div>
-
-                <!-- Middle 2: Reserve Liters & Cans -->
-                <div class="bg-blue-50/45 dark:bg-blue-950/15 border border-blue-100 dark:border-blue-950/30 rounded-xl p-2.5 flex items-center gap-3 shrink-0 min-w-[150px]">
-                    <div class="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-900/30 text-blue-500 flex items-center justify-center shrink-0">
-                        <i class="fa-solid fa-fill-drip text-sm"></i>
-                    </div>
-                    <div>
-                        <span class="text-[8px] font-black text-blue-400 dark:text-blue-500 uppercase tracking-wider block leading-none mb-0.5">Estoque Reserva</span>
-                        <span class="text-xs font-bold text-blue-800 dark:text-blue-300 leading-tight">${i.reserve_cans || 0} <span class="text-[10px] font-normal text-blue-400">un.</span> | ${i.reserve_liters || 0}L</span>
-                    </div>
-                </div>
-
-                <!-- Middle 3: Status & Fuel Type Badges -->
-                <div class="flex flex-col items-start gap-1 shrink-0">
-                    <span class="px-2 py-0.5 rounded text-[8px] font-black uppercase tracking-wider shrink-0 ${i.status === 'OPERACIONAL' ? 'bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600' : 'bg-red-50 dark:bg-red-950/20 text-red-600'}">
-                        ${i.status}
-                    </span>
-                    <span class="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded text-[8px] font-black uppercase tracking-wider shrink-0 mt-0.5">
-                        ${i.fuel_type}
-                    </span>
-                </div>
-
-                <!-- Right: Action Buttons -->
-                <div class="flex items-center gap-2 shrink-0 ml-auto md:ml-0">
-                    <button onclick="openAbastecer(${i.id})" class="px-3.5 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-xl text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 shadow-md shadow-orange-500/10 transition-all active:scale-95">
-                        <i class="fa-solid fa-gas-pump"></i> Abastecer
-                    </button>
-                    <button onclick="editGerador(${i.id})" class="w-8.5 h-8.5 flex items-center justify-center border border-slate-200 dark:border-white/10 text-slate-500 hover:bg-slate-50 dark:hover:bg-white/5 rounded-xl transition-all" title="Editar">
-                        <i class="fa-solid fa-pen text-[10px]"></i>
-                    </button>
-                    <button onclick="deleteGerador(${i.id})" class="w-8.5 h-8.5 flex items-center justify-center border border-red-100 text-red-400 hover:bg-red-50 rounded-xl transition-all" title="Excluir">
-                        <i class="fa-solid fa-trash text-[10px]"></i>
-                    </button>
-                </div>
-            </div>`;
-        }).join('');
+        currentGenerators = data;
+        updateGeradoresKPIs(data);
+        filterGeradores();
     } else if(slug === 'rota_exata') {
         rotaExataData = data;
         filterRotaExata();
@@ -6487,6 +6528,7 @@ function openModalGerador() {
     const form = document.getElementById('form-gerador');
     form.reset();
     if(form.querySelector('[name="id"]')) form.querySelector('[name="id"]').value = '';
+    if(form.querySelector('[name="last_refill_date"]')) form.querySelector('[name="last_refill_date"]').value = '';
     const btn = document.querySelector('#modal-gerador button[onclick="submitGerador()"]');
     if(btn) btn.innerText = "Salvar Gerador";
     openModal('modal-gerador');
@@ -6500,6 +6542,9 @@ function openAbastecer(id) {
     form.querySelector('[name="current_qty"]').value = item.current_qty;
     form.querySelector('[name="reserve_cans"]').value = item.reserve_cans;
     form.querySelector('[name="reserve_liters"]').value = item.reserve_liters;
+    if(form.querySelector('[name="last_refill_date"]')) {
+        form.querySelector('[name="last_refill_date"]').value = item.last_refill_date || new Date().toISOString().split('T')[0];
+    }
     openModal('modal-abastecer');
 }
 
@@ -6508,7 +6553,9 @@ document.getElementById('form-abastecer').onsubmit = async (e) => {
     const data = {};
     new FormData(e.target).forEach((value, key) => data[key] = value);
     const id = data.id;
-    data.last_refill_date = new Date().toISOString().split('T')[0];
+    if (!data.last_refill_date) {
+        data.last_refill_date = new Date().toISOString().split('T')[0];
+    }
     
     try {
         const res = await fetch(`/api/gestao/geradores/${id}`, {
@@ -6545,11 +6592,167 @@ async function editGerador(id) {
     form.querySelector('[name="fuel_type"]').value = item.fuel_type;
     form.querySelector('[name="reserve_cans"]').value = item.reserve_cans;
     form.querySelector('[name="reserve_liters"]').value = item.reserve_liters;
+    if(form.querySelector('[name="last_refill_date"]')) {
+        form.querySelector('[name="last_refill_date"]').value = item.last_refill_date || '';
+    }
     
     const btn = document.querySelector('#modal-gerador button[onclick="submitGerador()"]');
     if(btn) btn.innerText = "Salvar Alterações";
     
     openModal('modal-gerador');
+}
+
+function filterGeradores() {
+    const q = (document.getElementById('search-geradores')?.value || '').toLowerCase().trim();
+    if (!q) {
+        renderGeradoresList(currentGenerators);
+    } else {
+        const filtered = currentGenerators.filter(g => 
+            (g.name || '').toLowerCase().includes(q) ||
+            (g.location || '').toLowerCase().includes(q) ||
+            (g.fuel_type || '').toLowerCase().includes(q) ||
+            (g.status || '').toLowerCase().includes(q)
+        );
+        renderGeradoresList(filtered);
+    }
+}
+
+function updateGeradoresKPIs(data) {
+    const totalGens = data.length;
+    const totalCap = data.reduce((acc, g) => acc + (parseFloat(g.capacity_total) || 0), 0);
+    const totalCurr = data.reduce((acc, g) => acc + (parseFloat(g.current_qty) || 0), 0);
+    const totalRes = data.reduce((acc, g) => acc + (parseFloat(g.reserve_liters) || 0), 0);
+    const criticos = data.filter(g => g.capacity_total && ((parseFloat(g.current_qty) || 0) / parseFloat(g.capacity_total)) <= 0.3).length;
+
+    const elTotal = document.getElementById('kpi-total-geradores');
+    const elVol = document.getElementById('kpi-volume-total');
+    const elCrit = document.getElementById('kpi-criticos');
+    const elRes = document.getElementById('kpi-reserva-total');
+
+    if (elTotal) elTotal.innerText = totalGens;
+    if (elVol) elVol.innerText = `${totalCurr.toFixed(0)}L / ${totalCap.toFixed(0)}L`;
+    if (elCrit) elCrit.innerText = criticos;
+    if (elRes) elRes.innerText = `${totalRes.toFixed(0)} L`;
+}
+
+function renderGeradoresList(data) {
+    const container = document.getElementById('list-geradores');
+    if (!container) return;
+
+    if (!data || data.length === 0) {
+        container.innerHTML = `
+            <div class="bg-white dark:bg-gray-900 rounded-3xl border border-dashed border-slate-300 dark:border-white/10 p-12 text-center">
+                <div class="w-16 h-16 rounded-3xl bg-amber-500/10 text-amber-500 flex items-center justify-center text-2xl mx-auto mb-4">
+                    <i class="fa-solid fa-bolt-lightning"></i>
+                </div>
+                <h3 class="text-base font-extrabold text-slate-700 dark:text-white">Nenhum gerador encontrado</h3>
+                <p class="text-xs text-slate-400 mt-1 max-w-sm mx-auto">Cadastre um novo grupo gerador para iniciar o monitoramento de combustível.</p>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = data.map(i => {
+        const cap = parseFloat(i.capacity_total) || 0;
+        const curr = parseFloat(i.current_qty) || 0;
+        const perc = cap > 0 ? Math.min(100, Math.round((curr / cap) * 100)) : 0;
+        
+        let progressGradient = 'from-emerald-500 to-teal-400';
+        let textStatusColor = 'text-emerald-600 dark:text-emerald-400';
+
+        if (perc <= 30) {
+            progressGradient = 'from-rose-600 to-red-500';
+            textStatusColor = 'text-rose-600 dark:text-rose-400';
+        } else if (perc <= 50) {
+            progressGradient = 'from-amber-500 to-orange-400';
+            textStatusColor = 'text-amber-600 dark:text-amber-400';
+        }
+
+        const refillDateStr = i.last_refill_date ? i.last_refill_date.split('-').reverse().join('/') : 'Não informada';
+
+        return `
+        <div class="bg-white dark:bg-gray-900 rounded-2xl border border-slate-200/80 dark:border-white/10 p-5 shadow-sm hover:shadow-xl hover:border-orange-500/30 dark:hover:border-orange-500/30 transition-all duration-300 flex flex-wrap lg:flex-nowrap items-center justify-between gap-6 group relative overflow-hidden animate-premium">
+            
+            <!-- Glow Decorator -->
+            <div class="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-orange-500/5 to-transparent rounded-full pointer-events-none"></div>
+
+            <!-- Left Column: Identity -->
+            <div class="flex items-center gap-4 min-w-[260px] flex-1">
+                <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500/10 to-orange-500/20 dark:from-amber-500/20 dark:to-orange-500/30 text-orange-500 flex items-center justify-center text-xl shadow-inner shrink-0 group-hover:scale-110 transition-transform duration-300">
+                    <i class="fa-solid fa-bolt-lightning"></i>
+                </div>
+                <div class="min-w-0">
+                    <div class="flex items-center gap-2">
+                        <h4 class="font-black text-slate-800 dark:text-white text-base truncate leading-tight">${i.name}</h4>
+                    </div>
+                    <div class="flex flex-wrap items-center gap-3 mt-1.5 text-slate-500 dark:text-slate-400 text-[11px] font-bold">
+                        <span class="flex items-center gap-1">
+                            <i class="fa-solid fa-location-dot text-orange-500/80"></i> ${i.location || 'Local não informado'}
+                        </span>
+                        <span class="flex items-center gap-1 bg-slate-100 dark:bg-white/5 px-2 py-0.5 rounded-lg border border-slate-200/50 dark:border-white/5">
+                            <i class="fa-solid fa-calendar-check text-blue-500"></i> Últ. Abastec: <strong class="text-slate-700 dark:text-slate-200">${refillDateStr}</strong>
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Middle Column 1: Progress & Fuel Level -->
+            <div class="flex flex-col min-w-[200px] lg:w-72">
+                <div class="flex justify-between items-end mb-1.5 text-xs font-black">
+                    <span class="text-slate-400 uppercase tracking-widest text-[9px]">Nível de Combustível</span>
+                    <span class="text-slate-800 dark:text-white">${curr}L <span class="text-slate-400 font-normal">/ ${cap}L</span></span>
+                </div>
+                <div class="w-full h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden flex relative border border-slate-200/30 dark:border-white/5 p-0.5">
+                    <div class="h-full rounded-full bg-gradient-to-r ${progressGradient} transition-all duration-700 shadow-sm" style="width: ${perc}%"></div>
+                </div>
+                <div class="flex justify-between items-center mt-1.5">
+                    <span class="text-[10px] font-black tracking-wider uppercase ${textStatusColor}">
+                        ${perc <= 30 ? '⚠️ Crítico' : (perc <= 50 ? '⚡ Atenção' : '✅ Autonomia Ideal')}
+                    </span>
+                    <span class="text-[11px] font-black ${textStatusColor}">${perc}%</span>
+                </div>
+            </div>
+
+            <!-- Middle Column 2: Reserve & Fuel Badges -->
+            <div class="flex items-center gap-3 shrink-0">
+                <!-- Reserve Liters Pill -->
+                <div class="bg-blue-500/5 dark:bg-blue-500/10 border border-blue-500/15 dark:border-blue-500/20 rounded-2xl px-3.5 py-2 flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center shrink-0">
+                        <i class="fa-solid fa-fill-drip text-xs"></i>
+                    </div>
+                    <div>
+                        <span class="text-[8px] font-black text-blue-400 uppercase tracking-wider block leading-none">Reserva</span>
+                        <span class="text-xs font-black text-blue-700 dark:text-blue-300">${i.reserve_liters || 0} L</span>
+                    </div>
+                </div>
+
+                <!-- Status & Fuel Type -->
+                <div class="flex flex-col items-start gap-1">
+                    <span class="px-2.5 py-1 rounded-xl text-[9px] font-black uppercase tracking-wider border ${i.status === 'OPERACIONAL' ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20' : 'bg-rose-500/10 text-rose-600 border-rose-500/20'} flex items-center gap-1.5">
+                        <span class="w-1.5 h-1.5 rounded-full ${i.status === 'OPERACIONAL' ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}"></span>
+                        ${i.status}
+                    </span>
+                    <span class="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-lg text-[9px] font-bold uppercase tracking-wider">
+                        <i class="fa-solid fa-fire-flame-simple text-[8px]"></i> ${i.fuel_type}
+                    </span>
+                </div>
+            </div>
+
+            <!-- Right Column: Action Buttons -->
+            <div class="flex items-center gap-2 shrink-0 ml-auto lg:ml-0">
+                <button onclick="openAbastecer(${i.id})" class="px-4 py-2.5 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white rounded-xl text-xs font-extrabold uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-orange-500/20 transition-all active:scale-95">
+                    <i class="fa-solid fa-gas-pump"></i> Abastecer
+                </button>
+                <button onclick="editGerador(${i.id})" class="w-9 h-9 flex items-center justify-center border border-slate-200 dark:border-white/10 text-slate-500 hover:text-orange-500 hover:bg-orange-500/10 rounded-xl transition-all" title="Editar Gerador">
+                    <i class="fa-solid fa-pen text-xs"></i>
+                </button>
+                <button onclick="deleteGerador(${i.id})" class="w-9 h-9 flex items-center justify-center border border-rose-200/50 dark:border-rose-500/20 text-rose-500 hover:bg-rose-500/10 rounded-xl transition-all" title="Excluir Gerador">
+                    <i class="fa-solid fa-trash text-xs"></i>
+                </button>
+            </div>
+        </div>
+        `;
+    }).join('');
 }
 
 // --- EQUIPES ---
@@ -7806,6 +8009,10 @@ function downloadEncerramentoPDF(id) {
 
 function downloadAnotacaoPDF(id) {
     window.open(`/api/gestao/anotacoes/${id}/pdf`, '_blank');
+}
+
+function downloadGeradoresPDF() {
+    window.open('/api/gestao/geradores/pdf', '_blank');
 }
 
 // --- ROTA EXATA JS ---
@@ -9395,25 +9602,84 @@ async function carregarRelatorioPreview() {
         currentReportRecords = data.records || [];
         const metrics = data.metrics || {};
 
-        // 1. Render Metrics dynamically
+        // 1. Render Metrics dynamically with icons and colors
+        const metricStyleMap = {
+            'total': { icon: 'fa-list-ol', color: 'blue' },
+            'aprovado': { icon: 'fa-circle-check', color: 'emerald' },
+            'concluíd': { icon: 'fa-circle-check', color: 'emerald' },
+            'resolvid': { icon: 'fa-circle-check', color: 'emerald' },
+            'sucesso': { icon: 'fa-chart-line', color: 'emerald' },
+            'conformidade': { icon: 'fa-shield-check', color: 'emerald' },
+            'reprovado': { icon: 'fa-circle-xmark', color: 'rose' },
+            'irregular': { icon: 'fa-triangle-exclamation', color: 'rose' },
+            'atraso': { icon: 'fa-clock', color: 'amber' },
+            'desvio': { icon: 'fa-route', color: 'amber' },
+            'pendente': { icon: 'fa-hourglass-half', color: 'amber' },
+            'aberta': { icon: 'fa-folder-open', color: 'amber' },
+            'andamento': { icon: 'fa-spinner', color: 'sky' },
+            'agendad': { icon: 'fa-calendar', color: 'sky' },
+            'realizad': { icon: 'fa-calendar-check', color: 'emerald' },
+            'operacional': { icon: 'fa-gauge-high', color: 'emerald' },
+            'combustível': { icon: 'fa-gas-pump', color: 'sky' },
+            'reserva': { icon: 'fa-battery-half', color: 'amber' },
+            'nível': { icon: 'fa-battery-half', color: 'amber' },
+            'pátio': { icon: 'fa-warehouse', color: 'indigo' },
+            'feriado': { icon: 'fa-umbrella-beach', color: 'amber' },
+            'semana': { icon: 'fa-calendar-week', color: 'sky' },
+            'prioridade': { icon: 'fa-flag', color: 'rose' },
+            'filtro': { icon: 'fa-filter', color: 'indigo' },
+            'regular': { icon: 'fa-check-double', color: 'emerald' }
+        };
+
+        function getMetricStyle(key) {
+            const keyLower = key.toLowerCase();
+            for (const [keyword, style] of Object.entries(metricStyleMap)) {
+                if (keyLower.includes(keyword)) return style;
+            }
+            return { icon: 'fa-chart-simple', color: 'slate' };
+        }
+
         let metricsHtml = '';
         Object.entries(metrics).forEach(([key, val]) => {
+            const style = getMetricStyle(key);
             metricsHtml += `
-                <div class="p-5 rounded-[2rem] border border-slate-900/5 dark:border-white/5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-md shadow-sm transition-all hover:scale-105 duration-300">
-                    <div class="text-slate-400 dark:text-slate-500 text-[9px] font-black uppercase tracking-wider mb-1">${key}</div>
-                    <div class="text-lg font-black text-slate-800 dark:text-white">${val}</div>
+                <div class="p-5 rounded-[2rem] border border-slate-900/5 dark:border-white/5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-md shadow-sm transition-all hover:scale-[1.03] duration-300">
+                    <div class="flex items-center gap-2 mb-2">
+                        <div class="w-7 h-7 rounded-xl bg-${style.color}-500/10 flex items-center justify-center">
+                            <i class="fa-solid ${style.icon} text-[10px] text-${style.color}-500"></i>
+                        </div>
+                        <div class="text-slate-400 dark:text-slate-500 text-[9px] font-black uppercase tracking-wider">${key}</div>
+                    </div>
+                    <div class="text-xl font-black text-slate-800 dark:text-white pl-1">${val}</div>
                 </div>
             `;
         });
         if (!metricsHtml) {
             metricsHtml = `
                 <div class="p-5 rounded-[2rem] border border-slate-900/5 dark:border-white/5 bg-white/50 dark:bg-slate-800/50 backdrop-blur-md shadow-sm">
-                    <div class="text-slate-400 text-[9px] font-black uppercase tracking-wider mb-1">Status</div>
+                    <div class="flex items-center gap-2 mb-2">
+                        <div class="w-7 h-7 rounded-xl bg-slate-500/10 flex items-center justify-center">
+                            <i class="fa-solid fa-chart-simple text-[10px] text-slate-500"></i>
+                        </div>
+                        <div class="text-slate-400 text-[9px] font-black uppercase tracking-wider">Status</div>
+                    </div>
                     <div class="text-lg font-black text-slate-800 dark:text-white">Sem Métricas</div>
                 </div>
             `;
         }
         metricsContainer.innerHTML = metricsHtml;
+
+        // Update record count badge
+        const countBadge = document.getElementById('report-record-count');
+        if (countBadge) {
+            const total = currentReportRecords.length;
+            if (total > 0) {
+                countBadge.textContent = `${total} registro${total !== 1 ? 's' : ''}`;
+                countBadge.classList.remove('hidden');
+            } else {
+                countBadge.classList.add('hidden');
+            }
+        }
 
         // 2. Render Table
         renderTabelaRelatorios(currentReportRecords, type);
@@ -9517,14 +9783,21 @@ async function gerarRelatorioPDF() {
     const start = document.getElementById('report_start').value;
     const end = document.getElementById('report_end').value;
     const user_id = document.getElementById('report_user').value;
+    const btn = document.getElementById('btn-gerar-relatorio-pdf');
 
     if (!start || !end) {
-        return alert('Por favor, selecione as datas inicial e final.');
+        return showToast('Por favor, selecione as datas inicial e final.', 'warning');
     }
+
+    // Loading state
+    const originalHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.classList.add('opacity-70', 'cursor-wait');
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-lg"></i> Gerando PDF...';
 
     try {
         showToast('Gerando relatório... Isso pode levar alguns segundos.', 'info');
-        
+
         const params = new URLSearchParams({
             type: type,
             start_date: start,
@@ -9537,7 +9810,14 @@ async function gerarRelatorioPDF() {
 
     } catch (e) {
         console.error(e);
-        alert('Erro ao processar solicitação de relatório.');
+        showToast('Erro ao processar solicitação de relatório.', 'error');
+    } finally {
+        // Restore button after short delay
+        setTimeout(() => {
+            btn.disabled = false;
+            btn.classList.remove('opacity-70', 'cursor-wait');
+            btn.innerHTML = originalHtml;
+        }, 2000);
     }
 }
 

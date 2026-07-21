@@ -71,7 +71,7 @@ def login():
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "").strip()
 
-        u = User.query.filter_by(username=username).first()
+        u = User.query.filter_by(username=username.upper()).first()
         if u and u.check_password(password):
             _clear_attempts(client_ip)  # Login OK → limpa histórico
             login_user(u)
@@ -137,8 +137,6 @@ def dashboard():
     # --- Lógica de Estatísticas de Usuários (necessário para view='veiculos') ---
     user_stats_list = []
     if view == "veiculos":
-        # Incluindo todos os usuários exceto o admin principal para garantir reconhecimento total
-        users = User.query.filter(User.username != 'admin').all()
         now = agora()
         start_week = (now - timedelta(days=now.weekday())).replace(hour=0, minute=0, second=0, microsecond=0)
         start_month = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
@@ -146,6 +144,8 @@ def dashboard():
 
         # Trata período selecionado se houver
         periodo_custom = False
+        start_dt = None
+        end_dt = None
         if periodo and " - " in periodo:
             try:
                 start_str, end_str = periodo.split(" - ")
@@ -155,27 +155,43 @@ def dashboard():
             except Exception:
                 pass
 
-        for u in users:
-            if periodo_custom:
-                # Se há período personalizado, 'semanal' conterá o valor do período e total será o geral
-                total = Checklist.query.filter_by(technician=u.username).count()
-                semanal = Checklist.query.filter(Checklist.technician == u.username, Checklist.date >= start_dt, Checklist.date <= end_dt).count()
+        # Coleta todos os usuários cadastrados (exceto admin) e técnicos presentes nos checklists
+        user_map = {}  # lower_name -> display_name
+        all_users = User.query.filter(User.username != 'admin').all()
+        for u in all_users:
+            uname = (u.username or "").strip()
+            if uname and uname.lower() != "admin":
+                user_map[uname.lower()] = uname
+
+        # Também inclui técnicos registrados na tabela de checklists que não estejam na lista de usuários
+        tech_in_checklists = db.session.query(db.func.lower(Checklist.technician)).filter(Checklist.technician != None).group_by(db.func.lower(Checklist.technician)).all()
+        for (t_name,) in tech_in_checklists:
+            if t_name and t_name.strip() and t_name.strip().lower() != "admin":
+                t_clean = t_name.strip()
+                if t_clean.lower() not in user_map:
+                    user_map[t_clean.lower()] = t_clean.upper()
+
+        for lower_name, display_name in user_map.items():
+            if periodo_custom and start_dt and end_dt:
+                total = Checklist.query.filter(db.func.lower(Checklist.technician) == lower_name).count()
+                semanal = Checklist.query.filter(db.func.lower(Checklist.technician) == lower_name, Checklist.date >= start_dt, Checklist.date <= end_dt).count()
                 mensal = 0
                 anual = 0
             else:
-                total = Checklist.query.filter_by(technician=u.username).count()
-                semanal = Checklist.query.filter(Checklist.technician == u.username, Checklist.date >= start_week).count()
-                mensal = Checklist.query.filter(Checklist.technician == u.username, Checklist.date >= start_month).count()
-                anual = Checklist.query.filter(Checklist.technician == u.username, Checklist.date >= start_year).count()
-            
-            user_stats_list.append({
-                'username': u.username,
-                'semanal': semanal,
-                'mensal': mensal,
-                'anual': anual,
-                'total': total
-            })
-        # Ordenar pelo total de checklists no filtro correspondente (semanal para custom ou total geral)
+                total = Checklist.query.filter(db.func.lower(Checklist.technician) == lower_name).count()
+                semanal = Checklist.query.filter(db.func.lower(Checklist.technician) == lower_name, Checklist.date >= start_week).count()
+                mensal = Checklist.query.filter(db.func.lower(Checklist.technician) == lower_name, Checklist.date >= start_month).count()
+                anual = Checklist.query.filter(db.func.lower(Checklist.technician) == lower_name, Checklist.date >= start_year).count()
+
+            if total > 0 or semanal > 0 or mensal > 0 or anual > 0:
+                user_stats_list.append({
+                    'username': display_name,
+                    'semanal': semanal,
+                    'mensal': mensal,
+                    'anual': anual,
+                    'total': total
+                })
+
         if periodo_custom:
             user_stats_list.sort(key=lambda x: x['semanal'], reverse=True)
         else:
@@ -404,7 +420,7 @@ def api_gestao_stats():
     lms_completion = int((approved_assigns / total_assigns * 100)) if total_assigns > 0 else 0
 
     # 2. Auditorias consolidadas (Checklists de supervisor + Supervisão em Campo + Rota Exata + Vistorias no período)
-    audits = Checklist.query.join(User, Checklist.technician == User.username).filter(
+    audits = Checklist.query.join(User, db.func.lower(Checklist.technician) == db.func.lower(User.username)).filter(
         User.role == "supervisor",
         Checklist.date >= start_month,
         Checklist.date <= now
@@ -671,7 +687,7 @@ def users_new():
         flash("Usuário e senha obrigatórios.", "error")
         return redirect(url_for("users"))
 
-    if User.query.filter_by(username=username).first():
+    if User.query.filter_by(username=username.upper()).first():
         flash("Usuário já existe.", "error")
         return redirect(url_for("users"))
 

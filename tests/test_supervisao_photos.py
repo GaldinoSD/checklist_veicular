@@ -11,9 +11,10 @@ class TestSupervisaoPhotos(unittest.TestCase):
         self.app_context = self.app.app_context()
         self.app_context.push()
 
-        user = User.query.filter_by(username='admin').first()
+        user = User.query.filter_by(username='ADMIN').first()
         if not user:
-            user = User(username='admin', role='admin')
+            user = User(username='ADMIN', role='admin')
+            user.set_password('admin123')
             db.session.add(user)
             db.session.commit()
 

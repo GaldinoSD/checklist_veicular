@@ -111,7 +111,7 @@ class TestWhatsAppIntegration(unittest.TestCase):
         db.session.commit()
 
         # Verifica se o banco de dados tem o usuário de teste
-        db_user = User.query.filter_by(username='colaborador_teste').first()
+        db_user = User.query.filter_by(username='COLABORADOR_TESTE').first()
         self.assertIsNotNone(db_user)
         self.assertEqual(db_user.phone, '5521999999999')
 

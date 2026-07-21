@@ -684,7 +684,133 @@ class GlobalBlueprint(Blueprint):
 # ==========================================
 from reportlab.lib.styles import ParagraphStyle
 
+
+def get_premium_pdf_draw_background(title, extra_right_text=None):
+    """
+    Returns a reusable draw_background function with the standard AdaptLink
+    premium PDF layout (logo, title, divider, footer, pagination).
+
+    Uses SystemConfig for customizable logo/footer.
+
+    Args:
+        title: The PDF document title (will be rendered in the header).
+        extra_right_text: Optional text to show on the top-right (e.g. period range).
+
+    Returns:
+        draw_background callable compatible with ReportLab's onFirstPage/onLaterPages.
+    """
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib import colors
+    from reportlab.platypus import Paragraph
+    from reportlab.lib.styles import ParagraphStyle
+    import os
+
+    config = SystemConfig.query.first()
+
+    logo_path_custom = None
+    if config and config.pdf_logo:
+        custom_p = LAYOUT_UPLOAD_DIR / config.pdf_logo
+        if custom_p.exists():
+            logo_path_custom = str(custom_p)
+
+    logo_path = logo_path_custom if logo_path_custom else "logo.png"
+    if not logo_path_custom and not os.path.exists(logo_path):
+        logo_path = "/var/www/checklist_veicular/logo.png"
+
+    custom_rodape_linhas = None
+    if config and config.pdf_footer:
+        custom_rodape_linhas = [linha.strip() for linha in config.pdf_footer.splitlines() if linha.strip()]
+
+    RODAPE_LINHAS = custom_rodape_linhas if custom_rodape_linhas is not None else [
+        "ADAPT LINK SERVIÇOS EM COMUNICAÇÃO MULTIMÍDIA EIRELI",
+        "CNPJ: 08.980.148/0001-41       Inscr. Est.: 78.342.480",
+        "Rua Waldir Pedro de Medeiros, 253 – São Miguel – Seropédica – RJ",
+        "CEP: 23.893-725",
+        "Tel.: (21) 3812-5900 / (21) 2682-7822",
+        "WWW.ADAPTLINK.COM.BR",
+    ]
+
+    def draw_background(c, doc_obj):
+        width, height = A4
+
+        # 1. Logotipo
+        if logo_path and os.path.exists(logo_path):
+            try:
+                from reportlab.lib.utils import ImageReader
+                logo = ImageReader(logo_path)
+                c.drawImage(logo, 20, height - 60, width=90, height=37.5, preserveAspectRatio=True, mask="auto")
+            except Exception as e:
+                print("⚠️ Erro ao carregar logo no header:", e)
+
+        # 2. Título dinâmico com wrapping
+        title_len = len(title)
+        if title_len > 60:
+            font_size = 10
+            leading = 12
+        elif title_len > 40:
+            font_size = 11
+            leading = 13
+        else:
+            font_size = 13
+            leading = 15
+
+        header_title_style = ParagraphStyle(
+            name="HeaderTitle",
+            fontName="Helvetica-Bold",
+            fontSize=font_size,
+            leading=leading,
+            textColor=colors.HexColor("#0F172A")
+        )
+
+        p_title = Paragraph(title.upper(), header_title_style)
+        avail_width = width - 145
+        _, h_title = p_title.wrap(avail_width, 40)
+
+        y_pos = height - 22.5 - h_title
+        p_title.drawOn(c, 125, y_pos)
+
+        c.setFont("Helvetica", 8)
+        c.setFillColor(colors.HexColor("#475569"))
+        c.drawString(125, y_pos - 10, "Registro Formal – AdaptLink")
+
+        # 3. Linha Azul Divisória Premium
+        offset = 12 if h_title > 18 else 0
+        divider_y = height - 65 - offset
+
+        c.setStrokeColor(colors.HexColor("#1F3C78"))
+        c.setLineWidth(2)
+        c.line(20, divider_y, width - 20, divider_y)
+
+        # 4. Metadados do topo
+        c.setFont("Helvetica", 8)
+        c.setFillColor(colors.HexColor("#475569"))
+        now_str = agora().strftime("%d/%m/%Y %H:%M")
+        c.drawString(25, divider_y - 10, f"Emitido em: {now_str}")
+
+        if extra_right_text:
+            c.drawRightString(width - 25, divider_y - 10, extra_right_text)
+
+        # 5. Rodapé Institucional AdaptLink
+        c.setStrokeColor(colors.HexColor("#E2E8F0"))
+        c.setLineWidth(0.8)
+        c.line(25, 90, width - 25, 90)
+
+        c.setFont("Helvetica", 7)
+        c.setFillColor(colors.HexColor("#475569"))
+        y_footer = 75
+        for linha in RODAPE_LINHAS:
+            c.drawCentredString(width / 2, y_footer, linha)
+            y_footer -= 9
+
+        # Paginação
+        c.setFont("Helvetica-Oblique", 8)
+        c.drawRightString(width - 25, 30, f"Página {c.getPageNumber()}")
+
+    return draw_background
+
+
 def make_premium_pdf(buffer, title, metadata, content_table_data, image_paths=None, signature_path=None):
+
     from reportlab.lib.pagesizes import A4
     from reportlab.lib import colors
     from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image as RLImage
