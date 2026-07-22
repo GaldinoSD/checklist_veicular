@@ -972,7 +972,8 @@
                     {% else %}
                       text-slate-500 dark:text-gray-400 hover:bg-slate-900/5 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white
                     {% endif %}">
-            <i class="fa-solid fa-screwdrivers-wrench w-5 text-center text-base {% if request.endpoint == 'manutencao_os' %}text-white{% else %}text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200{% endif %} transition-colors"></i>
+            <i class="fa-solid fa-screwdriver-wrench w-5 text-center text-base {% if request.endpoint == 'manutencao_os' %}text-white{% else %}text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200{% endif %} transition-colors"></i>
+
             <span class="text-[13px] font-bold tracking-tight">Manutenção O.S.</span>
           </a>
           {% endif %}
@@ -1036,95 +1037,86 @@
           </div>
           {% endif %}
 
-          <div class="py-3 px-4 text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-gray-500 mt-6">Conta</div>
-          <button onclick="openModal('modalSenha')" 
-             class="w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl transition-all duration-300 group
-                    text-slate-500 dark:text-gray-400 hover:bg-slate-900/5 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white">
-            <i class="fa-solid fa-key w-5 text-center text-base text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200 transition-colors"></i>
-            <span class="text-[13px] font-bold tracking-tight">Alterar Senha</span>
-          </button>
 
             {% if current_user.has_permission('usuarios') or current_user.has_permission('avisos') or current_user.has_permission('config_checklist') or current_user.has_permission('logs') or current_user.has_permission('config_layout') or current_user.has_permission('config_ferramentas') %}
-            <div class="py-3 px-4 text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-gray-500 mt-6">Sistema</div>
-            
-            {% if current_user.has_permission('usuarios') %}
-            <a href="{{ url_for('users') }}" 
-               class="flex items-center gap-3.5 px-4 py-3 rounded-2xl transition-all duration-300 group
-                      {% if request.endpoint == 'users' %}
-                        bg-slate-800 dark:bg-white text-white dark:text-slate-900 shadow-xl scale-[1.02]
-                      {% else %}
-                        text-slate-500 dark:text-gray-400 hover:bg-slate-900/5 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white
-                      {% endif %}">
-              <i class="fa-solid fa-users-gear w-5 text-center text-base {% if request.endpoint == 'users' %}text-white dark:text-slate-900{% else %}text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200{% endif %} transition-colors"></i>
-              <span class="text-[13px] font-bold tracking-tight">Usuários</span>
-            </a>
+            <!-- ✅ CONFIGURAÇÕES E ADMINISTRAÇÃO COLLAPSIBLE (A + B) -->
+            <div class="pt-4 border-t border-slate-900/5 dark:border-white/5 mt-6">
+              <div class="py-2 px-4 text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-gray-500 mb-1">Configurações & Admin</div>
+              
+              <div class="space-y-1">
+                <button onclick="toggleSubmenu('submenu-configuracoes', this)" 
+                        class="w-full flex items-center justify-between gap-3.5 px-4 py-3 rounded-2xl transition-all duration-300 group
+                               {% if request.endpoint in ['config_layout', 'users', 'config_checklist', 'config_ferramentas', 'logs', 'avisos'] %}
+                                 bg-slate-800 text-white dark:bg-white dark:text-slate-900 shadow-lg border border-slate-700 dark:border-slate-200
+                               {% else %}
+                                 text-slate-500 dark:text-gray-400 hover:bg-slate-900/5 dark:hover:bg-white/5
+                               {% endif %}">
+                  <div class="flex items-center gap-3.5">
+                    <i class="fa-solid fa-gears w-5 text-center text-base transition-colors {% if request.endpoint in ['config_layout', 'users', 'config_checklist', 'config_ferramentas', 'logs', 'avisos'] %}text-emerald-400 dark:text-emerald-600{% else %}text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200{% endif %}"></i>
+                    <span class="text-[13px] font-bold tracking-tight">Configurações do Sistema</span>
+                  </div>
+                  <i class="fa-solid fa-chevron-down text-[10px] chevron-rotate {% if request.endpoint in ['config_layout', 'users', 'config_checklist', 'config_ferramentas', 'logs', 'avisos'] %}open-chevron{% endif %}"></i>
+                </button>
+                
+                <div id="submenu-configuracoes" class="submenu-container {% if request.endpoint in ['config_layout', 'users', 'config_checklist', 'config_ferramentas', 'logs', 'avisos'] %}open{% endif %} ml-4 border-l border-slate-900/5 dark:border-white/5 pl-2 space-y-1 mt-1">
+                    {% if current_user.has_permission('config_layout') %}
+                    <a href="{{ url_for('config_layout') }}" 
+                       class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-[12px] font-bold transition-all
+                              {% if request.endpoint == 'config_layout' %}text-emerald-500 bg-emerald-500/5 font-extrabold{% else %}text-slate-500 dark:text-gray-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-900/5 dark:hover:bg-white/5{% endif %}">
+                      <i class="fa-solid fa-palette w-4 text-center opacity-70"></i>
+                      Identidade & Layout
+                    </a>
+                    {% endif %}
+
+                    {% if current_user.has_permission('usuarios') %}
+                    <a href="{{ url_for('users') }}" 
+                       class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-[12px] font-bold transition-all
+                              {% if request.endpoint == 'users' %}text-emerald-500 bg-emerald-500/5 font-extrabold{% else %}text-slate-500 dark:text-gray-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-900/5 dark:hover:bg-white/5{% endif %}">
+                      <i class="fa-solid fa-users-gear w-4 text-center opacity-70"></i>
+                      Usuários & Permissões
+                    </a>
+                    {% endif %}
+
+                    {% if current_user.has_permission('config_checklist') %}
+                    <a href="{{ url_for('config_checklist') }}" 
+                       class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-[12px] font-bold transition-all
+                              {% if request.endpoint == 'config_checklist' %}text-emerald-500 bg-emerald-500/5 font-extrabold{% else %}text-slate-500 dark:text-gray-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-900/5 dark:hover:bg-white/5{% endif %}">
+                      <i class="fa-solid fa-sliders w-4 text-center opacity-70"></i>
+                      Config. Checklist
+                    </a>
+                    {% endif %}
+
+                    {% if current_user.has_permission('config_ferramentas') %}
+                    <a href="{{ url_for('config_ferramentas') }}" 
+                       class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-[12px] font-bold transition-all
+                              {% if request.endpoint == 'config_ferramentas' %}text-emerald-500 bg-emerald-500/5 font-extrabold{% else %}text-slate-500 dark:text-gray-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-900/5 dark:hover:bg-white/5{% endif %}">
+                      <i class="fa-solid fa-toolbox w-4 text-center opacity-70"></i>
+                      Config. Ferramentas
+                    </a>
+                    {% endif %}
+
+                    {% if current_user.has_permission('logs') %}
+                    <a href="{{ url_for('logs') }}" 
+                       class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-[12px] font-bold transition-all
+                              {% if request.endpoint == 'logs' %}text-emerald-500 bg-emerald-500/5 font-extrabold{% else %}text-slate-500 dark:text-gray-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-900/5 dark:hover:bg-white/5{% endif %}">
+                      <i class="fa-solid fa-terminal w-4 text-center opacity-70"></i>
+                      Logs Auditoria
+                    </a>
+                    {% endif %}
+
+                    {% if current_user.has_permission('avisos') %}
+                    <a href="{{ url_for('avisos') }}" 
+                       class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-[12px] font-bold transition-all
+                              {% if request.endpoint == 'avisos' %}text-emerald-500 bg-emerald-500/5 font-extrabold{% else %}text-slate-500 dark:text-gray-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-900/5 dark:hover:bg-white/5{% endif %}">
+                      <i class="fa-solid fa-bullhorn w-4 text-center opacity-70"></i>
+                      Comunicados
+                    </a>
+                    {% endif %}
+                </div>
+              </div>
+            </div>
             {% endif %}
 
-            {% if current_user.has_permission('avisos') %}
-            <a href="{{ url_for('avisos') }}" 
-               class="flex items-center gap-3.5 px-4 py-3 rounded-2xl transition-all duration-300 group
-                      {% if request.endpoint == 'avisos' %}
-                        bg-blue-600 text-white shadow-xl shadow-blue-500/30 scale-[1.02]
-                      {% else %}
-                        text-slate-500 dark:text-gray-400 hover:bg-slate-900/5 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white
-                      {% endif %}">
-              <i class="fa-solid fa-bullhorn w-5 text-center text-base {% if request.endpoint == 'avisos' %}text-white{% else %}text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200{% endif %} transition-colors"></i>
-              <span class="text-[13px] font-bold tracking-tight">Comunicados</span>
-            </a>
-            {% endif %}
-
-            {% if current_user.has_permission('config_checklist') %}
-            <a href="{{ url_for('config_checklist') }}" 
-               class="flex items-center gap-3.5 px-4 py-3 rounded-2xl transition-all duration-300 group
-                      {% if request.endpoint == 'config_checklist' %}
-                        bg-slate-800 dark:bg-white text-white dark:text-slate-900 shadow-xl scale-[1.02]
-                      {% else %}
-                        text-slate-500 dark:text-gray-400 hover:bg-slate-900/5 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white
-                      {% endif %}">
-              <i class="fa-solid fa-sliders w-5 text-center text-base {% if request.endpoint == 'config_checklist' %}text-white dark:text-slate-900{% else %}text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200{% endif %} transition-colors"></i>
-              <span class="text-[13px] font-bold tracking-tight">Config. Checklist</span>
-            </a>
-            {% endif %}
-
-            {% if current_user.has_permission('config_ferramentas') %}
-            <a href="{{ url_for('config_ferramentas') }}" 
-               class="flex items-center gap-3.5 px-4 py-3 rounded-2xl transition-all duration-300 group
-                      {% if request.endpoint == 'config_ferramentas' %}
-                        bg-slate-800 dark:bg-white text-white dark:text-slate-900 shadow-xl scale-[1.02]
-                      {% else %}
-                        text-slate-500 dark:text-gray-400 hover:bg-slate-900/5 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white
-                      {% endif %}">
-              <i class="fa-solid fa-toolbox w-5 text-center text-base {% if request.endpoint == 'config_ferramentas' %}text-white dark:text-slate-900{% else %}text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200{% endif %} transition-colors"></i>
-              <span class="text-[13px] font-bold tracking-tight">Config. Ferramentas</span>
-            </a>
-            {% endif %}
-
-            {% if current_user.has_permission('logs') %}
-            <a href="{{ url_for('logs') }}" 
-               class="flex items-center gap-3.5 px-4 py-3 rounded-2xl transition-all duration-300 group
-                      {% if request.endpoint == 'logs' %}
-                        bg-slate-800 dark:bg-white text-white dark:text-slate-900 shadow-xl scale-[1.02]
-                      {% else %}
-                        text-slate-500 dark:text-gray-400 hover:bg-slate-900/5 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white
-                      {% endif %}">
-              <i class="fa-solid fa-terminal w-5 text-center text-base {% if request.endpoint == 'logs' %}text-white dark:text-slate-900{% else %}text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200{% endif %} transition-colors"></i>
-              <span class="text-[13px] font-bold tracking-tight">Logs Auditoria</span>
-            </a>
-            {% endif %}
-
-            {% if current_user.has_permission('config_layout') %}
-            <a href="{{ url_for('config_layout') }}" 
-               class="flex items-center gap-3.5 px-4 py-3 rounded-2xl transition-all duration-300 group
-                      {% if request.endpoint == 'config_layout' %}
-                        bg-slate-800 dark:bg-white text-white dark:text-slate-900 shadow-xl scale-[1.02]
-                      {% else %}
-                        text-slate-500 dark:text-gray-400 hover:bg-slate-900/5 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white
-                      {% endif %}">
-              <i class="fa-solid fa-palette w-5 text-center text-base {% if request.endpoint == 'config_layout' %}text-white dark:text-slate-900{% else %}text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200{% endif %} transition-colors"></i>
-              <span class="text-[13px] font-bold tracking-tight">Config. Layout</span>
-            </a>
-            {% endif %}
-            {% endif %}
 
             {% if current_user.has_permission('whatsapp_conversas') or current_user.has_permission('whatsapp_evolution') %}
             <div class="py-3 px-4 text-[11px] font-black uppercase tracking-[0.2em] text-emerald-600 dark:text-emerald-500 mt-6 flex items-center gap-2">
@@ -1162,27 +1154,36 @@
 
         <!-- BOTTOM: ACTIONS -->
         <div class="p-4 border-t border-slate-900/5 dark:border-white/5 space-y-1.5">
-          
           <button id="btnTheme" class="w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl transition-all duration-300 group text-slate-500 dark:text-gray-400 hover:bg-slate-900/5 dark:hover:bg-white/5">
             <i class="fa-solid fa-moon w-5 text-center text-base text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200 transition-colors" id="themeIcon"></i>
             <span class="text-[13px] font-bold tracking-tight">Mudar Tema</span>
           </button>
 
-          <a href="{{ url_for('logout') }}" class="flex items-center gap-3.5 px-4 py-3 rounded-2xl text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all duration-300 group">
-            <i class="fa-solid fa-right-from-bracket w-5 text-center text-base transition-transform group-hover:translate-x-1"></i>
-            <span class="text-[13px] font-bold tracking-tight">Sair da Conta</span>
-          </a>
+          <!-- MOBILE ONLY (EXIBIDO APENAS NO MENU LATERAL MOBILE) -->
+          <div class="lg:hidden space-y-1.5 pt-2 border-t border-slate-900/5 dark:border-white/5">
+            <button onclick="openModal('modalSenha')" 
+               class="w-full flex items-center gap-3.5 px-4 py-2.5 rounded-2xl transition-all duration-300 group text-slate-500 dark:text-gray-400 hover:bg-slate-900/5 dark:hover:bg-white/5">
+              <i class="fa-solid fa-key w-5 text-center text-base text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200 transition-colors"></i>
+              <span class="text-[13px] font-bold tracking-tight">Alterar Senha</span>
+            </button>
 
-          <div class="flex items-center gap-3 px-4 py-4 rounded-[1.5rem] bg-slate-900/5 dark:bg-white/5 mt-4 border border-slate-900/5 dark:border-white/5">
-            <div class="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white font-black shrink-0 shadow-lg shadow-blue-500/20">
-              {{ current_user.username[0] | upper }}
-            </div>
-            <div class="min-w-0 flex-1">
-              <div class="text-[12px] font-black text-slate-800 dark:text-white truncate uppercase tracking-tight">{{ current_user.username }}</div>
-              <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{{ current_user.role }}</div>
+            <a href="{{ url_for('logout') }}" class="flex items-center gap-3.5 px-4 py-2.5 rounded-2xl text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all duration-300 group">
+              <i class="fa-solid fa-right-from-bracket w-5 text-center text-base transition-transform group-hover:translate-x-1"></i>
+              <span class="text-[13px] font-bold tracking-tight">Sair da Conta</span>
+            </a>
+
+            <div class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-slate-900/5 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 mt-2">
+              <div class="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-white font-black shrink-0 shadow-md">
+                {{ current_user.username[0] | upper if current_user and current_user.username else 'U' }}
+              </div>
+              <div class="min-w-0 flex-1">
+                <div class="text-[11px] font-black text-slate-800 dark:text-white truncate uppercase tracking-tight">{{ current_user.username }}</div>
+                <div class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{{ current_user.role }}</div>
+              </div>
             </div>
           </div>
         </div>
+
       </aside>
       {% endif %}
 
@@ -1191,14 +1192,15 @@
         
         <!-- TOPBAR (Modern & Functional) -->
         {% if not hide_header %}
-        <header class="h-16 border-b border-slate-900/5 dark:border-white/5 flex items-center justify-between px-8 sticky top-0 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl z-40 flex-nowrap overflow-hidden">
+        <header class="h-16 border-b border-slate-900/5 dark:border-white/5 flex items-center justify-between px-4 sm:px-8 sticky top-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl z-40 flex-nowrap">
           <div class="flex items-center gap-6 flex-nowrap flex-shrink-0">
             <button id="btnMobileToggle" class="lg:hidden p-3 rounded-2xl bg-slate-900/5 dark:bg-white/5 text-slate-500 hover:text-slate-900 dark:hover:text-white transition-all active:scale-95">
               <i class="fa-solid fa-bars-staggered text-lg"></i>
             </button>
             
-            <div class="flex items-center gap-4 flex-nowrap">
-              <h1 class="text-sm font-black text-slate-800 dark:text-white uppercase tracking-[0.1em] hidden xl:block whitespace-nowrap">Gestão de Frotas & Equipes</h1>
+            <div class="hidden sm:flex flex-col whitespace-nowrap flex-shrink-0">
+              <div class="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Painel de Controle</div>
+              <div class="text-xs font-bold text-slate-800 dark:text-white truncate max-w-[220px]" title="{{ page_title or 'Checklist Veicular' }}">{{ page_title or 'Checklist Veicular' }}</div>
             </div>
           </div>
           
@@ -1250,10 +1252,59 @@
                 </div>
               </div>
 
-             <div class="hidden xl:block text-right whitespace-nowrap flex-shrink-0 ml-2">
-                <div class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-0.5">Painel de Controle</div>
-                <div class="text-xs font-bold text-slate-800 dark:text-white truncate max-w-[180px]" title="{{ page_title or 'Checklist Veicular' }}">{{ page_title or 'Checklist Veicular' }}</div>
+             <!-- ✅ CARD DO USUÁRIO LOGADO (CLEAN & ELEGANT) -->
+             <div class="relative flex-shrink-0 ml-2 select-none">
+               <button id="btnUserDropdown" onclick="toggleUserDropdown(event)" type="button" 
+                       class="flex items-center gap-2.5 px-3 py-1.5 rounded-2xl bg-slate-900/5 dark:bg-white/5 hover:bg-slate-900/10 dark:hover:bg-white/10 border border-slate-900/10 dark:border-white/10 transition-all text-left group focus:outline-none">
+                 <!-- Avatar Badge -->
+                 <div class="relative">
+                   <div class="w-8 h-8 rounded-xl bg-slate-800 dark:bg-white text-white dark:text-slate-900 flex items-center justify-center text-xs font-black shrink-0 shadow-sm">
+                     {{ current_user.username[0] | upper if current_user and current_user.username else 'U' }}
+                   </div>
+                   <span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 border-2 border-white dark:border-slate-900 rounded-full"></span>
+                 </div>
+
+                 <!-- Informações da Pessoa Logada -->
+                 <div class="hidden sm:flex flex-col min-w-0">
+                   <div class="text-[12px] font-black text-slate-800 dark:text-white truncate tracking-tight leading-none mb-0.5">{{ current_user.username }}</div>
+                   <div class="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none">{{ current_user.role or 'Usuário' }}</div>
+                 </div>
+
+                 <i class="fa-solid fa-chevron-down text-[10px] text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-200 transition-transform duration-200 ml-1" id="userDropdownChevron"></i>
+               </button>
+
+               <!-- MENU EXPANSÍVEL DO USUÁRIO (CLEAN & DIRETO) -->
+               <div id="userProfileDropdown" class="hidden absolute right-0 mt-2.5 w-56 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-2xl shadow-2xl p-2 z-[100] transition-all transform origin-top-right">
+                 
+                 <!-- Perfil do Usuário -->
+                 <div class="px-3 py-2.5 border-b border-slate-100 dark:border-white/5 mb-1.5">
+                   <div class="text-xs font-black text-slate-900 dark:text-white truncate uppercase tracking-tight">{{ current_user.username }}</div>
+                   <div class="text-[9px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest mt-0.5 flex items-center gap-1.5">
+                     <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                     {{ current_user.role or 'Usuário' }}
+                   </div>
+                 </div>
+
+                 <!-- Ações Principais -->
+                 <div class="space-y-1">
+                   <button type="button" onclick="openModal('modalSenha'); closeUserDropdown();" 
+                           class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors text-left group">
+                     <i class="fa-solid fa-key text-slate-400 group-hover:text-amber-500 w-4 text-center transition-colors"></i>
+                     <span>Alterar Senha</span>
+                   </button>
+
+                   <a href="{{ url_for('logout') }}" 
+                      class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors group">
+                     <i class="fa-solid fa-right-from-bracket w-4 text-center transition-transform group-hover:translate-x-0.5"></i>
+                     <span>Sair da Conta</span>
+                   </a>
+                 </div>
+
+               </div>
              </div>
+
+
+
           </div>
         </header>
         {% endif %}
@@ -1617,6 +1668,36 @@
       }
 
 
+
+      // ✅ USER DROPDOWN TOGGLE
+      function toggleUserDropdown(event) {
+        if (event) event.stopPropagation();
+        const dropdown = document.getElementById('userProfileDropdown');
+        const chevron = document.getElementById('userDropdownChevron');
+        if (dropdown) {
+          if (dropdown.classList.contains('hidden')) {
+            dropdown.classList.remove('hidden');
+            if (chevron) chevron.classList.add('rotate-180');
+          } else {
+            closeUserDropdown();
+          }
+        }
+      }
+
+      function closeUserDropdown() {
+        const dropdown = document.getElementById('userProfileDropdown');
+        const chevron = document.getElementById('userDropdownChevron');
+        if (dropdown) dropdown.classList.add('hidden');
+        if (chevron) chevron.classList.remove('rotate-180');
+      }
+
+      document.addEventListener('click', function(e) {
+        const btn = document.getElementById('btnUserDropdown');
+        const dropdown = document.getElementById('userProfileDropdown');
+        if (dropdown && !dropdown.classList.contains('hidden') && btn && !btn.contains(e.target) && !dropdown.contains(e.target)) {
+          closeUserDropdown();
+        }
+      });
 
       // Inicializa na carga da página
       window.addEventListener('DOMContentLoaded', () => {
