@@ -804,6 +804,15 @@ class SystemConfig(db.Model):
     # Login card position
     login_card_position = db.Column(db.String(20), default="right")
 
+    # Layout mode and Hero Banner customization for modern login
+    login_layout_mode = db.Column(db.String(30), default="split")
+    login_hero_title = db.Column(db.String(255), default="Gestão Inteligente de Frotas e Equipes")
+    login_hero_subtitle = db.Column(db.Text, default="Controle total da sua operação, com mais eficiência, produtividade e segurança.")
+    login_hero_bullets = db.Column(db.Text, default="Gestão completa de frotas e veículos|Controle de equipes e produtividade|Vistorias e checklists digitais em tempo real|Gestão de Ordens de Serviço (O.S.) e avarias|Monitoramento operacional e indicadores|Automação de processos e redução de custos")
+    login_footer_text = db.Column(db.String(255), default="© 2026 Painel de Frota. Todos os direitos reservados.")
+
+
+
 
 class WhatsAppConfig(db.Model):
     __tablename__ = "whatsapp_config"

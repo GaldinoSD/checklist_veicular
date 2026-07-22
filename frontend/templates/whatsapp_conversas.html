@@ -4,13 +4,12 @@
 
 <!-- Style Overrides for Fixed Viewport & Chat Aesthetics -->
 <style>
-    /* Prevent general window scroll and force strict height of 100vh */
+    /* Prevent general window scroll and force strict height */
     html, body {
         overflow: hidden !important;
         height: 100vh !important;
     }
     
-    /* Set the main content container to fill viewport without overflow */
     #main-content {
         height: 100vh !important;
         overflow: hidden !important;
@@ -18,9 +17,8 @@
         flex-direction: column !important;
     }
     
-    /* Set inner workspace main area to occupy 100% of space without padding or margin */
     #main-content > main {
-        height: calc(100vh - 4rem) !important; /* 4rem is header h-16 */
+        height: calc(100vh - 4rem) !important;
         padding: 0 !important;
         margin: 0 !important;
         display: flex !important;
@@ -32,20 +30,19 @@
         width: 100% !important;
     }
 
-    /* Abstract Tech Blueprint Background for Chat Area */
+    /* Abstract Tech Wallpaper for Chat Area */
     .chat-wallpaper {
-        background-color: rgba(248, 250, 252, 0.3);
-        background-image: radial-gradient(rgba(16, 185, 129, 0.04) 1px, transparent 0), radial-gradient(rgba(16, 185, 129, 0.04) 1px, transparent 0);
-        background-size: 20px 20px;
-        background-position: 0 0, 10px 10px;
+        background-color: rgba(248, 250, 252, 0.4);
+        background-image: radial-gradient(rgba(16, 185, 129, 0.05) 1px, transparent 0);
+        background-size: 24px 24px;
     }
     
     .dark .chat-wallpaper {
-        background-color: rgba(9, 15, 25, 0.2);
-        background-image: radial-gradient(rgba(16, 185, 129, 0.02) 1px, transparent 0), radial-gradient(rgba(16, 185, 129, 0.02) 1px, transparent 0);
+        background-color: rgba(11, 19, 34, 0.6);
+        background-image: radial-gradient(rgba(16, 185, 129, 0.03) 1px, transparent 0);
     }
 
-    /* Smooth customized scrollbar */
+    /* Scrollbar */
     .custom-scrollbar::-webkit-scrollbar {
         width: 5px;
         height: 5px;
@@ -62,134 +59,150 @@
     }
 </style>
 
-<!-- =======================================================
-        CHAT LAYOUT CONTAINER (Full screen, integrated, flex)
-     ======================================================= -->
+<!-- 💬 CHAT WORKSPACE CONTAINER -->
 <div class="flex flex-1 min-h-0 h-full w-full bg-white dark:bg-[#090f19] overflow-hidden">
     
-    <!-- 📇 SIDEBAR: CONTACTS LIST (A bit smaller: width 300px) -->
-    <div class="w-[300px] bg-slate-50/50 dark:bg-slate-900/10 border-r border-slate-200 dark:border-slate-800/80 flex flex-col h-full overflow-hidden shrink-0 p-4">
+    <!-- 📇 SIDEBAR: CONTACTS & CHATS LIST -->
+    <div class="w-80 md:w-96 bg-slate-50/80 dark:bg-slate-900/40 border-r border-slate-200 dark:border-slate-800/80 flex flex-col h-full overflow-hidden shrink-0">
         
-        <!-- Sidebar Header with minimalist status badge -->
-        <div class="flex items-center justify-between mb-4 shrink-0">
-            <div class="flex items-center gap-2">
-                <i class="fa-brands fa-whatsapp text-emerald-500 text-base"></i>
-                <span class="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Conversas</span>
+        <!-- Sidebar Header -->
+        <div class="p-4 border-b border-slate-200/80 dark:border-slate-800/80 space-y-3 shrink-0">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-lg shrink-0">
+                        <i class="fa-brands fa-whatsapp"></i>
+                    </div>
+                    <div>
+                        <h2 class="text-sm font-bold text-slate-900 dark:text-white leading-tight">Conversas</h2>
+                        <p class="text-[10px] text-slate-400">Atendimento e mensagens instantâneas</p>
+                    </div>
+                </div>
+
+                <!-- New Conversation Button -->
+                <button type="button" onclick="openModal('modalNovaConversa')" title="Nova Conversa"
+                        class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-sm transition-all active:scale-95 flex items-center gap-1.5">
+                    <i class="fa-solid fa-plus text-[10px]"></i>
+                    <span class="hidden sm:inline">Nova</span>
+                </button>
             </div>
-            <!-- Minimalist active status badge -->
-            <div class="flex items-center gap-1.5 px-2 py-0.5 bg-emerald-500/10 dark:bg-emerald-500/5 rounded-md border border-emerald-500/20 text-emerald-500 text-[9px] font-black uppercase tracking-wider" id="contactsCount">
-                <span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
-                <span>Ativo</span>
+
+            <!-- Instance Connection Status Pill -->
+            <div class="flex items-center justify-between px-3 py-1.5 bg-slate-100 dark:bg-slate-800/60 rounded-xl border border-slate-200/60 dark:border-slate-700/60 text-xs">
+                <div class="flex items-center gap-2">
+                    <span id="instanceStatusDot" class="w-2 h-2 rounded-full bg-slate-400"></span>
+                    <span id="instanceStatusText" class="text-[11px] font-medium text-slate-600 dark:text-slate-300">Verificando status...</span>
+                </div>
+                <button type="button" onclick="checkConnectionStatus()" title="Atualizar Status" class="text-slate-400 hover:text-emerald-500 transition-colors">
+                    <i class="fa-solid fa-arrows-rotate text-[10px]"></i>
+                </button>
             </div>
-        </div>
-        
-        <!-- Search Input Bar -->
-        <div class="relative mb-4 shrink-0">
-            <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-650 text-xs"><i class="fas fa-search"></i></span>
-            <input type="text" id="chatSearch" onkeyup="filterContacts()" placeholder="Buscar contato ou número..." 
-                   class="w-full pl-9 pr-4 py-2.5 text-xs bg-slate-100/50 dark:bg-slate-950/40 border border-slate-200 dark:border-slate-800/80 rounded-lg outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 dark:text-white transition-all">
+
+            <!-- Search Input -->
+            <div class="relative">
+                <input type="text" id="chatSearch" onkeyup="filterContacts()" placeholder="Buscar contato ou número..." 
+                       class="w-full pl-9 pr-4 py-2 text-xs bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 dark:text-white placeholder:text-slate-400 transition-all">
+                <i class="fa-solid fa-search text-slate-400 text-xs absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+            </div>
         </div>
 
         <!-- Contacts Scroll Area -->
-        <div class="flex-1 overflow-y-auto space-y-2 pr-1 custom-scrollbar" id="contactsList">
-            <!-- Pulsing Skeleton Loader (Contacts list startup) -->
+        <div class="flex-1 overflow-y-auto p-3 space-y-2 custom-scrollbar" id="contactsList">
+            <!-- Pulsing Skeleton Loader -->
             <div class="space-y-3 animate-pulse">
-                <div class="flex items-center gap-3.5 p-3.5 bg-slate-200/20 dark:bg-slate-850/10 rounded-xl border border-transparent">
-                    <div class="w-11 h-11 rounded-lg bg-slate-200 dark:bg-slate-850 shrink-0"></div>
+                <div class="flex items-center gap-3 p-3 bg-slate-200/20 dark:bg-slate-800/20 rounded-xl">
+                    <div class="w-10 h-10 rounded-xl bg-slate-200 dark:bg-slate-800 shrink-0"></div>
                     <div class="flex-1 space-y-2">
-                        <div class="h-3 bg-slate-200 dark:bg-slate-750 rounded w-1/3"></div>
+                        <div class="h-3 bg-slate-200 dark:bg-slate-700 rounded w-1/3"></div>
                         <div class="h-2.5 bg-slate-150 dark:bg-slate-800 rounded w-2/3"></div>
                     </div>
                 </div>
-                <div class="flex items-center gap-3.5 p-3.5 bg-slate-200/20 dark:bg-slate-850/10 rounded-xl border border-transparent">
-                    <div class="w-11 h-11 rounded-lg bg-slate-200 dark:bg-slate-850 shrink-0"></div>
+                <div class="flex items-center gap-3 p-3 bg-slate-200/20 dark:bg-slate-800/20 rounded-xl">
+                    <div class="w-10 h-10 rounded-xl bg-slate-200 dark:bg-slate-800 shrink-0"></div>
                     <div class="flex-1 space-y-2">
-                        <div class="h-3 bg-slate-200 dark:bg-slate-750 rounded w-1/4"></div>
+                        <div class="h-3 bg-slate-200 dark:bg-slate-700 rounded w-1/4"></div>
                         <div class="h-2.5 bg-slate-150 dark:bg-slate-800 rounded w-3/4"></div>
-                    </div>
-                </div>
-                <div class="flex items-center gap-3.5 p-3.5 bg-slate-200/20 dark:bg-slate-850/10 rounded-xl border border-transparent">
-                    <div class="w-11 h-11 rounded-lg bg-slate-200 dark:bg-slate-850 shrink-0"></div>
-                    <div class="flex-1 space-y-2">
-                        <div class="h-3 bg-slate-200 dark:bg-slate-750 rounded w-2/5"></div>
-                        <div class="h-2.5 bg-slate-150 dark:bg-slate-800 rounded w-1/2"></div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- 💬 MAIN: ACTIVE CHAT SCREEN (Fills remainder width) -->
+    <!-- 💬 MAIN: ACTIVE CHAT SCREEN -->
     <div class="flex-1 bg-white dark:bg-[#0b1322] flex flex-col h-full overflow-hidden relative">
         
-        <!-- Chat Top Bar -->
-        <div class="px-5 py-3.5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-900/10 shrink-0">
-            <div class="flex items-center gap-3.5">
-                <div class="w-11 h-11 rounded-lg bg-slate-200 dark:bg-slate-850 flex items-center justify-center text-slate-400 dark:text-slate-650 font-extrabold text-sm shadow-sm" id="chat-avatar">-</div>
-                <div>
-                    <h3 class="text-xs font-extrabold text-slate-800 dark:text-white" id="chat-title">Selecione uma conversa</h3>
-                    <div class="flex items-center gap-1.5 mt-0.5">
-                        <span class="w-1.5 h-1.5 rounded-full bg-slate-450 inline-block" id="status-dot"></span>
-                        <span class="text-[9px] font-extrabold text-slate-450 dark:text-slate-500 uppercase tracking-widest" id="status-text">Aguardando</span>
-                        <span class="text-slate-350 dark:text-slate-700 font-light">|</span>
-                        <span class="text-[9px] font-mono text-slate-400 dark:text-slate-500 font-extrabold" id="chat-number">-</span>
+        <!-- Chat Header Bar -->
+        <div class="px-5 py-3.5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/60 dark:bg-slate-900/30 shrink-0">
+            <div class="flex items-center gap-3.5 min-w-0">
+                <div class="w-10 h-10 rounded-xl bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-slate-500 font-bold text-sm shrink-0 shadow-sm" id="chat-avatar">-</div>
+                <div class="min-w-0">
+                    <h3 class="text-sm font-bold text-slate-900 dark:text-white truncate" id="chat-title">Selecione uma conversa</h3>
+                    <div class="flex items-center gap-2 mt-0.5 text-[11px]">
+                        <span class="w-2 h-2 rounded-full bg-slate-400 inline-block" id="status-dot"></span>
+                        <span class="font-medium text-slate-500 dark:text-slate-400" id="status-text">Aguardando</span>
+                        <span class="text-slate-300 dark:text-slate-700">•</span>
+                        <span class="font-mono text-slate-400" id="chat-number">-</span>
                     </div>
                 </div>
             </div>
 
-            <!-- Header Actions -->
-            <div class="flex items-center gap-1">
-                <button class="w-8 h-8 rounded-lg hover:bg-red-500/10 flex items-center justify-center text-slate-400 hover:text-red-500 active:scale-95 transition-all" title="Limpar Histórico Visual" onclick="clearActiveChat()">
-                    <i class="fa-solid fa-trash text-[11px]"></i>
+            <!-- Header Action Buttons -->
+            <div class="flex items-center gap-1.5 shrink-0">
+                <button type="button" onclick="openModal('modalTemplates')" title="Templates Rápidos" class="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-semibold transition-all flex items-center gap-1.5">
+                    <i class="fa-solid fa-bolt text-amber-500 text-[11px]"></i>
+                    <span class="hidden md:inline">Templates</span>
                 </button>
-                <button class="w-8 h-8 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-850 flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 active:scale-95 transition-all" title="Ver Informações">
-                    <i class="fa-solid fa-circle-info text-[11px]"></i>
+                <button type="button" onclick="openWhatsAppWebDirect()" title="Abrir no WhatsApp Web" class="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 flex items-center justify-center transition-all">
+                    <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i>
+                </button>
+                <button type="button" onclick="refreshCurrentChat()" title="Recarregar Mensagens" class="w-9 h-9 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 flex items-center justify-center transition-all">
+                    <i class="fa-solid fa-rotate text-xs"></i>
+                </button>
+                <button type="button" onclick="clearActiveChat()" title="Limpar Histórico Visual" class="w-9 h-9 rounded-xl hover:bg-rose-500/10 text-slate-400 hover:text-rose-500 flex items-center justify-center transition-all">
+                    <i class="fa-solid fa-trash-can text-xs"></i>
                 </button>
             </div>
         </div>
 
-        <!-- Messages Stream Wallpaper Viewport -->
+        <!-- Messages Stream Viewport -->
         <div class="flex-1 overflow-y-auto p-6 space-y-4 chat-wallpaper custom-scrollbar" id="chatStream">
             <div class="flex flex-col items-center justify-center h-full text-slate-400 space-y-3">
-                <div class="w-14 h-14 rounded-xl bg-slate-100 dark:bg-slate-900/60 flex items-center justify-center text-slate-400 border border-slate-200 dark:border-slate-800 shadow-sm">
-                    <i class="fa-regular fa-comments text-2xl animate-pulse"></i>
+                <div class="w-14 h-14 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-center text-slate-400 shadow-sm">
+                    <i class="fa-regular fa-comments text-2xl text-emerald-500"></i>
                 </div>
-                <p class="text-xs font-bold uppercase tracking-wider text-slate-550 dark:text-slate-400">Nenhuma Conversa Selecionada</p>
-                <p class="text-[10px] text-slate-400 max-w-[220px] text-center leading-relaxed">Clique em uma das conversas ativas na barra lateral para carregar a interação em tempo real.</p>
+                <p class="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300">Nenhuma Conversa Selecionada</p>
+                <p class="text-xs text-slate-400 max-w-xs text-center leading-relaxed">Selecione uma conversa na lista lateral ou inicie um novo chat usando o botão "+ Nova".</p>
             </div>
         </div>
 
-        <!-- Integrated Glass Command Input Interface -->
-        <div class="relative shrink-0 border-t border-slate-200 dark:border-slate-850 p-4 bg-slate-50/50 dark:bg-slate-900/10">
+        <!-- Input Interface Container -->
+        <div class="relative shrink-0 border-t border-slate-200 dark:border-slate-800 p-4 bg-slate-50/50 dark:bg-slate-900/20">
             
             <!-- Floating Emoji Popover -->
-            <div id="emojiPopover" class="hidden absolute bottom-20 left-4 w-72 max-w-[90vw] bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-4 shadow-2xl z-50 animate-premium">
-                <div class="flex items-center justify-between mb-3 border-b border-slate-200 dark:border-slate-800 pb-2">
-                    <span class="text-[9px] font-extrabold text-slate-400 uppercase tracking-widest">Emojis rápidos</span>
-                    <div class="flex gap-1.5">
-                        <button type="button" onclick="setEmojiTab('smileys')" class="emoji-tab-btn text-[9px] px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 font-bold">😀</button>
-                        <button type="button" onclick="setEmojiTab('vehicles')" class="emoji-tab-btn text-[9px] px-2 py-0.5 rounded text-slate-450 hover:bg-slate-100 dark:hover:bg-slate-800">🚗</button>
-                        <button type="button" onclick="setEmojiTab('tools')" class="emoji-tab-btn text-[9px] px-2 py-0.5 rounded text-slate-450 hover:bg-slate-100 dark:hover:bg-slate-800">🔧</button>
+            <div id="emojiPopover" class="hidden absolute bottom-20 left-4 w-72 max-w-[90vw] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-2xl z-50 animate-dash-up">
+                <div class="flex items-center justify-between mb-3 border-b border-slate-100 dark:border-slate-800 pb-2">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Emojis rápidos</span>
+                    <div class="flex gap-1">
+                        <button type="button" onclick="setEmojiTab('smileys')" class="emoji-tab-btn text-[11px] px-2 py-0.5 rounded-lg bg-emerald-500/10 text-emerald-600 font-bold">😀</button>
+                        <button type="button" onclick="setEmojiTab('vehicles')" class="emoji-tab-btn text-[11px] px-2 py-0.5 rounded text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800">🚗</button>
+                        <button type="button" onclick="setEmojiTab('tools')" class="emoji-tab-btn text-[11px] px-2 py-0.5 rounded text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800">🔧</button>
                     </div>
                 </div>
                 
-                <div id="emojiGrid" class="grid grid-cols-6 gap-2.5 max-h-40 overflow-y-auto pr-1 custom-scrollbar text-lg text-center">
-                    <!-- Loaded programmatically -->
-                </div>
+                <div id="emojiGrid" class="grid grid-cols-6 gap-2 max-h-40 overflow-y-auto pr-1 custom-scrollbar text-lg text-center"></div>
             </div>
 
-            <!-- Gorgeous File Attachment Preview Box -->
-            <div id="attachmentPreview" class="hidden absolute bottom-20 left-4 right-4 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3 shadow-xl z-40 flex items-center justify-between gap-4 animate-premium">
+            <!-- Attachment Preview Card -->
+            <div id="attachmentPreview" class="hidden absolute bottom-20 left-4 right-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-3 shadow-xl z-40 flex items-center justify-between gap-4 animate-dash-up">
                 <div class="flex items-center gap-3 min-w-0">
-                    <div class="w-9 h-9 rounded-lg bg-emerald-500/10 text-emerald-600 flex items-center justify-center text-sm shrink-0 border border-emerald-500/20" id="attachmentIcon">
+                    <div class="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center text-sm shrink-0 border border-emerald-500/20" id="attachmentIcon">
                         <i class="fa-solid fa-file-invoice"></i>
                     </div>
                     <div class="min-w-0">
-                        <p class="text-[11px] font-extrabold text-slate-800 dark:text-white truncate" id="attachmentName">documento.pdf</p>
-                        <p class="text-[9px] text-slate-400 font-extrabold" id="attachmentSize">0 KB</p>
+                        <p class="text-xs font-bold text-slate-900 dark:text-white truncate" id="attachmentName">documento.pdf</p>
+                        <p class="text-[10px] text-slate-400" id="attachmentSize">0 KB</p>
                     </div>
                 </div>
-                <button type="button" onclick="clearAttachment()" class="w-7 h-7 rounded-lg hover:bg-red-500/15 text-slate-400 hover:text-red-500 flex items-center justify-center transition-all">
+                <button type="button" onclick="clearAttachment()" class="w-8 h-8 rounded-xl hover:bg-rose-500/10 text-slate-400 hover:text-rose-500 flex items-center justify-center transition-all">
                     <i class="fa-solid fa-xmark text-xs"></i>
                 </button>
             </div>
@@ -198,23 +211,20 @@
             <input type="file" id="chatFileInput" class="hidden" onchange="handleFileSelected(event)">
 
             <!-- Command Form -->
-            <form onsubmit="submitChatMessage(event)" class="flex gap-2 items-center bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800/80 rounded-xl p-1.5 shadow-sm focus-within:ring-2 focus-within:ring-emerald-500/25 focus-within:border-emerald-500 transition-all">
-                <!-- Action Buttons -->
-                <div class="flex items-center gap-0.5 pl-1">
-                    <button type="button" id="emojiBtn" onclick="toggleEmojiPopover()" class="w-9 h-9 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-900 flex items-center justify-center text-slate-400 hover:text-emerald-500 transition-all" title="Emojis">
+            <form onsubmit="submitChatMessage(event)" class="flex gap-2 items-center bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl p-2 shadow-sm focus-within:ring-2 focus-within:ring-emerald-500/30 focus-within:border-emerald-500 transition-all">
+                <div class="flex items-center gap-1 pl-1">
+                    <button type="button" id="emojiBtn" onclick="toggleEmojiPopover()" class="w-9 h-9 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-900 flex items-center justify-center text-slate-400 hover:text-emerald-500 transition-all" title="Emojis">
                         <i class="fa-regular fa-face-smile text-base"></i>
                     </button>
-                    <button type="button" onclick="document.getElementById('chatFileInput').click()" class="w-9 h-9 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-900 flex items-center justify-center text-slate-400 hover:text-emerald-500 transition-all" title="Anexar Arquivo">
+                    <button type="button" onclick="document.getElementById('chatFileInput').click()" class="w-9 h-9 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-900 flex items-center justify-center text-slate-400 hover:text-emerald-500 transition-all" title="Anexar Arquivo">
                         <i class="fa-solid fa-paperclip text-sm"></i>
                     </button>
                 </div>
                 
-                <!-- Borderless input field -->
                 <input type="text" id="messageInput" required autocomplete="off" placeholder="Digite sua mensagem..." 
-                       class="flex-1 bg-transparent border-none outline-none text-xs dark:text-white px-2 py-2 placeholder-slate-400 dark:placeholder-slate-655">
+                       class="flex-1 bg-transparent border-none outline-none text-xs dark:text-white px-2 py-2 placeholder-slate-400">
                 
-                <!-- Send Action Button -->
-                <button type="submit" class="w-9 h-9 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center shadow shadow-emerald-500/20 active:scale-95 transition-all shrink-0">
+                <button type="submit" class="w-10 h-10 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center shadow-md shadow-emerald-500/20 active:scale-95 transition-all shrink-0">
                     <i class="fa-solid fa-paper-plane text-xs"></i>
                 </button>
             </form>
@@ -222,23 +232,133 @@
     </div>
 </div>
 
-<!-- =======================================================
-        CLIENT JAVASCRIPT & AJAX INTEGRATION
-     ======================================================= -->
+<!-- ➕ MODAL: NOVA CONVERSA -->
+<div id="modalNovaConversa" class="fixed inset-0 hidden items-center justify-center z-50 p-4">
+    <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="closeModal('modalNovaConversa')"></div>
+    <div class="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+            <h3 class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <i class="fa-brands fa-whatsapp text-emerald-500"></i> Iniciar Nova Conversa
+            </h3>
+            <button type="button" onclick="closeModal('modalNovaConversa')" class="text-slate-400 hover:text-slate-600">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <form onsubmit="handleStartNewChat(event)" class="space-y-4">
+            <div class="space-y-1.5">
+                <label for="newPhone" class="block text-xs font-semibold text-slate-700 dark:text-slate-300">Número do WhatsApp (com DDD):</label>
+                <div class="relative">
+                    <input type="text" id="newPhone" required placeholder="Ex: 5521999998888 ou (21) 99999-8888"
+                           class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 dark:text-slate-100 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500">
+                </div>
+            </div>
+
+            <div class="space-y-1.5">
+                <label for="newInitialMsg" class="block text-xs font-semibold text-slate-700 dark:text-slate-300">Mensagem Inicial (opcional):</label>
+                <textarea id="newInitialMsg" rows="3" placeholder="Digite uma saudação ou comunicado inicial..."
+                          class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 dark:text-slate-100 placeholder:text-slate-400 outline-none focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 resize-none"></textarea>
+            </div>
+
+            <div class="flex items-center justify-end gap-2 pt-2">
+                <button type="button" onclick="closeModal('modalNovaConversa')" class="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl text-xs font-semibold">Cancelar</button>
+                <button type="submit" class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-semibold shadow-sm">Iniciar Chat</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ⚡ MODAL: TEMPLATES RÁPIDOS -->
+<div id="modalTemplates" class="fixed inset-0 hidden items-center justify-center z-50 p-4">
+    <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="closeModal('modalTemplates')"></div>
+    <div class="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+            <h3 class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <i class="fa-solid fa-bolt text-amber-500"></i> Templates de Mensagem Rápidos
+            </h3>
+            <button type="button" onclick="closeModal('modalTemplates')" class="text-slate-400 hover:text-slate-600">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <div class="space-y-2.5">
+            <div onclick="useTemplate('Olá, tudo bem? Lembramos que você tem um checklist pendente para hoje. Por favor, realize a inspeção assim que possível.')" 
+                 class="p-3.5 bg-slate-50 dark:bg-slate-800/60 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded-xl border border-slate-200/60 dark:border-slate-700/60 cursor-pointer transition-all">
+                <h4 class="text-xs font-bold text-slate-800 dark:text-white">🔔 Alerta de Checklist Pendente</h4>
+                <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-1">Lembrete amigável de checklist de veículo pendente.</p>
+            </div>
+
+            <div onclick="useTemplate('Prezado técnico, sua Ordem de Serviço foi atualizada e exige atenção. Verifique os detalhes no painel.')" 
+                 class="p-3.5 bg-slate-50 dark:bg-slate-800/60 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded-xl border border-slate-200/60 dark:border-slate-700/60 cursor-pointer transition-all">
+                <h4 class="text-xs font-bold text-slate-800 dark:text-white">🔧 Atualização de O.S. / Manutenção</h4>
+                <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-1">Aviso sobre mudança de status ou abertura de O.S.</p>
+            </div>
+
+            <div onclick="useTemplate('Olá, confirmamos sua escala de plantão programada. Por favor, confirme a recepção deste comunicado.')" 
+                 class="p-3.5 bg-slate-50 dark:bg-slate-800/60 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded-xl border border-slate-200/60 dark:border-slate-700/60 cursor-pointer transition-all">
+                <h4 class="text-xs font-bold text-slate-800 dark:text-white">📅 Confirmação de Plantão</h4>
+                <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-1">Comunicado oficial para escala operacional.</p>
+            </div>
+        </div>
+
+        <div class="flex justify-end pt-2">
+            <button type="button" onclick="closeModal('modalTemplates')" class="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl text-xs font-semibold">Fechar</button>
+        </div>
+    </div>
+</div>
+
+<!-- SCRIPTS & CLIENT LOGIC -->
 <script>
-    let chatsList = []; // Real contact chats fetched from Evolution
+    let chatsList = [];
     let activeNumber = '';
     let activeName = '';
     let activeGradient = 'from-emerald-500 to-teal-600';
     let selectedFile = null;
-    let activeChatHistory = []; // Messages stream parsed
+    let activeChatHistory = [];
 
-    // Unified Emoji maps
     const emojiMap = {
-        smileys: ['😀','😃','😄','😁','😆','😅','😂','🤣','😊','😇','🙂','🙃','😉','😌','😍','🥰','😘','😗','😙','😚','😋','😛','😝','😜','🤪','🤨','🧐','🤓','😎','🤩','🥳','😏','😒','😞','😔','😟','😕','🙁','☹️','😣','😖','😫','😩','🥺','😢','😭','😤','😠','😡','🤬','🤯','😳','🥵','🥶','😱','😨','😰','😥','😓','🤗','🤔','🤭','🤫','🤥','😶','😐','😑','😬','🙄','😯','😦','😧','😮','😲','🥱','😴','🤤','😪','😵','🤐','🥴','🤢','🤮','🤧','😷','🤒','🤕'],
-        vehicles: ['🚗','🚕','🚙','🚌','🚎','🏎️','🚓','🚑','🚒','🚐','🛻','🚚','🚛','🚜','🛵','🏍️','🛺','🚲','🛴','🛹','🚏','⛽','🚨','🚥','🚦','🚧','⚓','⛵','🛥️','🚢','✈️','🚀','🛸'],
-        tools: ['🔧','🔨','⚒️','🛠️','⛏️','🔩','⚙️','🧱','⛓️','🧲','🔫','💣','🧨','🪓','🔪','🗡️','⚔️','🛡️','🚬','⚰️','🪦','🏺','🔮','📿','🧿']
+        smileys: ['😀','😃','😄','😁','😆','😅','😂','🤣','😊','😇','🙂','🙃','😉','😌','😍','🥰','😘','😋','😛','😜','🤪','🤨','🧐','😎','🤩','😏','😟','🙁','😢','😭','😤','😠','🤯','😳','😱','🤔','🤭','🤫','😶','😐','😑','😬','🙄','😴','😷'],
+        vehicles: ['🚗','🚕','🚙','🚌','🏎️','🚓','🚑','🚒','🚐','🛻','🚚','🚛','🚜','🛵','🏍️','🚲','🚨','🚥','⛽','⚓','⛵','✈️','🛸'],
+        tools: ['🔧','🔨','🛠️','⚙️','🔩','⛓️','🧲','📦','📋','📁','⚡','🔔','✅','❌','⚠️','🔍','📌','📍']
     };
+
+    function openModal(id) {
+        const el = document.getElementById(id);
+        if (el) {
+            el.classList.remove('hidden');
+            el.classList.add('flex');
+        }
+    }
+
+    function closeModal(id) {
+        const el = document.getElementById(id);
+        if (el) {
+            el.classList.add('hidden');
+            el.classList.remove('flex');
+        }
+    }
+
+    function checkConnectionStatus() {
+        const dot = document.getElementById('instanceStatusDot');
+        const text = document.getElementById('instanceStatusText');
+        if (text) text.textContent = "Verificando...";
+
+        fetch('/api/whatsapp/status')
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'connected') {
+                if (dot) dot.className = "w-2 h-2 rounded-full bg-emerald-500 animate-pulse";
+                if (text) text.textContent = "Evolution Conectado";
+            } else {
+                if (dot) dot.className = "w-2 h-2 rounded-full bg-rose-500";
+                if (text) text.textContent = "Instância Desconectada";
+            }
+        })
+        .catch(() => {
+            if (dot) dot.className = "w-2 h-2 rounded-full bg-amber-500";
+            if (text) text.textContent = "Offline / Não configurado";
+        });
+    }
 
     function toggleEmojiPopover() {
         const popover = document.getElementById('emojiPopover');
@@ -251,12 +371,11 @@
     function setEmojiTab(tabName) {
         document.querySelectorAll('.emoji-tab-btn').forEach((btn, idx) => {
             btn.classList.remove('bg-emerald-500/10', 'text-emerald-600', 'font-bold');
-            btn.classList.add('hover:bg-slate-100', 'dark:hover:bg-slate-800', 'text-slate-400');
-            
+            btn.classList.add('text-slate-400');
             const btnName = ['smileys', 'vehicles', 'tools'][idx];
             if (btnName === tabName) {
                 btn.classList.add('bg-emerald-500/10', 'text-emerald-600', 'font-bold');
-                btn.classList.remove('hover:bg-slate-100', 'dark:hover:bg-slate-800', 'text-slate-405');
+                btn.classList.remove('text-slate-400');
             }
         });
 
@@ -266,7 +385,7 @@
         list.forEach(emoji => {
             const btn = document.createElement('button');
             btn.type = 'button';
-            btn.className = 'w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-50 dark:hover:bg-slate-900 hover:scale-110 active:scale-95 transition-all text-lg cursor-pointer';
+            btn.className = 'w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 hover:scale-110 active:scale-95 transition-all text-lg cursor-pointer';
             btn.innerText = emoji;
             btn.onclick = () => insertEmoji(emoji);
             grid.appendChild(btn);
@@ -284,7 +403,6 @@
         input.setSelectionRange(newPos, newPos);
     }
 
-    // Dismiss Emoji popover when clicking externally
     document.addEventListener('click', function(e) {
         const popover = document.getElementById('emojiPopover');
         const emojiBtn = document.getElementById('emojiBtn');
@@ -293,49 +411,65 @@
         }
     });
 
-    // File Attach Handler
+    function useTemplate(text) {
+        const input = document.getElementById('messageInput');
+        if (input) {
+            input.value = text;
+            input.focus();
+        }
+        closeModal('modalTemplates');
+    }
+
+    function openWhatsAppWebDirect() {
+        if (!activeNumber) {
+            alert("Selecione um contato para abrir no WhatsApp Web.");
+            return;
+        }
+        const clean = activeNumber.split('@')[0];
+        window.open(`https://wa.me/${clean}`, '_blank');
+    }
+
+    function refreshCurrentChat() {
+        if (activeNumber) {
+            loadChatHistory(activeNumber);
+        } else {
+            loadChatsList();
+        }
+    }
+
     function handleFileSelected(event) {
         const file = event.target.files[0];
         if (!file) return;
 
         const max20MB = 20 * 1024 * 1024;
         if (file.size > max20MB) {
-            if (typeof showToast === 'function') showToast('O arquivo excede o limite máximo de 20MB.', 'error');
-            else alert('O arquivo excede o limite máximo de 20MB.');
+            alert('O arquivo excede o limite máximo de 20MB.');
             event.target.value = '';
             return;
         }
 
         selectedFile = file;
-
         const ext = file.name.split('.').pop().toLowerCase();
         let iconHtml = '<i class="fa-solid fa-file-invoice"></i>';
-        let bgClass = 'bg-emerald-500/10 text-emerald-650 dark:text-emerald-450 border-emerald-500/20';
+        let bgClass = 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20';
 
         if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) {
             iconHtml = '<i class="fa-solid fa-image"></i>';
-            bgClass = 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20';
+            bgClass = 'bg-blue-500/10 text-blue-600 border-blue-500/20';
         } else if (['pdf'].includes(ext)) {
             iconHtml = '<i class="fa-solid fa-file-pdf"></i>';
-            bgClass = 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20';
+            bgClass = 'bg-rose-500/10 text-rose-600 border-rose-500/20';
         } else if (['xls', 'xlsx', 'csv'].includes(ext)) {
             iconHtml = '<i class="fa-solid fa-file-excel"></i>';
-            bgClass = 'bg-green-500/10 text-green-600 dark:text-green-400 border-green-500/20';
-        } else if (['doc', 'docx'].includes(ext)) {
-            iconHtml = '<i class="fa-solid fa-file-word"></i>';
-            bgClass = 'bg-sky-600/10 text-sky-700 dark:text-sky-550 border-sky-600/20';
+            bgClass = 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20';
         }
 
         const iconContainer = document.getElementById('attachmentIcon');
-        iconContainer.className = `w-9 h-9 rounded-lg flex items-center justify-center text-sm shrink-0 border ${bgClass}`;
+        iconContainer.className = `w-9 h-9 rounded-xl flex items-center justify-center text-sm shrink-0 border ${bgClass}`;
         iconContainer.innerHTML = iconHtml;
 
         document.getElementById('attachmentName').innerText = file.name;
-        
-        let sizeStr = '';
-        if (file.size < 1024 * 1024) sizeStr = `${(file.size / 1024).toFixed(1)} KB`;
-        else sizeStr = `${(file.size / (1024 * 1024)).toFixed(1)} MB`;
-        
+        const sizeStr = file.size < 1024 * 1024 ? `${(file.size / 1024).toFixed(1)} KB` : `${(file.size / (1024 * 1024)).toFixed(1)} MB`;
         document.getElementById('attachmentSize').innerText = sizeStr;
 
         document.getElementById('attachmentPreview').classList.remove('hidden');
@@ -349,7 +483,6 @@
         document.getElementById('messageInput').setAttribute('required', 'true');
     }
 
-    // Fetches live active contacts from Evolution API
     function loadChatsList() {
         const contactsList = document.getElementById('contactsList');
 
@@ -358,18 +491,19 @@
         .then(data => {
             if (data.success) {
                 let rawChats = data.chats || [];
-                if (!Array.isArray(rawChats) && rawChats.records) {
-                    rawChats = rawChats.records;
-                } else if (rawChats.data && Array.isArray(rawChats.data)) {
-                    rawChats = rawChats.data;
+                if (!Array.isArray(rawChats)) {
+                    if (rawChats.records && Array.isArray(rawChats.records)) rawChats = rawChats.records;
+                    else if (rawChats.chats && Array.isArray(rawChats.chats)) rawChats = rawChats.chats;
+                    else if (rawChats.data && Array.isArray(rawChats.data)) rawChats = rawChats.data;
+                    else rawChats = [];
                 }
 
                 if (!Array.isArray(rawChats) || rawChats.length === 0) {
                     contactsList.innerHTML = `
                         <div class="flex flex-col items-center justify-center p-8 text-slate-400 text-center space-y-2">
-                            <i class="fa-regular fa-folder-open text-xl text-slate-350"></i>
-                            <p class="text-[10px] font-bold uppercase tracking-wider">Nenhuma conversa ativa</p>
-                            <p class="text-[9px] text-slate-400">Inicie conversas com contatos pelo seu aparelho.</p>
+                            <i class="fa-regular fa-folder-open text-xl"></i>
+                            <p class="text-xs font-bold uppercase tracking-wider">Nenhuma conversa ativa</p>
+                            <button onclick="openModal('modalNovaConversa')" class="mt-2 text-xs text-emerald-600 font-semibold hover:underline">Iniciar nova conversa</button>
                         </div>
                     `;
                     return;
@@ -379,60 +513,70 @@
                 renderContactsSidebar();
             } else {
                 contactsList.innerHTML = `
-                    <div class="flex flex-col items-center justify-center p-6 text-red-500 text-center space-y-2">
+                    <div class="flex flex-col items-center justify-center p-6 text-rose-500 text-center space-y-2">
                         <i class="fa-solid fa-triangle-exclamation text-xl"></i>
-                        <p class="text-[10px] font-bold uppercase tracking-wider">Falha na listagem</p>
-                        <p class="text-[8.5px] text-slate-400 max-w-[170px]">${data.error || 'Verifique o status do Evolution gateway.'}</p>
+                        <p class="text-xs font-bold uppercase tracking-wider">Falha na listagem</p>
+                        <p class="text-[10px] text-slate-400 max-w-[180px]">${data.error || 'Verifique a Evolution API.'}</p>
                     </div>
                 `;
             }
         })
-        .catch(err => {
+        .catch(() => {
             contactsList.innerHTML = `
-                <div class="flex flex-col items-center justify-center p-6 text-red-500 text-center space-y-2">
+                <div class="flex flex-col items-center justify-center p-6 text-rose-500 text-center space-y-2">
                     <i class="fa-solid fa-circle-xmark text-xl"></i>
-                    <p class="text-[10px] font-bold uppercase tracking-wider">Sem conexão local</p>
+                    <p class="text-xs font-bold uppercase tracking-wider">Sem conexão</p>
                 </div>
             `;
         });
     }
 
-    // Dynamic contact sidebar rendering with actual message timestamps
     function renderContactsSidebar() {
         const contactsList = document.getElementById('contactsList');
         contactsList.innerHTML = '';
 
         const gradients = [
             'from-emerald-500 to-teal-600',
-            'from-cyan-500 to-blue-600',
+            'from-blue-500 to-indigo-600',
             'from-teal-500 to-emerald-600',
             'from-amber-500 to-orange-600',
-            'from-rose-500 to-orange-600',
-            'from-sky-500 to-teal-600'
+            'from-purple-500 to-indigo-600'
         ];
 
         chatsList.forEach((chat, index) => {
             const rawJid = chat.remoteJid || chat.id || '';
             const number = rawJid;
-            const name = chat.pushName || chat.name || (rawJid && rawJid.split('@')[0]) || 'Contato';
             
-            const initials = name.split(' ').map(n => n ? n[0] : '').join('').substring(0, 2).toUpperCase() || 'W';
+            let name = chat.pushName || chat.name;
+            if (!name || name === rawJid || name.includes('@lid') || /^\d+$/.test(name)) {
+                const cleanNum = rawJid.split('@')[0].split('-')[0];
+                name = cleanNum ? `+${cleanNum}` : 'Contato';
+            }
+            
+            const initials = name.replace('+', '').split(' ').map(n => n ? n[0] : '').join('').substring(0, 2).toUpperCase() || 'W';
             const gradientClass = gradients[index % gradients.length];
+            const profilePic = chat.profilePicUrl || chat.profilePictureUrl || chat.pictureUrl || chat.picture || '';
+
+            let avatarHtml = `<div class="w-10 h-10 rounded-xl bg-gradient-to-br ${gradientClass} flex items-center justify-center text-white font-bold text-xs shadow-sm shrink-0">${initials}</div>`;
+            if (profilePic) {
+                avatarHtml = `
+                    <div class="relative w-10 h-10 rounded-xl overflow-hidden shadow-sm shrink-0 bg-slate-200 dark:bg-slate-800">
+                        <img src="${profilePic}" alt="${name}" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<div class=\\'w-10 h-10 rounded-xl bg-gradient-to-br ${gradientClass} flex items-center justify-center text-white font-bold text-xs\\'>${initials}</div>'">
+                    </div>
+                `;
+            }
             
-            // Format Last Message Timestamp
             let timeStr = '';
             const timestamp = chat.messageTimestamp || (chat.lastMessage && chat.lastMessage.messageTimestamp);
             if (timestamp) {
                 const date = new Date(timestamp * 1000);
                 const today = new Date();
-                if (date.toDateString() === today.toDateString()) {
-                    timeStr = `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
-                } else {
-                    timeStr = date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
-                }
+                timeStr = (date.toDateString() === today.toDateString())
+                    ? `${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`
+                    : date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
             }
 
-            let lastMsg = 'Nenhuma conversa';
+            let lastMsg = 'Conversa iniciada';
             const msgObj = chat.lastMessage || chat.message;
             if (msgObj) {
                 if (typeof msgObj === 'string') lastMsg = msgObj;
@@ -443,7 +587,6 @@
                         if (innerMsg.conversation) lastMsg = innerMsg.conversation;
                         else if (innerMsg.extendedTextMessage && innerMsg.extendedTextMessage.text) lastMsg = innerMsg.extendedTextMessage.text;
                         else if (innerMsg.imageMessage) lastMsg = '📷 Imagem';
-                        else if (innerMsg.videoMessage) lastMsg = '🎥 Vídeo';
                         else if (innerMsg.documentMessage) lastMsg = innerMsg.documentMessage.fileName || '📁 Documento';
                         else if (innerMsg.audioMessage) lastMsg = '🎵 Áudio';
                         else if (innerMsg.text) lastMsg = innerMsg.text;
@@ -452,57 +595,61 @@
             }
 
             const unreadBadge = chat.unreadCount > 0 
-                ? `<span class="text-[9px] font-extrabold px-1.5 py-0.5 bg-emerald-600 text-white rounded-full absolute -top-1 -right-1 shadow">${chat.unreadCount}</span>` 
+                ? `<span class="text-[9px] font-bold px-1.5 py-0.5 bg-emerald-600 text-white rounded-full absolute -top-1 -right-1 shadow">${chat.unreadCount}</span>` 
                 : '';
 
             const isActive = activeNumber === number;
             const itemClasses = isActive 
-                ? 'bg-emerald-500/10 border-emerald-500/25 border-l-[3px] border-l-emerald-500 shadow-sm' 
-                : 'hover:bg-slate-50 dark:hover:bg-slate-900/60 border-transparent';
+                ? 'bg-emerald-500/10 border-emerald-500/30 border-l-4 border-l-emerald-500 shadow-sm' 
+                : 'hover:bg-slate-100 dark:hover:bg-slate-800/60 border-transparent';
 
             const itemDiv = document.createElement('div');
-            itemDiv.className = `p-3.5 flex items-center gap-3.5 rounded-xl cursor-pointer border transition-all duration-200 ${itemClasses}`;
+            itemDiv.className = `p-3 flex items-center gap-3 rounded-2xl cursor-pointer border transition-all duration-200 ${itemClasses}`;
             
             itemDiv.addEventListener('click', () => {
-                selectContact(itemDiv, name, number, initials, gradientClass);
+                selectContact(itemDiv, name, number, initials, gradientClass, profilePic);
             });
             
             itemDiv.innerHTML = `
                 <div class="relative shrink-0">
-                    <div class="w-10 h-10 rounded-lg bg-gradient-to-br ${gradientClass} flex items-center justify-center text-white font-black text-xs shadow-sm">${initials}</div>
-                    <span class="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-500 border-2 border-white dark:border-slate-900 shadow-sm"></span>
+                    ${avatarHtml}
+                    <span class="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-500 border-2 border-white dark:border-slate-900"></span>
                     ${unreadBadge}
                 </div>
                 <div class="flex-1 min-w-0">
                     <div class="flex justify-between items-baseline mb-0.5">
-                        <h4 class="text-xs font-black text-slate-800 dark:text-white truncate pr-2">${name}</h4>
-                        <span class="text-[9px] text-slate-400 dark:text-slate-500 font-bold shrink-0">${timeStr}</span>
+                        <h4 class="text-xs font-bold text-slate-900 dark:text-white truncate pr-2">${name}</h4>
+                        <span class="text-[10px] text-slate-400 font-medium shrink-0">${timeStr}</span>
                     </div>
-                    <p class="text-[10px] text-slate-550 dark:text-slate-455 truncate leading-relaxed">${lastMsg}</p>
+                    <p class="text-[11px] text-slate-500 dark:text-slate-400 truncate leading-relaxed">${lastMsg}</p>
                 </div>
             `;
             contactsList.appendChild(itemDiv);
         });
 
-        // Autoselect first index at start
         if (chatsList.length > 0 && !activeNumber) {
             const firstCard = contactsList.children[0];
             const chat = chatsList[0];
             const rawJid = chat.remoteJid || chat.id || '';
-            const name = chat.pushName || chat.name || (rawJid && rawJid.split('@')[0]) || 'Contato';
-            const initials = name.split(' ').map(n => n ? n[0] : '').join('').substring(0, 2).toUpperCase() || 'W';
-            selectContact(firstCard, name, rawJid, initials, gradients[0]);
+            let name = chat.pushName || chat.name;
+            if (!name || name === rawJid || name.includes('@lid') || /^\d+$/.test(name)) {
+                const cleanNum = rawJid.split('@')[0].split('-')[0];
+                name = cleanNum ? `+${cleanNum}` : 'Contato';
+            }
+            const initials = name.replace('+', '').split(' ').map(n => n ? n[0] : '').join('').substring(0, 2).toUpperCase() || 'W';
+            const profilePic = chat.profilePicUrl || chat.profilePictureUrl || chat.pictureUrl || chat.picture || '';
+            selectContact(firstCard, name, rawJid, initials, gradients[0], profilePic);
         }
     }
 
-    function selectContact(element, name, number, initials, gradientClass) {
+    function selectContact(element, name, number, initials, gradientClass, profilePic) {
         document.querySelectorAll('#contactsList > div').forEach(el => {
-            if (el.classList.contains('p-3.5')) {
-                el.className = 'p-3.5 flex items-center gap-3.5 rounded-xl cursor-pointer border transition-all duration-200 hover:bg-slate-50 dark:hover:bg-slate-900/60 border-transparent';
+            if (el.classList.contains('p-3')) {
+                el.className = 'p-3 flex items-center gap-3 rounded-2xl cursor-pointer border transition-all duration-200 hover:bg-slate-100 dark:hover:bg-slate-800/60 border-transparent';
             }
         });
         if (element) {
-            element.className = 'p-3.5 flex items-center gap-3.5 rounded-xl cursor-pointer border transition-all duration-200 bg-emerald-500/10 border-emerald-500/25 border-l-[3px] border-l-emerald-500 shadow-sm';
+            element.className = 'p-3 flex items-center gap-3 rounded-2xl cursor-pointer border transition-all duration-200 bg-emerald-500/10 border-emerald-500/30 border-l-4 border-l-emerald-500 shadow-sm';
         }
 
         activeName = name;
@@ -513,32 +660,32 @@
         document.getElementById('chat-number').innerText = number.split('@')[0];
         
         const avatar = document.getElementById('chat-avatar');
-        avatar.className = `w-11 h-11 rounded-lg bg-gradient-to-br ${gradientClass} flex items-center justify-center text-white font-black text-sm shadow-md`;
-        avatar.innerText = initials;
+        if (profilePic) {
+            avatar.className = 'w-10 h-10 rounded-xl overflow-hidden shadow-sm shrink-0 bg-slate-200 dark:bg-slate-800';
+            avatar.innerHTML = `<img src="${profilePic}" alt="${name}" class="w-full h-full object-cover" onerror="this.parentElement.className='w-10 h-10 rounded-xl bg-gradient-to-br ${gradientClass} flex items-center justify-center text-white font-bold text-xs shadow-sm'; this.parentElement.innerText='${initials}'">`;
+        } else {
+            avatar.className = `w-10 h-10 rounded-xl bg-gradient-to-br ${gradientClass} flex items-center justify-center text-white font-bold text-xs shadow-sm`;
+            avatar.innerText = initials;
+        }
 
         const dot = document.getElementById('status-dot');
         const text = document.getElementById('status-text');
-        dot.className = 'w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block';
-        text.innerText = 'Conectado';
+        if (dot) dot.className = 'w-2 h-2 rounded-full bg-emerald-500 inline-block';
+        if (text) text.innerText = 'Conectado';
 
         loadChatHistory(number);
     }
 
-    // Fetches live chat stream with dynamic skeleton loaders
     function loadChatHistory(number) {
         const stream = document.getElementById('chatStream');
         stream.innerHTML = `
-            <div class="space-y-5 animate-pulse">
+            <div class="space-y-4 animate-pulse">
                 <div class="flex gap-2.5 max-w-[65%]">
-                    <div class="w-7 h-7 rounded-full bg-slate-200 dark:bg-slate-800 shrink-0"></div>
-                    <div class="bg-slate-200/50 dark:bg-slate-850/40 h-10 w-44 rounded-2xl rounded-tl-none"></div>
+                    <div class="w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-800 shrink-0"></div>
+                    <div class="bg-slate-200/60 dark:bg-slate-800/60 h-12 w-48 rounded-2xl rounded-tl-none"></div>
                 </div>
                 <div class="flex gap-2.5 max-w-[65%] ml-auto justify-end">
-                    <div class="bg-emerald-250/20 dark:bg-emerald-950/20 h-14 w-60 rounded-2xl rounded-tr-none"></div>
-                </div>
-                <div class="flex gap-2.5 max-w-[65%]">
-                    <div class="w-7 h-7 rounded-full bg-slate-200 dark:bg-slate-800 shrink-0"></div>
-                    <div class="bg-slate-200/50 dark:bg-slate-855/40 h-16 w-52 rounded-2xl rounded-tl-none"></div>
+                    <div class="bg-emerald-500/20 h-14 w-60 rounded-2xl rounded-tr-none"></div>
                 </div>
             </div>
         `;
@@ -548,35 +695,36 @@
         .then(data => {
             if (data.success) {
                 let rawMsgs = data.messages || [];
-                if (!Array.isArray(rawMsgs) && rawMsgs.records) {
-                    rawMsgs = rawMsgs.records;
-                } else if (rawMsgs.data && Array.isArray(rawMsgs.data)) {
-                    rawMsgs = rawMsgs.data;
+                if (!Array.isArray(rawMsgs)) {
+                    if (rawMsgs.records && Array.isArray(rawMsgs.records)) rawMsgs = rawMsgs.records;
+                    else if (rawMsgs.messages && Array.isArray(rawMsgs.messages)) rawMsgs = rawMsgs.messages;
+                    else if (rawMsgs.messages && rawMsgs.messages.records && Array.isArray(rawMsgs.messages.records)) rawMsgs = rawMsgs.messages.records;
+                    else if (rawMsgs.data && Array.isArray(rawMsgs.data)) rawMsgs = rawMsgs.data;
+                    else rawMsgs = [];
                 }
                 
                 activeChatHistory = normalizeEvolutionMessages(rawMsgs);
                 renderChatStream();
             } else {
                 stream.innerHTML = `
-                    <div class="flex flex-col items-center justify-center h-full text-red-500 space-y-3">
-                        <i class="fa-solid fa-circle-exclamation text-3xl"></i>
+                    <div class="flex flex-col items-center justify-center h-full text-rose-500 space-y-2">
+                        <i class="fa-solid fa-circle-exclamation text-2xl"></i>
                         <p class="text-xs font-bold uppercase tracking-wider">Falha no histórico</p>
-                        <p class="text-[9.5px] text-slate-400 max-w-[200px] text-center">${data.error || 'Erro na resposta do gateway.'}</p>
+                        <p class="text-[10px] text-slate-400 max-w-[200px] text-center">${data.error || 'Erro na resposta da API.'}</p>
                     </div>
                 `;
             }
         })
-        .catch(err => {
+        .catch(() => {
             stream.innerHTML = `
-                <div class="flex flex-col items-center justify-center h-full text-red-500 space-y-3">
-                    <i class="fa-solid fa-circle-xmark text-3xl"></i>
-                    <p class="text-xs font-bold uppercase tracking-wider">Sem resposta da API</p>
+                <div class="flex flex-col items-center justify-center h-full text-rose-500 space-y-2">
+                    <i class="fa-solid fa-circle-xmark text-2xl"></i>
+                    <p class="text-xs font-bold uppercase tracking-wider">Sem conexão</p>
                 </div>
             `;
         });
     }
 
-    // Parses raw Evolution response properties to standardized UI objects
     function normalizeEvolutionMessages(rawMsgs) {
         if (!Array.isArray(rawMsgs)) return [];
         
@@ -593,24 +741,45 @@
             let fileUrl = null;
             let fileType = null;
             let fileName = '';
+            let isImage = false;
+            let isAudio = false;
+            let jpegThumbnail = null;
+            let msgId = msg.id || (msg.key && msg.key.id) || '';
+            let msgKey = msg.key || null;
 
-            const m = msg.message;
-            if (m) {
-                if (typeof m === 'string') text = m;
-                else if (m.conversation) text = m.conversation;
-                else if (m.extendedTextMessage && m.extendedTextMessage.text) text = m.extendedTextMessage.text;
-                else if (m.imageMessage) {
-                    text = m.imageMessage.caption || '📷 Imagem';
-                    fileType = 'image/png';
-                    fileUrl = '/static/img/placeholder.png'; 
-                } else if (m.documentMessage) {
-                    text = m.documentMessage.caption || '';
-                    fileName = m.documentMessage.fileName || 'documento';
-                    fileType = 'application/octet-stream';
-                    fileUrl = '#';
-                } else if (m.audioMessage) text = '🎵 Áudio';
-                else if (m.videoMessage) text = m.videoMessage.caption || '🎥 Vídeo';
-                else text = '[Mensagem]';
+            const m = msg.message || {};
+            if (typeof m === 'string') {
+                text = m;
+            } else if (m.conversation) {
+                text = m.conversation;
+            } else if (m.extendedTextMessage && m.extendedTextMessage.text) {
+                text = m.extendedTextMessage.text;
+            } else if (m.imageMessage) {
+                isImage = true;
+                text = m.imageMessage.caption || '';
+                fileType = 'image/png';
+                fileUrl = m.imageMessage.url || m.imageMessage.mediaUrl || null;
+                if (m.imageMessage.jpegThumbnail) {
+                    jpegThumbnail = 'data:image/jpeg;base64,' + m.imageMessage.jpegThumbnail;
+                }
+            } else if (m.audioMessage) {
+                isAudio = true;
+                text = '';
+                fileType = 'audio/ogg';
+                fileUrl = m.audioMessage.url || m.audioMessage.mediaUrl || null;
+            } else if (m.documentMessage) {
+                text = m.documentMessage.caption || '';
+                fileName = m.documentMessage.fileName || m.documentMessage.title || 'documento';
+                fileType = 'application/octet-stream';
+                fileUrl = m.documentMessage.url || m.documentMessage.mediaUrl || null;
+            } else if (m.videoMessage) {
+                text = m.videoMessage.caption || '🎥 Vídeo';
+            } else if (msg.messageType === 'audioMessage') {
+                isAudio = true;
+            } else if (msg.messageType === 'conversation' && typeof msg.body === 'string') {
+                text = msg.body;
+            } else if (typeof msg.content === 'string') {
+                text = msg.content;
             }
 
             let timeStr = '';
@@ -622,6 +791,11 @@
             }
 
             return {
+                msgId: msgId,
+                msgKey: msgKey,
+                isImage: isImage,
+                isAudio: isAudio,
+                jpegThumbnail: jpegThumbnail,
                 sender: isMe ? 'ME' : (msg.pushName || 'Contato'),
                 text: text,
                 time: timeStr,
@@ -634,7 +808,6 @@
         });
     }
 
-    // Chronological Message Stream Rendering with smooth iOS speech bubble layouts and checkmarks
     function renderChatStream() {
         const stream = document.getElementById('chatStream');
         stream.innerHTML = '';
@@ -643,11 +816,11 @@
             const emptyDiv = document.createElement('div');
             emptyDiv.className = 'flex flex-col items-center justify-center h-full text-slate-400 space-y-3';
             emptyDiv.innerHTML = `
-                <div class="w-14 h-14 rounded-xl bg-slate-100 dark:bg-slate-900/60 flex items-center justify-center text-slate-400 border border-slate-200 dark:border-slate-800">
-                    <i class="fa-regular fa-comments text-xl"></i>
+                <div class="w-14 h-14 rounded-2xl bg-white dark:bg-slate-900 flex items-center justify-center text-slate-400 border border-slate-200 dark:border-slate-800 shadow-sm">
+                    <i class="fa-regular fa-comments text-2xl text-emerald-500"></i>
                 </div>
-                <p class="text-xs font-bold uppercase tracking-wider">Histórico limpo</p>
-                <p class="text-[10px] text-slate-400 max-w-[200px] text-center leading-relaxed">Envie uma mensagem abaixo para registrar a comunicação assíncrona.</p>
+                <p class="text-xs font-bold uppercase tracking-wider">Histórico Limpo</p>
+                <p class="text-xs text-slate-400 max-w-xs text-center leading-relaxed">Envie uma mensagem abaixo para iniciar a interação.</p>
             `;
             stream.appendChild(emptyDiv);
             return;
@@ -656,10 +829,9 @@
         let lastDateStr = '';
 
         activeChatHistory.forEach(msg => {
-            // Daily separator insertion
             if (msg.dateStr && msg.dateStr !== lastDateStr) {
                 const separator = document.createElement('div');
-                separator.className = 'flex justify-center my-5';
+                separator.className = 'flex justify-center my-4';
                 
                 let displayDate = msg.dateStr;
                 const todayStr = new Date().toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
@@ -671,7 +843,7 @@
                 else if (msg.dateStr === yesterdayStr) displayDate = 'Ontem';
                 
                 separator.innerHTML = `
-                    <span class="px-3 py-1 bg-slate-200/50 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 text-[9px] font-extrabold uppercase tracking-widest rounded-full border border-slate-300/10 dark:border-white/5 shadow-sm">
+                    <span class="px-3 py-1 bg-slate-200/60 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 text-[10px] font-bold uppercase tracking-wider rounded-full border border-slate-300/40 dark:border-slate-700/40 shadow-sm">
                         ${displayDate}
                     </span>
                 `;
@@ -685,55 +857,85 @@
 
             if (!isMe) {
                 const avatar = document.createElement('div');
-                avatar.className = `w-7 h-7 rounded-full bg-gradient-to-br ${activeGradient} flex items-center justify-center text-white text-[9px] font-black shrink-0 shadow-sm`;
+                avatar.className = `w-7 h-7 rounded-full bg-gradient-to-br ${activeGradient} flex items-center justify-center text-white text-[10px] font-bold shrink-0 shadow-sm`;
                 avatar.innerText = activeName.split(' ').map(n => n ? n[0] : '').join('').substring(0, 2).toUpperCase();
                 outerDiv.appendChild(avatar);
             }
 
             const msgDiv = document.createElement('div');
             msgDiv.className = isMe 
-                ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white p-3.5 rounded-2xl rounded-tr-none text-xs shadow-md relative pb-6.5 min-w-[90px]' 
-                : 'bg-white dark:bg-slate-800 p-3.5 rounded-2xl rounded-tl-none border border-slate-200 dark:border-slate-700/60 text-xs text-slate-700 dark:text-gray-200 shadow-sm relative pb-6.5 min-w-[90px]';
+                ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white p-3.5 rounded-2xl rounded-tr-none text-xs shadow-sm relative pb-6 min-w-[90px]' 
+                : 'bg-white dark:bg-slate-800 p-3.5 rounded-2xl rounded-tl-none border border-slate-200 dark:border-slate-700/60 text-xs text-slate-800 dark:text-slate-100 shadow-sm relative pb-6 min-w-[90px]';
             
             let statusIcon = '';
             if (isMe) {
-                if (msg.status === 'sent') statusIcon = '<i class="fa-solid fa-check-double text-[9px] text-emerald-250 ml-1"></i>';
-                else if (msg.status === 'error') statusIcon = '<i class="fa-solid fa-circle-exclamation text-[9px] text-red-200 ml-1"></i>';
-                else if (msg.status === 'sending') statusIcon = '<i class="fa-solid fa-circle-notch text-[9px] text-emerald-350 animate-spin ml-1"></i>';
-                else statusIcon = '<i class="fa-solid fa-check text-[9px] text-emerald-350 ml-1"></i>';
+                if (msg.status === 'sent') statusIcon = '<i class="fa-solid fa-check-double text-[9px] text-emerald-200 ml-1"></i>';
+                else if (msg.status === 'error') statusIcon = '<i class="fa-solid fa-circle-exclamation text-[9px] text-rose-200 ml-1"></i>';
+                else if (msg.status === 'sending') statusIcon = '<i class="fa-solid fa-circle-notch text-[9px] text-emerald-300 animate-spin ml-1"></i>';
+                else statusIcon = '<i class="fa-solid fa-check text-[9px] text-emerald-300 ml-1"></i>';
             }
 
-            // Embedded attachments displays
             let mediaContent = '';
-            if (msg.fileUrl) {
-                if (msg.fileType && msg.fileType.startsWith('image/')) {
-                    mediaContent = `
-                        <div class="mb-2 max-w-full rounded-lg overflow-hidden shadow-sm border border-slate-200 dark:border-slate-700">
-                            <img src="${msg.fileUrl}" class="max-h-48 object-cover w-full cursor-pointer hover:scale-[1.02] transition" onclick="window.open('${msg.fileUrl}', '_blank')">
-                        </div>
-                    `;
-                } else {
-                    let docIcon = '<i class="fa-solid fa-file-invoice text-lg text-emerald-500"></i>';
-                    if (msg.fileName && msg.fileName.endsWith('.pdf')) docIcon = '<i class="fa-solid fa-file-pdf text-lg text-red-500"></i>';
-                    else if (msg.fileName && (msg.fileName.endsWith('.xls') || msg.fileName.endsWith('.xlsx') || msg.fileName.endsWith('.csv'))) docIcon = '<i class="fa-solid fa-file-excel text-lg text-green-500"></i>';
-                    else if (msg.fileName && (msg.fileName.endsWith('.doc') || msg.fileName.endsWith('.docx'))) docIcon = '<i class="fa-solid fa-file-word text-lg text-blue-500"></i>';
-                    
-                    mediaContent = `
-                        <a href="${msg.fileUrl}" target="_blank" class="flex items-center gap-3 p-2.5 rounded-lg bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-750 mb-2 hover:bg-slate-200 dark:hover:bg-slate-800 transition block min-w-[200px]">
-                            <div class="w-9 h-9 rounded bg-white dark:bg-slate-800 flex items-center justify-center shrink-0 shadow-sm">${docIcon}</div>
-                            <div class="min-w-0 flex-1">
-                                <p class="text-[10px] font-black truncate text-slate-800 dark:text-white">${msg.fileName}</p>
-                                <p class="text-[8px] text-slate-400 font-extrabold uppercase tracking-widest">Abrir Anexo</p>
+            if (msg.isAudio) {
+                const audioId = `audio-${msg.msgId || Math.random().toString(36).substring(2)}`;
+                mediaContent = `
+                    <div class="mb-1 flex items-center gap-3 p-2.5 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 min-w-[220px]">
+                        <button type="button" id="btn-play-${audioId}" onclick="toggleAudioPlay('${audioId}')" disabled class="w-9 h-9 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white flex items-center justify-center shrink-0 shadow-sm transition-all disabled:opacity-50">
+                            <i class="fa-solid fa-spinner animate-spin text-xs" id="icon-audio-${audioId}"></i>
+                        </button>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex justify-between text-[10px] text-slate-500 font-semibold mb-1">
+                                <span id="time-audio-${audioId}">0:00</span>
+                                <span id="status-audio-${audioId}">Carregando áudio...</span>
                             </div>
-                        </a>
-                    `;
+                            <div class="w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden cursor-pointer" onclick="seekAudio(event, '${audioId}')">
+                                <div id="bar-audio-${audioId}" class="bg-emerald-500 h-full w-0 transition-all duration-100"></div>
+                            </div>
+                        </div>
+                        <audio id="player-${audioId}" class="hidden" onended="onAudioEnded('${audioId}')" ontimeupdate="updateAudioProgress('${audioId}')"></audio>
+                    </div>
+                `;
+
+                if (msg.msgKey) {
+                    setTimeout(() => loadAudioAsync(audioId, msg.msgKey, msg.msgId), 50);
                 }
+            } else if (msg.isImage || (msg.fileType && msg.fileType.startsWith('image/'))) {
+                const imgSrc = msg.fileUrl && !msg.fileUrl.endsWith('.enc') ? msg.fileUrl : (msg.jpegThumbnail || '');
+                const imgId = `img-media-${msg.msgId || Math.random().toString(36).substring(2)}`;
+                
+                mediaContent = `
+                    <div class="mb-2 max-w-full rounded-xl overflow-hidden shadow-sm border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-900 min-h-[120px] min-w-[180px] flex items-center justify-center relative">
+                        <img id="${imgId}" src="${imgSrc}" class="${imgSrc ? '' : 'hidden'} max-h-60 w-full object-cover cursor-pointer hover:scale-105 transition" onclick="openMediaLightbox(this.src)">
+                        <div id="loader-${imgId}" class="${imgSrc ? 'hidden' : 'flex'} flex-col items-center justify-center p-6 text-slate-400 gap-2">
+                            <i class="fa-solid fa-spinner animate-spin text-lg text-emerald-500"></i>
+                            <span class="text-[10px] font-semibold">Carregando imagem...</span>
+                        </div>
+                    </div>
+                `;
+
+                if (msg.msgKey && !imgSrc.startsWith('data:image/')) {
+                    setTimeout(() => loadMediaAsync(imgId, msg.msgKey, msg.msgId), 50);
+                }
+            } else if (msg.fileUrl) {
+                let docIcon = '<i class="fa-solid fa-file-invoice text-base text-emerald-500"></i>';
+                if (msg.fileName && msg.fileName.endsWith('.pdf')) docIcon = '<i class="fa-solid fa-file-pdf text-base text-rose-500"></i>';
+                else if (msg.fileName && (msg.fileName.endsWith('.xls') || msg.fileName.endsWith('.xlsx') || msg.fileName.endsWith('.csv'))) docIcon = '<i class="fa-solid fa-file-excel text-base text-emerald-500"></i>';
+                
+                mediaContent = `
+                    <a href="${msg.fileUrl}" target="_blank" class="flex items-center gap-3 p-2.5 rounded-xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 mb-2 hover:bg-slate-200 dark:hover:bg-slate-800 transition block min-w-[200px]">
+                        <div class="w-8 h-8 rounded-lg bg-white dark:bg-slate-800 flex items-center justify-center shrink-0 shadow-sm">${docIcon}</div>
+                        <div class="min-w-0 flex-1">
+                            <p class="text-xs font-bold truncate text-slate-900 dark:text-white">${msg.fileName}</p>
+                            <p class="text-[9px] text-slate-400 font-semibold uppercase">Abrir Anexo</p>
+                        </div>
+                    </a>
+                `;
             }
 
             msgDiv.innerHTML = `
                 ${mediaContent}
-                <div class="break-words leading-relaxed">${msg.text}</div>
-                <div class="absolute right-3 bottom-1.5 flex items-center gap-1 text-[8px] ${isMe ? 'text-emerald-250' : 'text-slate-400'} font-extrabold tracking-wide">
+                ${msg.text ? `<div class="break-words leading-relaxed">${msg.text}</div>` : ''}
+                <div class="absolute right-3 bottom-1 flex items-center gap-1 text-[9px] ${isMe ? 'text-emerald-200' : 'text-slate-400'} font-medium">
                     <span>${msg.time}</span>
                     ${statusIcon}
                 </div>
@@ -742,25 +944,193 @@
             stream.appendChild(outerDiv);
         });
 
-        // Always force scrolls to bottom of stream
         stream.scrollTop = stream.scrollHeight;
     }
 
-    function clearActiveChat() {
-        if (confirm(`Deseja limpar visualmente as mensagens de ${activeName}?`)) {
-            activeChatHistory = [];
-            renderChatStream();
-            if (typeof showToast === 'function') showToast('Histórico visual limpo.', 'success');
+    function loadAudioAsync(audioId, msgKey, msgId) {
+        fetch('/api/whatsapp/media/base64', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ key: msgKey, id: msgId })
+        })
+        .then(res => res.json())
+        .then(data => {
+            const player = document.getElementById(`player-${audioId}`);
+            const btn = document.getElementById(`btn-play-${audioId}`);
+            const icon = document.getElementById(`icon-audio-${audioId}`);
+            const status = document.getElementById(`status-audio-${audioId}`);
+            
+            if (data.success && data.base64 && player) {
+                let src = data.base64;
+                if (!src.startsWith('data:')) {
+                    const mime = data.mimetype || 'audio/ogg';
+                    src = `data:${mime};base64,${src}`;
+                }
+                player.src = src;
+                if (btn) btn.removeAttribute('disabled');
+                if (icon) icon.className = 'fa-solid fa-play text-xs';
+                if (status) status.innerText = 'Áudio de voz';
+            } else {
+                if (status) status.innerText = 'Áudio indisponível';
+                if (icon) icon.className = 'fa-solid fa-circle-exclamation text-xs';
+            }
+        })
+        .catch(() => {
+            const status = document.getElementById(`status-audio-${audioId}`);
+            const icon = document.getElementById(`icon-audio-${audioId}`);
+            if (status) status.innerText = 'Erro ao carregar';
+            if (icon) icon.className = 'fa-solid fa-circle-exclamation text-xs';
+        });
+    }
+
+    function toggleAudioPlay(audioId) {
+        const player = document.getElementById(`player-${audioId}`);
+        const icon = document.getElementById(`icon-audio-${audioId}`);
+        if (!player) return;
+        
+        document.querySelectorAll('audio').forEach(a => {
+            if (a.id !== `player-${audioId}`) {
+                a.pause();
+                const otherId = a.id.replace('player-', '');
+                const otherIcon = document.getElementById(`icon-audio-${otherId}`);
+                if (otherIcon) otherIcon.className = 'fa-solid fa-play text-xs';
+            }
+        });
+
+        if (player.paused) {
+            player.play();
+            if (icon) icon.className = 'fa-solid fa-pause text-xs';
+        } else {
+            player.pause();
+            if (icon) icon.className = 'fa-solid fa-play text-xs';
         }
     }
 
-    // Submit live chat message through Evolution Endpoint
-    function submitChatMessage(event) {
+    function updateAudioProgress(audioId) {
+        const player = document.getElementById(`player-${audioId}`);
+        const bar = document.getElementById(`bar-audio-${audioId}`);
+        const time = document.getElementById(`time-audio-${audioId}`);
+        if (!player || !player.duration) return;
+        
+        const pct = (player.currentTime / player.duration) * 100;
+        if (bar) bar.style.width = `${pct}%`;
+        
+        const mins = Math.floor(player.currentTime / 60);
+        const secs = Math.floor(player.currentTime % 60);
+        if (time) time.innerText = `${mins}:${String(secs).padStart(2, '0')}`;
+    }
+
+    function onAudioEnded(audioId) {
+        const icon = document.getElementById(`icon-audio-${audioId}`);
+        const bar = document.getElementById(`bar-audio-${audioId}`);
+        if (icon) icon.className = 'fa-solid fa-play text-xs';
+        if (bar) bar.style.width = '0%';
+    }
+
+    function seekAudio(event, audioId) {
+        const player = document.getElementById(`player-${audioId}`);
+        const container = event.currentTarget;
+        if (!player || !player.duration) return;
+        
+        const rect = container.getBoundingClientRect();
+        const clickX = event.clientX - rect.left;
+        const width = rect.width;
+        const seekTime = (clickX / width) * player.duration;
+        player.currentTime = seekTime;
+    }
+
+    function loadMediaAsync(imgId, msgKey, msgId) {
+        fetch('/api/whatsapp/media/base64', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ key: msgKey, id: msgId })
+        })
+        .then(res => res.json())
+        .then(data => {
+            const img = document.getElementById(imgId);
+            const loader = document.getElementById(`loader-${imgId}`);
+            if (data.success && data.base64) {
+                if (img) {
+                    img.src = data.base64;
+                    img.classList.remove('hidden');
+                }
+                if (loader) loader.classList.add('hidden');
+            } else {
+                if (loader) {
+                    loader.innerHTML = '<i class="fa-regular fa-image text-xl text-slate-400"></i><span class="text-[9px] text-slate-400">Imagem indisponível</span>';
+                }
+            }
+        })
+        .catch(() => {
+            const loader = document.getElementById(`loader-${imgId}`);
+            if (loader) {
+                loader.innerHTML = '<i class="fa-regular fa-image text-xl text-slate-400"></i><span class="text-[9px] text-slate-400">Imagem indisponível</span>';
+            }
+        });
+    }
+
+    function openMediaLightbox(src) {
+        if (!src) return;
+        const modal = document.createElement('div');
+        modal.className = 'fixed inset-0 z-50 bg-slate-950/90 flex items-center justify-center p-4 cursor-pointer backdrop-blur-md animate-fade-in';
+        modal.onclick = () => modal.remove();
+        modal.innerHTML = `
+            <div class="relative max-w-4xl max-h-[90vh] overflow-hidden rounded-3xl p-2">
+                <img src="${src}" class="max-w-full max-h-[85vh] object-contain rounded-2xl shadow-2xl">
+                <button class="absolute top-4 right-4 w-9 h-9 rounded-full bg-slate-900/80 text-white flex items-center justify-center hover:bg-slate-900 transition"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    }
+
+    function clearActiveChat() {
+        if (confirm(`Deseja limpar o histórico visual de ${activeName}?`)) {
+            activeChatHistory = [];
+            renderChatStream();
+        }
+    }
+
+    function handleStartNewChat(event) {
         event.preventDefault();
+        const phone = document.getElementById('newPhone').value.trim();
+        const initialMsg = document.getElementById('newInitialMsg').value.trim();
+
+        if (!phone) return;
+
+        closeModal('modalNovaConversa');
+        
+        let sanitized = phone.replace(/\D/g, '');
+        if (sanitized.length <= 11 && !sanitized.startsWith('55')) {
+            sanitized = '55' + sanitized;
+        }
+        const numberJid = sanitized.includes('@s.whatsapp.net') ? sanitized : `${sanitized}@s.whatsapp.net`;
+
+        activeNumber = numberJid;
+        activeName = phone;
+        
+        document.getElementById('chat-title').innerText = phone;
+        document.getElementById('chat-number').innerText = sanitized;
+
+        if (initialMsg) {
+            document.getElementById('messageInput').value = initialMsg;
+            submitChatMessage(event);
+        } else {
+            loadChatHistory(numberJid);
+        }
+        
+        loadChatsList();
+    }
+
+    function submitChatMessage(event) {
+        if (event) event.preventDefault();
         const input = document.getElementById('messageInput');
         const text = input.value.trim();
         
         if (!text && !selectedFile) return;
+        if (!activeNumber) {
+            alert('Selecione uma conversa ou inicie um novo chat.');
+            return;
+        }
 
         const now = new Date();
         const timeStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
@@ -808,16 +1178,15 @@
         .then(data => {
             if (data.success) {
                 activeChatHistory[newMsgIndex].status = 'sent';
-                if (typeof showToast === 'function') showToast('Mensagem enviada com sucesso!', 'success');
             } else {
                 activeChatHistory[newMsgIndex].status = 'error';
-                if (typeof showToast === 'function') showToast(data.error || 'Falha ao enviar.', 'error');
+                alert(data.error || 'Falha ao enviar mensagem.');
             }
             renderChatStream();
         })
-        .catch(err => {
+        .catch(() => {
             activeChatHistory[newMsgIndex].status = 'error';
-            if (typeof showToast === 'function') showToast('Sem conexão com o servidor.', 'error');
+            alert('Sem conexão com o servidor.');
             renderChatStream();
         });
     }
@@ -825,7 +1194,7 @@
     function filterContacts() {
         const query = document.getElementById('chatSearch').value.toLowerCase();
         document.querySelectorAll('#contactsList > div').forEach(item => {
-            if (item.classList.contains('p-3.5')) {
+            if (item.classList.contains('p-3')) {
                 const name = item.querySelector('h4').innerText.toLowerCase();
                 const desc = item.querySelector('p').innerText.toLowerCase();
                 item.style.display = (name.includes(query) || desc.includes(query)) ? '' : 'none';
@@ -833,10 +1202,13 @@
         });
     }
 
-    // Startup Execution Loader
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', loadChatsList);
+        document.addEventListener('DOMContentLoaded', () => {
+            checkConnectionStatus();
+            loadChatsList();
+        });
     } else {
+        checkConnectionStatus();
         loadChatsList();
     }
 </script>

@@ -96,6 +96,13 @@ def login():
     return render_template("login.html")
 
 
+@auth_bp.route("/seguranca-privacidade")
+def seguranca_privacidade():
+    return render_template("seguranca_privacidade.html")
+
+
+
+
 
 
 @auth_bp.route("/logout")

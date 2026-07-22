@@ -272,7 +272,11 @@ def whatsapp_api_chats():
     try:
         res = requests.post(url, json={}, headers=headers, timeout=10)
         if res.status_code == 200:
-            return jsonify({"success": True, "chats": res.json()})
+            data = res.json()
+            chats_list = data
+            if isinstance(data, dict):
+                chats_list = data.get("chats") or data.get("records") or data.get("data") or []
+            return jsonify({"success": True, "chats": chats_list})
         else:
             return jsonify({"success": False, "error": f"Erro Evolution API: status {res.status_code}", "details": res.text}), 400
     except Exception as e:
@@ -320,17 +324,81 @@ def whatsapp_api_messages():
                 "remoteJid": remote_jid
             }
         },
-        "limit": 50
+        "limit": 100
     }
     
     try:
         res = requests.post(url, json=payload, headers=headers, timeout=10)
         if res.status_code == 200:
-            return jsonify({"success": True, "messages": res.json()})
+            data = res.json()
+            messages_list = data
+            if isinstance(data, dict):
+                if "messages" in data:
+                    inner = data["messages"]
+                    if isinstance(inner, dict):
+                        messages_list = inner.get("records") or inner.get("data") or []
+                    elif isinstance(inner, list):
+                        messages_list = inner
+                elif "records" in data:
+                    messages_list = data["records"]
+                elif "data" in data:
+                    messages_list = data["data"]
+            return jsonify({"success": True, "messages": messages_list})
         else:
             return jsonify({"success": False, "error": f"Erro Evolution API: status {res.status_code}", "details": res.text}), 400
     except Exception as e:
         return jsonify({"success": False, "error": f"Erro de conexão: {str(e)}"}), 500
+
+
+@whatsapp_bp.route("/api/whatsapp/media/base64", methods=["POST"])
+@login_required
+def whatsapp_api_media_base64():
+    if not (current_user.is_admin or current_user.has_permission("whatsapp_conversas")):
+        return jsonify({"success": False, "error": "Acesso negado"}), 403
+        
+    data = request.get_json(force=True, silent=True) or {}
+    message_key = data.get("key") or {}
+    message_id = data.get("id") or message_key.get("id")
+    
+    if not message_key and not message_id:
+        return jsonify({"success": False, "error": "Chave ou ID da mensagem é obrigatório"}), 400
+        
+    config = WhatsAppConfig.query.first()
+    if not config or not config.apikey or not config.api_url:
+        return jsonify({"success": False, "error": "WhatsApp não configurado"}), 400
+        
+    import requests
+    headers = {
+        "apikey": config.apikey,
+        "Content-Type": "application/json"
+    }
+    url = f"{config.api_url.rstrip('/')}/chat/getBase64FromMediaMessage/{config.instance_name}"
+    
+    payload = {
+        "message": {
+            "key": message_key if message_key else {"id": message_id}
+        },
+        "convertToMp4": False
+    }
+    
+    try:
+        res = requests.post(url, json=payload, headers=headers, timeout=15)
+        if res.status_code in (200, 201):
+            res_data = res.json()
+            base64_data = res_data.get("base64")
+            mimetype = res_data.get("mimetype") or "image/jpeg"
+            
+            if base64_data:
+                if not base64_data.startswith("data:"):
+                    base64_data = f"data:{mimetype};base64,{base64_data}"
+                return jsonify({"success": True, "base64": base64_data, "mimetype": mimetype})
+            else:
+                return jsonify({"success": False, "error": "Mídia não retornada pela API"}), 400
+        else:
+            return jsonify({"success": False, "error": f"Erro Evolution API: status {res.status_code}"}), 400
+    except Exception as e:
+        return jsonify({"success": False, "error": f"Erro ao obter mídia: {str(e)}"}), 500
+
 
 
 # ===========================

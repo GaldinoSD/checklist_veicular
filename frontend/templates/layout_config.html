@@ -618,7 +618,7 @@
                 <h3 class="text-sm font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2">
                   <i class="fa-solid fa-square-minus text-emerald-500"></i> Botão "Entrar" (Estilo e Tamanhos)
                 </h3>
-                
+
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <!-- Text do Botão -->
                   <div class="space-y-1.5">
@@ -693,6 +693,54 @@
                   </button>
                 </div>
               </div>
+
+              <!-- 3. Personalização do Banner Hero (Painel Lateral de Login) -->
+              <div class="border-t border-slate-200 dark:border-white/5 pt-5 space-y-4">
+                <h3 class="text-sm font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                  <i class="fa-solid fa-rectangle-ad text-emerald-500"></i> Banner Hero da Tela de Login (Apresentação Lateral)
+                </h3>
+                <p class="text-xs text-slate-400">Personalize o título principal, subtítulo e lista de destaques exibidos no painel lateral em telas Desktop.</p>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <!-- Hero Title -->
+                  <div class="space-y-1.5 md:col-span-2">
+                    <label class="text-xs font-semibold text-slate-600 dark:text-slate-400">Título Principal do Banner Hero</label>
+                    <input type="text" name="login_hero_title" id="login_hero_title"
+                           value="{{ config.login_hero_title or 'Gestão Inteligente & Controle Total para sua Frota' }}"
+                           maxlength="255"
+                           placeholder="Gestão Inteligente & Controle Total para sua Frota"
+                           class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-white/10 rounded-xl px-3.5 py-2 text-xs text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all">
+                  </div>
+
+                  <!-- Hero Subtitle -->
+                  <div class="space-y-1.5 md:col-span-2">
+                    <label class="text-xs font-semibold text-slate-600 dark:text-slate-400">Subtítulo do Banner Hero</label>
+                    <textarea name="login_hero_subtitle" id="login_hero_subtitle" rows="2"
+                              placeholder="Mais agilidade, economia e automação para a operação da sua empresa."
+                              class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-white/10 rounded-xl px-3.5 py-2 text-xs text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all">{{ config.login_hero_subtitle or 'Mais agilidade, economia e automação para a operação da sua empresa.' }}</textarea>
+                  </div>
+
+                  <!-- Hero Bullets -->
+                  <div class="space-y-1.5 md:col-span-2">
+                    <label class="text-xs font-semibold text-slate-600 dark:text-slate-400">Tópicos em Destaque (Separe cada tópico com |)</label>
+                    <textarea name="login_hero_bullets" id="login_hero_bullets" rows="3"
+                              placeholder="Vistorias e Checklists em Tempo Real|Gestão Completa de O.S. e Avarias|Monitoramento e Controle de Veículos"
+                              class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-white/10 rounded-xl px-3.5 py-2 text-xs text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all">{{ config.login_hero_bullets or 'Vistorias e Checklists em Tempo Real|Gestão Completa de O.S. e Avarias|Monitoramento e Controle de Veículos' }}</textarea>
+                    <p class="text-[10px] text-slate-400">Insira cada funcionalidade destacada separada pelo caractere barra vertical (<b>|</b>).</p>
+                  </div>
+
+                  <!-- Footer Text -->
+                  <div class="space-y-1.5 md:col-span-2">
+                    <label class="text-xs font-semibold text-slate-600 dark:text-slate-400">Texto de Copyright no Rodapé</label>
+                    <input type="text" name="login_footer_text" id="login_footer_text"
+                           value="{{ config.login_footer_text or '© 2026 Painel de Frota. Todos os direitos reservados.' }}"
+                           maxlength="255"
+                           placeholder="© 2026 Painel de Frota. Todos os direitos reservados."
+                           class="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-white/10 rounded-xl px-3.5 py-2 text-xs text-slate-800 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 transition-all">
+                  </div>
+                </div>
+              </div>
+
 
               <!-- Card Position -->
               <div class="border-t border-slate-200 dark:border-white/5 pt-5 space-y-3">
@@ -1007,49 +1055,69 @@ WWW.ADAPTLINK.COM.BR{% endif %}</textarea>
                 </div>
               </div>
 
-              <!-- Simulator Screen Content -->
-              <div id="simScreen" class="flex-1 overflow-hidden relative flex items-center">
+              <!-- Simulator Screen Content (Clean White Split Screen Mockup) -->
+              <div id="simScreen" class="flex-1 overflow-hidden relative flex items-center justify-center p-2 bg-slate-100">
                 
-                <!-- Background Image -->
-                <div id="simBgImage" class="absolute inset-0 bg-cover bg-center transition-all duration-200" 
-                     style="background-image: url('{% if config and config.login_bg_desktop %}{{ url_for('static', filename='uploads/layout/' ~ config.login_bg_desktop) }}{% else %}{{ url_for('static', filename='img.png') }}{% endif %}');">
-                </div>
-                
-                <!-- Overlay Color -->
-                <div id="simOverlay" class="absolute inset-0 transition-all duration-200"></div>
-
-                <!-- Real-time Login Card inside screen -->
-                <div id="simLoginCardContainer" class="absolute inset-0 flex items-center p-6 w-full h-full transition-all duration-300">
-                  <div id="simLoginCard" class="w-36 bg-black/60 border border-white/10 p-3 flex flex-col justify-between shrink-0 shadow-2xl transition-all duration-300" style="aspect-ratio: 5/6.5;">
-                    
-                    <!-- Logo -->
-                    <div class="flex justify-center mb-1">
-                      <img id="simLogo" src="{% if config and config.login_logo %}{{ url_for('static', filename='uploads/layout/' ~ config.login_logo) }}{% else %}{{ url_for('static', filename='logo.png') }}{% endif %}" class="object-contain" style="max-height: 40px; max-width: 100%;">
+                <!-- Mockup Container Dual-Pane -->
+                <div id="simSplitCard" class="w-full h-full max-w-full bg-white border border-slate-200 rounded-xl overflow-hidden shadow-lg flex flex-row">
+                  
+                  <!-- Esquerda: Formulário Clean -->
+                  <div id="simLeftForm" class="w-full lg:w-1/2 p-2.5 flex flex-col justify-between bg-white shrink-0">
+                    <div>
+                      <div class="flex justify-start mb-1">
+                        <img id="simLogo" src="{% if config and config.login_logo %}{{ url_for('static', filename='uploads/layout/' ~ config.login_logo) }}{% else %}{{ url_for('static', filename='logo.png') }}{% endif %}" class="object-contain" style="max-height: 24px; max-width: 100%;">
+                      </div>
+                      <p id="simTitleText" class="text-[7.5px] font-bold text-slate-800 tracking-tight truncate">{{ config.login_title_text or 'Acesse sua conta' }}</p>
+                      <p id="simSubtitleText" class="text-[5.5px] text-slate-400 font-medium leading-tight truncate">{{ config.login_subtitle_text or 'Entre com seu usuário e senha para continuar' }}</p>
                     </div>
 
-                    <!-- Title -->
-                    <div class="text-center my-1 select-none">
-                      <p id="simTitleText" class="text-[7px] font-bold text-white tracking-wide truncate"></p>
-                      <p id="simSubtitleText" class="text-[5px] text-slate-300 tracking-tight mt-0.5 truncate"></p>
-                    </div>
-
-                    <!-- Dummy Form Fields -->
+                    <!-- Campos de Entrada -->
                     <div class="space-y-1 my-1">
-                      <div class="h-4 rounded bg-white/10 border border-white/5 flex items-center px-1.5 select-none overflow-hidden">
-                        <span id="simUserPlaceholder" class="text-[5.5px] text-slate-400 truncate">Usuário</span>
+                      <div class="h-3.5 rounded-lg bg-slate-100 border border-slate-200 flex items-center px-1.5 overflow-hidden">
+                        <span id="simUserPlaceholder" class="text-[5px] text-slate-400 truncate">{{ config.login_username_placeholder or 'Digite seu usuário' }}</span>
                       </div>
-                      <div class="h-4 rounded bg-white/10 border border-white/5 flex items-center px-1.5 select-none overflow-hidden">
-                        <span id="simPassPlaceholder" class="text-[5.5px] text-slate-400 truncate">Senha</span>
+                      <div class="h-3.5 rounded-lg bg-slate-100 border border-slate-200 flex items-center px-1.5 overflow-hidden">
+                        <span id="simPassPlaceholder" class="text-[5px] text-slate-400 truncate">{{ config.login_password_placeholder or 'Digite sua senha' }}</span>
                       </div>
                     </div>
 
-                    <!-- Submit Button -->
-                    <button id="simBtnSubmit" type="button" class="w-full text-[7px] font-bold text-white transition-all shadow-md mt-1" onclick="return false;">
-                      Entrar
+                    <!-- Botão Submit -->
+                    <button id="simBtnSubmit" type="button" class="w-full text-[6.5px] font-bold text-white uppercase tracking-wider transition-all shadow-sm py-1 rounded-lg" onclick="return false;" style="background: linear-gradient(135deg, {{ config.login_primary_color or '#10b981' }}, {{ config.login_secondary_color or '#064e3b' }});">
+                      {{ config.login_btn_text or 'Entrar' }}
                     </button>
+                    
+                    <p id="simFooterText" class="text-[4.5px] text-slate-400 font-medium mt-1 truncate">{{ config.login_footer_text or '© 2026 Painel de Frota.' }}</p>
                   </div>
+
+                  <!-- Direita: Banner Hero (Desktop Mode) -->
+                  <div id="simHeroCard" class="hidden lg:flex w-1/2 p-1 shrink-0">
+                    <div class="w-full h-full relative rounded-lg overflow-hidden p-2.5 flex flex-col justify-between text-white" style="background-image: linear-gradient(135deg, rgba(15, 23, 42, 0.85), {{ config.login_secondary_color or '#064e3b' }}), url('{% if config and config.login_bg_desktop %}{{ url_for('static', filename='uploads/layout/' ~ config.login_bg_desktop) }}{% else %}{{ url_for('static', filename='img.png') }}{% endif %}'); background-size: cover;">
+                      <!-- Background & Overlay references for live JS manipulation -->
+                      <div id="simBgImage" class="absolute inset-0 bg-cover bg-center transition-all opacity-0 pointer-events-none"></div>
+                      <div id="simOverlay" class="absolute inset-0 transition-all opacity-0 pointer-events-none"></div>
+                      
+                      <div class="relative z-10">
+                        <p id="simHeroTitleText" class="text-[6.5px] font-bold text-white leading-tight drop-shadow-sm line-clamp-2">{{ config.login_hero_title or 'Gestão Inteligente de Frotas e Equipes' }}</p>
+                        <p id="simHeroSubtitleText" class="text-[5px] text-slate-200 font-medium leading-tight mt-0.5 line-clamp-2">{{ config.login_hero_subtitle or 'Controle total da sua operação, com mais eficiência...' }}</p>
+                      </div>
+
+                      <div id="simHeroBulletsContainer" class="relative z-10 space-y-0.5 my-1">
+                        <div class="flex items-center gap-1">
+                          <span class="w-2 h-2 rounded-full custom-login-accent-bg flex items-center justify-center shrink-0 text-white text-[4px]"><i class="fa-solid fa-check"></i></span>
+                          <span class="text-[4.5px] font-semibold text-slate-100 truncate">Vistorias e Checklists</span>
+                        </div>
+                      </div>
+
+                      <div class="relative z-10 flex justify-end">
+                        <img id="simSecondaryLogo" src="{% if config and config.login_logo %}{{ url_for('static', filename='uploads/layout/' ~ config.login_logo) }}{% else %}{{ url_for('static', filename='logo.png') }}{% endif %}" class="h-3 object-contain opacity-80">
+                      </div>
+                    </div>
+                  </div>
+
                 </div>
+
               </div>
+
             </div>
             
             <div class="bg-gradient-to-br from-blue-500/5 to-indigo-500/5 dark:from-blue-500/10 dark:to-indigo-500/10 border border-blue-500/15 rounded-2xl p-4">
@@ -1187,35 +1255,39 @@ WWW.ADAPTLINK.COM.BR{% endif %}</textarea>
 
   // EFFECTS PREVIEW (Live)
   function updateEffectsPreview() {
-    const zoom = document.getElementById('login_bg_zoom').value;
-    const blur = document.getElementById('login_bg_blur').value;
-    const opacity = document.getElementById('login_bg_opacity').value;
-    const overlayColor = document.getElementById('login_overlay_color_text').value;
-    const cardOpacity = document.getElementById('login_card_opacity').value;
-    const cardBlur = document.getElementById('login_card_blur').value;
-    const cardRadius = document.getElementById('login_card_radius').value;
-    const primaryColor = document.getElementById('login_primary_color_text').value;
-    const secondaryColor = document.getElementById('login_secondary_color_text').value;
-    const titleText = document.getElementById('login_title_text').value;
-    const subtitleText = document.getElementById('login_subtitle_text').value;
-    const usernamePlaceholder = document.getElementById('login_username_placeholder').value;
-    const passwordPlaceholder = document.getElementById('login_password_placeholder').value;
-    const btnText = document.getElementById('login_btn_text').value;
-    const btnRadius = document.getElementById('login_btn_radius').value;
-    const btnPaddingY = document.getElementById('login_btn_padding_y').value;
-    const btnFontSize = document.getElementById('login_btn_font_size').value;
-    const logoHeight = document.getElementById('login_logo_height').value;
+    const zoom = document.getElementById('login_bg_zoom')?.value || 100;
+    const blur = document.getElementById('login_bg_blur')?.value || 0;
+    const opacity = document.getElementById('login_bg_opacity')?.value || 15;
+    const overlayColor = document.getElementById('login_overlay_color_text')?.value || '#000000';
+    const cardOpacity = document.getElementById('login_card_opacity')?.value || 60;
+    const cardBlur = document.getElementById('login_card_blur')?.value || 12;
+    const cardRadius = document.getElementById('login_card_radius')?.value || 16;
+    const primaryColor = document.getElementById('login_primary_color_text')?.value || '#10b981';
+    const secondaryColor = document.getElementById('login_secondary_color_text')?.value || '#064e3b';
+    const titleText = document.getElementById('login_title_text')?.value || 'Acesse sua conta';
+    const subtitleText = document.getElementById('login_subtitle_text')?.value || 'Entre com seu usuário e senha';
+    const usernamePlaceholder = document.getElementById('login_username_placeholder')?.value || 'Digite seu usuário';
+    const passwordPlaceholder = document.getElementById('login_password_placeholder')?.value || 'Digite sua senha';
+    const btnText = document.getElementById('login_btn_text')?.value || 'Entrar';
+    const btnRadius = document.getElementById('login_btn_radius')?.value || 12;
+    const btnPaddingY = document.getElementById('login_btn_padding_y')?.value || 12;
+    const btnFontSize = document.getElementById('login_btn_font_size')?.value || 16;
+    const logoHeight = document.getElementById('login_logo_height')?.value || 120;
+    const heroTitleText = document.getElementById('login_hero_title')?.value || 'Gestão Inteligente de Frotas e Equipes';
+    const heroSubtitleText = document.getElementById('login_hero_subtitle')?.value || 'Controle total da sua operação...';
+    const heroBulletsRaw = document.getElementById('login_hero_bullets')?.value || '';
+    const footerText = document.getElementById('login_footer_text')?.value || '© 2026 Painel de Frota.';
 
     // Update labels
-    document.getElementById('login_bg_zoom_val').textContent = zoom + '%';
-    document.getElementById('login_bg_blur_val').textContent = blur + 'px';
-    document.getElementById('login_bg_opacity_val').textContent = opacity + '%';
-    document.getElementById('login_card_opacity_val').textContent = cardOpacity + '%';
-    document.getElementById('login_card_blur_val').textContent = cardBlur + 'px';
-    document.getElementById('login_card_radius_val').textContent = cardRadius + 'px';
-    document.getElementById('login_btn_radius_val').textContent = btnRadius + 'px';
-    document.getElementById('login_btn_padding_y_val').textContent = btnPaddingY + 'px';
-    document.getElementById('login_btn_font_size_val').textContent = btnFontSize + 'px';
+    if (document.getElementById('login_bg_zoom_val')) document.getElementById('login_bg_zoom_val').textContent = zoom + '%';
+    if (document.getElementById('login_bg_blur_val')) document.getElementById('login_bg_blur_val').textContent = blur + 'px';
+    if (document.getElementById('login_bg_opacity_val')) document.getElementById('login_bg_opacity_val').textContent = opacity + '%';
+    if (document.getElementById('login_card_opacity_val')) document.getElementById('login_card_opacity_val').textContent = cardOpacity + '%';
+    if (document.getElementById('login_card_blur_val')) document.getElementById('login_card_blur_val').textContent = cardBlur + 'px';
+    if (document.getElementById('login_card_radius_val')) document.getElementById('login_card_radius_val').textContent = cardRadius + 'px';
+    if (document.getElementById('login_btn_radius_val')) document.getElementById('login_btn_radius_val').textContent = btnRadius + 'px';
+    if (document.getElementById('login_btn_padding_y_val')) document.getElementById('login_btn_padding_y_val').textContent = btnPaddingY + 'px';
+    if (document.getElementById('login_btn_font_size_val')) document.getElementById('login_btn_font_size_val').textContent = btnFontSize + 'px';
 
     // Update Button & Gradients in Settings Form
     const btnPreview = document.getElementById('btnPreview');
@@ -1233,96 +1305,48 @@ WWW.ADAPTLINK.COM.BR{% endif %}</textarea>
     }
 
     // Update Device Simulator
-    const simBg = document.getElementById('simBgImage');
-    const simOverlay = document.getElementById('simOverlay');
-    const simCard = document.getElementById('simLoginCard');
     const simTitle = document.getElementById('simTitleText');
     const simSubtitle = document.getElementById('simSubtitleText');
     const simUserP = document.getElementById('simUserPlaceholder');
     const simPassP = document.getElementById('simPassPlaceholder');
     const simBtn = document.getElementById('simBtnSubmit');
     const simLogo = document.getElementById('simLogo');
-    const simCardContainer = document.getElementById('simLoginCardContainer');
+    const simHeroTitle = document.getElementById('simHeroTitleText');
+    const simHeroSubtitle = document.getElementById('simHeroSubtitleText');
+    const simFooter = document.getElementById('simFooterText');
+    const simBulletsContainer = document.getElementById('simHeroBulletsContainer');
+    const simHeroCard = document.getElementById('simHeroCard');
 
-    if (simBg) {
-      simBg.style.filter = `blur(${Math.round(blur / 2.0)}px)`;
-      simBg.style.transform = `scale(${zoom / 100})`;
-    }
-    if (simOverlay) {
-      simOverlay.style.backgroundColor = overlayColor;
-      simOverlay.style.opacity = opacity / 100;
-    }
-    if (simCard) {
-      simCard.style.borderRadius = Math.round(cardRadius / 1.5) + 'px';
-      simCard.style.backdropFilter = `blur(${Math.round(cardBlur / 2.0)}px)`;
-      simCard.style.background = `rgba(0, 0, 0, ${cardOpacity / 100})`;
-    }
-    if (simTitle) {
-      simTitle.textContent = titleText;
-    }
-    if (simSubtitle) {
-      simSubtitle.textContent = subtitleText;
-      if (subtitleText.trim() === '') {
-        simSubtitle.classList.add('hidden');
-      } else {
-        simSubtitle.classList.remove('hidden');
-      }
-    }
-    if (simUserP) {
-      simUserP.textContent = usernamePlaceholder;
-    }
-    if (simPassP) {
-      simPassP.textContent = passwordPlaceholder;
-    }
+    if (simTitle) simTitle.textContent = titleText;
+    if (simSubtitle) simSubtitle.textContent = subtitleText;
+    if (simUserP) simUserP.textContent = usernamePlaceholder;
+    if (simPassP) simPassP.textContent = passwordPlaceholder;
+    if (simFooter) simFooter.textContent = footerText;
+
     if (simBtn) {
       simBtn.style.background = `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`;
-      simBtn.style.borderRadius = Math.round(btnRadius / 1.5) + 'px';
-      simBtn.style.paddingTop = Math.round(btnPaddingY / 1.5) + 'px';
-      simBtn.style.paddingBottom = Math.round(btnPaddingY / 1.5) + 'px';
-      simBtn.style.fontSize = Math.round(btnFontSize / 1.5) + 'px';
       simBtn.textContent = btnText;
     }
     if (simLogo) {
-      simLogo.style.maxHeight = Math.round(logoHeight / 3.0) + 'px';
+      simLogo.style.maxHeight = Math.round(logoHeight / 4.0) + 'px';
     }
 
-    // Position Alignment (Desktop Simulator Mode only)
-    if (currentSimMode === 'desktop') {
-      let cardPos = 'right';
-      const radios = document.getElementsByName('login_card_position');
-      for (const r of radios) {
-        if (r.checked) {
-          cardPos = r.value;
-          break;
-        }
-      }
+    if (simHeroTitle) simHeroTitle.textContent = heroTitleText;
+    if (simHeroSubtitle) simHeroSubtitle.textContent = heroSubtitleText;
 
-      if (cardPos === 'left') {
-        simCardContainer.style.justifyContent = 'flex-start';
-        simCardContainer.style.paddingLeft = '1.5rem';
-        simCardContainer.style.paddingRight = '0';
-      } else if (cardPos === 'left-center') {
-        simCardContainer.style.justifyContent = 'flex-start';
-        simCardContainer.style.paddingLeft = '4.5rem';
-        simCardContainer.style.paddingRight = '0';
-      } else if (cardPos === 'center') {
-        simCardContainer.style.justifyContent = 'center';
-        simCardContainer.style.paddingLeft = '0';
-        simCardContainer.style.paddingRight = '0';
-      } else if (cardPos === 'right-center') {
-        simCardContainer.style.justifyContent = 'flex-end';
-        simCardContainer.style.paddingRight = '4.5rem';
-        simCardContainer.style.paddingLeft = '0';
-      } else { // right
-        simCardContainer.style.justifyContent = 'flex-end';
-        simCardContainer.style.paddingRight = '1.5rem';
-        simCardContainer.style.paddingLeft = '0';
-      }
-    } else {
-      // Mobile simulator always centers the card
-      simCardContainer.style.justifyContent = 'center';
-      simCardContainer.style.paddingLeft = '0';
-      simCardContainer.style.paddingRight = '0';
+    if (simHeroCard) {
+      const bgImgSrc = document.getElementById('preview_bg_desktop')?.src || '';
+      simHeroCard.firstElementChild.style.backgroundImage = `linear-gradient(135deg, rgba(15, 23, 42, 0.85), ${secondaryColor}), url('${bgImgSrc}')`;
+    }
+
+    if (simBulletsContainer && heroBulletsRaw) {
+      const bullets = heroBulletsRaw.includes('|') ? heroBulletsRaw.split('|') : heroBulletsRaw.split('\n');
+      simBulletsContainer.innerHTML = bullets.filter(b => b.trim()).slice(0, 3).map(b => `
+        <div class="flex items-center gap-1">
+          <span class="w-2 h-2 rounded-full flex items-center justify-center shrink-0 text-white text-[4px]" style="background-color: ${primaryColor}"><i class="fa-solid fa-check"></i></span>
+          <span class="text-[4.5px] font-semibold text-slate-100 truncate">${b.trim()}</span>
+        </div>
+      `).join('');
     }
   }
 
@@ -1341,14 +1365,11 @@ WWW.ADAPTLINK.COM.BR{% endif %}</textarea>
       const reader = new FileReader();
       reader.onload = function(e) {
         preview.src = e.target.result;
-        // Update device simulator backgrounds in real-time
-        if (previewId === 'preview_bg_desktop' && currentSimMode === 'desktop') {
-          document.getElementById('simBgImage').style.backgroundImage = `url('${e.target.result}')`;
-        } else if (previewId === 'preview_bg_mobile' && currentSimMode === 'mobile') {
-          document.getElementById('simBgImage').style.backgroundImage = `url('${e.target.result}')`;
-        } else if (previewId === 'preview_login_logo') {
-          document.getElementById('simLogo').src = e.target.result;
+        if (previewId === 'preview_login_logo') {
+          const simLogo = document.getElementById('simLogo');
+          if (simLogo) simLogo.src = e.target.result;
         }
+        updateEffectsPreview();
       };
       reader.readAsDataURL(file);
     }
@@ -1376,9 +1397,6 @@ WWW.ADAPTLINK.COM.BR{% endif %}</textarea>
     if (confirm('Tem certeza de que deseja restaurar esta configuração para o padrão do sistema?')) {
       const form = document.getElementById('resetForm');
       form.action = `/configuracoes/layout/reset/${field}`;
-      // form.submit() does NOT fire the DOM "submit" event,
-      // so the global CSRF injector from layout.html never runs.
-      // We must inject the token manually here.
       if (!form.querySelector('input[name="csrf_token"]')) {
         const tokenMeta = document.querySelector('meta[name="csrf-token"]');
         if (tokenMeta) {
@@ -1434,6 +1452,7 @@ WWW.ADAPTLINK.COM.BR{% endif %}</textarea>
     const headerDesktop = document.getElementById('simWindowHeader');
     const headerMobile = document.getElementById('simMobileHeader');
     const frame = document.getElementById('simDeviceFrame');
+    const simHeroCard = document.getElementById('simHeroCard');
     
     if (mode === 'desktop') {
       btnD.className = "px-3.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all bg-white dark:bg-slate-900 text-slate-800 dark:text-white shadow-sm border border-slate-200/20 dark:border-white/5";
@@ -1441,28 +1460,22 @@ WWW.ADAPTLINK.COM.BR{% endif %}</textarea>
       
       headerDesktop.classList.remove('hidden');
       headerMobile.classList.add('hidden');
+      if (simHeroCard) simHeroCard.classList.remove('hidden');
       
       frame.style.aspectRatio = "16/10";
       frame.style.maxWidth = "100%";
       frame.style.margin = "0";
-      
-      // Update background with Desktop Image
-      const bgImgSrc = document.getElementById('preview_bg_desktop').src;
-      document.getElementById('simBgImage').style.backgroundImage = `url('${bgImgSrc}')`;
     } else {
       btnM.className = "px-3.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all bg-white dark:bg-slate-900 text-slate-800 dark:text-white shadow-sm border border-slate-200/20 dark:border-white/5";
       btnD.className = "px-3.5 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all text-slate-500 dark:text-slate-400";
       
       headerDesktop.classList.add('hidden');
       headerMobile.classList.remove('hidden');
+      if (simHeroCard) simHeroCard.classList.add('hidden');
       
       frame.style.aspectRatio = "9/16";
-      frame.style.maxWidth = "280px";
+      frame.style.maxWidth = "260px";
       frame.style.margin = "0 auto";
-      
-      // Update background with Mobile Image
-      const bgImgSrc = document.getElementById('preview_bg_mobile').src;
-      document.getElementById('simBgImage').style.backgroundImage = `url('${bgImgSrc}')`;
     }
     
     updateEffectsPreview();
@@ -1475,7 +1488,8 @@ WWW.ADAPTLINK.COM.BR{% endif %}</textarea>
       'login_card_opacity', 'login_card_blur', 'login_card_radius',
       'login_primary_color_text', 'login_secondary_color_text',
       'login_title_text', 'login_subtitle_text', 'login_username_placeholder', 'login_password_placeholder',
-      'login_btn_text', 'login_btn_radius', 'login_btn_padding_y', 'login_btn_font_size', 'login_logo_height'
+      'login_btn_text', 'login_btn_radius', 'login_btn_padding_y', 'login_btn_font_size', 'login_logo_height',
+      'login_hero_title', 'login_hero_subtitle', 'login_hero_bullets', 'login_footer_text'
     ];
     
     inputsToWatch.forEach(id => {
@@ -1495,3 +1509,4 @@ WWW.ADAPTLINK.COM.BR{% endif %}</textarea>
   });
 </script>
 {% endblock %}
+

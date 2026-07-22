@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="pt-BR" class="h-full">
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Segurança & Privacidade • Painel de Frota</title>
+
+  <link rel="shortcut icon"
+    href="{% if sys_config and sys_config.favicon_custom %}{{ url_for('static', filename='uploads/layout/' ~ sys_config.favicon_custom, v='2') }}{% else %}{{ url_for('static', filename='favicon.ico', v='1') }}{% endif %}"
+    type="image/x-icon">
+  <link rel="icon"
+    href="{% if sys_config and sys_config.favicon_custom %}{{ url_for('static', filename='uploads/layout/' ~ sys_config.favicon_custom, v='2') }}{% else %}{{ url_for('static', filename='favicon.ico', v='1') }}{% endif %}"
+    type="image/x-icon">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+  <style>
+    :root {
+      --login-primary: {% if sys_config and sys_config.login_primary_color %}{{ sys_config.login_primary_color }}{% else %}#10b981{% endif %};
+      --login-secondary: {% if sys_config and sys_config.login_secondary_color %}{{ sys_config.login_secondary_color }}{% else %}#064e3b{% endif %};
+    }
+
+    .clean-bg {
+      background-color: #f8fafc;
+    }
+
+    .custom-accent-text {
+      color: var(--login-primary) !important;
+    }
+
+    .custom-accent-bg {
+      background-color: var(--login-primary) !important;
+    }
+
+    .custom-gradient-bg {
+      background: linear-gradient(135deg, var(--login-primary), var(--login-secondary)) !important;
+    }
+
+    .logo-adjust {
+      max-height: 50px;
+      max-width: 220px;
+      object-fit: contain;
+    }
+  </style>
+</head>
+
+<body class="min-h-screen clean-bg text-slate-800 flex flex-col justify-between selection:bg-emerald-500 selection:text-white">
+
+  <!-- CABEÇALHO SUPERIOR -->
+  <header class="bg-white border-b border-slate-200/80 sticky top-0 z-40 shadow-sm">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <a href="{{ url_for('login') }}" class="hover:opacity-90 transition-opacity">
+          <img src="{% if sys_config and sys_config.login_logo %}{{ url_for('static', filename='uploads/layout/' ~ sys_config.login_logo, v='2') }}{% else %}{{ url_for('static', filename='logo.png', v='2') }}{% endif %}"
+            alt="Logo do Sistema" class="logo-adjust">
+        </a>
+      </div>
+
+      <div class="flex items-center gap-3">
+        {% if current_user.is_authenticated %}
+        <a href="{{ url_for('dashboard') }}" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-white custom-gradient-bg shadow-md hover:opacity-95 transition-all">
+          <i class="fa-solid fa-gauge-high"></i> Voltar ao Painel
+        </a>
+        {% else %}
+        <a href="{{ url_for('login') }}" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 border border-slate-200 transition-all">
+          <i class="fa-solid fa-arrow-left"></i> Voltar para o Login
+        </a>
+        {% endif %}
+      </div>
+    </div>
+  </header>
+
+  <!-- CONTEÚDO PRINCIPAL -->
+  <main class="flex-1 max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full space-y-10">
+
+    <!-- BANNER HERO SUPERIOR -->
+    <div class="relative rounded-[2.5rem] overflow-hidden p-8 sm:p-12 text-white shadow-xl custom-gradient-bg">
+      <div class="relative z-10 max-w-3xl space-y-4">
+        <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/15 backdrop-blur-md text-white text-xs font-bold uppercase tracking-wider">
+          <i class="fa-solid fa-shield-halved"></i> Central de Segurança & Privacidade
+        </div>
+        <h1 class="text-3xl sm:text-4xl lg:text-5xl font-black tracking-tight leading-tight">
+          Segurança, Privacidade & Conformidade Digital
+        </h1>
+        <p class="text-sm sm:text-base text-slate-100 font-medium leading-relaxed">
+          Conheça os pilares de proteção, criptografia, auditoria operacional e salvaguardas de dados implementadas em nossa plataforma de gestão de frotas e vistorias.
+        </p>
+      </div>
+
+      <!-- MARCA D'ÁGUA DECORATIVA -->
+      <div class="absolute -right-10 -bottom-10 opacity-10 text-[180px] pointer-events-none select-none">
+        <i class="fa-solid fa-lock"></i>
+      </div>
+    </div>
+
+    <!-- RECURSOS E PILARES DE SEGURANÇA (GRID DE CARDS) -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+      <!-- CARD 1: AUTENTICAÇÃO E CONTROLE -->
+      <div class="bg-white rounded-3xl p-7 border border-slate-200/80 shadow-sm hover:shadow-md transition-all flex flex-col justify-between space-y-4">
+        <div class="space-y-3">
+          <div class="w-12 h-12 rounded-2xl custom-accent-bg text-white flex items-center justify-center text-xl shadow-md">
+            <i class="fa-solid fa-user-lock"></i>
+          </div>
+          <h3 class="text-lg font-bold text-slate-900">Autenticação & Controle de Acesso</h3>
+          <p class="text-xs text-slate-500 font-medium leading-relaxed">
+            Controle estrito de permissões baseado em papéis (RBAC). Proteção contra ataques de força bruta através de bloqueio automático por taxa de tentativas de login.
+          </p>
+        </div>
+        <ul class="space-y-2 pt-2 border-t border-slate-100 text-xs text-slate-600 font-semibold">
+          <li class="flex items-center gap-2"><i class="fa-solid fa-check text-emerald-500"></i> Hash de senhas PBKDF2:SHA256</li>
+          <li class="flex items-center gap-2"><i class="fa-solid fa-check text-emerald-500"></i> Rate limiting por IP remoto</li>
+          <li class="flex items-center gap-2"><i class="fa-solid fa-check text-emerald-500"></i> Proteção contra CSRF e Fixação de Sessão</li>
+        </ul>
+      </div>
+
+      <!-- CARD 2: AUDITORIA E LOGS -->
+      <div class="bg-white rounded-3xl p-7 border border-slate-200/80 shadow-sm hover:shadow-md transition-all flex flex-col justify-between space-y-4">
+        <div class="space-y-3">
+          <div class="w-12 h-12 rounded-2xl custom-accent-bg text-white flex items-center justify-center text-xl shadow-md">
+            <i class="fa-solid fa-clipboard-check"></i>
+          </div>
+          <h3 class="text-lg font-bold text-slate-900">Auditoria & Rastreabilidade</h3>
+          <p class="text-xs text-slate-500 font-medium leading-relaxed">
+            Registro imutável de logs para todas as ações relevantes do sistema (criação, edição e exclusão de vistorias, O.S., veículos e alterações de perfil).
+          </p>
+        </div>
+        <ul class="space-y-2 pt-2 border-t border-slate-100 text-xs text-slate-600 font-semibold">
+          <li class="flex items-center gap-2"><i class="fa-solid fa-check text-emerald-500"></i> Assinatura digital do vistoriador</li>
+          <li class="flex items-center gap-2"><i class="fa-solid fa-check text-emerald-500"></i> Carimbo de data/hora e IP em vistorias</li>
+          <li class="flex items-center gap-2"><i class="fa-solid fa-check text-emerald-500"></i> Registro de evidências fotográficas</li>
+        </ul>
+      </div>
+
+      <!-- CARD 3: CRIPTOGRAFIA E TRÂNSITO -->
+      <div class="bg-white rounded-3xl p-7 border border-slate-200/80 shadow-sm hover:shadow-md transition-all flex flex-col justify-between space-y-4">
+        <div class="space-y-3">
+          <div class="w-12 h-12 rounded-2xl custom-accent-bg text-white flex items-center justify-center text-xl shadow-md">
+            <i class="fa-solid fa-key"></i>
+          </div>
+          <h3 class="text-lg font-bold text-slate-900">Criptografia & Transmissão</h3>
+          <p class="text-xs text-slate-500 font-medium leading-relaxed">
+            Todo o tráfego de dados entre seu navegador e nossos servidores é criptografado utilizando protocolos modernos de comunicação segura HTTPS / TLS.
+          </p>
+        </div>
+        <ul class="space-y-2 pt-2 border-t border-slate-100 text-xs text-slate-600 font-semibold">
+          <li class="flex items-center gap-2"><i class="fa-solid fa-check text-emerald-500"></i> Criptografia TLS/SSL em trânsito</li>
+          <li class="flex items-center gap-2"><i class="fa-solid fa-check text-emerald-500"></i> Consultas parametrizadas (Anti-SQLi)</li>
+          <li class="flex items-center gap-2"><i class="fa-solid fa-check text-emerald-500"></i> Proteção contra XSS e injeção de scripts</li>
+        </ul>
+      </div>
+
+      <!-- CARD 4: CONFORMIDADE LGPD -->
+      <div class="bg-white rounded-3xl p-7 border border-slate-200/80 shadow-sm hover:shadow-md transition-all flex flex-col justify-between space-y-4">
+        <div class="space-y-3">
+          <div class="w-12 h-12 rounded-2xl custom-accent-bg text-white flex items-center justify-center text-xl shadow-md">
+            <i class="fa-solid fa-user-shield"></i>
+          </div>
+          <h3 class="text-lg font-bold text-slate-900">Conformidade LGPD</h3>
+          <p class="text-xs text-slate-500 font-medium leading-relaxed">
+            Respeito integral aos princípios da Lei Geral de Proteção de Dados (Lei nº 13.709/2018), coletando somente os dados estritamente necessários para a operação.
+          </p>
+        </div>
+        <ul class="space-y-2 pt-2 border-t border-slate-100 text-xs text-slate-600 font-semibold">
+          <li class="flex items-center gap-2"><i class="fa-solid fa-check text-emerald-500"></i> Minimização de dados cadastrais</li>
+          <li class="flex items-center gap-2"><i class="fa-solid fa-check text-emerald-500"></i> Restrição de acesso por privilégio</li>
+          <li class="flex items-center gap-2"><i class="fa-solid fa-check text-emerald-500"></i> Transparência operacional completa</li>
+        </ul>
+      </div>
+
+      <!-- CARD 5: INFRAESTRUTURA E BACKUPS -->
+      <div class="bg-white rounded-3xl p-7 border border-slate-200/80 shadow-sm hover:shadow-md transition-all flex flex-col justify-between space-y-4">
+        <div class="space-y-3">
+          <div class="w-12 h-12 rounded-2xl custom-accent-bg text-white flex items-center justify-center text-xl shadow-md">
+            <i class="fa-solid fa-database"></i>
+          </div>
+          <h3 class="text-lg font-bold text-slate-900">Infraestrutura & Redundância</h3>
+          <p class="text-xs text-slate-500 font-medium leading-relaxed">
+            Armazenamento relacional robusto PostgreSQL com rotinas automatizadas de backup e sanitização de arquivos de mídia enviados para a plataforma.
+          </p>
+        </div>
+        <ul class="space-y-2 pt-2 border-t border-slate-100 text-xs text-slate-600 font-semibold">
+          <li class="flex items-center gap-2"><i class="fa-solid fa-check text-emerald-500"></i> Rotinas automatizadas de backup</li>
+          <li class="flex items-center gap-2"><i class="fa-solid fa-check text-emerald-500"></i> Validação e sanitização de uploads</li>
+          <li class="flex items-center gap-2"><i class="fa-solid fa-check text-emerald-500"></i> Isolamento de diretórios de mídia</li>
+        </ul>
+      </div>
+
+      <!-- CARD 6: INTEGRIDADE DE VISTORIAS -->
+      <div class="bg-white rounded-3xl p-7 border border-slate-200/80 shadow-sm hover:shadow-md transition-all flex flex-col justify-between space-y-4">
+        <div class="space-y-3">
+          <div class="w-12 h-12 rounded-2xl custom-accent-bg text-white flex items-center justify-center text-xl shadow-md">
+            <i class="fa-solid fa-truck-ramp-box"></i>
+          </div>
+          <h3 class="text-lg font-bold text-slate-900">Integridade de Vistorias & O.S.</h3>
+          <p class="text-xs text-slate-500 font-medium leading-relaxed">
+            Garantia de que relatórios e PDFs exportados preservam as informações exatas das vistorias veiculares com cabeçalhos institucionais auditáveis.
+          </p>
+        </div>
+        <ul class="space-y-2 pt-2 border-t border-slate-100 text-xs text-slate-600 font-semibold">
+          <li class="flex items-center gap-2"><i class="fa-solid fa-check text-emerald-500"></i> Exportação segura de laudos PDF</li>
+          <li class="flex items-center gap-2"><i class="fa-solid fa-check text-emerald-500"></i> Histórico de manutenções e avarias</li>
+          <li class="flex items-center gap-2"><i class="fa-solid fa-check text-emerald-500"></i> Controle de aprovação por supervisão</li>
+        </ul>
+      </div>
+
+    </div>
+
+    <!-- SEÇÃO INFORMATIVA SOBRE DÚVIDAS -->
+    <div class="bg-white rounded-3xl p-8 border border-slate-200/80 shadow-sm flex flex-col md:flex-row items-center justify-between gap-6">
+      <div class="space-y-2 text-center md:text-left">
+        <h4 class="text-lg font-bold text-slate-900">Dúvidas sobre Segurança ou Privacidade?</h4>
+        <p class="text-xs text-slate-500 font-medium leading-relaxed max-w-2xl">
+          Nossa equipe de suporte técnico e segurança operacional está disponível para esclarecer qualquer dúvida referente ao tratamento de dados e políticas do sistema.
+        </p>
+      </div>
+      <a href="javascript:void(0)" onclick="alert('Para suporte de segurança, entre em contato com o seu Administrador de Sistema.')" class="px-6 py-3 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl shadow-md transition-all shrink-0">
+        Falar com o Suporte
+      </a>
+    </div>
+
+  </main>
+
+  <!-- RODAPÉ DA PÁGINA -->
+  <footer class="bg-white border-t border-slate-200/80 py-6 text-center">
+    <div class="max-w-6xl mx-auto px-4 text-xs text-slate-400 font-medium flex flex-col sm:flex-row items-center justify-between gap-3">
+      <span>{{ sys_config.login_footer_text or '© 2026 Painel de Frota. Todos os direitos reservados.' }}</span>
+      <div class="flex gap-4">
+        <a href="{{ url_for('login') }}" class="hover:text-slate-600 transition-colors">Voltar ao Login</a>
+      </div>
+    </div>
+  </footer>
+
+</body>
+
+</html>

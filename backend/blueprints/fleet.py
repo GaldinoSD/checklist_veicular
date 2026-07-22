@@ -1708,11 +1708,32 @@ def config_layout():
         sb_text = request.form.get("sidebar_text_color", "").strip()
         config.sidebar_text_color = sb_text if sb_text and sb_text.startswith("#") else None
 
-        # Processar posição do card
+        # Processar posição do card e modo de layout
         allowed_card_positions = {"left", "left-center", "center", "right-center", "right"}
         card_pos = request.form.get("login_card_position", "right").strip()
         if card_pos in allowed_card_positions:
             config.login_card_position = card_pos
+
+        layout_mode = request.form.get("login_layout_mode", "split").strip()
+        if layout_mode in {"split", "card", "split_reverse"}:
+            config.login_layout_mode = layout_mode
+
+        hero_title = request.form.get("login_hero_title", "").strip()
+        if hero_title:
+            config.login_hero_title = hero_title[:255]
+
+        hero_subtitle = request.form.get("login_hero_subtitle", "").strip()
+        if hero_subtitle:
+            config.login_hero_subtitle = hero_subtitle
+
+        hero_bullets = request.form.get("login_hero_bullets", "").strip()
+        if hero_bullets:
+            config.login_hero_bullets = hero_bullets
+
+        footer_text = request.form.get("login_footer_text", "").strip()
+        if footer_text:
+            config.login_footer_text = footer_text[:255]
+
 
         # Processar uploads
 
