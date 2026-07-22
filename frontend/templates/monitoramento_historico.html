@@ -2,25 +2,24 @@
 {% set page_title = "Histórico de Rotas" %}
 
 {% block content %}
-<div class="flex flex-col h-[calc(100vh-8rem)] lg:h-[calc(100vh-10rem)] overflow-hidden animate-premium">
+<div class="flex flex-col h-[calc(100vh-8.5rem)] overflow-hidden animate-premium">
     
-    <!-- ✅ HEADER SUTIL E ELEGANTE (SUBSTITUI FILTROS HORIZONTAIS) -->
-    <div class="mb-4">
-        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 glass-premium px-6 py-4 rounded-[2rem] shadow-xl relative overflow-hidden">
-            <!-- Efeito decorativo sutil -->
-            <div class="absolute -top-12 -right-12 w-32 h-32 bg-teal-500/10 rounded-full blur-2xl"></div>
+    <!-- ✅ HEADER ORIGINAL RESTAURADO E ESTILIZADO -->
+    <div class="mb-3 shrink-0">
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 glass-premium px-6 py-3.5 rounded-[2rem] shadow-xl relative overflow-hidden">
+            <div class="absolute -top-12 -right-12 w-32 h-32 bg-teal-500/10 rounded-full blur-2xl pointer-events-none"></div>
             
             <div class="flex items-center gap-4 relative z-10">
-                <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-teal-500 to-emerald-600 flex items-center justify-center text-white shadow-lg">
-                    <i class="fa-solid fa-map-location-dot text-lg"></i>
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-teal-600 via-teal-500 to-emerald-500 flex items-center justify-center text-white shadow-lg shadow-teal-500/20 shrink-0">
+                    <i class="fa-solid fa-map-location-dot text-base"></i>
                 </div>
                 <div>
-                    <h2 class="text-lg font-black text-slate-800 dark:text-white tracking-tight">Histórico de Rotas</h2>
+                    <h2 class="text-base font-black text-slate-800 dark:text-white tracking-tight">Histórico de Rotas</h2>
                     <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5">
                         {% if request.args.get('vehicle_id') and logs %}
                             {% set active_vehicle_list = veiculos | selectattr("id", "equalto", request.args.get('vehicle_id')|int) | list %}
                             {% if active_vehicle_list %}
-                                Rastro de <span class="text-teal-500 font-extrabold">{{ active_vehicle_list[0].plate }} ({{ active_vehicle_list[0].model }})</span>
+                                Rastro de <span class="text-teal-600 dark:text-teal-400 font-extrabold">{{ active_vehicle_list[0].plate }} ({{ active_vehicle_list[0].model }})</span>
                             {% else %}
                                 Rastro do Veículo
                             {% endif %}
@@ -32,189 +31,204 @@
             </div>
             
             <div class="flex flex-wrap items-center gap-3 relative z-10">
-                <!-- Indicador de filtros ativos -->
                 {% if request.args.get('vehicle_id') and data_ini and data_fim %}
-                <div class="hidden sm:flex items-center gap-2 px-4 py-2 bg-slate-900/5 dark:bg-white/5 rounded-xl border border-slate-900/5 dark:border-white/5 text-[10px] font-bold text-slate-600 dark:text-slate-300">
+                <div class="hidden sm:flex items-center gap-2 px-3.5 py-1.5 bg-slate-900/5 dark:bg-white/5 rounded-xl border border-slate-900/5 dark:border-white/5 text-[10px] font-bold text-slate-600 dark:text-slate-300">
                     <i class="fa-solid fa-calendar text-teal-500 text-xs"></i>
-                    <span>{{ data_ini[8:10] }}/{{ data_ini[5:7] }}/{{ data_ini[0:4] }} às {{ data_ini[11:16] }} até {{ data_fim[8:10] }}/{{ data_fim[5:7] }}/{{ data_fim[0:4] }} às {{ data_fim[11:16] }}</span>
+                    <span>{{ data_ini[8:10] }}/{{ data_ini[5:7] }}/{{ data_ini[0:4] }} {{ data_ini[11:16] }} até {{ data_fim[8:10] }}/{{ data_fim[5:7] }}/{{ data_fim[0:4] }} {{ data_fim[11:16] }}</span>
                     <span class="w-1.5 h-1.5 rounded-full bg-teal-500 ml-1"></span>
                     <span class="font-extrabold text-slate-800 dark:text-white">{{ logs|length }} pontos</span>
                 </div>
                 {% endif %}
 
-                <!-- Botão de abrir filtros (ganha mais tela, abre modal) -->
-                <button onclick="openModal('modalFiltros')" class="px-5 py-2.5 bg-slate-800 hover:bg-slate-900 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-950 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg transition-all active:scale-95 flex items-center gap-2">
+                <button onclick="openModal('modalFiltros')" type="button" class="px-4 py-2 bg-slate-800 hover:bg-slate-900 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-950 rounded-xl font-black text-[10px] uppercase tracking-widest shadow-md transition-all active:scale-95 flex items-center gap-2">
                     <i class="fa-solid fa-sliders text-xs text-teal-500"></i>
-                    Filtrar Período
+                    <span>Filtrar Período</span>
                 </button>
                 
                 {% if request.args.get('vehicle_id') and logs %}
                 <a href="/monitoramento/relatorio/pdf?vehicle_id={{ request.args.get('vehicle_id') }}&data_ini={{ request.args.get('data_ini') }}&data_fim={{ request.args.get('data_fim') }}" 
                    target="_blank" 
-                   class="px-5 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-teal-500/20 transition-all active:scale-95 flex items-center gap-2 text-center">
+                   class="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-md shadow-teal-500/20 transition-all active:scale-95 flex items-center gap-2 text-center">
                     <i class="fa-solid fa-file-pdf text-xs"></i>
-                    Exportar PDF
+                    <span>Exportar PDF</span>
                 </a>
                 {% endif %}
             </div>
         </div>
     </div>
 
-    <!-- ✅ MAPA E LISTA -->
-    <div class="flex flex-col lg:flex-row flex-1 gap-6 overflow-hidden min-h-0">
+    <!-- ✅ PAINEL DUAL: MAPA EM DESTAQUE + SIDEBAR DE EVENTOS E TELEMETRIA -->
+    <div class="flex flex-col lg:flex-row flex-1 gap-4 overflow-hidden min-h-0">
         
-        <!-- Área do Mapa -->
-        <div class="flex-1 min-h-[350px] lg:min-h-0 relative rounded-[2.5rem] overflow-hidden shadow-2xl border border-slate-900/5 dark:border-white/5 bg-slate-100 dark:bg-slate-900/50">
+        <!-- ÁREA DO MAPA -->
+        <div class="flex-1 relative rounded-[2.2rem] overflow-hidden shadow-2xl border border-slate-200/80 dark:border-white/10 bg-slate-100 dark:bg-slate-950 min-h-[400px] lg:min-h-0 flex flex-col">
             {% if logs %}
             <div id="map" class="absolute inset-0 z-0"></div>
-            {% else %}
-            <!-- Estado Vazio Premium -->
-            <div class="absolute inset-0 flex flex-col items-center justify-center text-center p-10 z-10 bg-slate-50 dark:bg-slate-950">
-                <div class="absolute -top-40 -left-40 w-96 h-96 bg-teal-500/5 rounded-full blur-3xl"></div>
-                <div class="absolute -bottom-40 -right-40 w-96 h-96 bg-emerald-500/5 rounded-full blur-3xl"></div>
-                
-                <div class="w-20 h-20 rounded-3xl bg-teal-500/10 dark:bg-teal-500/5 flex items-center justify-center text-teal-500 mb-6 border border-teal-500/20 relative z-20 animate-bounce">
-                    <i class="fa-solid fa-route text-4xl"></i>
-                </div>
-                <h3 class="text-xl font-black uppercase tracking-widest text-slate-800 dark:text-white relative z-20">Nenhum histórico carregado</h3>
-                <p class="text-xs font-bold text-slate-400 max-w-sm mt-2 leading-relaxed relative z-20">Selecione um veículo e o período para visualizar o rastro de telemetria e o trajeto simulado no mapa.</p>
-                <button onclick="openModal('modalFiltros')" class="mt-6 px-6 py-3.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-black text-xs uppercase tracking-widest shadow-xl shadow-teal-500/25 transition-all active:scale-95 flex items-center gap-2 relative z-20">
-                    <i class="fa-solid fa-sliders text-sm"></i>
-                    Selecionar Veículo
-                </button>
-            </div>
-            {% endif %}
 
-            <!-- Controle de Playback Interativo (WOW!) -->
-            {% if logs %}
-            <div class="absolute bottom-6 left-6 z-[1000] glass-premium p-4 rounded-2xl border border-slate-900/10 dark:border-white/10 flex items-center gap-4 shadow-2xl">
-                <button id="playback-btn" onclick="togglePlayback()" class="w-10 h-10 rounded-xl bg-teal-500 hover:bg-teal-600 active:scale-95 text-white shadow-lg flex items-center justify-center transition-all">
-                    <i id="playback-icon" class="fa-solid fa-play"></i>
+            <!-- HUD DISCRETO COM MÉTRICAS DE TELEMETRIA (TOP-LEFT) -->
+            <div class="absolute top-4 left-4 z-[1000] hidden sm:flex items-center gap-3 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md px-3.5 py-2 rounded-2xl border border-slate-200/70 dark:border-white/10 shadow-lg text-[11px]">
+                <div class="flex items-center gap-1.5 font-bold text-slate-700 dark:text-slate-200">
+                    <i class="fa-solid fa-gauge-high text-teal-500"></i>
+                    {% set max_speed = logs | map(attribute='speed') | select('number') | max | default(0) %}
+                    <span>Máx: <strong class="font-mono text-slate-900 dark:text-white">{{ max_speed|round|int }} KM/H</strong></span>
+                </div>
+                <div class="w-px h-3.5 bg-slate-200 dark:bg-slate-700"></div>
+                <div class="flex items-center gap-1.5 font-bold text-slate-700 dark:text-slate-200">
+                    <i class="fa-solid fa-satellite-dish text-blue-500"></i>
+                    <span>Total: <strong class="font-mono text-slate-900 dark:text-white">{{ logs|length }} Pts</strong></span>
+                </div>
+                {% set excess_count = logs | selectattr("speed", "defined") | selectattr("speed", "gt", 80) | list | length %}
+                {% if excess_count > 0 %}
+                <div class="w-px h-3.5 bg-slate-200 dark:bg-slate-700"></div>
+                <div class="flex items-center gap-1 font-bold text-red-500">
+                    <i class="fa-solid fa-triangle-exclamation animate-pulse"></i>
+                    <span>{{ excess_count }} Excesso(s)</span>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- CONTROLE DE PLAYBACK ULTRA DISCRETO E COMPACTO (BOTTOM-CENTER) -->
+            <div class="absolute bottom-4 left-1/2 -translate-x-1/2 z-[1000] bg-white/85 dark:bg-slate-900/85 backdrop-blur-md px-3 py-2 rounded-full border border-slate-200/80 dark:border-white/10 shadow-xl flex items-center gap-3 w-72 sm:w-80">
+                <button id="playback-btn" onclick="togglePlayback()" type="button" 
+                        class="w-7 h-7 rounded-full bg-teal-600 hover:bg-teal-500 active:scale-90 text-white shadow-md flex items-center justify-center transition-all shrink-0">
+                    <i id="playback-icon" class="fa-solid fa-play text-[9px]"></i>
                 </button>
-                <div class="flex flex-col justify-center">
-                    <div class="flex items-center justify-between w-64 mb-1">
-                        <span id="playback-speed" class="text-[9px] font-black text-teal-600 dark:text-teal-400 uppercase tracking-widest">Parado</span>
-                        <span id="playback-time" class="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">--:--:--</span>
+
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center justify-between text-[9px] font-black leading-none mb-1">
+                        <span id="playback-speed" class="text-teal-600 dark:text-teal-400 font-mono">0 KM/H</span>
+                        <span id="playback-time" class="text-slate-500 dark:text-slate-400 font-mono">--:--:--</span>
                     </div>
-                    <div class="w-64 h-2 bg-slate-200 dark:bg-white/10 rounded-full overflow-hidden cursor-pointer relative" onclick="seekPlayback(event)">
-                        <div id="playback-progress" class="h-full bg-teal-500 w-0 transition-all duration-300"></div>
+                    <div class="w-full h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden cursor-pointer relative" onclick="seekPlayback(event)">
+                        <div id="playback-progress" class="h-full bg-teal-500 w-0 transition-all duration-150"></div>
                     </div>
                 </div>
+            </div>
+
+            {% else %}
+            <!-- ESTADO VAZIO / SEM DADOS -->
+            <div class="absolute inset-0 flex flex-col items-center justify-center text-center p-8 bg-slate-50 dark:bg-slate-950">
+                <div class="w-16 h-16 rounded-2xl bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center mb-4 border border-teal-500/20">
+                    <i class="fa-solid fa-route text-2xl"></i>
+                </div>
+                <h3 class="text-base font-black uppercase tracking-wider text-slate-800 dark:text-white">Selecione um Veículo para Carregar o Rastro</h3>
+                <p class="text-xs font-medium text-slate-400 max-w-sm mt-1">
+                    Clique em <strong class="text-teal-600 dark:text-teal-400">Filtrar Período</strong> no topo para escolher o veículo da frota.
+                </p>
+                <button onclick="openModal('modalFiltros')" type="button" class="mt-4 px-5 py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl font-black text-xs uppercase tracking-wider shadow-lg shadow-teal-500/20 transition-all active:scale-95 flex items-center gap-2">
+                    <i class="fa-solid fa-sliders text-xs"></i>
+                    <span>Filtrar Período</span>
+                </button>
             </div>
             {% endif %}
         </div>
 
-        <!-- Lista de Eventos de Telemetria -->
-        <div class="w-full lg:w-80 h-[280px] lg:h-full flex flex-col gap-4 overflow-hidden shrink-0">
-            <div class="glass-premium p-4 md:p-5 rounded-[2rem] border border-slate-900/5 dark:border-white/5 h-full overflow-hidden flex flex-col">
-                <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                    <i class="fa-solid fa-list-ol text-teal-500"></i>
-                    Eventos de Telemetria
-                </h4>
-                
-                <div class="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-3">
+        <!-- TIMELINE LATERAL DE EVENTOS E SEGMENÇÃO (RIGHT PANEL) -->
+        <div class="w-full lg:w-80 h-[240px] lg:h-full bg-white dark:bg-slate-900 rounded-[2.2rem] border border-slate-200/80 dark:border-white/10 shadow-xl p-4 flex flex-col shrink-0 overflow-hidden">
+            <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-white/5 mb-3 shrink-0">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-list-ul text-teal-500 text-xs"></i>
+                    <h4 class="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider">Pontos de Rota</h4>
+                </div>
+                <span class="px-2 py-0.5 rounded-md bg-teal-500/10 text-teal-600 dark:text-teal-400 text-[9px] font-black font-mono">
+                    {{ logs|length if logs else 0 }} Registros
+                </span>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto pr-1 space-y-2 custom-scrollbar">
+                {% if logs %}
                     {% for log in logs %}
                     {% if log.lat is not none and log.lon is not none %}
-                    {# Mostrar pontos a cada 1 ou se for excesso de velocidade #}
-                    <div class="p-3 rounded-xl bg-slate-900/5 dark:bg-white/5 border border-transparent hover:border-teal-500/30 transition-all cursor-pointer sidebar-log-card"
+                    <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-white/5 hover:border-teal-500/40 transition-all cursor-pointer sidebar-log-card group"
                          id="log-card-{{ loop.index0 }}"
                          onclick="jumpToPoint({{ log.lat }}, {{ log.lon }}, '{{ log.timestamp.strftime('%H:%M:%S') }}', {{ log.speed if log.speed else 0 }}, {{ loop.index0 }})">
-                        <div class="flex justify-between items-start mb-1">
-                            <span class="text-[9px] font-black text-slate-500">{{ log.timestamp.strftime('%H:%M:%S') }}</span>
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="text-[10px] font-black text-slate-500 font-mono">{{ log.timestamp.strftime('%H:%M:%S') }}</span>
                             {% if log.speed and log.speed > 80 %}
-                            <span class="px-2 py-0.5 rounded-full bg-red-500/10 text-red-500 text-[8px] font-black uppercase tracking-tighter">Excesso</span>
+                            <span class="px-1.5 py-0.5 rounded bg-red-500/10 text-red-500 text-[8px] font-black uppercase">Excesso</span>
                             {% endif %}
                         </div>
                         <div class="flex items-center justify-between">
-                            <span class="text-xs font-bold text-slate-700 dark:text-white">{{ log.speed|round|int if log.speed else 0 }} KM/H</span>
-                            <i class="fa-solid fa-location-dot text-[10px] {% if log.ignition %}text-amber-500{% else %}text-slate-400{% endif %}"></i>
+                            <span class="text-xs font-black text-slate-800 dark:text-white font-mono">{{ log.speed|round|int if log.speed else 0 }} KM/H</span>
+                            <i class="fa-solid fa-location-dot text-[11px] text-teal-500 group-hover:scale-125 transition-transform"></i>
                         </div>
                     </div>
                     {% endif %}
-                    {% else %}
-                    <div class="text-center py-20 opacity-20 flex flex-col items-center justify-center">
-                        <i class="fa-solid fa-hourglass-start text-2xl mb-2"></i>
-                        <p class="text-[9px] font-black uppercase">Aguardando filtros</p>
-                    </div>
                     {% endfor %}
-                </div>
+                {% else %}
+                    <div class="text-center py-20 opacity-30 flex flex-col items-center justify-center">
+                        <i class="fa-solid fa-hourglass-start text-2xl mb-2"></i>
+                        <p class="text-[10px] font-black uppercase">Aguardando Filtro</p>
+                    </div>
+                {% endif %}
             </div>
         </div>
+
     </div>
 </div>
 
-<!-- ✅ MODAL FILTROS DE PERÍODO (PREMIUM, SEGUINDO PROTOCOLOS) -->
+<!-- ✅ MODAL FILTROS DE PERÍODO -->
 <div id="modalFiltros" class="fixed inset-0 hidden items-center justify-center z-[100] p-4">
-    <!-- Backdrop de desfoque premium -->
     <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="closeModal('modalFiltros')"></div>
     
-    <!-- Modal Card -->
-    <div class="relative w-full max-w-md rounded-[2.5rem] bg-white dark:bg-slate-950 border border-slate-900/10 dark:border-white/10 shadow-2xl overflow-hidden animate-premium">
+    <div class="relative w-full max-w-md rounded-[2rem] bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 shadow-2xl overflow-hidden animate-premium">
         
-        <!-- Header -->
-        <div class="p-6 border-b border-slate-900/5 dark:border-white/5 bg-slate-50 dark:bg-white/5 flex items-center justify-between">
+        <div class="p-6 border-b border-slate-100 dark:border-white/5 bg-slate-50 dark:bg-slate-800/50 flex items-center justify-between">
             <div>
-                <h3 class="text-lg font-black text-slate-900 dark:text-white tracking-tight">Filtros de Período</h3>
-                <p class="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-0.5">Selecione o veículo e intervalo de tempo</p>
+                <h3 class="text-base font-black text-slate-900 dark:text-white tracking-tight">Filtros de Período</h3>
+                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Selecione o veículo e intervalo de tempo</p>
             </div>
-            <button onclick="closeModal('modalFiltros')" class="w-8 h-8 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-400 hover:text-slate-700 dark:hover:text-white transition-all flex items-center justify-center">
+            <button onclick="closeModal('modalFiltros')" type="button" class="w-8 h-8 rounded-xl bg-slate-200/60 dark:bg-white/5 text-slate-500 hover:text-slate-900 dark:hover:text-white transition-all flex items-center justify-center">
                 <i class="fa-solid fa-xmark text-sm"></i>
             </button>
         </div>
         
-        <!-- Body / Form -->
         <div class="p-6">
-            <form id="filterFormModal" method="GET" action="/monitoramento/historico" class="space-y-5">
+            <form id="filterFormModal" method="GET" action="/monitoramento/historico" class="space-y-4">
                 
-                <!-- Veículo -->
                 <div class="space-y-1.5">
-                    <label class="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">Veículo</label>
-                    <div class="relative">
-                        <select name="vehicle_id" required class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-3 text-xs text-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-teal-500 transition-all cursor-pointer appearance-none">
-                            <option value="">Selecione um veículo</option>
-                            {% for v in veiculos %}
-                            <option value="{{ v.id }}" {% if request.args.get('vehicle_id')|int == v.id %}selected{% endif %}>{{ v.plate }} - {{ v.model }}</option>
-                            {% endfor %}
-                        </select>
-                        <div class="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 dark:text-slate-500 text-xs">
-                            <i class="fa-solid fa-chevron-down"></i>
-                        </div>
-                    </div>
+                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 block">Veículo</label>
+                    <select name="vehicle_id" required class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-xs font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-teal-500 transition-all cursor-pointer">
+                        <option value="">Selecione um veículo...</option>
+                        {% for v in veiculos %}
+                        <option value="{{ v.id }}" {% if request.args.get('vehicle_id')|int == v.id %}selected{% endif %}>
+                            {{ v.plate }} — {{ v.model }}
+                        </option>
+                        {% endfor %}
+                    </select>
                 </div>
                 
-                <!-- Datas -->
-                <div class="grid grid-cols-2 gap-4">
+                <div class="grid grid-cols-2 gap-3">
                     <div class="space-y-1.5">
-                        <label class="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">Data Início</label>
+                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 block">Data/Hora Início</label>
                         <input type="datetime-local" name="data_ini" id="data_ini" required value="{{ data_ini }}"
-                               class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-3 text-xs text-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-teal-500 transition-all">
+                               class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-teal-500 transition-all">
                     </div>
                     <div class="space-y-1.5">
-                        <label class="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1">Data Fim</label>
+                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 block">Data/Hora Fim</label>
                         <input type="datetime-local" name="data_fim" id="data_fim" required value="{{ data_fim }}"
-                               class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-3 text-xs text-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-teal-500 transition-all">
+                               class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2.5 text-xs font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-teal-500 transition-all">
                     </div>
                 </div>
                 
-                <!-- Presets rápidos -->
-                <div class="space-y-2">
-                    <label class="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest ml-1 block">Períodos Sugeridos</label>
-                    <div class="grid grid-cols-2 gap-3">
-                        <button type="button" onclick="setPreset('today')" class="w-full py-2 text-[10px] font-black uppercase tracking-wider rounded-xl bg-teal-500/10 hover:bg-teal-500/20 text-teal-600 dark:text-teal-400 border border-teal-500/20 hover:scale-[1.02] active:scale-95 transition-all text-center">
+                <div class="space-y-1.5">
+                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 block">Atalhos de Período</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button type="button" onclick="setPreset('today')" class="py-2 text-[10px] font-black uppercase tracking-wider rounded-xl bg-teal-500/10 text-teal-600 dark:text-teal-400 border border-teal-500/20 hover:bg-teal-500/20 transition-all text-center">
                             Hoje
                         </button>
-                        <button type="button" onclick="setPreset('3days')" class="w-full py-2 text-[10px] font-black uppercase tracking-wider rounded-xl bg-slate-500/10 hover:bg-slate-500/20 text-slate-600 dark:text-slate-400 border border-slate-500/20 hover:scale-[1.02] active:scale-95 transition-all text-center">
+                        <button type="button" onclick="setPreset('3days')" class="py-2 text-[10px] font-black uppercase tracking-wider rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-200 transition-all text-center">
                             Últimos 3 dias
                         </button>
                     </div>
                 </div>
                 
-                <!-- Actions -->
-                <div class="flex flex-col gap-2 pt-3 border-t border-slate-900/5 dark:border-white/5">
-                    <button type="submit" class="w-full py-3.5 bg-teal-600 hover:bg-teal-700 text-white font-black text-xs uppercase tracking-widest rounded-xl shadow-lg shadow-teal-500/20 transition-all active:scale-95 flex items-center justify-center gap-2">
-                        <i class="fa-solid fa-play text-[10px]"></i> Consultar Rota
+                <div class="flex flex-col gap-2 pt-3 border-t border-slate-100 dark:border-white/5">
+                    <button type="submit" class="w-full py-3.5 bg-teal-600 hover:bg-teal-700 text-white font-black text-xs uppercase tracking-wider rounded-xl shadow-lg shadow-teal-500/20 transition-all active:scale-95 flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-magnifying-glass text-xs"></i>
+                        <span>Consultar Rota</span>
                     </button>
-                    <button type="button" onclick="closeModal('modalFiltros')" class="w-full py-2 text-[10px] font-black text-slate-400 hover:text-slate-600 dark:hover:text-white uppercase tracking-[0.2em] transition-colors">
+                    <button type="button" onclick="closeModal('modalFiltros')" class="w-full py-2 text-[10px] font-black text-slate-400 hover:text-slate-600 dark:hover:text-white uppercase tracking-wider transition-colors">
                         Cancelar
                     </button>
                 </div>
@@ -272,7 +286,6 @@
         {% endfor %}
     ];
 
-    // Estados do Playback
     let playbackInterval = null;
     let playbackIndex = 0;
     let vehicleMarker = null;
@@ -282,13 +295,11 @@
     function initMap() {
         if (!pathData.length) return;
 
-        // Configuração de cores e temas dinâmica baseada na classe .dark do HTML
         const isDark = document.documentElement.classList.contains('dark');
         const tileUrl = isDark 
             ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png' 
             : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
 
-        // Criar Linha do Trajeto com Estilo Premium Teal
         const points = pathData.map(p => [p[0], p[1]]);
 
         map = L.map('map', {
@@ -298,26 +309,25 @@
         
         L.tileLayer(tileUrl).addTo(map);
         L.control.zoom({ position: 'bottomleft' }).addTo(map);
+        
         polyline = L.polyline(points, {
-            color: '#0d9488', // teal-600
-            weight: 5,
-            opacity: 0.8,
+            color: '#0d9488',
+            weight: 4,
+            opacity: 0.85,
             lineJoin: 'round',
-            dashArray: '2, 8'
+            dashArray: '3, 6'
         }).addTo(map);
 
-        // Ajustar zoom para caber todo o trajeto
-        map.fitBounds(polyline.getBounds(), { padding: [50, 50] });
+        map.fitBounds(polyline.getBounds(), { padding: [40, 40] });
 
-        // Marcador de Início e Fim Estilizados
         const startIcon = L.divIcon({
-            html: `<div class="w-6 h-6 rounded-full bg-emerald-500 border-2 border-white shadow-lg flex items-center justify-center text-white text-[8px] font-black uppercase">IN</div>`,
+            html: `<div class="w-6 h-6 rounded-full bg-emerald-500 border-2 border-white shadow-md flex items-center justify-center text-white text-[8px] font-black uppercase">IN</div>`,
             iconSize: [24, 24],
             iconAnchor: [12, 12]
         });
 
         const endIcon = L.divIcon({
-            html: `<div class="w-6 h-6 rounded-full bg-red-500 border-2 border-white shadow-lg flex items-center justify-center text-white text-[8px] font-black uppercase">OUT</div>`,
+            html: `<div class="w-6 h-6 rounded-full bg-red-500 border-2 border-white shadow-md flex items-center justify-center text-white text-[8px] font-black uppercase">OUT</div>`,
             iconSize: [24, 24],
             iconAnchor: [12, 12]
         });
@@ -325,41 +335,36 @@
         L.marker(points[0], { icon: startIcon }).addTo(map).bindPopup("<b>Início do Percurso</b>");
         L.marker(points[points.length-1], { icon: endIcon }).addTo(map).bindPopup("<b>Fim do Percurso</b>");
 
-        // Iniciar Marcador Dinâmico do Veículo para a Animação
         const carIcon = L.divIcon({
-            html: `<div class="w-8 h-8 rounded-full bg-teal-500 border-2 border-white shadow-lg flex items-center justify-center text-white relative"><i class="fa-solid fa-car text-xs animate-pulse"></i><span class="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-emerald-500 border border-white flex items-center justify-center text-[7px] font-bold"><i class="fa-solid fa-bolt"></i></span></div>`,
+            html: `<div class="w-8 h-8 rounded-full bg-teal-600 border-2 border-white shadow-xl flex items-center justify-center text-white relative"><i class="fa-solid fa-car text-[10px] animate-pulse"></i></div>`,
             className: 'custom-car-icon',
             iconSize: [32, 32],
             iconAnchor: [16, 16]
         });
         vehicleMarker = L.marker(points[0], { icon: carIcon }).addTo(map);
 
-        // Forçar renderização de tamanho do Leaflet em containers flex
         setTimeout(() => {
             if (map) map.invalidateSize();
         }, 200);
     }
 
-    // Função de Playback
     function togglePlayback() {
         const btn = document.getElementById('playback-btn');
         const icon = document.getElementById('playback-icon');
         
         if (isPlaying) {
-            // Pausar
             clearInterval(playbackInterval);
             isPlaying = false;
-            icon.className = 'fa-solid fa-play';
+            icon.className = 'fa-solid fa-play text-[9px]';
         } else {
-            // Iniciar
             isPlaying = true;
-            icon.className = 'fa-solid fa-pause';
+            icon.className = 'fa-solid fa-pause text-[9px]';
             
             if (playbackIndex >= pathData.length) {
                 playbackIndex = 0;
             }
             
-            playbackInterval = setInterval(stepPlayback, 1000);
+            playbackInterval = setInterval(stepPlayback, 800);
         }
     }
 
@@ -372,8 +377,6 @@
         
         const pt = pathData[playbackIndex];
         moveMarker(pt[0], pt[1], pt[2], pt[3]);
-        
-        // Destacar o card na barra lateral correspondente ao index
         highlightSidebarCard(playbackIndex);
         
         playbackIndex++;
@@ -384,18 +387,16 @@
         vehicleMarker.setLatLng([lat, lon]);
         map.panTo([lat, lon]);
         
-        // Atualizar painel de playback
         document.getElementById('playback-time').textContent = time;
         const speedEl = document.getElementById('playback-speed');
         speedEl.textContent = Math.round(speed) + ' KM/H';
         
         if (speed > 80) {
-            speedEl.className = 'text-[9px] font-black text-red-500 uppercase tracking-widest animate-pulse';
+            speedEl.className = 'text-[9px] font-black text-red-500 font-mono animate-pulse';
         } else {
-            speedEl.className = 'text-[9px] font-black text-teal-600 dark:text-teal-400 uppercase tracking-widest';
+            speedEl.className = 'text-[9px] font-black text-teal-600 dark:text-teal-400 font-mono';
         }
         
-        // Atualizar barra de progresso
         const pct = ((playbackIndex) / (pathData.length - 1)) * 100;
         document.getElementById('playback-progress').style.width = pct + '%';
     }
@@ -422,11 +423,11 @@
 
     function highlightSidebarCard(index) {
         document.querySelectorAll('.sidebar-log-card').forEach(card => {
-            card.classList.remove('ring-2', 'ring-teal-500', 'bg-teal-500/5', 'dark:bg-teal-500/5');
+            card.classList.remove('ring-2', 'ring-teal-500', 'bg-teal-500/10', 'dark:bg-teal-500/10');
         });
         const activeCard = document.getElementById(`log-card-${index}`);
         if (activeCard) {
-            activeCard.classList.add('ring-2', 'ring-teal-500', 'bg-teal-500/5', 'dark:bg-teal-500/5');
+            activeCard.classList.add('ring-2', 'ring-teal-500', 'bg-teal-500/10', 'dark:bg-teal-500/10');
             activeCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
     }
@@ -442,7 +443,6 @@
     .leaflet-container { background: #f8fafc !important; }
     .dark .leaflet-container { background: #0f172a !important; }
     
-    /* Scrollbar minimalista e bonita */
     .custom-scrollbar::-webkit-scrollbar {
         width: 4px;
     }
@@ -458,5 +458,3 @@
     }
 </style>
 {% endblock %}
-
-{# accessibility helper: onkeydown= handler present #}
