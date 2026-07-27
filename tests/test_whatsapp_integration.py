@@ -367,5 +367,16 @@ class TestWhatsAppIntegration(unittest.TestCase):
             db.session.delete(w_log)
             db.session.commit()
 
+    def test_integracoes_route(self):
+        """Testa o acesso à nova página central de integrações /integracoes"""
+        from unittest.mock import patch
+        admin_user = User(username='test_admin_integracoes', role='admin')
+        with patch('flask_login.utils._get_user', return_value=admin_user):
+            response = self.client.get('/integracoes')
+            self.assertEqual(response.status_code, 200)
+            self.assertIn(b"Hub de Integra", response.data)
+            self.assertIn(b"Evolution API", response.data)
+
 if __name__ == '__main__':
     unittest.main()
+

@@ -68,6 +68,18 @@ def whatsapp_conversas():
 
 
 
+@whatsapp_bp.route("/integracoes")
+@login_required
+def integracoes():
+    if not (current_user.is_admin or current_user.has_permission("whatsapp_evolution") or current_user.has_permission("integracoes")):
+        flash("Acesso restrito às integrações do sistema.", "error")
+        return redirect(url_for("dashboard"))
+    
+    config = WhatsAppConfig.query.first()
+    active_tab = request.args.get("tab", "whatsapp")
+    return render_template("integracoes.html", whatsapp_config=config, active_tab=active_tab)
+
+
 @whatsapp_bp.route("/whatsapp/config")
 @login_required
 def whatsapp_config():
@@ -75,8 +87,7 @@ def whatsapp_config():
         flash("Acesso restrito às configurações do WhatsApp.", "error")
         return redirect(url_for("dashboard"))
     
-    config = WhatsAppConfig.query.first()
-    return render_template("whatsapp_config.html", whatsapp_config=config)
+    return redirect(url_for("integracoes", tab="whatsapp"))
 
 
 
@@ -101,7 +112,7 @@ def whatsapp_config_save():
     db.session.commit()
     registrar_log(f"Configuração do Whatsapp atualizada por {current_user.username}")
     flash("✅ Configurações salvas com sucesso!", "success")
-    return redirect(url_for("whatsapp_config"))
+    return redirect(url_for("integracoes", tab="whatsapp"))
 
 
 
@@ -132,7 +143,7 @@ def whatsapp_templates_save():
     db.session.commit()
     registrar_log(f"Templates do Whatsapp atualizados por {current_user.username}")
     flash("✅ Templates salvos com sucesso!", "success")
-    return redirect(url_for("whatsapp_config"))
+    return redirect(url_for("integracoes", tab="whatsapp"))
 
 
 

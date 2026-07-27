@@ -649,7 +649,7 @@ def get_default_perms(role):
         "perm_gestao_encerramento", "perm_gestao_rfo", "perm_gestao_tarefas",
         "perm_gestao_geradores", "perm_gestao_rota_exata", "perm_gestao_supervisao",
         "perm_gestao_treinamentos", "perm_gestao_solicitacoes", "perm_gestao_relatorios",
-        "perm_whatsapp_evolution", "perm_whatsapp_conversas", "perm_gestao_mapas", "perm_gestao_powerbi", "perm_avisos_historico"
+        "perm_whatsapp_evolution", "perm_whatsapp_conversas", "perm_integracoes", "perm_gestao_mapas", "perm_gestao_powerbi", "perm_avisos_historico"
     ]
     perms = {}
     if role == "tech":
@@ -799,7 +799,7 @@ def users_permissions(uid):
         "perm_gestao_encerramento", "perm_gestao_rfo", "perm_gestao_tarefas",
         "perm_gestao_geradores", "perm_gestao_rota_exata", "perm_gestao_supervisao",
         "perm_gestao_treinamentos", "perm_gestao_solicitacoes", "perm_gestao_relatorios",
-        "perm_whatsapp_evolution", "perm_whatsapp_conversas",
+        "perm_whatsapp_evolution", "perm_whatsapp_conversas", "perm_integracoes",
         "perm_config_ferramentas", "perm_controle_ferramentas", "perm_controle_ferramentas_atual", "perm_gestao_mapas", "perm_gestao_powerbi", "perm_avisos_historico"
     ]
     

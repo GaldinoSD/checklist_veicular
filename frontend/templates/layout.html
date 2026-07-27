@@ -1137,16 +1137,16 @@
             </a>
             {% endif %}
 
-            {% if current_user.has_permission('whatsapp_evolution') %}
-            <a href="{{ url_for('whatsapp_config') }}" 
+            {% if current_user.is_admin or current_user.has_permission('whatsapp_evolution') or current_user.has_permission('integracoes') %}
+            <a href="{{ url_for('integracoes') }}" 
                class="flex items-center gap-3.5 px-4 py-3 rounded-2xl transition-all duration-300 group
-                      {% if request.endpoint == 'whatsapp_config' %}
-                        bg-slate-800 dark:bg-white text-white dark:text-slate-900 shadow-xl scale-[1.02]
+                      {% if request.endpoint in ['integracoes', 'whatsapp_config'] %}
+                        bg-emerald-600 text-white shadow-xl shadow-emerald-500/30 scale-[1.02]
                       {% else %}
                         text-slate-500 dark:text-gray-400 hover:bg-slate-900/5 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white
                       {% endif %}">
-              <i class="fa-solid fa-sliders w-5 text-center text-base {% if request.endpoint == 'whatsapp_config' %}text-white dark:text-slate-900{% else %}text-slate-400 group-hover:text-emerald-500 dark:group-hover:text-emerald-400{% endif %} transition-colors"></i>
-              <span class="text-[13px] font-bold tracking-tight">Configurações API</span>
+              <i class="fa-solid fa-plug w-5 text-center text-base {% if request.endpoint in ['integracoes', 'whatsapp_config'] %}text-white{% else %}text-slate-400 group-hover:text-emerald-500 dark:group-hover:text-emerald-400{% endif %} transition-colors"></i>
+              <span class="text-[13px] font-bold tracking-tight">Integrações</span>
             </a>
             {% endif %}
             {% endif %}
@@ -1172,13 +1172,13 @@
               <span class="text-[13px] font-bold tracking-tight">Sair da Conta</span>
             </a>
 
-            <div class="flex items-center gap-3 px-4 py-3 rounded-2xl bg-slate-900/5 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 mt-2">
-              <div class="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center text-white font-black shrink-0 shadow-md">
+            <div class="flex items-center gap-3 p-3 rounded-2xl bg-gradient-to-r from-slate-900/5 to-slate-900/10 dark:from-white/5 dark:to-white/10 border border-slate-900/10 dark:border-white/10 mt-2 shadow-sm">
+              <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-sky-500 flex items-center justify-center text-white font-black shrink-0 shadow-md">
                 {{ current_user.username[0] | upper if current_user and current_user.username else 'U' }}
               </div>
               <div class="min-w-0 flex-1">
                 <div class="text-[11px] font-black text-slate-800 dark:text-white truncate uppercase tracking-tight">{{ current_user.username }}</div>
-                <div class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{{ current_user.role }}</div>
+                <div class="text-[9px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest">{{ current_user.role or 'Usuário' }}</div>
               </div>
             </div>
           </div>
@@ -1252,60 +1252,118 @@
                 </div>
               </div>
 
-             <!-- ✅ CARD DO USUÁRIO LOGADO (CLEAN & ELEGANT) -->
-             <div class="relative flex-shrink-0 ml-2 select-none">
-               <button id="btnUserDropdown" onclick="toggleUserDropdown(event)" type="button" 
-                       class="flex items-center gap-2.5 px-3 py-1.5 rounded-2xl bg-slate-900/5 dark:bg-white/5 hover:bg-slate-900/10 dark:hover:bg-white/10 border border-slate-900/10 dark:border-white/10 transition-all text-left group focus:outline-none">
-                 <!-- Avatar Badge -->
-                 <div class="relative">
-                   <div class="w-8 h-8 rounded-xl bg-slate-800 dark:bg-white text-white dark:text-slate-900 flex items-center justify-center text-xs font-black shrink-0 shadow-sm">
-                     {{ current_user.username[0] | upper if current_user and current_user.username else 'U' }}
-                   </div>
-                   <span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 border-2 border-white dark:border-slate-900 rounded-full"></span>
-                 </div>
+              <!-- ✅ CARD DO USUÁRIO LOGADO (Exibido apenas em Desktop/Tablet - Oculto no Mobile) -->
+              <div class="hidden lg:block relative flex-shrink-0 ml-2 select-none">
+                <button id="btnUserDropdown" onclick="toggleUserDropdown(event)" type="button" 
+                        class="flex items-center gap-3 px-3.5 py-1.5 rounded-2xl bg-slate-900/5 dark:bg-white/5 hover:bg-slate-900/10 dark:hover:bg-white/10 border border-slate-900/10 dark:border-white/10 hover:border-blue-500/30 dark:hover:border-blue-400/30 shadow-sm hover:shadow-md hover:shadow-blue-500/5 transition-all duration-300 text-left group focus:outline-none focus:ring-2 focus:ring-blue-500/20">
+                  <!-- Avatar Badge com Gradientes e Glow -->
+                  <div class="relative">
+                    <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-sky-500 text-white flex items-center justify-center text-xs font-black shrink-0 shadow-md shadow-blue-500/20 group-hover:scale-105 transition-transform duration-300">
+                      {{ current_user.username[0] | upper if current_user and current_user.username else 'U' }}
+                    </div>
+                    <span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 border-2 border-white dark:border-slate-900 rounded-full shadow-sm flex items-center justify-center">
+                      <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    </span>
+                  </div>
 
-                 <!-- Informações da Pessoa Logada -->
-                 <div class="hidden sm:flex flex-col min-w-0">
-                   <div class="text-[12px] font-black text-slate-800 dark:text-white truncate tracking-tight leading-none mb-0.5">{{ current_user.username }}</div>
-                   <div class="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest leading-none">{{ current_user.role or 'Usuário' }}</div>
-                 </div>
+                  <!-- Informações da Pessoa Logada -->
+                  <div class="hidden sm:flex flex-col min-w-0 pr-1">
+                    <div class="text-[12px] font-black text-slate-800 dark:text-white truncate tracking-tight leading-none mb-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                      {{ current_user.username }}
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                      <span class="px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider rounded-md bg-blue-500/10 dark:bg-blue-400/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                        {{ current_user.role or 'Usuário' }}
+                      </span>
+                    </div>
+                  </div>
 
-                 <i class="fa-solid fa-chevron-down text-[10px] text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-200 transition-transform duration-200 ml-1" id="userDropdownChevron"></i>
-               </button>
+                  <i class="fa-solid fa-chevron-down text-[10px] text-slate-400 group-hover:text-blue-500 transition-all duration-300 ml-0.5 transform group-hover:translate-y-0.5" id="userDropdownChevron"></i>
+                </button>
 
-               <!-- MENU EXPANSÍVEL DO USUÁRIO (CLEAN & DIRETO) -->
-               <div id="userProfileDropdown" class="hidden absolute right-0 mt-2.5 w-56 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-2xl shadow-2xl p-2 z-[100] transition-all transform origin-top-right">
-                 
-                 <!-- Perfil do Usuário -->
-                 <div class="px-3 py-2.5 border-b border-slate-100 dark:border-white/5 mb-1.5">
-                   <div class="text-xs font-black text-slate-900 dark:text-white truncate uppercase tracking-tight">{{ current_user.username }}</div>
-                   <div class="text-[9px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-widest mt-0.5 flex items-center gap-1.5">
-                     <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                     {{ current_user.role or 'Usuário' }}
-                   </div>
-                 </div>
+                <!-- MENU EXPANSÍVEL DO USUÁRIO (REDESENHADO & MODERNO) -->
+                <div id="userProfileDropdown" class="hidden absolute right-0 mt-3 w-64 bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl border border-slate-200/80 dark:border-white/10 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.5)] p-2 z-[100] transition-all transform origin-top-right">
+                  
+                  <!-- Cabeçalho do Card de Perfil -->
+                  <div class="relative overflow-hidden rounded-xl p-3.5 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 dark:from-slate-800/80 dark:to-slate-950 text-white mb-2 shadow-inner border border-white/10">
+                    <!-- Glow Decorativo no fundo -->
+                    <div class="absolute -top-6 -right-6 w-20 h-20 bg-blue-500/20 rounded-full blur-xl pointer-events-none"></div>
+                    
+                    <div class="flex items-center gap-3 relative z-10">
+                      <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-500 to-sky-400 flex items-center justify-center text-sm font-black text-white shrink-0 shadow-md border border-white/20">
+                        {{ current_user.username[0] | upper if current_user and current_user.username else 'U' }}
+                      </div>
+                      <div class="min-w-0 flex-1">
+                        <div class="text-xs font-black truncate uppercase tracking-tight text-white">{{ current_user.username }}</div>
+                        <div class="text-[9px] font-bold text-emerald-400 uppercase tracking-widest mt-0.5 flex items-center gap-1.5">
+                          <span class="relative flex h-1.5 w-1.5">
+                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                            <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+                          </span>
+                          Sessão Ativa
+                        </div>
+                      </div>
+                    </div>
 
-                 <!-- Ações Principais -->
-                 <div class="space-y-1">
-                   <button type="button" onclick="openModal('modalSenha'); closeUserDropdown();" 
-                           class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/5 transition-colors text-left group">
-                     <i class="fa-solid fa-key text-slate-400 group-hover:text-amber-500 w-4 text-center transition-colors"></i>
-                     <span>Alterar Senha</span>
-                   </button>
+                    <div class="mt-2.5 pt-2 border-t border-white/10 flex items-center justify-between text-[9px] font-bold uppercase tracking-wider text-slate-300">
+                      <span>Perfil / Função</span>
+                      <span class="px-2 py-0.5 rounded-md bg-white/10 text-white border border-white/10 font-extrabold">{{ current_user.role or 'Usuário' }}</span>
+                    </div>
+                  </div>
 
-                   <a href="{{ url_for('logout') }}" 
-                      class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors group">
-                     <i class="fa-solid fa-right-from-bracket w-4 text-center transition-transform group-hover:translate-x-0.5"></i>
-                     <span>Sair da Conta</span>
-                   </a>
-                 </div>
+                  <!-- Ações Principais -->
+                  <div class="space-y-1 p-0.5">
+                    <button type="button" onclick="openModal('modalSenha'); closeUserDropdown();" 
+                            class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-900/5 dark:hover:bg-white/5 transition-all duration-200 group text-left">
+                      <div class="flex items-center gap-3">
+                        <div class="w-7 h-7 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-500 group-hover:scale-110 transition-transform">
+                          <i class="fa-solid fa-key text-xs"></i>
+                        </div>
+                        <span class="group-hover:text-slate-900 dark:group-hover:text-white transition-colors">Alterar Senha</span>
+                      </div>
+                      <i class="fa-solid fa-chevron-right text-[9px] text-slate-300 dark:text-slate-600 group-hover:translate-x-0.5 transition-transform"></i>
+                    </button>
 
-               </div>
-             </div>
+                    <button type="button" onclick="document.getElementById('btnTheme').click();" 
+                            class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-900/5 dark:hover:bg-white/5 transition-all duration-200 group text-left">
+                      <div class="flex items-center gap-3">
+                        <div class="w-7 h-7 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-500 group-hover:scale-110 transition-transform">
+                          <i class="fa-solid fa-circle-half-stroke text-xs"></i>
+                        </div>
+                        <span class="group-hover:text-slate-900 dark:group-hover:text-white transition-colors">Alternar Tema</span>
+                      </div>
+                      <i class="fa-solid fa-chevron-right text-[9px] text-slate-300 dark:text-slate-600 group-hover:translate-x-0.5 transition-transform"></i>
+                    </button>
 
+                    <button type="button" onclick="toggleHelp(); closeUserDropdown();" 
+                            class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-900/5 dark:hover:bg-white/5 transition-all duration-200 group text-left">
+                      <div class="flex items-center gap-3">
+                        <div class="w-7 h-7 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-500 group-hover:scale-110 transition-transform">
+                          <i class="fa-solid fa-circle-question text-xs"></i>
+                        </div>
+                        <span class="group-hover:text-slate-900 dark:group-hover:text-white transition-colors">Ajuda & Manuais</span>
+                      </div>
+                      <i class="fa-solid fa-chevron-right text-[9px] text-slate-300 dark:text-slate-600 group-hover:translate-x-0.5 transition-transform"></i>
+                    </button>
 
+                    <div class="my-1 border-t border-slate-100 dark:border-white/5"></div>
 
-          </div>
+                    <a href="{{ url_for('logout') }}" 
+                       class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold text-red-500 hover:bg-red-500/10 transition-all duration-200 group">
+                      <div class="flex items-center gap-3">
+                        <div class="w-7 h-7 rounded-lg bg-red-500/10 flex items-center justify-center text-red-500 group-hover:scale-110 transition-transform">
+                          <i class="fa-solid fa-right-from-bracket text-xs"></i>
+                        </div>
+                        <span class="group-hover:font-extrabold transition-all">Sair da Conta</span>
+                      </div>
+                      <i class="fa-solid fa-arrow-right text-[10px] text-red-400 group-hover:translate-x-1 transition-transform"></i>
+                    </a>
+                  </div>
+
+                </div>
+              </div>
+
+           </div>
         </header>
         {% endif %}
 

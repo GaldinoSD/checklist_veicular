@@ -1,0 +1,689 @@
+{% extends 'layout.html' %}
+{% set page_title = "Central de Integrações" %}
+{% block content %}
+
+<!-- Custom Styles for Integrations Cards Hub -->
+<style>
+    .animate-card-fade {
+        animation: cardFadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+    
+    @keyframes cardFadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(14px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .integration-card {
+        transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .integration-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 16px 32px -8px rgba(0, 0, 0, 0.12), 0 4px 12px -2px rgba(0, 0, 0, 0.08);
+    }
+    .dark .integration-card:hover {
+        box-shadow: 0 20px 40px -12px rgba(0, 0, 0, 0.6), 0 4px 12px -2px rgba(0, 0, 0, 0.4);
+    }
+
+    .terminal-textarea {
+        background-color: #0d131f;
+        font-family: 'Fira Code', 'Courier New', Courier, monospace;
+        color: #e2e8f0;
+        border-color: #1e293b;
+        resize: vertical;
+    }
+    .terminal-textarea:focus {
+        border-color: #10b981 !important;
+        box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1) !important;
+    }
+    
+    :root:not(.dark) .terminal-textarea {
+        background-color: #f8fafc;
+        color: #1e293b;
+        border-color: #e2e8f0;
+    }
+
+    .modal-backdrop {
+        background: rgba(15, 23, 42, 0.7);
+        backdrop-filter: blur(8px);
+    }
+</style>
+
+<div class="space-y-8 animate-card-fade">    <!-- ✅ HEADER PREMIUM INTEGRAÇÕES COMPACT -->
+    <div class="mb-8 animate-premium">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6 glass-premium p-6 rounded-[2rem] shadow-xl overflow-hidden relative border border-slate-900/5 dark:border-white/5">
+            <!-- Decorativos -->
+            <div class="absolute -top-24 -right-24 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl"></div>
+            <div class="absolute -bottom-24 -left-24 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl"></div>
+
+            <div class="flex items-center gap-5 relative z-10">
+                <div class="w-12 h-12 rounded-[1.25rem] bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-2xl shadow-emerald-500/20 shrink-0">
+                    <i class="fa-solid fa-plug text-xl"></i>
+                </div>
+                <div>
+                    <nav class="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-0.5">
+                        <span>Painel Operacional</span>
+                        <i class="fa-solid fa-chevron-right text-[8px] opacity-30"></i>
+                        <span class="text-emerald-500">Hub de Integrações</span>
+                    </nav>
+                    <h2 class="text-2xl font-black text-slate-800 dark:text-white tracking-tight">Integrações</h2>
+                </div>
+            </div>
+
+            <div class="flex flex-wrap items-center gap-3 relative z-10">
+                <div class="bg-slate-900/5 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 px-4 py-2.5 rounded-2xl text-right">
+                    <span class="block text-[9px] font-black text-slate-400 uppercase tracking-widest">APIs Conectadas</span>
+                    <span class="text-sm font-black text-slate-800 dark:text-white">6 Módulos</span>
+                </div>
+                <div class="bg-emerald-500/10 border border-emerald-500/20 px-4 py-2.5 rounded-2xl text-right">
+                    <span class="block text-[9px] font-black text-emerald-500 uppercase tracking-widest">Status WhatsApp</span>
+                    <span class="text-sm font-black text-emerald-500">{% if whatsapp_config and whatsapp_config.is_enabled %}Ativo{% else %}Pronto{% endif %}</span>
+                </div>
+            </div>
+        </div>
+    </div> </div>
+
+    <!-- =======================================================
+            SEARCH & CATEGORY FILTERS
+         ======================================================= -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <!-- Filter Pills -->
+        <div class="flex flex-wrap items-center gap-1.5 bg-slate-100 dark:bg-slate-900/60 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-800/80">
+            <button onclick="filterCards('all', this)" class="filter-btn px-4 py-2 rounded-xl text-xs font-extrabold transition-all bg-slate-900 dark:bg-white text-white dark:text-slate-950 shadow-sm">
+                <i class="fa-solid fa-border-all mr-1.5"></i> Todas (6)
+            </button>
+            <button onclick="filterCards('comunicacao', this)" class="filter-btn px-4 py-2 rounded-xl text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all">
+                <i class="fa-solid fa-comments mr-1.5 text-emerald-500"></i> Comunicação
+            </button>
+            <button onclick="filterCards('telemetria', this)" class="filter-btn px-4 py-2 rounded-xl text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all">
+                <i class="fa-solid fa-location-crosshairs mr-1.5 text-indigo-500"></i> Telemetria & GPS
+            </button>
+            <button onclick="filterCards('storage', this)" class="filter-btn px-4 py-2 rounded-xl text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all">
+                <i class="fa-solid fa-cloud mr-1.5 text-amber-500"></i> Cloud Storage
+            </button>
+            <button onclick="filterCards('bi', this)" class="filter-btn px-4 py-2 rounded-xl text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all">
+                <i class="fa-solid fa-chart-pie mr-1.5 text-violet-500"></i> Analytics & BI
+            </button>
+        </div>
+
+        <!-- Search Input -->
+        <div class="relative w-full md:w-72">
+            <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none">
+                <i class="fa-solid fa-magnifying-glass"></i>
+            </span>
+            <input id="searchCardsInput" type="text" onkeyup="searchCards(this.value)" placeholder="Buscar integração..." 
+                   class="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl pl-9 pr-4 py-2 text-xs dark:text-white outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all">
+        </div>
+    </div>
+
+    <!-- =======================================================
+            INTEGRATIONS GRID (CARDS VIEW)
+         ======================================================= -->
+    <div id="cardsGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+
+        <!-- 🟢 CARD 1: WHATSAPP EVOLUTION API -->
+        <div class="card-item integration-card bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 flex flex-col justify-between relative overflow-hidden shadow-lg" data-category="comunicacao" data-keywords="whatsapp evolution api mensagens sms notificacao">
+            <div class="space-y-4">
+                <!-- Card Header -->
+                <div class="flex items-start justify-between gap-4">
+                    <div class="flex items-center gap-3.5">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white text-2xl shadow-lg shadow-emerald-500/20 shrink-0">
+                            <i class="fa-brands fa-whatsapp"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-base font-extrabold text-slate-900 dark:text-white tracking-tight">WhatsApp Evolution</h3>
+                            <span class="text-[10px] font-mono text-slate-400 dark:text-slate-500">REST API Gateway</span>
+                        </div>
+                    </div>
+                    <span class="px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider {% if whatsapp_config and whatsapp_config.is_enabled %}bg-emerald-500/10 text-emerald-500 border border-emerald-500/20{% else %}bg-slate-100 dark:bg-slate-800 text-slate-400{% endif %}">
+                        {% if whatsapp_config and whatsapp_config.is_enabled %}● Ativo{% else %}Inativo{% endif %}
+                    </span>
+                </div>
+
+                <!-- Description -->
+                <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                    Disparo automático de mensagens no WhatsApp para alertas de checklists reprovados, vistorias e ordens de serviço.
+                </p>
+
+                <!-- Tags -->
+                <div class="flex flex-wrap gap-1.5 pt-1">
+                    <span class="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold font-mono">Open Source</span>
+                    <span class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[10px] font-bold">Custo R$ 0</span>
+                    <span class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[10px] font-bold">Webhooks</span>
+                </div>
+            </div>
+
+            <!-- Card Actions -->
+            <div class="pt-6 mt-6 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
+                <button onclick="openIntegrationModal('modalWhatsApp')" class="flex-1 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-[11px] rounded-xl shadow-md shadow-emerald-500/20 active:scale-95 transition-all flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-sliders"></i> Configurar
+                </button>
+                <button onclick="quickTestWhatsApp()" title="Testar Conexão" class="px-3 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl transition-all">
+                    <i class="fa-solid fa-rotate-right" id="quick-test-icon"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- ✈️ CARD 2: TELEGRAM BOT NOC -->
+        <div class="card-item integration-card bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 flex flex-col justify-between relative overflow-hidden shadow-lg" data-category="comunicacao" data-keywords="telegram bot noc rede alertas grupo comunicados">
+            <div class="space-y-4">
+                <div class="flex items-start justify-between gap-4">
+                    <div class="flex items-center gap-3.5">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-sky-400 to-blue-600 flex items-center justify-center text-white text-2xl shadow-lg shadow-sky-500/20 shrink-0">
+                            <i class="fa-brands fa-telegram"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-base font-extrabold text-slate-900 dark:text-white tracking-tight">Telegram Bot NOC</h3>
+                            <span class="text-[10px] font-mono text-slate-400 dark:text-slate-500">Telegram Bot API</span>
+                        </div>
+                    </div>
+                    <span class="px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-sky-500/10 text-sky-500 border border-sky-500/20">
+                        Grátis
+                    </span>
+                </div>
+
+                <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                    Notificações em tempo real para grupos de suporte técnico, quedas de rede NOC e alertas de geradores sem energia.
+                </p>
+
+                <div class="flex flex-wrap gap-1.5 pt-1">
+                    <span class="px-2 py-0.5 rounded bg-sky-500/10 text-sky-600 dark:text-sky-400 text-[10px] font-bold font-mono">100% Grátis</span>
+                    <span class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[10px] font-bold">Ilimitado</span>
+                    <span class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[10px] font-bold">Grupos</span>
+                </div>
+            </div>
+
+            <div class="pt-6 mt-6 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
+                <button onclick="openIntegrationModal('modalTelegram')" class="flex-1 px-4 py-2.5 bg-slate-900 dark:bg-white hover:bg-slate-800 dark:hover:bg-slate-100 text-white dark:text-slate-950 font-extrabold text-[11px] rounded-xl active:scale-95 transition-all flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-gear"></i> Configurar Telegram
+                </button>
+            </div>
+        </div>
+
+        <!-- ☁️ CARD 3: CLOUDFLARE R2 STORAGE -->
+        <div class="card-item integration-card bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 flex flex-col justify-between relative overflow-hidden shadow-lg" data-category="storage" data-keywords="cloudflare r2 s3 aws nuvem fotos imagens uploads s3">
+            <div class="space-y-4">
+                <div class="flex items-start justify-between gap-4">
+                    <div class="flex items-center gap-3.5">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-white text-2xl shadow-lg shadow-amber-500/20 shrink-0">
+                            <i class="fa-solid fa-cloud"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-base font-extrabold text-slate-900 dark:text-white tracking-tight">Cloudflare R2 Storage</h3>
+                            <span class="text-[10px] font-mono text-slate-400 dark:text-slate-500">S3 API Compatible</span>
+                        </div>
+                    </div>
+                    <span class="px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                        10 GB Free
+                    </span>
+                </div>
+
+                <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                    Armazenamento externo seguro para fotos de vistorias, avarias e PDFs na nuvem sem custo de transferência (Zero Egress).
+                </p>
+
+                <div class="flex flex-wrap gap-1.5 pt-1">
+                    <span class="px-2 py-0.5 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 text-[10px] font-bold font-mono">Zero Egress</span>
+                    <span class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[10px] font-bold">10 GB Grátis</span>
+                    <span class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[10px] font-bold">CDN Global</span>
+                </div>
+            </div>
+
+            <div class="pt-6 mt-6 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
+                <button onclick="openIntegrationModal('modalCloudflare')" class="flex-1 px-4 py-2.5 bg-slate-900 dark:bg-white hover:bg-slate-800 dark:hover:bg-slate-100 text-white dark:text-slate-950 font-extrabold text-[11px] rounded-xl active:scale-95 transition-all flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-database"></i> Configurar Nuvem
+                </button>
+            </div>
+        </div>
+
+        <!-- 📍 CARD 4: TRACCAR GPS TELEMETRIA -->
+        <div class="card-item integration-card bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 flex flex-col justify-between relative overflow-hidden shadow-lg" data-category="telemetria" data-keywords="traccar gps telemetria odometro km rastreador posicao frota">
+            <div class="space-y-4">
+                <div class="flex items-start justify-between gap-4">
+                    <div class="flex items-center gap-3.5">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white text-2xl shadow-lg shadow-indigo-500/20 shrink-0">
+                            <i class="fa-solid fa-location-crosshairs"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-base font-extrabold text-slate-900 dark:text-white tracking-tight">Traccar GPS Telemetria</h3>
+                            <span class="text-[10px] font-mono text-slate-400 dark:text-slate-500">Open Source Server</span>
+                        </div>
+                    </div>
+                    <span class="px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-indigo-500/10 text-indigo-500 border border-indigo-500/20">
+                        Open Source
+                    </span>
+                </div>
+
+                <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                    Sincronização em tempo real da posição GPS e atualização automatizada do odômetro (KM) dos veículos no checklist.
+                </p>
+
+                <div class="flex flex-wrap gap-1.5 pt-1">
+                    <span class="px-2 py-0.5 rounded bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 text-[10px] font-bold font-mono">2000+ Modelos</span>
+                    <span class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[10px] font-bold">KM Automático</span>
+                </div>
+            </div>
+
+            <div class="pt-6 mt-6 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
+                <button onclick="openIntegrationModal('modalTraccar')" class="flex-1 px-4 py-2.5 bg-slate-900 dark:bg-white hover:bg-slate-800 dark:hover:bg-slate-100 text-white dark:text-slate-950 font-extrabold text-[11px] rounded-xl active:scale-95 transition-all flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-satellite-dish"></i> Configurar Telemetria
+                </button>
+            </div>
+        </div>
+
+        <!-- 📊 CARD 5: METABASE BI ANALYTICS -->
+        <div class="card-item integration-card bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 flex flex-col justify-between relative overflow-hidden shadow-lg" data-category="bi" data-keywords="metabase bi analytics dashboard relatorios powerbi looker postgresql">
+            <div class="space-y-4">
+                <div class="flex items-start justify-between gap-4">
+                    <div class="flex items-center gap-3.5">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-violet-500 to-fuchsia-600 flex items-center justify-center text-white text-2xl shadow-lg shadow-violet-500/20 shrink-0">
+                            <i class="fa-solid fa-chart-pie"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-base font-extrabold text-slate-900 dark:text-white tracking-tight">Metabase / BI Analytics</h3>
+                            <span class="text-[10px] font-mono text-slate-400 dark:text-slate-500">Business Intelligence</span>
+                        </div>
+                    </div>
+                    <span class="px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-violet-500/10 text-violet-500 border border-violet-500/20">
+                        Community
+                    </span>
+                </div>
+
+                <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                    Dashboards gerenciais visuais integrados ao banco de dados PostgreSQL para monitoramento de custos da frota e SLAs.
+                </p>
+
+                <div class="flex flex-wrap gap-1.5 pt-1">
+                    <span class="px-2 py-0.5 rounded bg-violet-500/10 text-violet-600 dark:text-violet-400 text-[10px] font-bold font-mono">PostgreSQL Direct</span>
+                    <span class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[10px] font-bold">Embed UI</span>
+                </div>
+            </div>
+
+            <div class="pt-6 mt-6 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
+                <button onclick="openIntegrationModal('modalMetabase')" class="flex-1 px-4 py-2.5 bg-slate-900 dark:bg-white hover:bg-slate-800 dark:hover:bg-slate-100 text-white dark:text-slate-950 font-extrabold text-[11px] rounded-xl active:scale-95 transition-all flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-chart-line"></i> Configurar BI
+                </button>
+            </div>
+        </div>
+
+        <!-- ✉️ CARD 6: E-MAIL TRANSACTIONAL (BREVO / SMTP) -->
+        <div class="card-item integration-card bg-white dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 flex flex-col justify-between relative overflow-hidden shadow-lg" data-category="comunicacao" data-keywords="email smtp sendgrid brevo mailgun pdf relatorios">
+            <div class="space-y-4">
+                <div class="flex items-start justify-between gap-4">
+                    <div class="flex items-center gap-3.5">
+                        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center text-white text-2xl shadow-lg shadow-blue-500/20 shrink-0">
+                            <i class="fa-solid fa-envelope"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-base font-extrabold text-slate-900 dark:text-white tracking-tight">E-mail Transacional</h3>
+                            <span class="text-[10px] font-mono text-slate-400 dark:text-slate-500">SMTP / Brevo API</span>
+                        </div>
+                    </div>
+                    <span class="px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-blue-500/10 text-blue-500 border border-blue-500/20">
+                        300/dia Grátis
+                    </span>
+                </div>
+
+                <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                    Envio automatizado dos PDFs de vistorias e relatórios quinzenais gerados pelo sistema diretamente para a diretoria.
+                </p>
+
+                <div class="flex flex-wrap gap-1.5 pt-1">
+                    <span class="px-2 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 text-[10px] font-bold font-mono">SMTP SSL</span>
+                    <span class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 text-[10px] font-bold">PDF Attach</span>
+                </div>
+            </div>
+
+            <div class="pt-6 mt-6 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-2">
+                <button onclick="openIntegrationModal('modalEmail')" class="flex-1 px-4 py-2.5 bg-slate-900 dark:bg-white hover:bg-slate-800 dark:hover:bg-slate-100 text-white dark:text-slate-950 font-extrabold text-[11px] rounded-xl active:scale-95 transition-all flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-paper-plane"></i> Configurar E-mail
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+
+<!-- =======================================================
+        MODALS DE CONFIGURAÇÃO DEDICADOS
+     ======================================================= -->
+
+<!-- 1. MODAL WHATSAPP EVOLUTION API -->
+<div id="modalWhatsApp" class="fixed inset-0 z-50 hidden items-center justify-center p-4 modal-backdrop overflow-y-auto">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-4xl shadow-2xl overflow-hidden my-8 max-h-[90vh] flex flex-col">
+        <!-- Modal Header -->
+        <div class="p-6 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-950/40 shrink-0">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center text-xl">
+                    <i class="fa-brands fa-whatsapp"></i>
+                </div>
+                <div>
+                    <h3 class="text-base font-extrabold text-slate-900 dark:text-white">Configurações WhatsApp Evolution API</h3>
+                    <p class="text-xs text-slate-400">Credenciais, status em tempo real e modelos de mensagem.</p>
+                </div>
+            </div>
+            <button onclick="closeIntegrationModal('modalWhatsApp')" class="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors flex items-center justify-center">
+                <i class="fa-solid fa-xmark text-base"></i>
+            </button>
+        </div>
+
+        <!-- Modal Body (Scrollable) -->
+        <div class="p-6 overflow-y-auto space-y-6 flex-1">
+            <!-- Modal Tabs -->
+            <div class="flex gap-2 border-b border-slate-200 dark:border-slate-800 pb-2">
+                <button onclick="switchModalTab('wtab-credentials', this)" class="modal-tab-btn px-4 py-2 rounded-lg text-xs font-extrabold bg-slate-900 dark:bg-white text-white dark:text-slate-950">
+                    Credenciais API
+                </button>
+                <button onclick="switchModalTab('wtab-templates', this)" class="modal-tab-btn px-4 py-2 rounded-lg text-xs font-bold text-slate-500 hover:text-slate-900 dark:hover:text-white">
+                    Templates de Notificação
+                </button>
+            </div>
+
+            <!-- Tab 1: Credentials Form -->
+            <div id="wtab-credentials" class="modal-tab-panel space-y-6">
+                <form method="post" action="{{ url_for('whatsapp_config_save') }}" class="space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div class="space-y-1.5">
+                            <label class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block">URL da API (API URL)</label>
+                            <input name="api_url" required value="{{ whatsapp_config.api_url or 'https://api.evolution.com' }}" class="w-full bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-xs dark:text-white font-mono outline-none">
+                        </div>
+                        <div class="space-y-1.5">
+                            <label class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block">Nome da Instância</label>
+                            <input name="instance_name" required value="{{ whatsapp_config.instance_name or 'checklist_instance' }}" class="w-full bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-xs dark:text-white font-mono outline-none">
+                        </div>
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <label class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block">Global API Key</label>
+                        <input name="apikey" type="password" value="{{ whatsapp_config.apikey or '' }}" class="w-full bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-xs dark:text-white font-mono outline-none">
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <label class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block">Telefones Destinatários Globais (Separados por vírgula)</label>
+                        <textarea name="recipients" rows="2" class="w-full bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 rounded-xl p-3 text-xs dark:text-white font-mono outline-none">{{ whatsapp_config.recipients or '' }}</textarea>
+                    </div>
+
+                    <div class="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-950/40 rounded-xl border border-slate-200 dark:border-slate-800">
+                        <div>
+                            <h4 class="text-xs font-bold text-slate-800 dark:text-white">Status da Automação</h4>
+                            <p class="text-[10px] text-slate-400">Ativa ou desativa os disparos automáticos.</p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" name="is_enabled" {% if whatsapp_config and whatsapp_config.is_enabled %}checked{% endif %} class="sr-only peer">
+                            <div class="w-10 h-5.5 bg-slate-200 dark:bg-slate-700 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[2.5px] after:left-[2px] after:bg-white after:rounded-full after:h-4.5 after:w-4.5 after:transition-all peer-checked:bg-emerald-500"></div>
+                        </label>
+                    </div>
+
+                    <div class="flex items-center gap-3 pt-4 border-t border-slate-200 dark:border-slate-800">
+                        <button type="submit" class="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl shadow-lg shadow-emerald-500/20 active:scale-95 transition-all">
+                            Salvar Alterações
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Tab 2: Templates -->
+            <div id="wtab-templates" class="modal-tab-panel hidden space-y-4">
+                <form method="post" action="{{ url_for('whatsapp_templates_save') }}" class="space-y-4">
+                    <div class="space-y-1.5">
+                        <label class="text-xs font-bold text-slate-700 dark:text-slate-300">Mensagem: Checklist Reprovado</label>
+                        <textarea name="msg_checklist_fail" rows="3" class="w-full terminal-textarea rounded-xl p-3 text-xs outline-none leading-relaxed">{{ whatsapp_config.msg_checklist_fail if whatsapp_config else '' }}</textarea>
+                    </div>
+                    <div class="space-y-1.5">
+                        <label class="text-xs font-bold text-slate-700 dark:text-slate-300">Mensagem: Nova Vistoria</label>
+                        <textarea name="msg_new_vistoria" rows="3" class="w-full terminal-textarea rounded-xl p-3 text-xs outline-none leading-relaxed">{{ whatsapp_config.msg_new_vistoria if whatsapp_config else '' }}</textarea>
+                    </div>
+                    <button type="submit" class="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-xl active:scale-95 transition-all">
+                        Salvar Templates
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- 2. MODAL TELEGRAM BOT -->
+<div id="modalTelegram" class="fixed inset-0 z-50 hidden items-center justify-center p-4 modal-backdrop overflow-y-auto">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-xl shadow-2xl overflow-hidden my-8">
+        <div class="p-6 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-950/40">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-sky-500/10 text-sky-500 flex items-center justify-center text-xl">
+                    <i class="fa-brands fa-telegram"></i>
+                </div>
+                <div>
+                    <h3 class="text-base font-extrabold text-slate-900 dark:text-white">Telegram Bot NOC</h3>
+                    <p class="text-xs text-slate-400">Notificações em grupo e alertas operacionais.</p>
+                </div>
+            </div>
+            <button onclick="closeIntegrationModal('modalTelegram')" class="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors flex items-center justify-center">
+                <i class="fa-solid fa-xmark text-base"></i>
+            </button>
+        </div>
+        <div class="p-6 space-y-4">
+            <div class="space-y-1.5">
+                <label class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block">Bot Token (BotFather)</label>
+                <input type="password" placeholder="123456789:ABCdefGhI..." class="w-full bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-xs dark:text-white font-mono outline-none">
+            </div>
+            <div class="space-y-1.5">
+                <label class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block">Chat ID do Grupo</label>
+                <input type="text" placeholder="-100123456789" class="w-full bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-xs dark:text-white font-mono outline-none">
+            </div>
+            <button onclick="alert('Configurações salvas!')" class="w-full py-3 bg-sky-600 hover:bg-sky-700 text-white font-extrabold text-xs rounded-xl transition-all">
+                Salvar Configurações Telegram
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- 3. MODAL CLOUDFLARE R2 -->
+<div id="modalCloudflare" class="fixed inset-0 z-50 hidden items-center justify-center p-4 modal-backdrop overflow-y-auto">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-xl shadow-2xl overflow-hidden my-8">
+        <div class="p-6 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-950/40">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center text-xl">
+                    <i class="fa-solid fa-cloud"></i>
+                </div>
+                <div>
+                    <h3 class="text-base font-extrabold text-slate-900 dark:text-white">Cloudflare R2 Storage</h3>
+                    <p class="text-xs text-slate-400">Armazenamento de fotos de vistorias e arquivos.</p>
+                </div>
+            </div>
+            <button onclick="closeIntegrationModal('modalCloudflare')" class="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors flex items-center justify-center">
+                <i class="fa-solid fa-xmark text-base"></i>
+            </button>
+        </div>
+        <div class="p-6 space-y-4">
+            <div class="space-y-1.5">
+                <label class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block">Nome do Bucket</label>
+                <input type="text" placeholder="checklist-veicular-uploads" class="w-full bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-xs dark:text-white font-mono outline-none">
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div class="space-y-1.5">
+                    <label class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block">Access Key ID</label>
+                    <input type="text" placeholder="Access Key" class="w-full bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-xs dark:text-white font-mono outline-none">
+                </div>
+                <div class="space-y-1.5">
+                    <label class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block">Secret Access Key</label>
+                    <input type="password" placeholder="Secret Key" class="w-full bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-xs dark:text-white font-mono outline-none">
+                </div>
+            </div>
+            <button onclick="alert('Configurações de nuvem salvas!')" class="w-full py-3 bg-amber-600 hover:bg-amber-700 text-white font-extrabold text-xs rounded-xl transition-all">
+                Salvar Armazenamento Nuvem
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- 4. MODAL TRACCAR GPS -->
+<div id="modalTraccar" class="fixed inset-0 z-50 hidden items-center justify-center p-4 modal-backdrop overflow-y-auto">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-xl shadow-2xl overflow-hidden my-8">
+        <div class="p-6 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-950/40">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-indigo-500/10 text-indigo-500 flex items-center justify-center text-xl">
+                    <i class="fa-solid fa-location-crosshairs"></i>
+                </div>
+                <div>
+                    <h3 class="text-base font-extrabold text-slate-900 dark:text-white">Traccar GPS Telemetria</h3>
+                    <p class="text-xs text-slate-400">Atualização automática de KM e posição GPS.</p>
+                </div>
+            </div>
+            <button onclick="closeIntegrationModal('modalTraccar')" class="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors flex items-center justify-center">
+                <i class="fa-solid fa-xmark text-base"></i>
+            </button>
+        </div>
+        <div class="p-6 space-y-4">
+            <div class="space-y-1.5">
+                <label class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block">URL do Servidor Traccar</label>
+                <input type="text" placeholder="http://localhost:8082" class="w-full bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-xs dark:text-white font-mono outline-none">
+            </div>
+            <button onclick="alert('Configurações salva!')" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-xs rounded-xl transition-all">
+                Salvar Telemetria
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- 5. MODAL METABASE BI -->
+<div id="modalMetabase" class="fixed inset-0 z-50 hidden items-center justify-center p-4 modal-backdrop overflow-y-auto">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-xl shadow-2xl overflow-hidden my-8">
+        <div class="p-6 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-950/40">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-violet-500/10 text-violet-500 flex items-center justify-center text-xl">
+                    <i class="fa-solid fa-chart-pie"></i>
+                </div>
+                <div>
+                    <h3 class="text-base font-extrabold text-slate-900 dark:text-white">Metabase / BI Analytics</h3>
+                    <p class="text-xs text-slate-400">Incorporação de painéis dinâmicos de BI.</p>
+                </div>
+            </div>
+            <button onclick="closeIntegrationModal('modalMetabase')" class="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors flex items-center justify-center">
+                <i class="fa-solid fa-xmark text-base"></i>
+            </button>
+        </div>
+        <div class="p-6 space-y-4">
+            <div class="space-y-1.5">
+                <label class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block">URL de Incorporação (Embed URL)</label>
+                <input type="text" placeholder="http://bi.seudominio.com/embed/dashboard/..." class="w-full bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-xs dark:text-white font-mono outline-none">
+            </div>
+            <button onclick="alert('Configuração de BI salva!')" class="w-full py-3 bg-violet-600 hover:bg-violet-700 text-white font-extrabold text-xs rounded-xl transition-all">
+                Salvar BI
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- 6. MODAL EMAIL SMTP -->
+<div id="modalEmail" class="fixed inset-0 z-50 hidden items-center justify-center p-4 modal-backdrop overflow-y-auto">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl w-full max-w-xl shadow-2xl overflow-hidden my-8">
+        <div class="p-6 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-950/40">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center text-xl">
+                    <i class="fa-solid fa-envelope"></i>
+                </div>
+                <div>
+                    <h3 class="text-base font-extrabold text-slate-900 dark:text-white">E-mail Transacional</h3>
+                    <p class="text-xs text-slate-400">Servidor SMTP para envio de relatórios em PDF.</p>
+                </div>
+            </div>
+            <button onclick="closeIntegrationModal('modalEmail')" class="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors flex items-center justify-center">
+                <i class="fa-solid fa-xmark text-base"></i>
+            </button>
+        </div>
+        <div class="p-6 space-y-4">
+            <div class="space-y-1.5">
+                <label class="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest block">Servidor SMTP</label>
+                <input type="text" placeholder="smtp.brevo.com" class="w-full bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 text-xs dark:text-white font-mono outline-none">
+            </div>
+            <button onclick="alert('Configuração de E-mail salva!')" class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs rounded-xl transition-all">
+                Salvar E-mail SMTP
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript Engine for Filtering & Modals -->
+<script>
+function filterCards(category, btn) {
+    document.querySelectorAll('.filter-btn').forEach(b => {
+        b.className = 'filter-btn px-4 py-2 rounded-xl text-xs font-bold text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all';
+    });
+    btn.className = 'filter-btn px-4 py-2 rounded-xl text-xs font-extrabold transition-all bg-slate-900 dark:bg-white text-white dark:text-slate-950 shadow-sm';
+
+    const cards = document.querySelectorAll('.card-item');
+    cards.forEach(card => {
+        if(category === 'all' || card.getAttribute('data-category') === category) {
+            card.style.display = 'flex';
+        } else {
+            card.style.display = 'none';
+        }
+    });
+}
+
+function searchCards(query) {
+    const q = (query || '').toLowerCase().strip();
+    const cards = document.querySelectorAll('.card-item');
+    cards.forEach(card => {
+        const keywords = card.getAttribute('data-keywords') || '';
+        const text = card.innerText.toLowerCase();
+        if(!q || keywords.includes(q) || text.includes(q)) {
+            card.style.display = 'flex';
+        } else {
+            card.style.display = 'none';
+        }
+    });
+}
+
+function openIntegrationModal(modalId) {
+    const m = document.getElementById(modalId);
+    if(m) {
+        m.classList.remove('hidden');
+        m.classList.add('flex');
+    }
+}
+
+function closeIntegrationModal(modalId) {
+    const m = document.getElementById(modalId);
+    if(m) {
+        m.classList.add('hidden');
+        m.classList.remove('flex');
+    }
+}
+
+function switchModalTab(tabId, btn) {
+    document.querySelectorAll('.modal-tab-panel').forEach(p => p.classList.add('hidden'));
+    document.querySelectorAll('.modal-tab-btn').forEach(b => {
+        b.className = 'modal-tab-btn px-4 py-2 rounded-lg text-xs font-bold text-slate-500 hover:text-slate-900 dark:hover:text-white';
+    });
+    const target = document.getElementById(tabId);
+    if(target) target.classList.remove('hidden');
+    btn.className = 'modal-tab-btn px-4 py-2 rounded-lg text-xs font-extrabold bg-slate-900 dark:bg-white text-white dark:text-slate-950';
+}
+
+function quickTestWhatsApp() {
+    const icon = document.getElementById('quick-test-icon');
+    if(icon) icon.classList.add('fa-spin');
+    
+    fetch("{{ url_for('whatsapp_connection_status') }}")
+    .then(res => res.json())
+    .then(data => {
+        if(icon) icon.classList.remove('fa-spin');
+        if(data.status === 'connected') {
+            alert('✅ Evolution API está ONLINE e conectada!');
+        } else {
+            alert('⚠️ Evolution API está Desconectada. Clique em "Configurar" para checar suas credenciais.');
+        }
+    })
+    .catch(err => {
+        if(icon) icon.classList.remove('fa-spin');
+        alert('❌ Erro ao conectar com o servidor da Evolution API.');
+    });
+}
+</script>
+
+{% endblock %}
