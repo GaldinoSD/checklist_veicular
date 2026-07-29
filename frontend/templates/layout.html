@@ -908,8 +908,8 @@
                 <a href="{{ url_for('mapa_rede') }}" 
                    class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-[12px] font-bold transition-all
                           {% if request.endpoint == 'mapa_rede' %}text-indigo-500 bg-indigo-500/5{% else %}text-slate-500 dark:text-gray-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-900/5 dark:hover:bg-white/5{% endif %}">
-                  <i class="fa-solid fa-route w-4 text-center opacity-70"></i>
-                  Mapa de Fibra
+                  <i class="fa-solid fa-network-wired w-4 text-center opacity-70"></i>
+                  Projeto de Rede
                 </a>
                 {% endif %}
                 <a href="{{ url_for('rede_registros') }}" 
@@ -1467,14 +1467,24 @@
         });
       })();
 
-      // Modal Logic
+      // Modal Logic (Global)
       function openModal(id) {
         const el = document.getElementById(id);
-        if(el) { el.classList.remove('hidden'); el.classList.add('flex'); }
+        if(el) {
+          el.classList.remove('hidden');
+          el.classList.add('flex');
+          el.classList.add('open');
+          el.style.display = 'flex';
+        }
       }
       function closeModal(id) {
         const el = document.getElementById(id);
-        if(el) { el.classList.add('hidden'); el.classList.remove('flex'); }
+        if(el) {
+          el.classList.add('hidden');
+          el.classList.remove('flex');
+          el.classList.remove('open');
+          el.style.display = 'none';
+        }
       }
 
       // ✅ TOPBAR CLOCK

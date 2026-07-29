@@ -123,7 +123,15 @@
                         </div>
                         Registros de Rede
                     </h1>
-                    <p class="text-sm text-slate-500 dark:text-slate-400 mt-2 ml-[60px]">Consulta detalhada de todos os elementos cadastrados na rede de fibra óptica</p>
+                    <p class="text-sm text-slate-500 dark:text-slate-400 mt-2 ml-[60px]">Consulta detalhada e exportação de todos os elementos da infraestrutura FTTH/FTTX</p>
+                </div>
+                <div class="flex flex-wrap items-center gap-2">
+                    <a href="/api/network/export/geojson" class="px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-all shadow-lg shadow-indigo-500/20 flex items-center gap-2">
+                        <i class="fa-solid fa-file-export"></i> GeoJSON
+                    </a>
+                    <a href="/api/network/export/kml" class="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-lg shadow-emerald-500/20 flex items-center gap-2">
+                        <i class="fa-solid fa-earth-americas"></i> Google Earth (KML)
+                    </a>
                 </div>
             </div>
         </div>
@@ -139,10 +147,13 @@
                 <i class="fa-regular fa-lightbulb"></i> Postes <span class="tab-count bg-blue-500/10 text-blue-500 px-2 py-0.5 rounded-lg text-[9px]" id="count-postes">0</span>
             </button>
             <button onclick="switchTab('ceos')" data-tab="ceos" class="tab-btn flex items-center gap-2 px-5 py-3 rounded-2xl bg-slate-900/5 dark:bg-white/5 text-slate-500 dark:text-slate-400 text-xs font-black uppercase tracking-widest whitespace-nowrap">
-                <i class="fa-solid fa-network-wired"></i> CEOs <span class="tab-count bg-teal-500/10 text-teal-500 px-2 py-0.5 rounded-lg text-[9px]" id="count-ceos">0</span>
+                <i class="fa-solid fa-circle-nodes"></i> CEOs <span class="tab-count bg-teal-500/10 text-teal-500 px-2 py-0.5 rounded-lg text-[9px]" id="count-ceos">0</span>
             </button>
             <button onclick="switchTab('ctos')" data-tab="ctos" class="tab-btn flex items-center gap-2 px-5 py-3 rounded-2xl bg-slate-900/5 dark:bg-white/5 text-slate-500 dark:text-slate-400 text-xs font-black uppercase tracking-widest whitespace-nowrap">
                 <i class="fa-solid fa-box"></i> CTOs NAP <span class="tab-count bg-amber-500/10 text-amber-500 px-2 py-0.5 rounded-lg text-[9px]" id="count-ctos">0</span>
+            </button>
+            <button onclick="switchTab('pops')" data-tab="pops" class="tab-btn flex items-center gap-2 px-5 py-3 rounded-2xl bg-slate-900/5 dark:bg-white/5 text-slate-500 dark:text-slate-400 text-xs font-black uppercase tracking-widest whitespace-nowrap">
+                <i class="fa-solid fa-building"></i> POPs & Racks <span class="tab-count bg-orange-500/10 text-orange-500 px-2 py-0.5 rounded-lg text-[9px]" id="count-pops">0</span>
             </button>
             <button onclick="switchTab('cabos')" data-tab="cabos" class="tab-btn flex items-center gap-2 px-5 py-3 rounded-2xl bg-slate-900/5 dark:bg-white/5 text-slate-500 dark:text-slate-400 text-xs font-black uppercase tracking-widest whitespace-nowrap">
                 <i class="fa-solid fa-bezier-curve"></i> Cabos <span class="tab-count bg-indigo-500/10 text-indigo-500 px-2 py-0.5 rounded-lg text-[9px]" id="count-cabos">0</span>
@@ -159,6 +170,7 @@
     <div id="tab-postes" class="tab-content active"></div>
     <div id="tab-ceos" class="tab-content"></div>
     <div id="tab-ctos" class="tab-content"></div>
+    <div id="tab-pops" class="tab-content"></div>
     <div id="tab-cabos" class="tab-content"></div>
 
     <!-- EMPTY STATE -->
@@ -198,8 +210,9 @@
 
     // Categorize nodes
     const posts = nodesData.filter(n => n.type === 'post');
-    const ceos = nodesData.filter(n => n.type === 'box' && n.details && n.details.subcategory === 'ceo');
-    const ctos = nodesData.filter(n => n.type === 'box' && (!n.details || n.details.subcategory !== 'ceo'));
+    const ceos = nodesData.filter(n => n.type === 'ceo' || (n.type === 'box' && n.details && n.details.subcategory === 'ceo'));
+    const ctos = nodesData.filter(n => n.type === 'cto' || (n.type === 'box' && (!n.details || n.details.subcategory !== 'ceo')));
+    const pops = nodesData.filter(n => ['pop', 'rack', 'mini_rack', 'dio', 'torre', 'shelter', 'armario'].includes(n.type));
 
     // ======================== TABS ========================
     function switchTab(tab) {
@@ -452,6 +465,54 @@
         }).join('')}</div>`;
     }
 
+    // ---- POPS & RACKS ----
+    function renderPOPs() {
+        const container = document.getElementById('tab-pops');
+        document.getElementById('count-pops').textContent = pops.length;
+
+        if (pops.length === 0) {
+            container.innerHTML = emptySection('Nenhum POP ou Rack cadastrado');
+            return;
+        }
+
+        container.innerHTML = `<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">${pops.map(node => {
+            const cables = getCablesAtNode(node.id);
+            const cardId = `card-pop-${node.id}`;
+            const iconMap = { pop: 'fa-building', rack: 'fa-server', mini_rack: 'fa-hdd', dio: 'fa-network-wired', torre: 'fa-tower-cell', shelter: 'fa-warehouse', armario: 'fa-cabinet-filing' };
+            const typeLabels = { pop: 'POP Central', rack: 'Rack 19"', mini_rack: 'Mini Rack', dio: 'DIO', torre: 'Torre', shelter: 'Shelter', armario: 'Armário Outdoor' };
+            const icon = iconMap[node.type] || 'fa-building';
+            const label = typeLabels[node.type] || node.type.toUpperCase();
+
+            return `
+                <div class="card-premium card-expandable registry-card overflow-hidden" id="${cardId}" data-name="${node.name}">
+                    <div class="p-5 cursor-pointer flex items-center justify-between" onclick="toggleCard('${cardId}')">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-orange-500/10 text-orange-500 flex items-center justify-center">
+                                <i class="fa-solid ${icon} text-lg"></i>
+                            </div>
+                            <div>
+                                <div class="text-sm font-black text-slate-900 dark:text-white">${node.name}</div>
+                                <div class="text-[10px] font-bold text-slate-400 mt-0.5">${label} ${node.code ? '· ' + node.code : ''} · ${node.lat.toFixed(6)}, ${node.lng.toFixed(6)}</div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="px-2 py-1 rounded-lg bg-emerald-500/10 text-emerald-500 text-[9px] font-black">${node.status || 'Ativo'}</span>
+                            <i class="fa-solid fa-chevron-down text-slate-400 text-xs expand-chevron"></i>
+                        </div>
+                    </div>
+                    <div class="card-details">
+                        <div class="px-5 pb-5 space-y-3 border-t border-slate-900/5 dark:border-white/5 pt-4">
+                            ${node.manufacturer ? `<div class="flex justify-between text-xs text-slate-500"><span>Fabricante:</span><span class="font-bold text-slate-700 dark:text-white">${node.manufacturer}</span></div>` : ''}
+                            ${node.model ? `<div class="flex justify-between text-xs text-slate-500"><span>Modelo:</span><span class="font-bold text-slate-700 dark:text-white">${node.model}</span></div>` : ''}
+                            ${node.capacity ? `<div class="flex justify-between text-xs text-slate-500"><span>Capacidade:</span><span class="font-bold text-slate-700 dark:text-white">${node.capacity}</span></div>` : ''}
+                            ${renderCablesList(cables)}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('')}</div>`;
+    }
+
     // ---- CABOS ----
     function renderCabos() {
         const container = document.getElementById('tab-cabos');
@@ -695,6 +756,7 @@
         renderPostes();
         renderCEOs();
         renderCTOs();
+        renderPOPs();
         renderCabos();
 
         // Show empty state if nothing

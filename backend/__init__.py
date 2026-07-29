@@ -80,7 +80,7 @@ def create_app():
             session["csrf_token"] = secrets.token_hex(32)
             
         if request.method in ("POST", "PUT", "PATCH", "DELETE"):
-            if request.path == "/api/gps/gateway":
+            if request.path == "/api/gps/gateway" or request.path.startswith("/api/network/"):
                 return
                 
             token = request.form.get("csrf_token") or request.headers.get("X-CSRFToken")

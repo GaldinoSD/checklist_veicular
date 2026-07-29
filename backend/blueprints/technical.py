@@ -368,7 +368,7 @@ def geradores_pdf():
         buffer,
         mimetype="application/pdf",
         as_attachment=False,
-        download_name=f"relatorio_geradores_{now_dt.strftime('%Y%m%d_%H%M')}.pdf"
+        download_name=f"relatorio_geradores_{now_dt.strftime('%d_%m_%Y')}.pdf"
     )
 
 
@@ -1099,7 +1099,7 @@ def atividade_realizada_pdf(id):
         buffer,
         mimetype="application/pdf",
         as_attachment=False,
-        download_name=f"atividade_realizada_{id}.pdf"
+        download_name=f"atividade_realizada_{datetime.now().strftime('%d_%m_%Y')}.pdf"
     )
 
 
@@ -1633,7 +1633,7 @@ def anotacao_pdf(id):
         buffer,
         mimetype="application/pdf",
         as_attachment=False,
-        download_name=f"anotacao_{id}.pdf"
+        download_name=f"anotacao_{datetime.now().strftime('%d_%m_%Y')}.pdf"
     )
 
 
@@ -2085,9 +2085,6 @@ def make_premium_pdf(buffer, title, metadata, content_table_data, image_paths=No
         c.setFillColor(colors.HexColor("#475569"))
         now_str = agora().strftime("%d/%m/%Y %H:%M")
         c.drawString(25, divider_y - 10, f"Emitido em: {now_str}")
-        
-        doc_ref = ref_id or metadata.get("ID") or metadata.get("Código") or metadata.get("Placa") or metadata.get("Nº") or "N/A"
-        c.drawRightString(width - 25, divider_y - 10, f"Doc Ref: {doc_ref}")
 
         c.setStrokeColor(colors.HexColor("#E2E8F0"))
         c.setLineWidth(0.8)
@@ -2364,7 +2361,7 @@ def encerramento_pdf(id):
         buffer,
         mimetype="application/pdf",
         as_attachment=False,
-        download_name=f"encerramento_diario_{id}.pdf"
+        download_name=f"encerramento_diario_{datetime.now().strftime('%d_%m_%Y')}.pdf"
     )
 
 
@@ -2500,7 +2497,6 @@ def atividade_pdf(id):
             c.setFillColor(colors.HexColor("#475569"))
             now_str = agora().strftime("%d/%m/%Y %H:%M")
             c.drawString(25, height - 75, f"Emitido em: {now_str}")
-            c.drawRightString(width - 25, height - 75, f"Doc Ref: AT-{a.id}")
 
             # 5. Rodapé Institucional AdaptLink
             c.setStrokeColor(colors.HexColor("#E2E8F0"))
@@ -2776,7 +2772,7 @@ def atividade_pdf(id):
         buffer,
         mimetype="application/pdf",
         as_attachment=False,
-        download_name=f"atividade_tecnica_{id}.pdf"
+        download_name=f"atividade_tecnica_{datetime.now().strftime('%d_%m_%Y')}.pdf"
     )
 
 
@@ -2821,7 +2817,7 @@ def reuniao_pdf(id):
         buffer,
         mimetype="application/pdf",
         as_attachment=False,
-        download_name=f"ata_reuniao_{id}.pdf"
+        download_name=f"ata_reuniao_{datetime.now().strftime('%d_%m_%Y')}.pdf"
     )
 
 
@@ -2893,7 +2889,7 @@ def rfo_pdf(id):
         buffer,
         mimetype="application/pdf",
         as_attachment=False,
-        download_name=f"rfo_{r.number or id}.pdf"
+        download_name=f"rfo_{datetime.now().strftime('%d_%m_%Y')}.pdf"
     )
 
 
@@ -2909,7 +2905,7 @@ def rota_exata_pdf(id):
 
     metadata = {
         "__ref_id__": f"RE-{r.id}",
-        "Supervisor": (r.supervisor.username if r.supervisor else "N/A").upper(),
+        "Supervisor": r.supervisor.username if r.supervisor else "N/A",
         "Data de Auditoria": r.date.strftime("%d/%m/%Y") if r.date else "N/A",
         "Horário": r.date_created.strftime("%H:%M") if r.date_created else (r.time or "N/A"),
     }
@@ -2921,7 +2917,7 @@ def rota_exata_pdf(id):
                 lines = []
                 for i, t in enumerate(r.techs_data, 1):
                     tech_name = t.get('tech_name') or f"Técnico ID {t.get('tech_id')}"
-                    lines.append(f"<b>AUDITORIA {i}: {tech_name.upper()}</b>")
+                    lines.append(f"<b>AUDITORIA {i}: {tech_name}</b>")
                     lines.append(f"  • <b>Data de Supervisão:</b> {t.get('supervision_date') or 'N/A'}")
                     lines.append(f"  • <b>Saída do Pátio:</b> {t.get('yard_departure_time') or 'N/A'}")
                     
@@ -2955,8 +2951,7 @@ def rota_exata_pdf(id):
             techs_str = f"Erro ao processar dados de técnicos: {str(ex)}"
 
     content = [
-        ("Auditoria de Técnicos em Campo", techs_str or "Nenhuma auditoria de técnico registrada"),
-        ("Observações do Supervisor", r.obs or "Sem observações registradas")
+        ("Auditoria de Técnicos em Campo", techs_str or "Nenhuma auditoria de técnico registrada")
     ]
 
     make_premium_pdf(buffer, "Relatório de Auditoria Rota Exata", metadata, content)
@@ -2966,7 +2961,7 @@ def rota_exata_pdf(id):
         buffer,
         mimetype="application/pdf",
         as_attachment=False,
-        download_name=f"auditoria_rota_exata_{id}.pdf"
+        download_name=f"auditoria_rota_exata_{datetime.now().strftime('%d_%m_%Y')}.pdf"
     )
 
 
@@ -3129,7 +3124,7 @@ def supervisao_pdf(id):
         buffer,
         mimetype="application/pdf",
         as_attachment=False,
-        download_name=f"supervisao_campo_{id}.pdf"
+        download_name=f"supervisao_campo_{datetime.now().strftime('%d_%m_%Y')}.pdf"
     )
 
 
@@ -3734,7 +3729,7 @@ def gestao_relatorios_gerar():
         buffer,
         mimetype="application/pdf",
         as_attachment=False,
-        download_name=f"relatorio_consolidado_{report_type}.pdf"
+        download_name=f"relatorio_consolidado_{report_type}_{datetime.now().strftime('%d_%m_%Y')}.pdf"
     )
 
 
@@ -6868,7 +6863,7 @@ def monitoramento_relatorio_pdf():
     
     response = make_response(buffer.getvalue())
     response.headers['Content-Type'] = 'application/pdf'
-    response.headers['Content-Disposition'] = f'inline; filename=relatorio_telemetria_{vehicle.plate}.pdf'
+    response.headers['Content-Disposition'] = f'inline; filename=relatorio_telemetria_{vehicle.plate}_{datetime.now().strftime("%d_%m_%Y")}.pdf'
     return response
 
 
@@ -7534,7 +7529,7 @@ def controle_ferramentas_relatorio_pdf(user_id):
         buffer,
         mimetype="application/pdf",
         as_attachment=False,
-        download_name=f"vistoria_ferramentas_{user.username}.pdf"
+        download_name=f"vistoria_ferramentas_{user.username}_{datetime.now().strftime('%d_%m_%Y')}.pdf"
     )
 
 

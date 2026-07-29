@@ -703,7 +703,7 @@ def avaria_pdf(avaria_id):
         buffer,
         mimetype="application/pdf",
         as_attachment=False,
-        download_name=f"ordem_servico_os-{os_detail.id}.pdf"
+        download_name=f"ordem_servico_{datetime.now().strftime('%d_%m_%Y')}.pdf"
     )
 
 
@@ -1402,7 +1402,7 @@ def checklist_pdf_download(cid):
         pdf_path_str,
         mimetype="application/pdf",
         as_attachment=False,
-        download_name=f"checklist_{c.id}_{c.technician}.pdf"
+        download_name=f"checklist_{datetime.now().strftime('%d_%m_%Y')}.pdf"
     )
 
 
@@ -1908,7 +1908,7 @@ def test_layout_pdf():
         buffer,
         mimetype="application/pdf",
         as_attachment=False,
-        download_name="homologacao_layout.pdf"
+        download_name=f"homologacao_layout_{datetime.now().strftime('%d_%m_%Y')}.pdf"
     )
 
 
@@ -2010,7 +2010,6 @@ def generate_checklist_pdf(checklist_obj: Checklist, raw: dict) -> str:
             c.setFont("Helvetica", 7)
             c.setFillColor(CINZA_TEXTO)
             c.drawString(12*mm, height-31*mm, f"Emitido em: {now_brt_str}")
-            c.drawRightString(width-12*mm, height-31*mm, f"Doc Ref: CK-{checklist_obj.id}")
 
             footer_line_y = 20*mm
             c.setStrokeColor(colors.HexColor("#BBBBBB"))
@@ -2569,7 +2568,6 @@ def generate_vistoria_pdf(vistoria_obj: Vistoria) -> str:
             c.setFont("Helvetica", 7)
             c.setFillColor(CINZA_TEXTO)
             c.drawString(12*mm, height-31*mm, f"Emitido em: {now_brt_str}")
-            c.drawRightString(width-12*mm, height-31*mm, f"Doc Ref: CK-{vistoria_obj.id}")
 
             footer_line_y = 20*mm
             c.setStrokeColor(colors.HexColor("#BBBBBB"))
@@ -2844,7 +2842,7 @@ def vistoria_pdf_download(vistoria_id):
         pdf_path_str,
         mimetype="application/pdf",
         as_attachment=False,
-        download_name=f"vistoria_{v.id}_{v.vehicle.plate if v.vehicle else 'sem_placa'}.pdf"
+        download_name=f"vistoria_{datetime.now().strftime('%d_%m_%Y')}.pdf"
     )
 
 

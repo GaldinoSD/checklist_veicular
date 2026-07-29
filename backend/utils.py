@@ -824,7 +824,6 @@ def make_premium_pdf(buffer, title, metadata, content_table_data, image_paths=No
             return ""
         text_str = str(text)
         import re
-        # Split by allowed ReportLab XML/HTML tags (case-insensitive)
         allowed_tags_pattern = r'(</?(?:b|i|u|strong|em|font(?:\s+color=(?:\'[^\']*\'|"[^\"]*")|\s+face=(?:\'[^\']*\'|"[^\"]*")|\s+size=(?:\'[^\']*\'|"[^\"]*"))*|br\s*/?)>)'
         parts = re.split(allowed_tags_pattern, text_str, flags=re.IGNORECASE)
         for i in range(len(parts)):
@@ -833,7 +832,6 @@ def make_premium_pdf(buffer, title, metadata, content_table_data, image_paths=No
                 parts[i] = parts[i].replace('\n', '<br/>')
         return "".join(parts)
 
-    # Dynamic layout configuration from SystemConfig
     config = SystemConfig.query.first()
     
     logo_path_custom = None
@@ -862,7 +860,7 @@ def make_premium_pdf(buffer, title, metadata, content_table_data, image_paths=No
     def draw_background(c, doc):
         width, height = A4
         
-        # 1. Cabeçalho / Logotipo
+        # 1. Logotipo
         if logo_path and os.path.exists(logo_path):
             try:
                 from reportlab.lib.utils import ImageReader
@@ -871,7 +869,7 @@ def make_premium_pdf(buffer, title, metadata, content_table_data, image_paths=No
             except Exception as e:
                 print("⚠️ Erro ao carregar logo no header:", e)
 
-        # 2. Título e Subtítulo dinâmicos com Paragraph para evitar estouro
+        # 2. Título do PDF
         title_len = len(title)
         if title_len > 60:
             font_size = 10
@@ -892,7 +890,7 @@ def make_premium_pdf(buffer, title, metadata, content_table_data, image_paths=No
         )
         
         p_title = Paragraph(title.upper(), header_title_style)
-        avail_width = width - 145  # width - logo_width(90) - margin_left(20) - margin_right(20) - gap(15)
+        avail_width = width - 145
         _, h_title = p_title.wrap(avail_width, 40)
         
         y_pos = height - 22.5 - h_title
@@ -902,7 +900,7 @@ def make_premium_pdf(buffer, title, metadata, content_table_data, image_paths=No
         c.setFillColor(colors.HexColor("#475569"))
         c.drawString(125, y_pos - 10, "Registro Formal – AdaptLink")
 
-        # 3. Linha Azul Divisória Premium
+        # 3. Linha Azul Divisória Premium (Navy #1F3C78)
         offset = 12 if h_title > 18 else 0
         divider_y = height - 65 - offset
         
@@ -915,11 +913,8 @@ def make_premium_pdf(buffer, title, metadata, content_table_data, image_paths=No
         c.setFillColor(colors.HexColor("#475569"))
         now_str = agora().strftime("%d/%m/%Y %H:%M")
         c.drawString(25, divider_y - 10, f"Emitido em: {now_str}")
-        
-        ref_id = metadata.get("ID") or metadata.get("Código") or metadata.get("Placa") or metadata.get("Nº") or "N/A"
-        c.drawRightString(width - 25, divider_y - 10, f"Doc Ref: {ref_id}")
 
-        # 5. Rodapé Institucional AdaptLink
+        # 5. Rodapé Institucional
         c.setStrokeColor(colors.HexColor("#E2E8F0"))
         c.setLineWidth(0.8)
         c.line(25, 90, width - 25, 90)
@@ -938,17 +933,27 @@ def make_premium_pdf(buffer, title, metadata, content_table_data, image_paths=No
     doc = SimpleDocTemplate(
         buffer,
         pagesize=A4,
-        rightMargin=20*mm, leftMargin=20*mm,
+        rightMargin=15*mm, leftMargin=15*mm,
         topMargin=45*mm, bottomMargin=40*mm
     )
 
     styles = getSampleStyleSheet()
     
+    heading_style = ParagraphStyle(
+        name="ExecHeading",
+        parent=styles["Normal"],
+        fontName="Helvetica-Bold",
+        fontSize=11,
+        leading=14,
+        textColor=colors.HexColor("#1F3C78")
+    )
+
     label_style = ParagraphStyle(
         name="PremiumLabel",
         parent=styles["Normal"],
         fontName="Helvetica-Bold",
-        fontSize=10,
+        fontSize=8.5,
+        leading=10.5,
         textColor=colors.HexColor("#475569")
     )
     
@@ -956,71 +961,118 @@ def make_premium_pdf(buffer, title, metadata, content_table_data, image_paths=No
         name="PremiumValue",
         parent=styles["Normal"],
         fontName="Helvetica",
-        fontSize=10,
-        textColor=colors.HexColor("#1E293B")
+        fontSize=8.5,
+        leading=10.5,
+        textColor=colors.HexColor("#0F172A")
+    )
+
+    header_cell_style = ParagraphStyle(
+        name="ExecHeaderCell",
+        parent=styles["Normal"],
+        fontName="Helvetica-Bold",
+        fontSize=8.5,
+        leading=10.5,
+        textColor=colors.white
+    )
+
+    cell_label_style = ParagraphStyle(
+        name="ExecCellLabel",
+        parent=styles["Normal"],
+        fontName="Helvetica-Bold",
+        fontSize=8,
+        leading=10.5,
+        textColor=colors.HexColor("#1F3C78")
+    )
+
+    cell_val_style = ParagraphStyle(
+        name="ExecCellVal",
+        parent=styles["Normal"],
+        fontName="Helvetica",
+        fontSize=8,
+        leading=10.5,
+        textColor=colors.HexColor("#334155")
     )
 
     story = []
 
-    story.append(Paragraph("<b>Metadados do Registro</b>", styles["Heading3"]))
-    story.append(Spacer(1, 3*mm))
+    # 1. Metadados do Registro (Grid 4 colunas com rótulos em MAIÚSCULO e valores em minúsculo/original)
+    story.append(Paragraph("<b>METADADOS E RESUMO OPERACIONAL</b>", heading_style))
+    story.append(Spacer(1, 2.5*mm))
 
     meta_table_data = []
-    keys = list(metadata.keys())
+    keys = [k for k in metadata.keys() if not k.startswith("__")]
     for i in range(0, len(keys), 2):
         k1 = keys[i]
         v1 = metadata[k1]
         row = [
-            Paragraph(f"<b>{k1}:</b>", label_style),
+            Paragraph(f"<b>{str(k1).upper()}:</b>", label_style),
             Paragraph(format_html_text(v1), value_style)
         ]
         if i + 1 < len(keys):
             k2 = keys[i+1]
             v2 = metadata[k2]
             row.extend([
-                Paragraph(f"<b>{k2}:</b>", label_style),
+                Paragraph(f"<b>{str(k2).upper()}:</b>", label_style),
                 Paragraph(format_html_text(v2), value_style)
             ])
         else:
             row.extend(["", ""])
         meta_table_data.append(row)
 
-    meta_table = Table(meta_table_data, colWidths=[35*mm, 50*mm, 35*mm, 50*mm])
-    meta_table.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor("#F8FAFC")),
-        ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
-        ('TOPPADDING', (0, 0), (-1, -1), 6),
-        ('LINEBELOW', (0, 0), (-1, -1), 0.5, colors.HexColor("#E2E8F0")),
-    ]))
-    story.append(meta_table)
-    story.append(Spacer(1, 8*mm))
+    if meta_table_data:
+        meta_table = Table(meta_table_data, colWidths=[38*mm, 52*mm, 38*mm, 52*mm])
+        meta_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor("#F8FAFC")),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+            ('TOPPADDING', (0, 0), (-1, -1), 5),
+            ('LINEBELOW', (0, 0), (-1, -1), 0.5, colors.HexColor("#E2E8F0")),
+        ]))
+        story.append(meta_table)
+        story.append(Spacer(1, 6*mm))
 
-    story.append(Paragraph("<b>Detalhamento do Registro</b>", styles["Heading3"]))
-    story.append(Spacer(1, 3*mm))
+    # 2. Detalhamento das Informações (Categorias em MAIÚSCULO, informações no formato preenchido pelo usuário)
+    story.append(Paragraph("<b>DETALHAMENTO DO REGISTRO</b>", heading_style))
+    story.append(Spacer(1, 2.5*mm))
 
-    content_rows = []
+    content_rows = [
+        [
+            Paragraph("CAMPO / CATEGORIA", header_cell_style),
+            Paragraph("INFORMAÇÕES REGISTRADAS", header_cell_style)
+        ]
+    ]
+
     for k, v in content_table_data:
         content_rows.append([
-            Paragraph(f"<b>{format_html_text(k)}</b>", label_style),
-            Paragraph(format_html_text(v), value_style)
+            Paragraph(format_html_text(str(k).upper()), cell_label_style),
+            Paragraph(format_html_text(v), cell_val_style)
         ])
 
-    content_table = Table(content_rows, colWidths=[45*mm, 125*mm])
-    content_table.setStyle(TableStyle([
+    content_table = Table(content_rows, colWidths=[50*mm, 130*mm], repeatRows=1)
+    t_style = [
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#1F3C78")),
         ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
         ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-        ('TOPPADDING', (0, 0), (-1, -1), 8),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 8),
+        ('TOPPADDING', (0, 0), (-1, -1), 5),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+        ('LEFTPADDING', (0, 0), (-1, -1), 5),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 5),
         ('LINEBELOW', (0, 0), (-1, -1), 0.5, colors.HexColor("#F1F5F9")),
-    ]))
+        ('LINEBELOW', (0, 0), (-1, 0), 1.5, colors.HexColor("#0F172A")),
+    ]
+    for row_idx in range(1, len(content_rows)):
+        if row_idx % 2 == 0:
+            t_style.append(('BACKGROUND', (0, row_idx), (-1, row_idx), colors.HexColor("#F8FAFC")))
+
+    content_table.setStyle(TableStyle(t_style))
     story.append(content_table)
 
+    # 3. Registros Fotográficos
     if image_paths:
-        story.append(Spacer(1, 8*mm))
-        story.append(Paragraph("<b>Registros Fotográficos</b>", styles["Heading3"]))
-        story.append(Spacer(1, 3*mm))
+        story.append(Spacer(1, 6*mm))
+        story.append(Paragraph("<b>Registros Fotográficos Anexados</b>", heading_style))
+        story.append(Spacer(1, 2.5*mm))
         
         photo_elements = []
         for img_path in image_paths:
@@ -1029,7 +1081,7 @@ def make_premium_pdf(buffer, title, metadata, content_table_data, image_paths=No
                 with PILImage.open(img_path) as test_img:
                     test_img.verify()
                 
-                img = RLImage(str(img_path), width=80*mm, height=60*mm)
+                img = RLImage(str(img_path), width=85*mm, height=62*mm)
                 img.hAlign = 'LEFT'
                 photo_elements.append(img)
             except Exception as ex:
@@ -1045,24 +1097,23 @@ def make_premium_pdf(buffer, title, metadata, content_table_data, image_paths=No
                     row.append("")
                 table_data.append(row)
             
-            photos_table = Table(table_data, colWidths=[85*mm, 85*mm])
+            photos_table = Table(table_data, colWidths=[90*mm, 90*mm])
             photos_table.setStyle(TableStyle([
                 ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-                ('TOPPADDING', (0, 0), (-1, -1), 6),
+                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
                 ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+                ('TOPPADDING', (0, 0), (-1, -1), 6),
             ]))
             story.append(photos_table)
 
+    # 4. Assinatura Digital / Responsável Técnico
     if signature_path and os.path.exists(signature_path):
-        story.append(Spacer(1, 8*mm))
-        story.append(Paragraph("<b>Assinatura Digital de Validação</b>", styles["Heading3"]))
-        story.append(Spacer(1, 3*mm))
+        story.append(Spacer(1, 6*mm))
+        story.append(Paragraph("<b>Assinatura do Responsável Técnico</b>", heading_style))
+        story.append(Spacer(1, 2.5*mm))
         try:
-            sig_img = RLImage(signature_path, width=60*mm, height=18*mm)
+            sig_img = RLImage(str(signature_path), width=65*mm, height=25*mm)
             sig_img.hAlign = 'LEFT'
-            
-            tech_name = metadata.get("Técnico Responsável") or metadata.get("Técnico") or "N/A"
             date_time_str = metadata.get("Última Atualização") or metadata.get("Data") or metadata.get("Data/Hora") or agora().strftime("%d/%m/%Y %H:%M")
             
             sig_table_data = [
