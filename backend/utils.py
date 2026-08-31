@@ -82,7 +82,7 @@ def parse_periodo(periodo: str):
 def registrar_log(acao):
     try:
         user = current_user.username if current_user.is_authenticated else "Sistema"
-        db.session.add(Log(usuario=user, acao=acao))
+        db.session.add(Log(usuario=user, acao=acao, data_hora=agora()))
         db.session.commit()
     except Exception as e:
         print("⚠️ Erro registrar_log:", e)

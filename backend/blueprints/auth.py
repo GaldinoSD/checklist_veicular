@@ -1212,26 +1212,48 @@ def api_admin_online_users():
     today_count = 0
     need_commit = False
 
+    def fix_tz(dt):
+        if not dt:
+            return None
+        # Se a data está adiantada em ~3h em relação ao horário atual de Brasília, subtrai 3 horas
+        diff_s = (dt - now).total_seconds()
+        if 3600 <= diff_s <= 5 * 3600:
+            return dt - timedelta(hours=3)
+        if dt > now:
+            return now
+        return dt
+
     for u in users:
         uname_upper = u.username.upper() if u.username else ""
         candidate_dates = []
 
         if u.last_seen:
-            candidate_dates.append(u.last_seen)
+            norm_ls = fix_tz(u.last_seen)
+            candidate_dates.append(norm_ls)
+            if norm_ls != u.last_seen:
+                u.last_seen = norm_ls
+                need_commit = True
+
         if u.last_login:
-            candidate_dates.append(u.last_login)
+            norm_ll = fix_tz(u.last_login)
+            candidate_dates.append(norm_ll)
+            if norm_ll != u.last_login:
+                u.last_login = norm_ll
+                need_commit = True
 
         # Fallback para registros históricos
         if uname_upper in hist_logs and hist_logs[uname_upper]:
-            candidate_dates.append(hist_logs[uname_upper])
+            candidate_dates.append(fix_tz(hist_logs[uname_upper]))
         if uname_upper in hist_checklists and hist_checklists[uname_upper]:
-            candidate_dates.append(hist_checklists[uname_upper])
+            candidate_dates.append(fix_tz(hist_checklists[uname_upper]))
         if uname_upper in hist_movs and hist_movs[uname_upper]:
-            candidate_dates.append(hist_movs[uname_upper])
+            candidate_dates.append(fix_tz(hist_movs[uname_upper]))
         if u.id in hist_vistorias and hist_vistorias[u.id]:
-            candidate_dates.append(hist_vistorias[u.id])
+            candidate_dates.append(fix_tz(hist_vistorias[u.id]))
 
         best_date = max(candidate_dates) if candidate_dates else None
+        if best_date and best_date > now:
+            best_date = now
 
         # Se encontrou histórico mais recente que u.last_seen, atualiza
         if best_date and (not u.last_seen or best_date > u.last_seen):
@@ -1248,8 +1270,8 @@ def api_admin_online_users():
         if best_date:
             diff = (now - best_date).total_seconds()
             
-            # Considera online se a atividade for nos últimos 5 minutos
-            if diff <= 300:
+            # Considera online se a atividade for nos últimos 5 minutos (0 a 300 segundos)
+            if 0 <= diff <= 300:
                 is_online = True
                 online_count += 1
 
@@ -1271,7 +1293,8 @@ def api_admin_online_users():
                 last_seen_rel = best_date.strftime("%d/%m/%Y às %H:%M")
 
         if u.last_login:
-            last_login_str = u.last_login.strftime("%d/%m/%Y às %H:%M")
+            norm_login = fix_tz(u.last_login)
+            last_login_str = norm_login.strftime("%d/%m/%Y às %H:%M")
 
         data.append({
             "id": u.id,

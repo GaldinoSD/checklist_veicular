@@ -3,97 +3,18 @@
 {% block content %}
 
 <style>
-    /* Estilos Premium adicionais para o Dashboard */
+    /* Estilos Premium para os Cards do Dashboard (Sem efeitos de hover intrusivos) */
     .card-premium {
         position: relative;
         overflow: hidden;
         border: 1px solid rgba(15, 23, 42, 0.04) !important;
         background: rgba(255, 255, 255, 0.8) !important;
         backdrop-filter: blur(12px);
-        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1) !important;
     }
     
     .dark .card-premium {
         border: 1px solid rgba(255, 255, 255, 0.04) !important;
         background: rgba(15, 23, 42, 0.4) !important;
-    }
-    
-    /* Efeito de hover suave para todos os cards */
-    .card-premium:hover {
-        transform: translateY(-4px) !important;
-        border-color: rgba(59, 130, 246, 0.15) !important;
-        box-shadow: 0 20px 40px -15px rgba(59, 130, 246, 0.08) !important;
-    }
-    
-    /* Indicador discreto na borda esquerda para os cards no hover */
-    .card-premium::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 4px;
-        height: 100%;
-        background: linear-gradient(to bottom, #3b82f6, #6366f1);
-        opacity: 0;
-        transition: opacity 0.3s ease;
-    }
-    .card-premium:hover::before {
-        opacity: 1;
-    }
-
-    /* Manter os comportamentos e cores específicas dos cards KPI superiores */
-    .card-kpi-emerald:hover {
-        border-color: rgba(16, 185, 129, 0.3) !important;
-        box-shadow: 0 20px 40px -15px rgba(16, 185, 129, 0.15) !important;
-    }
-    .card-kpi-emerald::before { background: #10b981 !important; }
-
-    .card-kpi-amber:hover {
-        border-color: rgba(245, 158, 11, 0.3) !important;
-        box-shadow: 0 20px 40px -15px rgba(245, 158, 11, 0.15) !important;
-    }
-    .card-kpi-amber::before { background: #f59e0b !important; }
-
-    .card-kpi-blue:hover {
-        border-color: rgba(59, 130, 246, 0.3) !important;
-        box-shadow: 0 20px 40px -15px rgba(59, 130, 246, 0.15) !important;
-    }
-    .card-kpi-blue::before { background: #3b82f6 !important; }
-
-    .card-kpi-rose:hover {
-        border-color: rgba(244, 63, 94, 0.3) !important;
-        box-shadow: 0 20px 40px -15px rgba(244, 63, 94, 0.15) !important;
-    }
-    .card-kpi-rose::before { background: #f43f5e !important; }
-
-    .card-kpi-teal:hover {
-        border-color: rgba(20, 184, 166, 0.3) !important;
-        box-shadow: 0 20px 40px -15px rgba(20, 184, 166, 0.15) !important;
-    }
-    .card-kpi-teal::before { background: #14b8a6 !important; }
-    
-    /* Animação nos ícones dos KPIs ao passar o mouse */
-    .card-premium:hover i {
-        animation: kpiBounce 0.6s ease-in-out;
-    }
-    
-    @keyframes kpiBounce {
-        0%, 100% { transform: scale(1); }
-        50% { transform: scale(1.15) rotate(5deg); }
-    }
-
-    /* Estilos para as listagens dentro dos cards */
-    .card-premium .p-3 {
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
-    }
-    .card-premium .p-3:hover {
-        background: rgba(59, 130, 246, 0.04) !important;
-        border-color: rgba(59, 130, 246, 0.15) !important;
-        transform: translateX(4px);
-    }
-    .dark .card-premium .p-3:hover {
-        background: rgba(59, 130, 246, 0.08) !important;
-        border-color: rgba(59, 130, 246, 0.25) !important;
     }
 </style>
 
@@ -843,7 +764,7 @@
                         const heroIcon = isFer ? 'fa-solid fa-flag' : 'fa-solid fa-calendar-check';
 
                         return `
-                            <div class="card-premium p-6 rounded-3xl border ${borderCardClass} shadow-xl flex flex-col justify-between gap-5 relative overflow-hidden transition-all hover:scale-[1.01]">
+                            <div class="card-premium p-6 rounded-3xl border ${borderCardClass} shadow-xl flex flex-col justify-between gap-5 relative overflow-hidden">
                                 <div>
                                     <div class="flex items-start justify-between gap-3 mb-3">
                                         <div class="flex items-center gap-2 flex-wrap">

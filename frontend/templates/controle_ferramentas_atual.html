@@ -32,77 +32,41 @@
     </div>
 </div>
 
-<!-- STATS CARDS -->
-<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-    <div class="card-premium p-6 flex items-center justify-between">
-        <div>
-            <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Técnicos Inspecionados</span>
-            <h3 class="text-3xl font-black text-slate-800 dark:text-white mt-1">{{ total_tecnicos }}</h3>
-        </div>
-        <div class="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-white/5 flex items-center justify-center text-slate-500">
-            <i class="fa-solid fa-users text-xl"></i>
-        </div>
-    </div>
-    
-    <div class="card-premium p-6 flex items-center justify-between border-l-4 border-l-rose-500">
-        <div>
-            <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Itens Danificados</span>
-            <h3 class="text-3xl font-black text-rose-600 dark:text-rose-400 mt-1">{{ total_avarias }}</h3>
-        </div>
-        <div class="w-12 h-12 rounded-2xl bg-rose-500/10 flex items-center justify-center text-rose-500">
-            <i class="fa-solid fa-triangle-exclamation text-xl"></i>
-        </div>
-    </div>
-
-    <div class="card-premium p-6 flex items-center justify-between border-l-4 border-l-orange-500">
-        <div>
-            <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Itens Perdidos</span>
-            <h3 class="text-3xl font-black text-orange-600 dark:text-orange-400 mt-1">{{ total_perdidos }}</h3>
-        </div>
-        <div class="w-12 h-12 rounded-2xl bg-orange-500/10 flex items-center justify-center text-orange-500">
-            <i class="fa-solid fa-circle-xmark text-xl"></i>
-        </div>
-    </div>
-</div>
-
-<!-- FILTROS E BUSCA RÁPIDA -->
-<div class="card-premium p-6 mb-8">
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <!-- Busca rápida -->
-        <div class="relative flex-1 max-w-md">
-            <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400 dark:text-gray-500">
-                <i class="fa-solid fa-magnifying-glass"></i>
-            </span>
-            <input type="text" id="tech-search" onkeyup="filterTechnicians()" placeholder="Buscar por técnico ou placa..."
-                   class="w-full rounded-2xl pl-11 pr-5 py-3.5 border text-sm font-semibold
-                          bg-slate-50 text-slate-900 border-slate-900/5 dark:bg-white/5 dark:text-white dark:border-white/5
-                          outline-none focus:ring-4 focus:ring-slate-500/10 transition-all">
-        </div>
-
-        <!-- Filtros segmentados -->
-        <div class="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0">
-            <button onclick="setFilter('todos')" id="btn-filter-todos"
-                    class="px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all outline-none bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-md">
-                Todos
-            </button>
-            <button onclick="setFilter('avaria')" id="btn-filter-avaria"
-                    class="px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-all outline-none border border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-white/5 text-slate-600 dark:text-gray-400 hover:bg-slate-100 dark:hover:bg-white/10">
-                Com Avaria
-            </button>
-            <button onclick="setFilter('ausente')" id="btn-filter-ausente"
-                    class="px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-all outline-none border border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-white/5 text-slate-600 dark:text-gray-400 hover:bg-slate-100 dark:hover:bg-white/10">
-                Com Perda/Ausência
-            </button>
-        </div>
-    </div>
-</div>
-
 <!-- AUDITORIA DOS TÉCNICOS -->
 <div class="card-premium p-6 overflow-hidden">
-    <div class="flex items-center justify-between mb-6">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 pb-4 border-b border-slate-900/5 dark:border-white/5">
         <div>
             <h3 class="text-lg font-black text-slate-800 dark:text-white">Estado Atual de Cada Técnico</h3>
-            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Painel consolidado da vistoria</p>
+            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Painel consolidado da vistoria de ferramentas</p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-3">
+            <!-- Busca rápida compacta -->
+            <div class="relative w-full sm:w-60">
+                <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400 dark:text-gray-500">
+                    <i class="fa-solid fa-magnifying-glass text-xs"></i>
+                </span>
+                <input type="text" id="tech-search" onkeyup="filterTechnicians()" placeholder="Buscar técnico..."
+                       class="w-full rounded-xl pl-9 pr-3 py-2 border text-xs font-semibold
+                              bg-slate-50 text-slate-900 border-slate-900/10 dark:bg-white/5 dark:text-white dark:border-white/10
+                              outline-none focus:ring-2 focus:ring-slate-500/20 transition-all">
+            </div>
+
+            <!-- Filtros segmentados compactos -->
+            <div class="flex items-center gap-1.5 overflow-x-auto">
+                <button onclick="setFilter('todos')" id="btn-filter-todos"
+                        class="px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all outline-none bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-sm">
+                    Todos
+                </button>
+                <button onclick="setFilter('avaria')" id="btn-filter-avaria"
+                        class="px-3 py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all outline-none border border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-white/5 text-slate-600 dark:text-gray-400 hover:bg-slate-100 dark:hover:bg-white/10">
+                    Com Avaria
+                </button>
+                <button onclick="setFilter('ausente')" id="btn-filter-ausente"
+                        class="px-3 py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all outline-none border border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-white/5 text-slate-600 dark:text-gray-400 hover:bg-slate-100 dark:hover:bg-white/10">
+                    Ausente
+                </button>
+            </div>
         </div>
     </div>
 
@@ -211,87 +175,91 @@
         <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
         
         <!-- Conteúdo do Modal -->
-        <div class="inline-block align-bottom bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-900/10 dark:border-white/10 text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
-            <div class="px-8 pt-8 pb-6">
+        <div class="inline-block align-bottom bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-white/10 text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
+            <div class="p-6">
                 <!-- Header -->
-                <div class="flex items-center justify-between mb-6 pb-4 border-b border-slate-900/5 dark:border-white/5">
+                <div class="flex items-start justify-between pb-4 border-b border-slate-100 dark:border-white/5 gap-4">
                     <div class="flex items-center gap-3">
-                        <div class="w-10 h-10 rounded-xl bg-rose-500/10 flex items-center justify-center text-rose-500 shadow-inner">
-                            <i class="fa-solid fa-toolbox text-lg"></i>
+                        <div class="w-10 h-10 rounded-xl bg-slate-100 dark:bg-white/5 flex items-center justify-center text-slate-700 dark:text-slate-300">
+                            <i class="fa-solid fa-toolbox"></i>
                         </div>
                         <div>
-                            <div class="flex items-center gap-2.5 flex-wrap">
-                                <h3 class="text-lg font-black text-slate-800 dark:text-white" id="detail-title">Auditoria do Técnico</h3>
-                                <span id="detail-status-badge" class="hidden text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border"></span>
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <h3 class="text-base font-black text-slate-800 dark:text-white" id="detail-title">Auditoria do Técnico</h3>
+                                <span id="detail-status-badge" class="hidden text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border"></span>
                             </div>
-                            <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider" id="detail-subtitle">Carregando informações...</p>
+                            <p class="text-xs text-slate-400 mt-0.5" id="detail-subtitle">Carregando informações...</p>
                         </div>
                     </div>
-                    <button type="button" onclick="closeDetailsModal()" class="w-8 h-8 rounded-full hover:bg-slate-100 dark:hover:bg-white/5 flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-white transition-all">
-                        <i class="fa-solid fa-xmark text-sm"></i>
-                    </button>
+                    <div class="flex items-center gap-3">
+                        <div id="detail-summary-pills" class="hidden sm:flex items-center gap-1.5"></div>
+                        <button type="button" onclick="closeDetailsModal()" class="w-8 h-8 rounded-lg hover:bg-slate-100 dark:hover:bg-white/5 flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-white transition-all">
+                            <i class="fa-solid fa-xmark text-sm"></i>
+                        </button>
+                    </div>
                 </div>
 
-                <!-- Conteúdo central -->
-                <div class="space-y-6 max-h-[55vh] overflow-y-auto pr-2 custom-scrollbar">
-                    <!-- Itens Críticos/Problemas -->
-                    <div>
-                        <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-1.5">
-                            <i class="fa-solid fa-circle-exclamation text-rose-500"></i> Itens Ausentes ou Danificados
-                        </h4>
-                        <div id="critical-items-container" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <!-- Injetado dinamicamente -->
-                        </div>
-                    </div>
-
-                    <!-- Itens Normais -->
-                    <div>
-                        <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-1.5">
-                            <i class="fa-solid fa-circle-check text-emerald-500"></i> Itens em Bom Estado
-                        </h4>
-                        <div id="normal-items-container" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <!-- Injetado dinamicamente -->
-                        </div>
+                <!-- Conteúdo central: Tabela Compacta de Itens -->
+                <div class="mt-4 space-y-4">
+                    <div class="overflow-x-auto max-h-[50vh] custom-scrollbar border border-slate-200/80 dark:border-white/10 rounded-xl">
+                        <table class="w-full text-left text-xs border-collapse">
+                            <thead class="bg-slate-50 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 font-bold uppercase text-[10px] tracking-wider sticky top-0 z-10 border-b border-slate-200/80 dark:border-white/10">
+                                <tr>
+                                    <th class="py-2.5 px-3 w-10 text-center">#</th>
+                                    <th class="py-2.5 px-3">Equipamento / Ferramenta</th>
+                                    <th class="py-2.5 px-3 w-32">Categoria</th>
+                                    <th class="py-2.5 px-3 w-36">Situação</th>
+                                    <th class="py-2.5 px-3">Observação / Avaria</th>
+                                    <th class="py-2.5 px-3 w-28 text-right">Ação</th>
+                                </tr>
+                            </thead>
+                            <tbody id="modal-tools-tbody" class="divide-y divide-slate-100 dark:divide-white/5 bg-white dark:bg-slate-900">
+                                <tr>
+                                    <td colspan="6" class="text-center py-8 text-slate-400 text-xs">
+                                        <i class="fa-solid fa-spinner animate-spin mr-2"></i> Carregando ferramentas...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
 
                     <!-- Observações Gerais -->
-                    <div class="pt-4 border-t border-slate-900/5 dark:border-white/5">
-                        <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-1.5">
-                            <i class="fa-solid fa-comment-dots"></i> Observações do Técnico
-                        </h4>
-                        <blockquote id="detail-notes" class="p-4 bg-slate-50 dark:bg-white/[0.02] border-l-4 border-l-slate-400 rounded-r-2xl text-xs font-semibold text-slate-600 dark:text-gray-300 italic leading-relaxed">
-                            Nenhuma observação geral inserida.
-                        </blockquote>
+                    <div id="container-detail-notes" class="p-3 bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 rounded-xl text-xs">
+                        <span class="font-bold text-slate-700 dark:text-slate-300 block mb-1 text-[11px] uppercase tracking-wider">
+                            <i class="fa-regular fa-comment-dots mr-1"></i> Observações do Técnico:
+                        </span>
+                        <p id="detail-notes" class="text-slate-600 dark:text-slate-400 italic">Nenhuma observação geral informada.</p>
                     </div>
                 </div>
             </div>
 
             <!-- Footer -->
-            <div class="px-8 py-6 bg-slate-50 dark:bg-white/[0.02] border-t border-slate-900/5 dark:border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4 rounded-b-[2.5rem]">
+            <div class="px-6 py-4 bg-slate-50 dark:bg-white/[0.02] border-t border-slate-100 dark:border-white/5 flex flex-col sm:flex-row items-center justify-between gap-3">
                 <!-- Ações Administrativas -->
                 <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
-                    <form id="form-excluir" method="POST" class="hidden" onsubmit="return confirm('⚠️ ATENÇÃO: Tem certeza que deseja excluir esta vistoria? Isso irá zerar o checklist do técnico, voltando o status para Pendente e deletando permanentemente as respostas atuais.');">
-                        <button type="submit" class="px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-md transition-all flex items-center gap-1.5">
-                            <i class="fa-solid fa-trash-can"></i> Zerar Vistoria (Excluir)
+                    <form id="form-excluir" method="POST" class="hidden" onsubmit="return confirm('⚠️ ATENÇÃO: Tem certeza que deseja zerar/excluir esta vistoria? O status voltará para Pendente.');">
+                        <button type="submit" class="px-3 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold text-xs tracking-wider shadow-sm transition-all flex items-center gap-1.5">
+                            <i class="fa-solid fa-trash-can text-[10px]"></i> Zerar Vistoria
                         </button>
                     </form>
-                    <form id="form-liberar-total" method="POST" class="hidden" onsubmit="return confirm('Deseja liberar o checklist completo para o técnico? Ele poderá editar qualquer ferramenta e enviar novamente.');">
-                        <button type="submit" class="px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-md transition-all flex items-center gap-1.5">
-                            <i class="fa-solid fa-lock-open"></i> Liberar Checklist Total
+                    <form id="form-liberar-total" method="POST" class="hidden" onsubmit="return confirm('Deseja liberar o checklist completo para o técnico?');">
+                        <button type="submit" class="px-3 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-bold text-xs tracking-wider shadow-sm transition-all flex items-center gap-1.5">
+                            <i class="fa-solid fa-lock-open text-[10px]"></i> Liberar Checklist Total
                         </button>
                     </form>
-                    <span id="label-checklist-liberado" class="hidden text-[9px] font-black uppercase tracking-wider px-3 py-2 bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400 rounded-xl border border-emerald-500/20">
-                        <i class="fa-solid fa-circle-check mr-1"></i> Totalmente Liberado
+                    <span id="label-checklist-liberado" class="hidden text-[10px] font-bold tracking-wider px-2.5 py-1.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 rounded-xl border border-emerald-500/20">
+                        <i class="fa-solid fa-circle-check mr-1"></i> Liberado para Edição
                     </span>
                 </div>
-                <div class="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto shrink-0 justify-end">
+
+                <div class="flex items-center gap-2 w-full sm:w-auto shrink-0 justify-end">
                     <a id="btn-gerar-pdf-individual" href="#" target="_blank"
-                       class="w-full sm:w-auto px-6 py-3 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-black text-xs uppercase tracking-widest shadow-md transition-all flex items-center justify-center gap-1.5">
-                        <i class="fa-solid fa-file-pdf text-sm"></i> Gerar PDF do Técnico
+                       class="px-4 py-2 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 rounded-xl font-bold text-xs tracking-wider shadow-sm transition-all flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-file-pdf text-xs"></i> Gerar PDF do Técnico
                     </a>
                     <button type="button" onclick="closeDetailsModal()"
-                            class="w-full sm:w-auto px-6 py-3 bg-slate-900 dark:bg-white hover:bg-slate-800 dark:hover:bg-slate-100 text-white dark:text-slate-900 rounded-xl font-black text-xs uppercase tracking-widest shadow-md transition-all">
-                        Fechar Auditoria
+                            class="px-4 py-2 bg-slate-200 hover:bg-slate-300 dark:bg-white/10 dark:hover:bg-white/20 text-slate-700 dark:text-slate-200 rounded-xl font-bold text-xs tracking-wider transition-all">
+                        Fechar
                     </button>
                 </div>
             </div>
@@ -336,10 +304,12 @@ function setFilter(filterType) {
     const filters = ['todos', 'avaria', 'ausente'];
     filters.forEach(type => {
         const btn = document.getElementById(`btn-filter-${type}`);
-        if (type === filterType) {
-            btn.className = "px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all outline-none bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-md";
-        } else {
-            btn.className = "px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-widest transition-all outline-none border border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-white/5 text-slate-600 dark:text-gray-400 hover:bg-slate-100 dark:hover:bg-white/10";
+        if (btn) {
+            if (type === filterType) {
+                btn.className = "px-3 py-2 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all outline-none bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-sm";
+            } else {
+                btn.className = "px-3 py-2 rounded-xl text-[11px] font-bold uppercase tracking-wider transition-all outline-none border border-slate-200 dark:border-white/5 bg-slate-50 dark:bg-white/5 text-slate-600 dark:text-gray-400 hover:bg-slate-100 dark:hover:bg-white/10";
+            }
         }
     });
     
@@ -347,24 +317,33 @@ function setFilter(filterType) {
 }
 
 function viewCompleteControl(userId) {
-    // Abre modal com estado de carregando
     document.getElementById('detail-title').textContent = 'Consultando Técnico...';
     document.getElementById('detail-subtitle').textContent = 'Buscando os status mais recentes no banco...';
-    document.getElementById('critical-items-container').innerHTML = '<div class="col-span-2 text-center text-xs text-slate-400 dark:text-gray-500 py-4"><i class="fa-solid fa-spinner animate-spin mr-2"></i> Carregando ferramentas...</div>';
-    document.getElementById('normal-items-container').innerHTML = '';
-    document.getElementById('detail-notes').textContent = 'Nenhuma observação geral inserida.';
-    
-    // Vincula link de PDF individual
-    document.getElementById('btn-gerar-pdf-individual').href = `/controle/ferramentas/relatorio/pdf/${userId}`;
-    
+    document.getElementById('modal-tools-tbody').innerHTML = `
+        <tr>
+            <td colspan="6" class="text-center py-8 text-slate-400 text-xs">
+                <i class="fa-solid fa-spinner animate-spin mr-2"></i> Carregando ferramentas...
+            </td>
+        </tr>
+    `;
+    document.getElementById('detail-notes').textContent = 'Nenhuma observação geral informada.';
+    const pillsContainer = document.getElementById('detail-summary-pills');
+    if (pillsContainer) {
+        pillsContainer.innerHTML = '';
+        pillsContainer.classList.add('hidden');
+    }
+
+    // Vincula link de PDF individual com timestamp anti-cache
+    document.getElementById('btn-gerar-pdf-individual').href = `/controle/ferramentas/relatorio/pdf/${userId}?t=${Date.now()}`;
+
     // Oculta badges e ações anteriores para evitar flash visual
     document.getElementById('detail-status-badge').classList.add('hidden');
     document.getElementById('form-excluir').style.display = 'none';
     document.getElementById('form-liberar-total').style.display = 'none';
     document.getElementById('label-checklist-liberado').classList.add('hidden');
-    
+
     document.getElementById('modalDetails').classList.remove('hidden');
-    
+
     // Faz a consulta via AJAX
     fetch(`/controle/ferramentas/atual/detalhes/${userId}`)
         .then(response => {
@@ -373,204 +352,140 @@ function viewCompleteControl(userId) {
         })
         .then(data => {
             document.getElementById('detail-title').textContent = `Auditoria: ${data.technician}`;
-            document.getElementById('detail-subtitle').textContent = `Preenchimento Atual em ${data.updated_at}`;
-            
+            document.getElementById('detail-subtitle').textContent = `Conferência em ${data.updated_at}`;
+
             // Configura e exibe o Badge de Status Geral no cabeçalho
             const badge = document.getElementById('detail-status-badge');
             badge.classList.remove('hidden');
             if (data.is_locked) {
-                badge.className = "inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider bg-rose-500/10 text-rose-600 dark:bg-rose-500/20 dark:text-rose-400 border border-rose-500/20 animate-pulse";
-                badge.innerHTML = '<i class="fa-solid fa-lock"></i> Trancado';
-                
-                // Exibe botões administrativos
+                badge.className = "inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400 border border-rose-200 dark:border-rose-800/40";
+                badge.innerHTML = '<i class="fa-solid fa-lock text-[8px]"></i> Trancado';
+
                 document.getElementById('form-liberar-total').style.display = 'inline-block';
                 document.getElementById('form-liberar-total').action = `/controle/ferramentas/atual/liberar-total/${userId}`;
                 document.getElementById('label-checklist-liberado').classList.add('hidden');
             } else {
-                badge.className = "inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400 border border-emerald-500/20";
-                badge.innerHTML = '<i class="fa-solid fa-lock-open"></i> Desbloqueado';
-                
-                // Oculta liberação total e mostra etiqueta informativa
+                badge.className = "inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/40";
+                badge.innerHTML = '<i class="fa-solid fa-lock-open text-[8px]"></i> Desbloqueado';
+
                 document.getElementById('form-liberar-total').style.display = 'none';
                 document.getElementById('label-checklist-liberado').classList.remove('hidden');
             }
-            
-            // Exibe e configura a ação de Zerar/Excluir
+
             document.getElementById('form-excluir').style.display = 'inline-block';
             document.getElementById('form-excluir').action = `/controle/ferramentas/atual/excluir/${userId}`;
-            
+
             if (data.notes) {
                 document.getElementById('detail-notes').textContent = data.notes;
             } else {
-                document.getElementById('detail-notes').textContent = 'Sem observações gerais informadas.';
+                document.getElementById('detail-notes').textContent = 'Nenhuma observação geral informada.';
             }
-            
-            const criticalContainer = document.getElementById('critical-items-container');
-            const normalContainer = document.getElementById('normal-items-container');
-            
-            criticalContainer.innerHTML = '';
-            normalContainer.innerHTML = '';
-            
-            let countCritical = 0;
-            let countNormal = 0;
-            
-            // Group by category
-            const grouped = {};
-            data.statuses.forEach(item => {
-                const cat = (item.category || 'Outros').trim();
-                if (!grouped[cat]) {
-                    grouped[cat] = [];
+
+            const tbody = document.getElementById('modal-tools-tbody');
+            tbody.innerHTML = '';
+
+            let countOk = 0;
+            let countAvaria = 0;
+            let countAusente = 0;
+
+            const items = data.statuses || [];
+            // Ordenar por Categoria e depois por Nome da Ferramenta
+            items.sort((a, b) => {
+                const catA = a.category || 'Outros';
+                const catB = b.category || 'Outros';
+                if (catA !== catB) {
+                    if (catA === 'Outros') return 1;
+                    if (catB === 'Outros') return -1;
+                    return catA.localeCompare(catB);
                 }
-                grouped[cat].push(item);
+                return a.tool_name.localeCompare(b.tool_name);
             });
-            
-            // Sort category names alphabetically, putting "Outros" at the end
-            const categories = Object.keys(grouped).sort((a, b) => {
-                if (a === 'Outros') return 1;
-                if (b === 'Outros') return -1;
-                return a.localeCompare(b);
-            });
-            
-            // Sort items inside each category alphabetically by tool_name
-            categories.forEach(cat => {
-                grouped[cat].sort((a, b) => a.tool_name.localeCompare(b.tool_name));
-            });
-            
-            // Render by category
-            categories.forEach(cat => {
-                const catItems = grouped[cat];
-                
-                // 1. Critical Items
-                const hasCritical = catItems.some(item => !(item.status === 'possui' && item.sub_status === 'bom'));
-                if (hasCritical) {
-                    const divider = document.createElement('div');
-                    divider.className = "col-span-1 sm:col-span-2 mt-4 first:mt-0 pb-1 border-b border-slate-950/5 dark:border-white/5 select-none";
-                    divider.innerHTML = `
-                        <h5 class="text-[9px] font-black text-rose-500/80 dark:text-rose-400/80 uppercase tracking-widest flex items-center gap-1.5">
-                            <i class="fa-solid fa-tag text-[8px]"></i> Categoria: ${cat}
-                        </h5>
-                    `;
-                    criticalContainer.appendChild(divider);
-                    
-                    catItems.forEach(item => {
-                        if (!(item.status === 'possui' && item.sub_status === 'bom')) {
-                            countCritical++;
-                            const card = document.createElement('div');
-                            card.className = "p-3.5 bg-rose-500/[0.02] border border-rose-500/25 rounded-2xl relative overflow-hidden";
-                            
-                            let subStatusLabel = '';
-                            let subStatusClass = '';
-                            let extraDesc = '';
-                            
-                            if (item.sub_status === 'ruim') {
-                                subStatusLabel = 'Ferramenta com avaria';
-                                subStatusClass = 'bg-rose-500/10 text-rose-600 dark:bg-rose-500/20 dark:text-rose-400';
-                                extraDesc = `<p class="mt-2 text-xs font-black text-rose-500 dark:text-rose-400 bg-rose-500/5 p-2 rounded-xl border border-rose-500/10 leading-relaxed italic"><i class="fa-solid fa-triangle-exclamation mr-1 shrink-0"></i> Avaria: ${item.damage_description || 'Sem descrição cadastrada'}</p>`;
-                            } else if (item.sub_status === 'nao_recebi') {
-                                subStatusLabel = 'Ferramentas não recebidas';
-                                subStatusClass = 'bg-orange-500/10 text-orange-600 dark:bg-orange-500/20 dark:text-orange-400';
-                            } else if (item.sub_status === 'perdi') {
-                                subStatusLabel = 'Ferramenta perdida';
-                                subStatusClass = 'bg-red-500/10 text-red-600 dark:bg-red-500/20 dark:text-red-400';
-                            } else {
-                                subStatusLabel = 'Não possui';
-                                subStatusClass = 'bg-rose-500/10 text-rose-600 dark:bg-rose-500/20 dark:text-rose-400';
-                            }
-                            
-                            // Ação de Liberação Cirúrgica do Item
-                            let releaseAction = '';
-                            if (!data.is_locked) {
-                                releaseAction = `<span class="text-[7px] font-bold text-emerald-500 uppercase tracking-wider"><i class="fa-solid fa-circle-check"></i> Aberto</span>`;
-                            } else if (item.is_editable) {
-                                releaseAction = `<span class="text-[7px] font-black text-teal-600 bg-teal-500/10 px-1.5 py-0.5 rounded uppercase tracking-wider"><i class="fa-solid fa-lock-open"></i> Liberado Técnico</span>`;
-                            } else {
-                                releaseAction = `<button type="button" onclick="liberarItem(${userId}, ${item.tool_id}, this)" class="text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200 transition-all flex items-center gap-1"><i class="fa-solid fa-lock text-[8px]"></i> Liberar Item</button>`;
-                            }
-                            
-                            card.innerHTML = `
-                                <div class="flex items-start justify-between gap-3">
-                                    <div class="flex items-center gap-3">
-                                        <div class="w-8 h-8 rounded-lg bg-rose-500/10 flex items-center justify-center text-rose-500 text-xs shrink-0">
-                                            <i class="fa-solid fa-triangle-exclamation"></i>
-                                        </div>
-                                        <div>
-                                            <span class="text-xs font-bold text-slate-800 dark:text-white block">${item.tool_name}</span>
-                                            <span class="text-[8px] font-black text-slate-400 uppercase tracking-wider">${item.category}</span>
-                                        </div>
-                                    </div>
-                                    <div class="flex flex-col items-end gap-1.5">
-                                        <span class="text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded ${subStatusClass}">${subStatusLabel}</span>
-                                        ${releaseAction}
-                                    </div>
-                                </div>
-                                ${extraDesc}
-                            `;
-                            criticalContainer.appendChild(card);
-                        }
-                    });
-                }
-                
-                // 2. Normal Items
-                const hasNormal = catItems.some(item => (item.status === 'possui' && item.sub_status === 'bom'));
-                if (hasNormal) {
-                    const divider = document.createElement('div');
-                    divider.className = "col-span-1 sm:col-span-2 mt-4 first:mt-0 pb-1 border-b border-slate-950/5 dark:border-white/5 select-none";
-                    divider.innerHTML = `
-                        <h5 class="text-[9px] font-black text-teal-600/80 dark:text-teal-400/80 uppercase tracking-widest flex items-center gap-1.5">
-                            <i class="fa-solid fa-tag text-[8px]"></i> Categoria: ${cat}
-                        </h5>
-                    `;
-                    normalContainer.appendChild(divider);
-                    
-                    catItems.forEach(item => {
-                        if (item.status === 'possui' && item.sub_status === 'bom') {
-                            countNormal++;
-                            const card = document.createElement('div');
-                            card.className = "p-3.5 bg-emerald-500/[0.02] border border-emerald-500/10 rounded-2xl flex items-center justify-between";
-                            
-                            // Ação de Liberação Cirúrgica do Item
-                            let releaseActionNormal = '';
-                            if (!data.is_locked) {
-                                releaseActionNormal = `<span class="text-[7px] font-bold text-emerald-500 uppercase tracking-wider"><i class="fa-solid fa-circle-check"></i> Aberto</span>`;
-                            } else if (item.is_editable) {
-                                releaseActionNormal = `<span class="text-[7px] font-black text-teal-600 bg-teal-500/10 px-1.5 py-0.5 rounded uppercase tracking-wider"><i class="fa-solid fa-lock-open"></i> Liberado Técnico</span>`;
-                            } else {
-                                releaseActionNormal = `<button type="button" onclick="liberarItem(${userId}, ${item.tool_id}, this)" class="text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200 transition-all flex items-center gap-1"><i class="fa-solid fa-lock text-[8px]"></i> Liberar Item</button>`;
-                            }
-                            
-                            card.innerHTML = `
-                                <div class="flex items-center gap-3">
-                                    <div class="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-500 text-xs shrink-0">
-                                        <i class="fa-solid fa-circle-check"></i>
-                                    </div>
-                                    <div>
-                                        <span class="text-xs font-bold text-slate-800 dark:text-white block">${item.tool_name}</span>
-                                        <span class="text-[8px] font-black text-slate-400 uppercase tracking-wider">${item.category}</span>
-                                    </div>
-                                </div>
-                                <div class="flex flex-col items-end gap-1.5">
-                                    <span class="text-[9px] font-bold text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded">Bom Estado</span>
-                                    ${releaseActionNormal}
-                                </div>
-                            `;
-                            normalContainer.appendChild(card);
-                        }
-                    });
-                }
-            });
-            
-            if (countCritical === 0) {
-                criticalContainer.innerHTML = '<div class="col-span-2 text-center text-xs text-emerald-500 py-3 font-semibold"><i class="fa-solid fa-circle-check mr-1.5"></i> Todas as ferramentas estão em bom estado!</div>';
+
+            if (items.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="text-center py-6 text-slate-400 text-xs">Nenhuma ferramenta associada a este técnico.</td>
+                    </tr>
+                `;
+                return;
             }
-            if (countNormal === 0) {
-                normalContainer.innerHTML = '<div class="col-span-2 text-center text-xs text-slate-400 dark:text-gray-500 py-3">Nenhuma ferramenta em bom estado.</div>';
+
+            items.forEach((item, idx) => {
+                let statusChip = '';
+                let obsText = item.damage_description || '<span class="text-slate-300 dark:text-slate-600">-</span>';
+
+                if (item.status === 'possui' && item.sub_status === 'bom') {
+                    countOk++;
+                    statusChip = `
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/40">
+                            <i class="fa-solid fa-circle-check text-[8px]"></i> Em Ordem
+                        </span>
+                    `;
+                } else if (item.status === 'possui' && item.sub_status === 'ruim') {
+                    countAvaria++;
+                    statusChip = `
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400 border border-rose-200/60 dark:border-rose-800/40">
+                            <i class="fa-solid fa-triangle-exclamation text-[8px]"></i> Com Avaria
+                        </span>
+                    `;
+                } else {
+                    countAusente++;
+                    let tipo = item.sub_status === 'perdi' ? 'Perdido' : (item.sub_status === 'nao_recebi' ? 'Não Recebido' : 'Ausente');
+                    statusChip = `
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400 border border-amber-200/60 dark:border-amber-800/40">
+                            <i class="fa-solid fa-circle-xmark text-[8px]"></i> ${tipo}
+                        </span>
+                    `;
+                }
+
+                // Ação de Liberação
+                let actionHtml = '';
+                if (!data.is_locked) {
+                    actionHtml = `<span class="text-[9px] text-slate-400 font-medium">Aberto</span>`;
+                } else if (item.is_editable) {
+                    actionHtml = `<span class="text-[9px] font-bold text-teal-600 dark:text-teal-400 bg-teal-50 dark:bg-teal-950/40 px-1.5 py-0.5 rounded border border-teal-200 dark:border-teal-800/40">Liberado</span>`;
+                } else {
+                    actionHtml = `
+                        <button type="button" onclick="liberarItem(${userId}, ${item.tool_id}, this)"
+                                class="px-2 py-1 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200 rounded-lg text-[10px] font-bold transition-all flex items-center gap-1 ml-auto">
+                            <i class="fa-solid fa-lock text-[8px]"></i> Liberar
+                        </button>
+                    `;
+                }
+
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50/70 dark:hover:bg-white/[0.02] transition-colors';
+                tr.innerHTML = `
+                    <td class="py-2.5 px-3 text-center text-slate-400 font-mono text-[11px]">${idx + 1}</td>
+                    <td class="py-2.5 px-3 font-bold text-slate-800 dark:text-slate-100">${item.tool_name}</td>
+                    <td class="py-2.5 px-3 text-slate-500 dark:text-slate-400 text-[11px]">${item.category || 'Outros'}</td>
+                    <td class="py-2.5 px-3">${statusChip}</td>
+                    <td class="py-2.5 px-3 text-slate-600 dark:text-slate-300 text-[11px]">${obsText}</td>
+                    <td class="py-2.5 px-3 text-right">${actionHtml}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            // Summary Pills no Header
+            if (pillsContainer) {
+                pillsContainer.classList.remove('hidden');
+                pillsContainer.innerHTML = `
+                    <span class="px-2 py-0.5 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 rounded-lg text-[10px] font-bold">${items.length} itens</span>
+                    <span class="px-2 py-0.5 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 rounded-lg text-[10px] font-bold">${countOk} OK</span>
+                    ${countAvaria > 0 ? `<span class="px-2 py-0.5 bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400 rounded-lg text-[10px] font-bold">${countAvaria} Avaria</span>` : ''}
+                    ${countAusente > 0 ? `<span class="px-2 py-0.5 bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-400 rounded-lg text-[10px] font-bold">${countAusente} Ausente</span>` : ''}
+                `;
             }
         })
         .catch(err => {
             console.error(err);
             document.getElementById('detail-title').textContent = 'Erro ao Carregar';
             document.getElementById('detail-subtitle').textContent = 'Não foi possível carregar as informações do técnico.';
-            document.getElementById('critical-items-container').innerHTML = '<div class="col-span-2 text-center text-xs text-red-500 py-4"><i class="fa-solid fa-circle-exclamation mr-1.5"></i> Erro ao buscar os dados. Tente novamente mais tarde.</div>';
+            document.getElementById('modal-tools-tbody').innerHTML = `
+                <tr>
+                    <td colspan="6" class="text-center py-6 text-rose-500 text-xs">Erro ao buscar ferramentas.</td>
+                </tr>
+            `;
         });
 }
 

@@ -7457,87 +7457,272 @@ def controle_ferramentas_sugestoes_reprovar(id):
 @technical_bp.route("/controle/ferramentas/relatorio/pdf/<int:user_id>")
 @admin_required
 def controle_ferramentas_relatorio_pdf(user_id):
-    import io
+    import io, os
     from flask import send_file
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib import colors
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image as RLImage, KeepTogether
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import mm
+    from pathlib import Path
     
     ins = UserToolInspection.query.filter_by(user_id=user_id).first_or_404()
     user = ins.user
+    config = SystemConfig.query.first()
     
-    metadata = {
-        "__ref_id__": f"VT-{ins.id}",
-        "Documento": "Termo de Responsabilidade e Controle",
-        "Técnico Responsável": user.username,
-        "Última Atualização": ins.updated_at.strftime("%d/%m/%Y %H:%M"),
-        "Status Geral": "Trancado (Confirmado)" if ins.is_locked else "Aberto para Edição",
-        "Emissor": current_user.username
-    }
+    # Valida caminho do logo
+    logo_path = None
+    if config and config.pdf_logo:
+        custom_p = LAYOUT_UPLOAD_DIR / config.pdf_logo
+        if custom_p.exists():
+            logo_path = str(custom_p)
+    if not logo_path and os.path.exists("logo.png"):
+        logo_path = "logo.png"
+    elif not logo_path and os.path.exists("/var/www/checklist_veicular/logo.png"):
+        logo_path = "/var/www/checklist_veicular/logo.png"
+
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        leftMargin=15*mm,
+        rightMargin=15*mm,
+        topMargin=32*mm,
+        bottomMargin=20*mm
+    )
     
-    # Agrupar ferramentas por categoria
-    grouped = {}
+    styles = getSampleStyleSheet()
+    
+    cell_bold = ParagraphStyle(
+        name="ToolCellBold",
+        fontName="Helvetica-Bold",
+        fontSize=8,
+        leading=10,
+        textColor=colors.HexColor("#1e293b")
+    )
+    cell_norm = ParagraphStyle(
+        name="ToolCellNorm",
+        fontName="Helvetica",
+        fontSize=8,
+        leading=10,
+        textColor=colors.HexColor("#334155")
+    )
+    cell_center = ParagraphStyle(
+        name="ToolCellCenter",
+        fontName="Helvetica",
+        fontSize=8,
+        leading=10,
+        alignment=1,
+        textColor=colors.HexColor("#64748b")
+    )
+    hdr_cell = ParagraphStyle(
+        name="ToolHdrCell",
+        fontName="Helvetica-Bold",
+        fontSize=8,
+        leading=10,
+        textColor=colors.white
+    )
+    hdr_cell_center = ParagraphStyle(
+        name="ToolHdrCellCenter",
+        fontName="Helvetica-Bold",
+        fontSize=8,
+        leading=10,
+        alignment=1,
+        textColor=colors.white
+    )
+    
     total_ok = 0
     total_avarias = 0
     total_faltas = 0
     
-    for s in ins.statuses:
-        if s.tool and s.tool.is_active:
-            cat = (s.tool.category or "Outros").strip()
-            if cat not in grouped:
-                grouped[cat] = []
-            
-            # Formatação do status
-            if s.status == "possui" and s.sub_status == "bom":
-                status_html = "• <b>{}</b>: <font color='#10b981'>Em Bom Estado (Possui)</font>".format(s.tool.name)
-                total_ok += 1
-            elif s.status == "possui" and s.sub_status == "ruim":
-                avaria_desc = f" ({s.damage_description})" if s.damage_description else ""
-                status_html = "• <b>{}</b>: <font color='#ef4444'>Com Avaria</font>{}".format(s.tool.name, avaria_desc)
-                total_avarias += 1
-            else:
-                tipo_falta = "Não Possui"
-                if s.sub_status == "perdi":
-                    tipo_falta = "Perdido"
-                elif s.sub_status == "nao_recebi":
-                    tipo_falta = "Não Recebido"
-                
-                status_html = "• <b>{}</b>: <font color='#f97316'>Ausente</font> ({})".format(s.tool.name, tipo_falta)
-                total_faltas += 1
-                
-            grouped[cat].append(status_html)
-            
-    # Ordenar as categorias
-    categories = sorted(grouped.keys(), key=lambda x: (1 if x == "Outros" else 0, x.lower()))
+    table_rows = []
+    # Linha de cabeçalho da tabela
+    table_rows.append([
+        Paragraph("Nº", hdr_cell_center),
+        Paragraph("Equipamento / Ferramenta", hdr_cell),
+        Paragraph("Categoria", hdr_cell),
+        Paragraph("Situação", hdr_cell),
+        Paragraph("Observações / Avaria", hdr_cell)
+    ])
     
-    content = []
-    for cat in categories:
-        items_html = "<br/>".join(sorted(grouped[cat]))
-        content.append((f"Categoria: {cat}", items_html))
+    # Ordenar por categoria e depois por nome
+    valid_statuses = [s for s in ins.statuses if s.tool and s.tool.is_active]
+    valid_statuses.sort(key=lambda x: (x.tool.category or "Outros", x.tool.name))
+    
+    for idx, s in enumerate(valid_statuses, start=1):
+        cat = s.tool.category or "Outros"
+        obs = s.damage_description or "-"
         
-    # Adicionar observações do técnico se existirem
+        if s.status == "possui" and s.sub_status == "bom":
+            sit = "<font color=\"#0f766e\"><b>Em Ordem</b></font>"
+            total_ok += 1
+        elif s.status == "possui" and s.sub_status == "ruim":
+            sit = "<font color=\"#991b1b\"><b>Com Avaria</b></font>"
+            total_avarias += 1
+        else:
+            if s.sub_status == "perdi":
+                sit = "<font color=\"#9a3412\"><b>Ausente (Perda)</b></font>"
+            elif s.sub_status == "nao_recebi":
+                sit = "<font color=\"#475569\"><b>Não Recebido</b></font>"
+            else:
+                sit = "<font color=\"#475569\"><b>Ausente</b></font>"
+            total_faltas += 1
+            
+        table_rows.append([
+            Paragraph(str(idx), cell_center),
+            Paragraph(s.tool.name, cell_bold),
+            Paragraph(cat, cell_norm),
+            Paragraph(sit, cell_norm),
+            Paragraph(obs, cell_norm)
+        ])
+        
+    story = []
+    
+    # 1. Resumo Executivo / Dados do Registro
+    total_items = len(valid_statuses)
+    ok_pct = int(total_ok / total_items * 100) if total_items > 0 else 100
+    resumo_data = [
+        [
+            Paragraph("<b>Colaborador:</b> " + user.username.upper(), cell_norm),
+            Paragraph("<b>Data da Vistoria:</b> " + ins.updated_at.strftime("%d/%m/%Y %H:%M"), cell_norm),
+            Paragraph("<b>Status:</b> " + ("Confirmado / Assinado" if ins.is_locked else "Aberto para Edição"), cell_norm)
+        ],
+        [
+            Paragraph(f"<b>Total de Itens:</b> {total_items}", cell_norm),
+            Paragraph(f"<b>Em Ordem:</b> {total_ok} ({ok_pct}%)", cell_norm),
+            Paragraph(f"<b>Avarias:</b> {total_avarias} | <b>Ausentes:</b> {total_faltas}", cell_norm)
+        ]
+    ]
+    resumo_table = Table(resumo_data, colWidths=[60*mm, 60*mm, 60*mm])
+    resumo_table.setStyle(TableStyle([
+        ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#f8fafc")),
+        ("BOX", (0, 0), (-1, -1), 0.5, colors.HexColor("#cbd5e1")),
+        ("INNERGRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#e2e8f0")),
+        ("TOPPADDING", (0, 0), (-1, -1), 5),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+        ("LEFTPADDING", (0, 0), (-1, -1), 8),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 8),
+    ]))
+    story.append(resumo_table)
+    story.append(Spacer(1, 4*mm))
+    
+    # 2. Tabela Detalhada de Ferramentas
+    items_table = Table(table_rows, colWidths=[9*mm, 70*mm, 32*mm, 34*mm, 35*mm], repeatRows=1)
+    t_style = [
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#1e293b")),
+        ("ALIGN", (0, 0), (0, -1), "CENTER"),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("TOPPADDING", (0, 0), (-1, -1), 3.5),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 3.5),
+        ("LEFTPADDING", (0, 0), (-1, -1), 4),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+        ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#e2e8f0")),
+    ]
+    for r in range(1, len(table_rows)):
+        if r % 2 == 0:
+            t_style.append(("BACKGROUND", (0, r), (-1, r), colors.HexColor("#f8fafc")))
+    items_table.setStyle(TableStyle(t_style))
+    story.append(items_table)
+    
+    # 3. Observações Gerais do Técnico (se existirem)
     if ins.notes:
-        content.append(("Observações do Técnico", f"<i>\"{ins.notes}\"</i>"))
+        story.append(Spacer(1, 3*mm))
+        obs_box = Table([[
+            Paragraph(f"<b>Observações do Técnico:</b> {ins.notes}", cell_norm)
+        ]], colWidths=[180*mm])
+        obs_box.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#f8fafc")),
+            ("BOX", (0, 0), (-1, -1), 0.5, colors.HexColor("#cbd5e1")),
+            ("PADDING", (0, 0), (-1, -1), 5),
+        ]))
+        story.append(obs_box)
         
-    # Adicionar contadores resumidos aos metadados
-    metadata["Itens OK"] = str(total_ok)
-    metadata["Itens com Avaria"] = str(total_avarias)
-    metadata["Itens em Falta/Ausentes"] = str(total_faltas)
+    # 4. Termo de Responsabilidade e Assinatura
+    story.append(Spacer(1, 4*mm))
+    sig_elements = [
+        Paragraph(
+            "<i>Declaro ter conferido os equipamentos e ferramentas acima relacionados sob minha responsabilidade para uso exclusivo no desempenho de minhas funções profissionais, comprometendo-me a zelar por sua guarda e conservação.</i>",
+            ParagraphStyle(name="ToolDecl", fontName="Helvetica-Oblique", fontSize=7, leading=9, textColor=colors.HexColor("#64748b"))
+        ),
+        Spacer(1, 3*mm)
+    ]
     
     sig_path = None
     if ins.signature:
-        from pathlib import Path
         full_sig = Path("/var/www/checklist_veicular/static/assinaturas") / ins.signature
+        if not full_sig.exists():
+            full_sig = Path("/var/www/checklist_veicular/frontend/static/assinaturas") / ins.signature
         if full_sig.exists():
             sig_path = str(full_sig)
-
-    buffer = io.BytesIO()
-    make_premium_pdf(buffer, f"VISTORIA DE FERRAMENTAS - {user.username.upper()}", metadata, content, signature_path=sig_path)
+            
+    if sig_path:
+        try:
+            img = RLImage(sig_path, width=45*mm, height=18*mm)
+            img.hAlign = "CENTER"
+            sig_elements.append(img)
+        except Exception:
+            sig_elements.append(Spacer(1, 12*mm))
+    else:
+        sig_elements.append(Spacer(1, 12*mm))
+        
+    sig_elements.append(Paragraph(
+        f"____________________________________________________<br/><b>{user.username.upper()}</b><br/>Técnico Responsável",
+        ParagraphStyle(name="ToolSigName", fontName="Helvetica", fontSize=7.5, leading=10, alignment=1, textColor=colors.HexColor("#1e293b"))
+    ))
+    
+    story.append(KeepTogether(sig_elements))
+    
+    def on_page(canvas, document):
+        width, height = A4
+        canvas.saveState()
+        
+        # Logo no Header se existir
+        if logo_path and os.path.exists(logo_path):
+            try:
+                from reportlab.lib.utils import ImageReader
+                logo_img = ImageReader(logo_path)
+                canvas.drawImage(logo_img, 15*mm, height - 25*mm, width=35*mm, height=15*mm, preserveAspectRatio=True, mask="auto")
+            except Exception:
+                pass
+        
+        # Linha e Título do Header
+        canvas.setStrokeColor(colors.HexColor("#0f172a"))
+        canvas.setLineWidth(1)
+        canvas.line(15*mm, height - 26*mm, width - 15*mm, height - 26*mm)
+        
+        canvas.setFont("Helvetica-Bold", 10.5)
+        canvas.setFillColor(colors.HexColor("#0f172a"))
+        canvas.drawString(55*mm if logo_path else 15*mm, height - 16*mm, "TERMO DE CONFERÊNCIA E CONTROLE DE FERRAMENTAL")
+        
+        canvas.setFont("Helvetica", 7.5)
+        canvas.setFillColor(colors.HexColor("#64748b"))
+        now_str = agora().strftime("%d/%m/%Y às %H:%M")
+        canvas.drawString(55*mm if logo_path else 15*mm, height - 22*mm, f"ADAPTLINK • Ref: VT-{ins.id} • Emitido em: {now_str}")
+        canvas.drawRightString(width - 15*mm, height - 22*mm, f"Técnico: {user.username.upper()}")
+        
+        # Linha e Informações do Rodapé
+        canvas.setStrokeColor(colors.HexColor("#e2e8f0"))
+        canvas.setLineWidth(0.5)
+        canvas.line(15*mm, 14*mm, width - 15*mm, 14*mm)
+        
+        canvas.setFont("Helvetica", 6.8)
+        canvas.drawString(15*mm, 9*mm, "AdaptLink Serviços de Telecomunicação • Documento Interno de Controle e Cautela de Patrimônio")
+        canvas.drawRightString(width - 15*mm, 9*mm, f"Página {document.page}")
+        canvas.restoreState()
+        
+    doc.build(story, onFirstPage=on_page, onLaterPages=on_page)
     buffer.seek(0)
     
-    return send_file(
+    response = send_file(
         buffer,
         mimetype="application/pdf",
         as_attachment=False,
         download_name=f"vistoria_ferramentas_{user.username}_{datetime.now().strftime('%d_%m_%Y')}.pdf"
     )
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
 
 
 
