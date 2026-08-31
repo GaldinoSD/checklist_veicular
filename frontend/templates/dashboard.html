@@ -99,10 +99,7 @@
 
 <!-- ✅ HEADER PREMIUM DASHBOARD COMPACT -->
 <div class="mb-8 animate-premium">
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 glass-premium p-6 rounded-[2rem] shadow-xl overflow-hidden relative">
-        <!-- Decorativos -->
-        <div class="absolute -top-24 -right-24 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl"></div>
-        <div class="absolute -bottom-24 -left-24 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl"></div>
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-4 border-b border-slate-200 dark:border-white/5 mb-6">
 
         <div class="flex items-center gap-5 relative z-10">
             <div class="w-12 h-12 rounded-[1.25rem] bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-2xl shadow-blue-500/20">
@@ -422,128 +419,218 @@
 
 {% else %}
 <!-- ============================
-      DASHBOARD GESTÃO TÉCNICA (PREMIUM COCKPIT)
+      DASHBOARD GESTÃO TÉCNICA (COCKPIT DE PLANTÕES & ESCALAS)
 ============================ -->
-<div id="gestao-dashboard-premium" class="animate-premium">
-    <!-- Top KPIs -->
-    <div class="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <div class="card-premium p-6 card-kpi-teal">
-            <div class="flex items-center justify-between mb-4">
-                <div class="w-12 h-12 rounded-2xl bg-teal-100 dark:bg-teal-900/30 flex items-center justify-center text-teal-600 shadow-lg shadow-teal-500/10">
-                    <i class="fa-solid fa-graduation-cap text-xl"></i>
-                </div>
-                <span class="text-[9px] font-black text-teal-500 bg-teal-500/10 px-2 py-1 rounded-lg uppercase tracking-tighter">LMS Ativo</span>
-            </div>
-            <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">Conclusão Treinamentos</p>
-            <h3 id="stat-lms-completion" class="text-3xl font-black text-slate-800 dark:text-white mt-1">0%</h3>
-            <div class="mt-4 h-1.5 w-full bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden">
-                <div id="bar-lms" class="h-full bg-teal-500 transition-all duration-1000" style="width: 0%"></div>
-            </div>
-        </div>
+<div id="gestao-dashboard-premium" class="animate-premium space-y-8">
+    
 
-        <div class="card-premium p-6 card-kpi-blue">
-            <div class="flex items-center justify-between mb-4">
-                <div class="w-12 h-12 rounded-2xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 shadow-lg shadow-blue-500/10">
-                    <i class="fa-solid fa-clipboard-check text-xl"></i>
+    <!-- ✅ HERO DUAL: OS 2 PRÓXIMOS PLANTÕES -->
+    <div>
+        <div class="flex items-center justify-between mb-3 px-1">
+            <h4 class="text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                <i class="fa-solid fa-bolt-lightning text-amber-500"></i> Próximos 2 Plantões Iminentes
+            </h4>
+            <span class="text-[10px] font-bold text-slate-400 dark:text-slate-500">Escala Ativa & Rodízio</span>
+        </div>
+        <div id="hero-dois-plantoes" class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Renderizado dinamicamente via loadGestaoDashboard() -->
+            <div class="card-premium p-6 rounded-3xl border border-slate-900/10 dark:border-white/10 animate-pulse flex items-center gap-4">
+                <div class="w-14 h-14 rounded-2xl bg-slate-200 dark:bg-white/10 shrink-0"></div>
+                <div class="space-y-2 flex-1">
+                    <div class="h-4 bg-slate-200 dark:bg-white/10 rounded w-1/3"></div>
+                    <div class="h-6 bg-slate-200 dark:bg-white/10 rounded w-2/3"></div>
+                    <div class="h-3 bg-slate-200 dark:bg-white/10 rounded w-1/2"></div>
                 </div>
             </div>
-            <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">Auditorias (Mês)</p>
-            <h3 id="stat-audits" class="text-3xl font-black text-slate-800 dark:text-white mt-1">0</h3>
-            <p class="text-[9px] text-slate-400 mt-2">Rota Exata + Supervisão</p>
+            <div class="card-premium p-6 rounded-3xl border border-slate-900/10 dark:border-white/10 animate-pulse flex items-center gap-4">
+                <div class="w-14 h-14 rounded-2xl bg-slate-200 dark:bg-white/10 shrink-0"></div>
+                <div class="space-y-2 flex-1">
+                    <div class="h-4 bg-slate-200 dark:bg-white/10 rounded w-1/3"></div>
+                    <div class="h-6 bg-slate-200 dark:bg-white/10 rounded w-2/3"></div>
+                    <div class="h-3 bg-slate-200 dark:bg-white/10 rounded w-1/2"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ✅ 4 TOP KPIS DE PLANTÃO -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-6">
+        <!-- KPI 1: Plantão Sábado -->
+        <div class="card-premium p-6 card-kpi-amber">
+            <div class="flex items-center justify-between mb-4">
+                <div class="w-12 h-12 rounded-2xl bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center text-amber-600 shadow-lg shadow-amber-500/10">
+                    <i class="fa-solid fa-calendar-day text-xl"></i>
+                </div>
+                <span class="text-[9px] font-black text-amber-600 bg-amber-500/10 px-2 py-1 rounded-lg uppercase tracking-wider">Sábados</span>
+            </div>
+            <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">Plantões de Sábado</p>
+            <h3 id="stat-sabados-count" class="text-3xl font-black text-slate-800 dark:text-white mt-1">0</h3>
+            <p class="text-[9px] text-slate-400 mt-2 flex items-center gap-1">
+                <i class="fa-solid fa-arrows-rotate text-amber-500 text-[8px]"></i> Rodízio e Manuais
+            </p>
         </div>
 
+        <!-- KPI 2: Plantão Domingo -->
         <div class="card-premium p-6 card-kpi-emerald">
             <div class="flex items-center justify-between mb-4">
                 <div class="w-12 h-12 rounded-2xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center text-emerald-600 shadow-lg shadow-emerald-500/10">
-                    <i class="fa-solid fa-truck-medical text-xl"></i>
+                    <i class="fa-solid fa-sun text-xl"></i>
                 </div>
+                <span class="text-[9px] font-black text-emerald-600 bg-emerald-500/10 px-2 py-1 rounded-lg uppercase tracking-wider">Domingos</span>
             </div>
-            <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">Saúde da Frota (7d)</p>
-            <h3 id="stat-fleet-health" class="text-3xl font-black text-slate-800 dark:text-white mt-1">0%</h3>
-            <div class="mt-4 h-1.5 w-full bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden">
-                <div id="bar-fleet" class="h-full bg-emerald-500 transition-all duration-1000" style="width: 0%"></div>
-            </div>
+            <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">Plantões de Domingo</p>
+            <h3 id="stat-domingos-count" class="text-3xl font-black text-slate-800 dark:text-white mt-1">0</h3>
+            <p class="text-[9px] text-slate-400 mt-2 flex items-center gap-1">
+                <i class="fa-solid fa-check-circle text-emerald-500 text-[8px]"></i> Escalas ativas
+            </p>
         </div>
 
+        <!-- KPI 3: Plantão Feriado -->
         <div class="card-premium p-6 card-kpi-rose">
             <div class="flex items-center justify-between mb-4">
-                <div class="w-12 h-12 rounded-2xl bg-red-100 dark:bg-red-900/30 flex items-center justify-center text-red-600 shadow-lg shadow-red-500/10">
-                    <i class="fa-solid fa-triangle-exclamation text-xl"></i>
+                <div class="w-12 h-12 rounded-2xl bg-rose-100 dark:bg-rose-900/30 flex items-center justify-center text-rose-600 shadow-lg shadow-rose-500/10">
+                    <i class="fa-solid fa-flag text-xl"></i>
                 </div>
+                <span class="text-[9px] font-black text-rose-600 bg-rose-500/10 px-2 py-1 rounded-lg uppercase tracking-wider">Feriados</span>
             </div>
-            <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">Pendências Críticas</p>
-            <h3 id="stat-critical" class="text-3xl font-black text-slate-800 dark:text-white mt-1">0</h3>
-            <p class="text-[9px] text-rose-400 mt-2">RFO Abertos + Tarefas</p>
+            <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">Plantões de Feriado</p>
+            <h3 id="stat-feriados-count" class="text-3xl font-black text-slate-800 dark:text-white mt-1">0</h3>
+            <p class="text-[9px] text-slate-400 mt-2 flex items-center gap-1">
+                <i class="fa-solid fa-calendar-plus text-rose-500 text-[8px]"></i> Feriados e Pontes
+            </p>
+        </div>
+
+        <!-- KPI 4: Total de Técnicos Escalados -->
+        <div class="card-premium p-6 card-kpi-blue">
+            <div class="flex items-center justify-between mb-4">
+                <div class="w-12 h-12 rounded-2xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 shadow-lg shadow-blue-500/10">
+                    <i class="fa-solid fa-users text-xl"></i>
+                </div>
+                <span class="text-[9px] font-black text-blue-600 bg-blue-500/10 px-2 py-1 rounded-lg uppercase tracking-wider">Equipe</span>
+            </div>
+            <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em]">Técnicos no Rodízio</p>
+            <h3 id="stat-total-tecnicos" class="text-3xl font-black text-slate-800 dark:text-white mt-1">0</h3>
+            <p id="label-total-plantoes" class="text-[9px] text-slate-400 mt-2">
+                0 plantões totais distribuídos
+            </p>
         </div>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
+    <!-- ✅ GRÁFICOS ANALÍTICOS (EVOLUÇÃO TEMPORAL & COMPOSIÇÃO) -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Gráfico 1: Evolução Temporal de Plantões -->
         <div class="lg:col-span-2 card-premium p-8">
-            <div class="flex items-center justify-between mb-8">
+            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                 <div>
-                    <h4 class="text-lg font-black text-slate-800 dark:text-white">Produtividade Operacional</h4>
-                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Volume de Atividades (Últimos 7 dias)</p>
+                    <h4 class="text-lg font-black text-slate-800 dark:text-white">Volume & Frequência de Plantões</h4>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Histórico e Projeção Mensal (Sábado, Domingo, Feriado)</p>
+                </div>
+                <div class="flex items-center gap-3 text-[10px] font-black uppercase">
+                    <span class="flex items-center gap-1 text-amber-500"><span class="w-2.5 h-2.5 rounded bg-amber-500 inline-block"></span> Sábados</span>
+                    <span class="flex items-center gap-1 text-emerald-500"><span class="w-2.5 h-2.5 rounded bg-emerald-500 inline-block"></span> Domingos</span>
+                    <span class="flex items-center gap-1 text-rose-500"><span class="w-2.5 h-2.5 rounded bg-rose-500 inline-block"></span> Feriados</span>
                 </div>
             </div>
             <div class="h-72">
-                <canvas id="chartAtividades"></canvas>
+                <canvas id="chartTimelinePlantoes"></canvas>
             </div>
         </div>
 
-        <div class="lg:col-span-1 card-premium p-8">
-            <h4 class="text-lg font-black text-slate-800 dark:text-white mb-1">Ranking de Performance</h4>
-            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-8">Baseado em Treinamentos LMS</p>
-            <div id="dashboard-ranking" class="space-y-4">
-                <p class="text-center text-slate-400 text-xs py-10 italic">Calculando scores...</p>
+        <!-- Gráfico 2: Donut de Distribuição por Categoria -->
+        <div class="lg:col-span-1 card-premium p-8 flex flex-col justify-between">
+            <div>
+                <h4 class="text-lg font-black text-slate-800 dark:text-white mb-1">Composição por Tipo</h4>
+                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-6">Distribuição consolidada</p>
+                <div class="h-56 relative flex items-center justify-center">
+                    <canvas id="chartTiposPlantoes"></canvas>
+                </div>
             </div>
-        </div>
-    </div>
-
-    <!-- ✅ Linha Premium: Escalas e Encerramentos do Dia -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
-        <div class="card-premium p-8">
-            <h3 class="text-sm font-black text-slate-800 dark:text-white mb-6 uppercase tracking-widest flex items-center gap-2">
-                <i class="fa-solid fa-calendar-day text-purple-500"></i> Escalas de Plantão Hoje
-            </h3>
-            <div id="dashboard-scales-today" class="space-y-3">
-                <p class="text-center text-slate-400 text-xs py-10 italic">Nenhuma escala ativa para hoje.</p>
-            </div>
-        </div>
-
-        <div class="card-premium p-8">
-            <h3 class="text-sm font-black text-slate-800 dark:text-white mb-6 uppercase tracking-widest flex items-center gap-2">
-                <i class="fa-solid fa-warehouse text-emerald-500"></i> Últimos Encerramentos Diários
-            </h3>
-            <div id="dashboard-closures-recent" class="space-y-3">
-                <p class="text-center text-slate-400 text-xs py-10 italic">Nenhum encerramento registrado.</p>
+            <div id="chart-tipos-legend" class="grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-slate-100 dark:border-white/5 text-center">
+                <div>
+                    <span class="text-[9px] font-bold text-slate-400 block uppercase">Sábados</span>
+                    <span id="donut-val-sab" class="text-sm font-black text-amber-500">0</span>
+                </div>
+                <div>
+                    <span class="text-[9px] font-bold text-slate-400 block uppercase">Domingos</span>
+                    <span id="donut-val-dom" class="text-sm font-black text-emerald-500">0</span>
+                </div>
+                <div>
+                    <span class="text-[9px] font-bold text-slate-400 block uppercase">Feriados</span>
+                    <span id="donut-val-fer" class="text-sm font-black text-rose-500">0</span>
+                </div>
             </div>
         </div>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        <div class="card-premium p-8">
-            <h3 class="text-sm font-black text-slate-800 dark:text-white mb-6 uppercase tracking-widest flex items-center gap-2">
-                <i class="fa-solid fa-bolt text-amber-500"></i> Alertas Combustível
-            </h3>
-            <div id="dashboard-generator-alerts" class="space-y-4"></div>
+    <!-- ✅ PROGRAMAÇÃO OPERACIONAL: PRÓXIMOS PLANTÕES & EQUILÍBRIO POR TÉCNICO -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <!-- Lista de Próximos Plantões -->
+        <div class="lg:col-span-2 card-premium p-8">
+            <div class="flex items-center justify-between mb-6">
+                <div>
+                    <h4 class="text-lg font-black text-slate-800 dark:text-white">Próximos Plantões Confirmados</h4>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Cronograma de escalas futuras e rodízios</p>
+                </div>
+                <span class="px-3 py-1 bg-slate-100 dark:bg-white/5 rounded-xl text-[10px] font-black text-slate-600 dark:text-slate-400">
+                    Auto-sincronizado
+                </span>
+            </div>
+            <div id="dashboard-proximos-plantoes" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <p class="text-center text-slate-400 text-xs py-10 italic col-span-2">Carregando cronograma...</p>
+            </div>
         </div>
 
-        <div class="card-premium p-8">
-            <h3 class="text-sm font-black text-slate-800 dark:text-white mb-6 uppercase tracking-widest flex items-center gap-2">
-                <i class="fa-solid fa-list-check text-blue-500"></i> Planos de Ação
-            </h3>
-            <div id="dashboard-tasks-critical" class="space-y-3"></div>
-        </div>
+        <!-- Central de Prontidão & Alertas Operacionais -->
+        <div class="lg:col-span-1 card-premium p-6 sm:p-7 flex flex-col justify-between gap-6">
+            <div>
+                <div class="flex items-center justify-between mb-5">
+                    <div>
+                        <h4 class="text-base sm:text-lg font-black text-slate-800 dark:text-white flex items-center gap-2">
+                            <i class="fa-solid fa-shield-halved text-emerald-500"></i> Central de Prontidão
+                        </h4>
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Saúde das escalas & Alertas</p>
+                    </div>
+                    <span id="badge-prontidao-status" class="px-2.5 py-1 rounded-xl text-[9px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                        100% Coberto
+                    </span>
+                </div>
 
-        <div class="card-premium p-8">
-            <h3 class="text-sm font-black text-slate-800 dark:text-white mb-6 uppercase tracking-widest flex items-center gap-2">
-                <i class="fa-solid fa-chart-pie text-red-500"></i> Distribuição RFO
-            </h3>
-            <div class="h-48">
-                <canvas id="chartRFO"></canvas>
+                <!-- 1. Card de Taxa de Cobertura -->
+                <div class="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-900/5 mb-5">
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 tracking-wider">Cobertura Próx. 30 Dias</span>
+                        <span id="prontidao-cobertura-label" class="text-xs font-black text-slate-800 dark:text-white">0 de 0 datas</span>
+                    </div>
+                    <div class="w-full bg-slate-200 dark:bg-white/10 h-2.5 rounded-full overflow-hidden mb-1">
+                        <div id="bar-prontidao-cobertura" class="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full transition-all duration-1000" style="width: 0%"></div>
+                    </div>
+                    <p class="text-[10px] text-slate-400 dark:text-slate-500 text-right font-medium">Dias de plantão assegurados</p>
+                </div>
+
+                <!-- 2. Alertas & Próximos Feriados -->
+                <div>
+                    <h5 class="text-[11px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-widest mb-3 flex items-center gap-1.5">
+                        <i class="fa-solid fa-bell text-amber-500 text-[10px]"></i> Alertas de Feriados
+                    </h5>
+                    <div id="container-feriados-alertas" class="space-y-2.5">
+                        <p class="text-xs text-slate-400 italic py-3 text-center">Nenhum feriado iminente nos próximos 60 dias.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. Equipes Técnicas Ativas -->
+            <div class="pt-4 border-t border-slate-100 dark:border-white/5">
+                <div class="flex items-center justify-between mb-3">
+                    <span class="text-[10px] font-black uppercase text-slate-400 tracking-wider">Equipes no Sistema</span>
+                    <span id="total-equipes-count" class="text-[10px] font-bold text-slate-400">0 equipes</span>
+                </div>
+                <div id="container-equipes-status" class="flex flex-wrap gap-1.5">
+                    <!-- Preenchido dinamicamente -->
+                </div>
             </div>
         </div>
     </div>
+
 </div>
 {% endif %}
 
@@ -572,7 +659,6 @@
             document.getElementById('stat-frota-checklists').textContent = data.checklists_today;
             document.getElementById('stat-frota-os').textContent = data.open_os;
 
-            // Rótulo dinâmico do card de checklists
             const labelChecklist = document.getElementById('label-frota-checklists');
             if (labelChecklist) {
                 labelChecklist.textContent = periodo ? 'Checklists no Período' : 'Checklists Hoje';
@@ -614,7 +700,6 @@
                 }
             });
 
-            // Mapeia chaves do status_dist para ordenar e aplicar as cores corretas
             const orderedStatusKeys = ["OK", "Atenção", "Crítico"];
             const orderedStatusVals = orderedStatusKeys.map(k => data.status_dist[k] || 0);
 
@@ -626,7 +711,7 @@
                     labels: orderedStatusKeys,
                     datasets: [{
                         data: orderedStatusVals,
-                        backgroundColor: ['#10b981', '#f59e0b', '#f43f5e'], // OK (Verde), Atenção (Laranja), Crítico (Vermelho)
+                        backgroundColor: ['#10b981', '#f59e0b', '#f43f5e'],
                         borderWidth: 0
                     }]
                 },
@@ -641,36 +726,38 @@
             });
 
             const revDiv = document.getElementById('dashboard-rev-alerts');
-            revDiv.innerHTML = data.rev_alerts.length ? data.rev_alerts.map(v => `
-                <div class="p-3 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-900/5">
-                    <div class="flex justify-between items-center mb-2">
-                        <span class="text-xs font-black text-slate-800 dark:text-white">${v.plate}</span>
-                        <span class="text-[10px] font-bold text-rose-500">${v.remaining} km restando</span>
+            if (revDiv) {
+                revDiv.innerHTML = data.rev_alerts.length ? data.rev_alerts.map(v => `
+                    <div class="p-3 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-900/5">
+                        <div class="flex justify-between items-center mb-2">
+                            <span class="text-xs font-black text-slate-800 dark:text-white">${v.plate}</span>
+                            <span class="text-[10px] font-bold text-rose-500">${v.remaining} km restando</span>
+                        </div>
+                        <div class="w-full h-1.5 bg-slate-200 dark:bg-white/5 rounded-full overflow-hidden">
+                            <div class="h-full bg-rose-500 transition-all duration-1000" style="width: ${v.perc}%"></div>
+                        </div>
                     </div>
-                    <div class="w-full h-1.5 bg-slate-200 dark:bg-white/5 rounded-full overflow-hidden">
-                        <div class="h-full bg-rose-500 transition-all duration-1000" style="width: ${v.perc}%"></div>
-                    </div>
-                </div>
-            `).join('') : '<p class="text-xs text-slate-400 text-center py-10">Frota revisada!</p>';
+                `).join('') : '<p class="text-xs text-slate-400 text-center py-10">Frota revisada!</p>';
+            }
 
             const osDiv = document.getElementById('dashboard-os-recent');
-            osDiv.innerHTML = data.latest_os.length ? data.latest_os.map(o => `
-                <div class="p-3 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-900/5 flex justify-between items-center">
-                    <div>
-                        <h4 class="text-xs font-black text-slate-800 dark:text-white">${o.plate}</h4>
-                        <p class="text-[9px] text-slate-400 truncate w-40">${o.desc}</p>
+            if (osDiv) {
+                osDiv.innerHTML = data.latest_os.length ? data.latest_os.map(o => `
+                    <div class="p-3 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-900/5 flex justify-between items-center">
+                        <div>
+                            <h4 class="text-xs font-black text-slate-800 dark:text-white">${o.plate}</h4>
+                            <p class="text-[9px] text-slate-400 truncate w-40">${o.desc}</p>
+                        </div>
+                        <span class="px-2 py-0.5 rounded-lg text-[8px] font-black bg-rose-100 text-rose-600 uppercase">
+                            ${o.gravity}
+                        </span>
                     </div>
-                    <span class="px-2 py-0.5 rounded-lg text-[8px] font-black bg-rose-100 text-rose-600 uppercase">
-                        ${o.gravity}
-                    </span>
-                </div>
-            `).join('') : '<p class="text-xs text-slate-400 text-center py-10">Nenhuma O.S aberta.</p>';
+                `).join('') : '<p class="text-xs text-slate-400 text-center py-10">Nenhuma O.S aberta.</p>';
+            }
 
-            // Populando os novos cards da frota (Inventário)
             const totalVehicles = data.total_vehicles || 0;
             const activeVehicles = data.active_vehicles || 0;
             const maintenanceVehicles = data.maintenance_vehicles || 0;
-            
             const activePerc = totalVehicles > 0 ? Math.round((activeVehicles / totalVehicles) * 100) : 0;
             const maintenancePerc = totalVehicles > 0 ? Math.round((maintenanceVehicles / totalVehicles) * 100) : 0;
 
@@ -695,7 +782,6 @@
             const barManutencao = document.getElementById('bar-manutencao');
             if (barManutencao) barManutencao.style.width = maintenancePerc + '%';
 
-            // Composição da Frota (Tipos)
             if (data.types_dist) {
                 const compCarros = document.getElementById('comp-carros');
                 if (compCarros) compCarros.textContent = data.types_dist.carro || 0;
@@ -710,131 +796,341 @@
         } catch (e) { console.error("Erro dashboard frota:", e); }
     }
 
-    // --- DASHBOARD GESTÃO ---
-    let rfoChart = null, activitiesChart = null;
+    // --- DASHBOARD GESTÃO TÉCNICA (PLANTÕES & ESCALAS) ---
+    let timelineChart = null;
+    let tiposChart = null;
 
     async function loadGestaoDashboard() {
         try {
-            const urlParams = new URLSearchParams(window.location.search);
-            const periodo = urlParams.get('periodo') || '';
-            const res = await fetch(`/api/gestao/dashboard_stats?periodo=${encodeURIComponent(periodo)}`);
+            const res = await fetch('/api/gestao/dashboard_stats');
             const data = await res.json();
 
-            document.getElementById('stat-lms-completion').textContent = (data.lms_completion || 0) + '%';
-            document.getElementById('bar-lms').style.width = (data.lms_completion || 0) + '%';
-            document.getElementById('stat-audits').textContent = data.total_audits_month || 0;
-            document.getElementById('stat-fleet-health').textContent = (data.fleet_health || 0) + '%';
-            document.getElementById('bar-fleet').style.width = (data.fleet_health || 0) + '%';
-            document.getElementById('stat-critical').textContent = (data.rfo_active || 0) + (data.tasks_pending || 0);
+            // 1. Renderizar os 2 Próximos Plantões (Dual Hero Cards)
+            const heroContainer = document.getElementById('hero-dois-plantoes');
+            if (heroContainer) {
+                const proximos = data.dois_proximos_plantoes || (data.proximo_plantao ? [data.proximo_plantao] : []);
+                if (proximos.length > 0) {
+                    let html = proximos.map((p, idx) => {
+                        const isPrimary = (idx === 0);
+                        const isToday = p.is_today;
+                        const isSab = p.type === 'Sábado';
+                        const isDom = p.type === 'Domingo';
+                        const isFer = p.type === 'Feriado';
 
-            const ctxRFO = document.getElementById('chartRFO').getContext('2d');
-            if(rfoChart) rfoChart.destroy();
-            rfoChart = new Chart(ctxRFO, {
-                type: 'doughnut',
-                data: {
-                    labels: Object.keys(data.rfo_by_type || {}),
-                    datasets: [{
-                        data: Object.values(data.rfo_by_type || {}),
-                        backgroundColor: ['#ef4444', '#f59e0b', '#3b82f6', '#10b981', '#8b5cf6', '#6366f1'],
-                        borderWidth: 0
-                    }]
-                },
-                options: {
-                    responsive: true, maintainAspectRatio: false,
-                    plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 6, font: { size: 9 } } } },
-                    cutout: '70%'
+                        let statusText = isToday ? 'PLANTÃO HOJE' : (isPrimary ? '1º PRÓXIMO PLANTÃO' : '2º PRÓXIMO PLANTÃO');
+                        let statusClass = isToday 
+                            ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                            : (isPrimary 
+                                ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/30'
+                                : 'bg-blue-500/20 text-blue-600 dark:text-blue-400 border-blue-500/30');
+
+                        let iconBg = isFer
+                            ? 'bg-rose-500 text-white shadow-rose-500/20'
+                            : (isToday 
+                                ? 'bg-emerald-500 text-white shadow-emerald-500/20'
+                                : (isPrimary ? 'bg-amber-500 text-white shadow-amber-500/20' : 'bg-blue-600 text-white shadow-blue-500/20'));
+
+                        let typeBadgeClass = isSab 
+                            ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+                            : (isDom ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20');
+
+                        let borderCardClass = isFer
+                            ? 'border-rose-500/30 bg-gradient-to-br from-rose-500/10 via-slate-50 to-rose-500/5 dark:from-rose-500/10 dark:via-slate-900/40 dark:to-slate-900/60'
+                            : (isPrimary 
+                                ? 'border-amber-500/30 bg-gradient-to-br from-amber-500/10 via-slate-50 to-amber-500/5 dark:from-amber-500/10 dark:via-slate-900/40 dark:to-slate-900/60'
+                                : 'border-slate-900/10 dark:border-white/10 bg-gradient-to-br from-blue-500/5 via-slate-50 to-slate-100 dark:from-blue-500/10 dark:via-slate-900/40 dark:to-slate-900/60');
+
+                        const heroIcon = isFer ? 'fa-solid fa-flag' : 'fa-solid fa-calendar-check';
+
+                        return `
+                            <div class="card-premium p-6 rounded-3xl border ${borderCardClass} shadow-xl flex flex-col justify-between gap-5 relative overflow-hidden transition-all hover:scale-[1.01]">
+                                <div>
+                                    <div class="flex items-start justify-between gap-3 mb-3">
+                                        <div class="flex items-center gap-2 flex-wrap">
+                                            <span class="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border flex items-center gap-1.5 ${statusClass}">
+                                                <span class="w-1.5 h-1.5 rounded-full ${isToday ? 'bg-emerald-500 animate-pulse' : (isPrimary ? 'bg-amber-500 animate-pulse' : 'bg-blue-500')}"></span>
+                                                ${statusText}
+                                            </span>
+                                            <span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider border ${typeBadgeClass}">
+                                                ${p.raw_type && p.raw_type.startsWith('Feriado:') ? p.raw_type : p.type}
+                                            </span>
+                                        </div>
+                                        <span class="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold bg-slate-200 dark:bg-white/10 text-slate-700 dark:text-slate-200 shrink-0">
+                                            ${p.relative_label}
+                                        </span>
+                                    </div>
+
+                                    <div class="flex items-center gap-4">
+                                        <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-xl shadow-lg shrink-0 ${iconBg}">
+                                            <i class="${heroIcon}"></i>
+                                        </div>
+                                        <div class="min-w-0">
+                                            <h4 class="text-base sm:text-lg font-black text-slate-800 dark:text-white truncate">
+                                                ${p.weekday}, ${p.date_formatted}
+                                            </h4>
+                                            <p class="text-xs font-bold text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mt-0.5">
+                                                <i class="fa-solid fa-people-group text-amber-500 text-[10px]"></i>
+                                                Equipe: <span class="text-slate-800 dark:text-slate-200">${p.team_name || 'Geral'}</span>
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="pt-4 border-t border-slate-200/70 dark:border-white/10 space-y-2">
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-[10px] font-black uppercase text-slate-400 tracking-wider">
+                                            Técnicos de Prontidão
+                                        </span>
+                                        ${p.is_automatic ? '<span class="text-[8px] font-extrabold px-2 py-0.5 bg-blue-500/10 text-blue-500 rounded-md" title="Gerado por Rodízio"><i class="fa-solid fa-arrows-rotate mr-1"></i>Rodízio</span>' : '<span class="text-[8px] font-extrabold px-2 py-0.5 bg-emerald-500/10 text-emerald-500 rounded-md">Escala Fixa</span>'}
+                                    </div>
+                                    <div class="flex flex-wrap gap-1.5">
+                                        ${p.techs && p.techs.length ? p.techs.map(t => `
+                                            <span class="px-2.5 py-1 rounded-xl bg-white dark:bg-white/10 text-slate-800 dark:text-white font-bold text-xs border border-slate-200 dark:border-white/10 shadow-sm flex items-center gap-1.5">
+                                                <i class="fa-solid fa-user-shield text-amber-500 text-[10px]"></i> ${t}
+                                            </span>
+                                        `).join('') : '<span class="text-xs text-slate-400 italic">Nenhum técnico escalado</span>'}
+                                    </div>
+                                    ${p.obs ? `<p class="text-[10px] text-slate-400 italic mt-1">Obs: ${p.obs}</p>` : ''}
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+
+                    if (proximos.length === 1) {
+                        html += `
+                            <div class="card-premium p-6 rounded-3xl border border-dashed border-slate-300 dark:border-white/10 flex flex-col items-center justify-center text-center py-8">
+                                <div class="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-white/5 text-slate-400 flex items-center justify-center text-xl mb-3">
+                                    <i class="fa-solid fa-calendar-plus"></i>
+                                </div>
+                                <h4 class="text-sm font-black text-slate-700 dark:text-slate-300">2º Plantão a Definir</h4>
+                                <p class="text-xs text-slate-400 mt-1 max-w-xs">Configure mais escalas ou o rodízio automático na Gestão Técnica para projetar as próximas datas.</p>
+                            </div>
+                        `;
+                    }
+                    heroContainer.innerHTML = html;
+                } else {
+                    heroContainer.innerHTML = `
+                        <div class="col-span-full card-premium p-8 rounded-3xl border border-slate-900/10 dark:border-white/10 text-center py-12">
+                            <div class="w-14 h-14 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center text-2xl mx-auto mb-3">
+                                <i class="fa-solid fa-calendar-xmark"></i>
+                            </div>
+                            <h3 class="text-lg font-black text-slate-800 dark:text-white">Nenhum plantão futuro agendado</h3>
+                            <p class="text-xs text-slate-400 mt-1">Cadastre novas escalas ou configure o rodízio na Gestão Técnica.</p>
+                        </div>
+                    `;
                 }
-            });
+            }
 
-            const ctxAct = document.getElementById('chartAtividades').getContext('2d');
-            if(activitiesChart) activitiesChart.destroy();
-            activitiesChart = new Chart(ctxAct, {
-                type: 'line',
-                data: {
-                    labels: data.atividades_history.labels,
-                    datasets: [{
-                        label: 'Atividades',
-                        data: data.atividades_history.values,
-                        borderColor: '#6366f1',
-                        backgroundColor: 'rgba(99, 102, 241, 0.1)',
-                        fill: true, tension: 0.4, borderWidth: 3, pointRadius: 3
-                    }]
-                },
-                options: {
-                    responsive: true, maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        y: { beginAtZero: true, grid: { color: isDark() ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' } },
-                        x: { grid: { display: false } }
+            // 2. Renderizar Top 4 KPIs
+            if (data.plantao_kpis) {
+                const kpis = data.plantao_kpis;
+                const elSab = document.getElementById('stat-sabados-count');
+                if (elSab) elSab.textContent = kpis.sabados_count || 0;
+                const elDom = document.getElementById('stat-domingos-count');
+                if (elDom) elDom.textContent = kpis.domingos_count || 0;
+                const elFer = document.getElementById('stat-feriados-count');
+                if (elFer) elFer.textContent = kpis.feriados_count || 0;
+                const elTechs = document.getElementById('stat-total-tecnicos');
+                if (elTechs) elTechs.textContent = kpis.total_tecnicos_escalados || 0;
+                
+                const labelPlantoes = document.getElementById('label-total-plantoes');
+                if (labelPlantoes) {
+                    labelPlantoes.textContent = `${kpis.total_plantoes || 0} plantões distribuídos`;
+                }
+
+                const dSab = document.getElementById('donut-val-sab');
+                if (dSab) dSab.textContent = kpis.sabados_count || 0;
+                const dDom = document.getElementById('donut-val-dom');
+                if (dDom) dDom.textContent = kpis.domingos_count || 0;
+                const dFer = document.getElementById('donut-val-fer');
+                if (dFer) dFer.textContent = kpis.feriados_count || 0;
+            }
+
+            // 3. Gráfico 1: Timeline de Plantões
+            const ctxTimeline = document.getElementById('chartTimelinePlantoes');
+            if (ctxTimeline && data.timeline_plantoes) {
+                if (timelineChart) timelineChart.destroy();
+                timelineChart = new Chart(ctxTimeline.getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: data.timeline_plantoes.labels,
+                        datasets: [
+                            {
+                                label: 'Sábados',
+                                data: data.timeline_plantoes.sabados,
+                                backgroundColor: '#f59e0b',
+                                borderRadius: 6
+                            },
+                            {
+                                label: 'Domingos',
+                                data: data.timeline_plantoes.domingos,
+                                backgroundColor: '#10b981',
+                                borderRadius: 6
+                            },
+                            {
+                                label: 'Feriados',
+                                data: data.timeline_plantoes.feriados,
+                                backgroundColor: '#f43f5e',
+                                borderRadius: 6
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            x: { stacked: false, grid: { display: false }, ticks: { font: { size: 10, weight: 'bold' } } },
+                            y: { beginAtZero: true, ticks: { stepSize: 1, font: { size: 10 } }, grid: { color: isDark() ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)' } }
+                        }
+                    }
+                });
+            }
+
+            // 4. Gráfico 2: Composição dos Tipos de Plantão
+            const ctxTipos = document.getElementById('chartTiposPlantoes');
+            if (ctxTipos && data.distribuicao_tipos) {
+                if (tiposChart) tiposChart.destroy();
+                const dist = data.distribuicao_tipos;
+                tiposChart = new Chart(ctxTipos.getContext('2d'), {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Sábados', 'Domingos', 'Feriados'],
+                        datasets: [{
+                            data: [dist['Sábado'] || 0, dist['Domingo'] || 0, dist['Feriado'] || 0],
+                            backgroundColor: ['#f59e0b', '#10b981', '#f43f5e'],
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        cutout: '72%'
+                    }
+                });
+            }
+
+            // 5. Próximos Plantões Programados (Cards na Grid)
+            const containerProximos = document.getElementById('dashboard-proximos-plantoes');
+            if (containerProximos) {
+                if (data.proximos_plantoes && data.proximos_plantoes.length) {
+                    containerProximos.innerHTML = data.proximos_plantoes.map(p => {
+                        const isSab = p.type === 'Sábado';
+                        const isDom = p.type === 'Domingo';
+                        const badgeBg = isSab ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20' :
+                                       (isDom ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' :
+                                                'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20');
+                        
+                        return `
+                            <div class="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-900/5 flex flex-col justify-between gap-3 hover:border-amber-500/30 transition-all">
+                                <div class="flex items-start justify-between gap-2">
+                                    <div>
+                                        <div class="flex items-center gap-2 mb-1">
+                                            <span class="px-2 py-0.5 rounded-lg text-[9px] font-black uppercase border ${badgeBg}">
+                                                ${p.raw_type && p.raw_type.startsWith('Feriado:') ? p.raw_type : p.type}
+                                            </span>
+                                            <span class="text-[10px] font-bold text-slate-400">${p.relative_label}</span>
+                                        </div>
+                                        <h5 class="text-xs font-black text-slate-800 dark:text-white">
+                                            ${p.date_formatted} • ${p.weekday}
+                                        </h5>
+                                        <p class="text-[10px] font-bold text-slate-500 dark:text-slate-400 mt-0.5">
+                                            Equipe: <span class="text-slate-700 dark:text-slate-200">${p.team_name}</span>
+                                        </p>
+                                    </div>
+                                    ${p.is_automatic ? '<span class="text-[8px] font-extrabold px-1.5 py-0.5 bg-blue-500/10 text-blue-500 rounded" title="Gerado por Rodízio"><i class="fa-solid fa-arrows-rotate"></i> Auto</span>' : ''}
+                                </div>
+                                <div class="pt-2 border-t border-slate-200/60 dark:border-white/5">
+                                    <span class="text-[9px] font-bold uppercase text-slate-400 block mb-1">Técnicos:</span>
+                                    <div class="flex flex-wrap gap-1">
+                                        ${p.techs && p.techs.length ? p.techs.map(t => `<span class="px-2 py-0.5 rounded-md bg-white dark:bg-white/10 text-slate-700 dark:text-slate-300 text-[10px] font-bold border border-slate-200 dark:border-white/5">${t}</span>`).join('') : '<span class="text-[10px] text-slate-400 italic">A definir</span>'}
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+                } else {
+                    containerProximos.innerHTML = '<p class="text-center text-slate-400 text-xs py-10 italic col-span-2">Nenhum plantão futuro encontrado.</p>';
+                }
+            }
+
+            // 6. Central de Prontidão & Alertas Operacionais
+            if (data.prontidao_info) {
+                const pInfo = data.prontidao_info;
+
+                // Barra de cobertura
+                const barCobertura = document.getElementById('bar-prontidao-cobertura');
+                if (barCobertura) barCobertura.style.width = pInfo.taxa_cobertura_pct + '%';
+
+                const labelCobertura = document.getElementById('prontidao-cobertura-label');
+                if (labelCobertura) {
+                    labelCobertura.textContent = `${pInfo.cobertos_30d} de ${pInfo.total_30d} datas (${pInfo.taxa_cobertura_pct}%)`;
+                }
+
+                const badgeStatus = document.getElementById('badge-prontidao-status');
+                if (badgeStatus) {
+                    if (pInfo.taxa_cobertura_pct >= 90) {
+                        badgeStatus.className = "px-2.5 py-1 rounded-xl text-[9px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20";
+                        badgeStatus.textContent = `${pInfo.taxa_cobertura_pct}% Coberto`;
+                    } else if (pInfo.taxa_cobertura_pct >= 60) {
+                        badgeStatus.className = "px-2.5 py-1 rounded-xl text-[9px] font-black uppercase tracking-wider bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20";
+                        badgeStatus.textContent = `${pInfo.taxa_cobertura_pct}% Parcial`;
+                    } else {
+                        badgeStatus.className = "px-2.5 py-1 rounded-xl text-[9px] font-black uppercase tracking-wider bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20";
+                        badgeStatus.textContent = `${pInfo.taxa_cobertura_pct}% Crítico`;
                     }
                 }
-            });
 
-            const rankingDiv = document.getElementById('dashboard-ranking');
-            rankingDiv.innerHTML = data.ranking.length ? data.ranking.map((r, idx) => `
-                <div class="flex items-center gap-3 p-3 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-900/5 transition-all">
-                    <div class="w-7 h-7 rounded-lg ${idx === 0 ? 'bg-amber-400 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-500'} flex items-center justify-center font-black text-[10px]">
-                        ${idx + 1}º
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <div class="text-[11px] font-bold text-slate-800 dark:text-white truncate">${r.name}</div>
-                        <div class="w-full bg-slate-200 dark:bg-white/5 h-1 rounded-full mt-1.5">
-                            <div class="h-full bg-teal-500 rounded-full" style="width: ${Math.min(r.points, 100)}%"></div>
-                        </div>
-                    </div>
-                    <div class="text-[10px] font-black text-teal-600">${r.points} pts</div>
-                </div>
-            `).join('') : '<p class="text-xs text-slate-400 text-center py-10">Sem dados.</p>';
+                // Alertas de feriados
+                const containerFeriados = document.getElementById('container-feriados-alertas');
+                if (containerFeriados) {
+                    if (pInfo.feriados_alertas && pInfo.feriados_alertas.length) {
+                        containerFeriados.innerHTML = pInfo.feriados_alertas.map(f => {
+                            const statusBadge = f.tem_escala
+                                ? '<span class="px-2 py-0.5 rounded-md text-[9px] font-black uppercase bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0"><i class="fa-solid fa-check mr-1"></i>Escalado</span>'
+                                : '<span class="px-2 py-0.5 rounded-md text-[9px] font-black uppercase bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 shrink-0"><i class="fa-solid fa-triangle-exclamation mr-1"></i>Definir</span>';
 
-            const genContainer = document.getElementById('dashboard-generator-alerts');
-            genContainer.innerHTML = data.generator_alerts.length ? data.generator_alerts.map(g => `
-                <div class="p-4 rounded-2xl bg-amber-50 dark:bg-amber-900/10 border border-amber-200 dark:border-amber-900/30">
-                    <div class="flex justify-between items-center mb-2">
-                        <span class="text-xs font-bold text-amber-700 dark:text-amber-400">${g.name}</span>
-                        <span class="text-[10px] font-black text-amber-600">${g.perc}%</span>
-                    </div>
-                    <div class="w-full h-1.5 bg-amber-200 dark:bg-amber-900/40 rounded-full overflow-hidden">
-                        <div class="h-full bg-amber-500" style="width: ${g.perc}%"></div>
-                    </div>
-                </div>
-            `).join('') : '<p class="text-center text-slate-400 text-xs py-10">Tudo normal.</p>';
+                            return `
+                                <div class="p-3 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-900/5 flex items-center justify-between gap-2">
+                                    <div class="min-w-0">
+                                        <div class="flex items-center gap-1.5">
+                                            <span class="text-[10px] font-black text-rose-500">${f.date_formatted}</span>
+                                            <span class="text-xs font-black text-slate-800 dark:text-white truncate">${f.name}</span>
+                                        </div>
+                                        <p class="text-[10px] text-slate-400 mt-0.5">${f.weekday} • ${f.relative_label}</p>
+                                    </div>
+                                    ${statusBadge}
+                                </div>
+                            `;
+                        }).join('');
+                    } else {
+                        containerFeriados.innerHTML = '<p class="text-xs text-slate-400 italic py-2 text-center">Nenhum feriado nos próximos 60 dias.</p>';
+                    }
+                }
 
-            const taskContainer = document.getElementById('dashboard-tasks-critical');
-            taskContainer.innerHTML = data.critical_tasks.length ? data.critical_tasks.map(t => `
-                <div class="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-900/5 flex justify-between items-center">
-                    <div>
-                        <h4 class="text-xs font-bold text-slate-800 dark:text-white">${t.title}</h4>
-                        <p class="text-[10px] text-slate-400 capitalize">${t.responsible} • ${t.priority}</p>
-                    </div>
-                    <span class="px-2 py-0.5 rounded-full text-[8px] font-black bg-red-100 text-red-600 uppercase">Crítica</span>
-                </div>
-            `).join('') : '<p class="text-center text-slate-400 text-xs py-10">Sem tarefas críticas.</p>';
+                // Equipes ativas
+                const containerEquipes = document.getElementById('container-equipes-status');
+                const labelEquipesCount = document.getElementById('total-equipes-count');
+                if (containerEquipes && pInfo.equipes_status) {
+                    if (labelEquipesCount) labelEquipesCount.textContent = `${pInfo.equipes_status.length} equipes`;
+                    if (pInfo.equipes_status.length) {
+                        containerEquipes.innerHTML = pInfo.equipes_status.map(eq => `
+                            <span class="px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-slate-300 font-bold text-xs border border-slate-200 dark:border-white/5 flex items-center gap-1.5">
+                                <span class="w-2 h-2 rounded-full" style="background-color: ${eq.color};"></span>
+                                ${eq.name}
+                                <span class="text-[10px] text-slate-400">(${eq.members_count}p)</span>
+                            </span>
+                        `).join('');
+                    } else {
+                        containerEquipes.innerHTML = '<span class="text-xs text-slate-400 italic">Nenhuma equipe cadastrada</span>';
+                    }
+                }
+            }
 
-            const scaleContainer = document.getElementById('dashboard-scales-today');
-            scaleContainer.innerHTML = data.escalas_hoje.length ? data.escalas_hoje.map(esc => `
-                <div class="p-4 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-900/5 flex flex-col gap-2">
-                    <div class="flex justify-between items-center">
-                        <span class="text-xs font-black text-purple-600 uppercase tracking-wider">${esc.type}</span>
-                    </div>
-                    ${esc.obs ? `<p class="text-[10px] text-slate-400 italic">${esc.obs}</p>` : ''}
-                    <div class="flex flex-wrap gap-1.5 mt-1">
-                        ${esc.techs.length ? esc.techs.map(t => `<span class="px-2 py-0.5 bg-purple-500/10 text-purple-500 rounded-lg text-[9px] font-black">${t}</span>`).join('') : '<span class="text-[9px] text-slate-400">Nenhum técnico escalado</span>'}
-                    </div>
-                </div>
-            `).join('') : '<p class="text-center text-slate-400 text-xs py-10">Nenhuma escala ativa para hoje.</p>';
-
-            const closureContainer = document.getElementById('dashboard-closures-recent');
-            closureContainer.innerHTML = data.recent_encerramentos.length ? data.recent_encerramentos.map(enc => `
-                <div class="p-4 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-900/5 flex justify-between items-center">
-                    <div>
-                        <h4 class="text-xs font-black text-slate-800 dark:text-white">${enc.patio}</h4>
-                        <p class="text-[9px] text-slate-400">${enc.date} • ${enc.closing_time}</p>
-                    </div>
-                    <span class="px-2 py-0.5 rounded-lg text-[8px] font-black bg-emerald-100 text-emerald-600 uppercase">Concluído</span>
-                </div>
-            `).join('') : '<p class="text-center text-slate-400 text-xs py-10">Nenhum encerramento registrado.</p>';
-
-        } catch (e) { console.error("Erro dashboard gestao:", e); }
+        } catch (e) {
+            console.error("Erro dashboard gestão plantões:", e);
+        }
     }
 
     // --- INIT ---
@@ -851,11 +1147,11 @@
             });
         }
 
-        {% if view == 'veiculos' %}
-            loadFrotaDashboard();
-        {% else %}
+        if (document.getElementById('gestao-dashboard-premium')) {
             loadGestaoDashboard();
-        {% endif %}
+        } else {
+            loadFrotaDashboard();
+        }
     });
 </script>
 

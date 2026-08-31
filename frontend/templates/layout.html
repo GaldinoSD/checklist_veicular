@@ -21,7 +21,6 @@
       document.addEventListener("submit", function(event) {
         const form = event.target;
         if (form.method && form.method.toUpperCase() === "POST") {
-          // Se o formulário não tiver um input de csrf_token, anexa dinamicamente antes do envio
           if (!form.querySelector('input[name="csrf_token"]')) {
             const tokenMeta = document.querySelector('meta[name="csrf-token"]');
             if (tokenMeta) {
@@ -75,8 +74,14 @@
         darkMode: "class",
         theme: {
           extend: {
+            fontFamily: {
+              sans: ['"Plus Jakarta Sans"', 'Inter', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+            },
             boxShadow: {
-              glass: "0 18px 60px rgba(0,0,0,.45)",
+              subtle: "0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05)",
+              card: "0 4px 6px -1px rgba(0, 0, 0, 0.04), 0 2px 4px -2px rgba(0, 0, 0, 0.03)",
+              dropdown: "0 12px 30px -4px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04)",
+              glass: "0 18px 60px rgba(0,0,0,.35)",
             }
           }
         }
@@ -96,13 +101,15 @@
     </script>
 
     <style>
-      @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
+      @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
       
       body {
-        font-family: 'Outfit', sans-serif;
+        font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
       }
 
-      /* ✅ SIDEBAR FIXO */
+      /* ✅ SIDEBAR FIXO PROFISSIONAL */
       #sidebar {
         width: 260px;
         min-width: 260px;
@@ -112,36 +119,26 @@
         left: 0;
         top: 0;
         z-index: 50;
-        background: white;
-        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        background: #ffffff;
+        border-right: 1px solid #e2e8f0;
+        transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
       }
-      .dark #sidebar { background: #0f172a; }
-
-      /* Borda lateral direita a partir do menu (abaixo da logo/topbar) */
-      #sidebar::after {
-        content: '';
-        position: absolute;
-        top: 64px; /* Altura da logo / topbar (h-16 = 64px) */
-        right: 0;
-        bottom: 0;
-        width: 1px;
-        background-color: rgba(15, 23, 42, 0.1);
-        z-index: 55;
-      }
-      .dark #sidebar::after {
-        background-color: rgba(255, 255, 255, 0.1);
+      .dark #sidebar { 
+        background: #0d131f; 
+        border-right: 1px solid rgba(255, 255, 255, 0.07);
       }
 
       /* ✅ MAIN CONTENT ADJUSTMENT */
       #main-content {
         margin-left: 260px;
         min-height: 100vh;
-        transition: padding 0.3s ease;
+        transition: margin-left 0.25s cubic-bezier(0.4, 0, 0.2, 1);
       }
 
       @media (max-width: 1024px) {
         #sidebar {
           transform: translateX(-100%);
+          box-shadow: 0 20px 40px rgba(0,0,0,0.15);
         }
         #sidebar.mobile-open {
           transform: translateX(0);
@@ -152,24 +149,26 @@
         }
       }
 
+      /* Scrollbar refinada */
       .custom-scrollbar::-webkit-scrollbar {
-        width: 4px;
+        width: 5px;
       }
       .custom-scrollbar::-webkit-scrollbar-track {
         background: transparent;
       }
       .custom-scrollbar::-webkit-scrollbar-thumb {
-        background: rgba(0,0,0,0.1);
-        border-radius: 10px;
+        background: rgba(148, 163, 184, 0.25);
+        border-radius: 9999px;
       }
       .dark .custom-scrollbar::-webkit-scrollbar-thumb {
-        background: rgba(255,255,255,0.1);
+        background: rgba(255, 255, 255, 0.12);
       }
 
+      /* Submenu Accordion suave */
       .submenu-container {
         max-height: 0;
         overflow: hidden;
-        transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       }
       .submenu-container.open {
         max-height: 1000px;
@@ -177,48 +176,54 @@
 
       /* ✅ NOTIFICATION DRAWER */
       #notification-drawer {
-        width: 350px;
+        width: 360px;
         height: 100vh;
         position: fixed;
         right: 0;
         top: 0;
         z-index: 100;
-        background: rgba(255, 255, 255, 0.95);
-        backdrop-filter: blur(20px);
-        box-shadow: -10px 0 30px rgba(0,0,0,0.05);
+        background: #ffffff;
+        border-left: 1px solid #e2e8f0;
+        box-shadow: -10px 0 30px rgba(0,0,0,0.06);
         transform: translateX(100%);
-        transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-        border-left: 1px border-slate-900/10;
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       }
-      .dark #notification-drawer { background: rgba(15, 23, 42, 0.95); border-left-color: rgba(255,255,255,0.05); }
+      .dark #notification-drawer { 
+        background: #0f172a; 
+        border-left-color: rgba(255,255,255,0.08); 
+        box-shadow: -10px 0 30px rgba(0,0,0,0.4);
+      }
       #notification-drawer.open { transform: translateX(0); }
       
       #drawer-overlay {
         position: fixed;
         inset: 0;
-        background: rgba(0,0,0,0.4);
-        backdrop-filter: blur(4px);
+        background: rgba(15, 23, 42, 0.4);
+        backdrop-filter: blur(3px);
         z-index: 90;
         opacity: 0;
         pointer-events: none;
-        transition: opacity 0.3s ease;
+        transition: opacity 0.25s ease;
       }
       #drawer-overlay.visible { opacity: 1; pointer-events: auto; }
+      
       .chevron-rotate {
-        transition: transform 0.3s ease;
+        transition: transform 0.25s ease;
       }
       .open-chevron {
         transform: rotate(180deg);
       }
       
-      /* ✅ SIDEBAR TAB ACTIVE */
+      /* ✅ SIDEBAR TAB ACTIVE (Gestão Técnica) */
       .sidebar-tab-link.active {
-        background: rgba(147, 51, 234, 0.1);
-        color: #9333ea !important;
+        background: #f1f5f9;
+        color: #0f172a !important;
+        font-weight: 600;
       }
       .dark .sidebar-tab-link.active {
-        background: rgba(168, 85, 247, 0.1);
-        color: #a855f7 !important;
+        background: rgba(255, 255, 255, 0.08);
+        color: #ffffff !important;
+        font-weight: 600;
       }
 
       /* TOAST NOTIFICATION */
@@ -229,24 +234,24 @@
         z-index: 9999;
         display: flex;
         flex-direction: column;
-        gap: 12px;
+        gap: 10px;
       }
       .toast {
         background: white;
-        padding: 16px 24px;
-        border-radius: 20px;
-        box-shadow: 0 10px 40px rgba(0,0,0,0.08);
-        border: 1px border-slate-900/5;
+        padding: 14px 20px;
+        border-radius: 12px;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 10px -6px rgba(0, 0, 0, 0.04);
+        border: 1px solid #e2e8f0;
         display: flex;
         align-items: center;
         gap: 12px;
         transform: translateX(120%);
-        transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-        min-width: 300px;
+        transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        min-width: 290px;
       }
       .dark .toast {
         background: #1e293b;
-        border-color: rgba(255,255,255,0.05);
+        border-color: rgba(255,255,255,0.08);
       }
       .toast.show {
         transform: translateX(0);
@@ -260,8 +265,8 @@
         position: absolute;
         bottom: 0;
         left: 0;
-        height: 3px;
-        background: rgba(0,0,0,0.1);
+        height: 2.5px;
+        background: rgba(0,0,0,0.06);
         width: 100%;
         transform-origin: left;
       }
@@ -280,14 +285,14 @@
         animation: toast-progress-anim 4s linear forwards;
       }
 
-      /* ✅ PREMIUM DESIGN TOKENS */
+      /* ✅ DESIGN TOKENS CORPORATIVOS */
       :root {
-        --card-shadow: 0 10px 40px -10px rgba(0,0,0,0.05);
-        --card-shadow-hover: 0 20px 60px -15px rgba(0,0,0,0.1);
+        --card-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
+        --card-shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.06), 0 4px 6px -4px rgba(0, 0, 0, 0.03);
       }
       .dark :root {
-        --card-shadow: 0 10px 40px -10px rgba(0,0,0,0.3);
-        --card-shadow-hover: 0 20px 60px -15px rgba(0,0,0,0.5);
+        --card-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.3), 0 1px 2px -1px rgba(0, 0, 0, 0.2);
+        --card-shadow-hover: 0 10px 20px -3px rgba(0, 0, 0, 0.4), 0 4px 6px -4px rgba(0, 0, 0, 0.2);
       }
 
       /* Padronização global: nomes de usuários sempre em MAIÚSCULAS */
@@ -300,500 +305,68 @@
 
       .card-premium {
         background: white;
-        border-radius: 2rem;
-        border: 1px solid rgba(15, 23, 42, 0.05);
+        border-radius: 1rem;
+        border: 1px solid #e2e8f0;
         box-shadow: var(--card-shadow);
-        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        transition: all 0.25s ease;
       }
       .dark .card-premium {
-        background: rgba(30, 41, 59, 0.4);
-        border-color: rgba(255, 255, 255, 0.05);
+        background: #1e293b;
+        border-color: rgba(255, 255, 255, 0.07);
       }
       .card-premium:hover {
-        transform: translateY(-4px);
+        transform: translateY(-2px);
         box-shadow: var(--card-shadow-hover);
-        border-color: rgba(59, 130, 246, 0.2);
       }
 
       .glass-premium {
-        background: rgba(255, 255, 255, 0.7);
-        backdrop-filter: blur(16px);
-        -webkit-backdrop-filter: blur(16px);
-        border: 1px solid rgba(255, 255, 255, 0.2);
+        background: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        border: 1px solid rgba(226, 232, 240, 0.8);
       }
       .dark .glass-premium {
-        background: rgba(15, 23, 42, 0.7);
-        border-color: rgba(255, 255, 255, 0.05);
+        background: rgba(15, 23, 42, 0.85);
+        border-color: rgba(255, 255, 255, 0.07);
       }
 
       .btn-premium {
-        padding: 0.75rem 1.5rem;
-        border-radius: 1rem;
-        font-weight: 700;
-        transition: all 0.2s;
+        padding: 0.625rem 1.25rem;
+        border-radius: 0.75rem;
+        font-weight: 600;
+        font-size: 0.875rem;
+        transition: all 0.15s ease;
         display: flex;
         align-items: center;
         justify-content: center;
         gap: 0.5rem;
       }
-      .btn-premium:active { transform: scale(0.95); }
+      .btn-premium:active { transform: scale(0.98); }
 
-      /* ==========================================================================
-         HEADER MINIMALIST REDESIGN (Ajuste do Entorno do Header)
-         ========================================================================== */
-
-      /* 1. Aproximar o cabeçalho do topbar */
-      main:not(.p-0) {
-        padding-top: 0.75rem !important;
-      }
-
-      /* 2. Compactar o tamanho dos cabeçalhos das páginas (Remover fundo, diminuir margens e padding) */
-      main > .animate-premium:first-of-type,
-      main > div > .animate-premium:first-of-type,
-      main > .mb-8:first-of-type,
-      main > div > .mb-8:first-of-type {
-        margin-bottom: 1.25rem !important;
-      }
-
-      main > .animate-premium:first-of-type > .glass-premium,
-      main > div > .animate-premium:first-of-type > .glass-premium,
-      main > form > .glass-premium:first-of-type,
-      main > div > form > .glass-premium:first-of-type,
-      main > .animate-premium:first-of-type > form.glass-premium,
-      main > div > .animate-premium:first-of-type > form.glass-premium,
-      main > .animate-premium:first-child > .glass-premium,
-      main > div > .animate-premium:first-child > .glass-premium,
-      main > .mb-8:first-of-type > .glass-premium,
-      main > div > .mb-8:first-of-type > .glass-premium {
-        background: transparent !important;
-        backdrop-filter: none !important;
-        -webkit-backdrop-filter: none !important;
-        border: none !important;
-        box-shadow: none !important;
-        overflow: hidden !important;
-        padding-top: 0.25rem !important;
-        padding-bottom: 0.25rem !important;
-        padding-left: 0 !important;
-        padding-right: 0 !important;
-      }
-
-      /* 2.1 Ocultar elementos decorativos (blurs, círculos absolutos) dos headers */
-      main > .animate-premium:first-of-type > .glass-premium .absolute,
-      main > div > .animate-premium:first-of-type > .glass-premium .absolute,
-      main > .mb-8:first-of-type > .glass-premium .absolute,
-      main > div > .mb-8:first-of-type > .glass-premium .absolute {
-        display: none !important;
-      }
-
-      /* 3. Ajustar o tamanho das imagens/ícones e títulos nos cabeçalhos para tamanho compacto padronizado */
-      main .glass-premium h1,
-      main .glass-premium h2 {
-        font-size: 1.25rem !important; /* text-xl */
-        line-height: 1.75rem !important;
-      }
-      
-      main .glass-premium p {
-        font-size: 0.75rem !important; /* text-xs */
-        margin-top: 0.125rem !important;
-      }
-
-      main .glass-premium .w-12.h-12,
-      main .glass-premium .w-14.h-14 {
-        width: 2.5rem !important; /* w-10 */
-        height: 2.5rem !important; /* h-10 */
-        border-radius: 0.75rem !important;
-      }
-
-      main .glass-premium .w-12.h-12 i,
-      main .glass-premium .w-14.h-14 i {
-        font-size: 1.125rem !important; /* text-lg */
-      }
-
-      /* =======================================================
-         ✅ REGRA GLOBAL PARA MODAIS COMPACTOS E RESPONSIVOS
-         ======================================================= */
-      /* Reduzir o padding e cantos arredondados de todos os cartões de modais */
-      .fixed.inset-0.items-center.justify-center > div.bg-white,
-      .fixed.inset-0.items-center.justify-center > div.bg-white\/90,
-      .fixed.inset-0.items-center.justify-center > div.bg-white\/95,
-      .fixed.inset-0.items-center.justify-center > div.dark\:bg-slate-900,
-      .fixed.inset-0.items-center.justify-center > div.dark\:bg-slate-900\/90,
-      .fixed.inset-0.items-center.justify-center > div.dark\:bg-slate-900\/95,
-      dialog > div.bg-white,
-      dialog > div.bg-white\/95,
-      dialog > div.dark\:bg-slate-900,
-      dialog > div.dark\:bg-slate-900\/95 {
-        padding: 1.25rem !important; /* p-5 */
-        border-radius: 1.25rem !important; /* rounded-2xl */
-        max-height: 94vh !important;
-      }
-
-      /* No mobile, reduzir ainda mais o padding e cantos para economizar espaço de tela */
-      @media (max-width: 640px) {
-        .fixed.inset-0.items-center.justify-center > div.bg-white,
-        .fixed.inset-0.items-center.justify-center > div.bg-white\/90,
-        .fixed.inset-0.items-center.justify-center > div.bg-white\/95,
-        .fixed.inset-0.items-center.justify-center > div.dark\:bg-slate-900,
-        .fixed.inset-0.items-center.justify-center > div.dark\:bg-slate-900\/90,
-        .fixed.inset-0.items-center.justify-center > div.dark\:bg-slate-900\/95,
-        dialog > div.bg-white,
-        dialog > div.bg-white\/95,
-        dialog > div.dark\:bg-slate-900,
-        dialog > div.dark\:bg-slate-900\/95 {
-          padding: 1rem !important; /* p-4 */
-          border-radius: 1rem !important; /* rounded-xl */
-          max-height: 96vh !important;
-        }
-      }
-
-      /* Compactação de cabeçalhos de modais */
-      .fixed.inset-0.items-center.justify-center .pb-4.border-b.mb-4,
-      dialog .pb-4.border-b.mb-4 {
-        padding-bottom: 0.75rem !important;
-        margin-bottom: 0.75rem !important;
-      }
-      
-      /* Reduzir margens inferiores de blocos informativos dentro de modais */
-      .fixed.inset-0.items-center.justify-center .mb-4.shrink-0,
-      .fixed.inset-0.items-center.justify-center .mb-6,
-      dialog .mb-4.shrink-0,
-      dialog .mb-6 {
-        margin-bottom: 0.75rem !important;
-      }
-
-      /* Tornar inputs, labels e botões dentro de modais ligeiramente mais compactos */
-      .fixed.inset-0.items-center.justify-center label,
-      dialog label {
-        font-size: 9px !important;
-        margin-bottom: 2px !important;
-      }
-
-      .fixed.inset-0.items-center.justify-center input,
-      .fixed.inset-0.items-center.justify-center select,
-      .fixed.inset-0.items-center.justify-center textarea,
-      dialog input,
-      dialog select,
-      dialog textarea {
-        padding-top: 0.375rem !important; /* py-1.5 */
-        padding-bottom: 0.375rem !important;
-        font-size: 0.75rem !important; /* text-xs */
-        border-radius: 0.5rem !important; /* rounded-lg */
-      }
-
-      /* Botões de cancelar/salvar em modais */
-      .fixed.inset-0.items-center.justify-center button.py-3,
-      dialog button.py-3 {
-        padding-top: 0.5rem !important;
-        padding-bottom: 0.5rem !important;
-      }
-
-      /* Grid de checkboxes das posições das avarias no mobile */
-      @media (max-width: 640px) {
-        div[data-sub-container] {
-          display: grid !important;
-          grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-          gap: 0.375rem !important;
-        }
-        div[data-sub-container] > label {
-          width: 100% !important;
-          justify-content: center !important;
-          padding: 0.375rem 0.5rem !important;
-          margin-bottom: 0px !important;
-        }
-      }
-
-      /* =======================================================
-         ✅ AJUSTES DOS MODAIS NO MOBILE (BOTTOM SHEET FIXO)
-         ======================================================= */
-      @keyframes fadeInModal {
-        from { opacity: 0; }
-        to { opacity: 1; }
-      }
-
-      @media (max-width: 640px) {
-        /* Bloqueio de scroll do body com modal aberto */
-        body:has(dialog[open]),
-        body:has(.fixed.inset-0.flex:not(.hidden)),
-        body:has(.fixed.inset-0.z-50:not(.hidden)) {
-          overflow: hidden !important;
-        }
-
-        /* 1. Alinhamento dos modais baseados em DIV no rodapé (Apenas ativos) */
-        .fixed.inset-0.items-center.justify-center.flex,
-        .fixed.inset-0.z-\[100\].flex,
-        .fixed.inset-0.z-\[110\].flex,
-        .fixed.inset-0.z-50.flex,
-        .fixed.inset-0.z-50 > div.flex {
-          display: flex !important;
-          align-items: flex-end !important;
-          justify-content: center !important;
-          padding: 0 !important;
-          min-height: 100vh !important;
-        }
-
-        /* 2. Alinhamento dos modais baseados em DIALOG no rodapé (Apenas ativos) */
-        dialog[open] {
-          position: fixed !important;
-          inset: auto 0 0 0 !important;
-          margin: 0 auto !important;
-          max-width: 100vw !important;
-          width: 100vw !important;
-          height: 90vh !important;
-          max-height: 90vh !important;
-          border-radius: 2rem 2rem 0 0 !important;
-          display: flex !important;
-          flex-direction: column !important;
-          overflow: hidden !important;
-        }
-
-        /* Se o dialog for o próprio cartão (tem fundo definido) */
-        dialog[open].bg-white,
-        dialog[open].bg-slate-900,
-        dialog[open].dark\:bg-gray-900,
-        dialog[open].dark\:bg-slate-900,
-        dialog[open][class*="bg-white"],
-        dialog[open][class*="bg-slate-900"],
-        dialog[open][class*="bg-gray-900"],
-        dialog[open][class*="bg-slate-800"],
-        dialog[open][class*="dark:bg-gray-900"] {
-          padding: 1.5rem 1.25rem 2.5rem 1.25rem !important;
-          overflow-y: auto !important;
-          -webkit-overflow-scrolling: touch;
-          background-color: white !important;
-        }
-
-        /* Se o dialog for apenas um wrapper transparente contendo um div cartão */
-        dialog[open]:not(.bg-white):not(.bg-slate-900):not(.dark\:bg-gray-900):not(.dark\:bg-slate-900):not([class*="bg-white"]):not([class*="bg-slate-900"]):not([class*="bg-gray-900"]):not([class*="bg-slate-800"]) {
-          padding: 0 !important;
-          background: transparent !important;
-          transform: none !important;
-        }
-
-        /* 3. Estilização do cartão de conteúdo visível (Bottom Sheet) */
-        .fixed.inset-0.items-center.justify-center.flex > div:not(.absolute),
-        .fixed.inset-0.z-\[100\].flex > div:not(.absolute),
-        .fixed.inset-0.z-\[110\].flex > div:not(.absolute),
-        .fixed.inset-0.z-50.flex > div:not(.absolute),
-        .fixed.inset-0.z-50 > div.flex > div.inline-block,
-        dialog[open]:not(#modalNovaVistoria):not(#modalVerVistoria) > div.bg-white,
-        dialog[open]:not(#modalNovaVistoria):not(#modalVerVistoria) > div.bg-white\/95,
-        dialog[open]:not(#modalNovaVistoria):not(#modalVerVistoria) > div.bg-white\/90,
-        dialog[open]:not(#modalNovaVistoria):not(#modalVerVistoria) > div.dark\:bg-slate-900,
-        dialog[open]:not(#modalNovaVistoria):not(#modalVerVistoria) > div.dark\:bg-slate-900\/95,
-        dialog[open]:not(#modalNovaVistoria):not(#modalVerVistoria) > div.dark\:bg-slate-900\/90 {
-          width: 100vw !important;
-          max-width: 100vw !important;
-          height: 90vh !important;
-          max-height: 90vh !important;
-          border-radius: 2rem 2rem 0 0 !important;
-          margin: 0 !important;
-          padding: 1.5rem 1.25rem 2.5rem 1.25rem !important;
-          display: flex !important;
-          flex-direction: column !important;
-          overflow-y: auto !important;
-          -webkit-overflow-scrolling: touch;
-          position: relative !important;
-          background-color: white !important;
-        }
-
-        /* Suporte ao modo escuro nos cartões de conteúdo */
-        .dark .fixed.inset-0.items-center.justify-center.flex > div:not(.absolute),
-        .dark .fixed.inset-0.z-\[100\].flex > div:not(.absolute),
-        .dark .fixed.inset-0.z-\[110\].flex > div:not(.absolute),
-        .dark .fixed.inset-0.z-50.flex > div:not(.absolute),
-        .dark .fixed.inset-0.z-50 > div.flex > div.inline-block,
-        .dark dialog[open].bg-white,
-        .dark dialog[open][class*="bg-white"],
-        .dark dialog[open] > div.bg-white,
-        .dark dialog[open] > div.bg-white\/95,
-        .dark dialog[open] > div.bg-white\/90 {
-          background-color: #0f172a !important;
-        }
-
-        /* 4. Animação de entrada suave (fade-in sem transform) */
-        .fixed.inset-0.flex > div:not(.absolute),
-        .fixed.inset-0.z-50 > div.flex > div.inline-block,
-        dialog[open],
-        dialog[open] > div {
-          animation: fadeInModal 0.25s ease-out both !important;
-        }
-
-        /* 6. Aumento no tamanho dos inputs e desativação do auto-zoom no iOS */
-        .fixed.inset-0.flex input,
-        .fixed.inset-0.flex select,
-        .fixed.inset-0.flex textarea,
-        .fixed.inset-0.z-50 input,
-        .fixed.inset-0.z-50 select,
-        .fixed.inset-0.z-50 textarea,
-        dialog[open] input,
-        dialog[open] select,
-        dialog[open] textarea {
-          font-size: 16px !important;
-          padding-top: 0.625rem !important;
-          padding-bottom: 0.625rem !important;
-        }
-
-        /* 7. Modais de vistoria: tela cheia no mobile com scroll único */
-        dialog#modalNovaVistoria[open],
-        dialog#modalVerVistoria[open] {
-          height: 100dvh !important;
-          height: 100vh !important;
-          max-height: 100dvh !important;
-          max-height: 100vh !important;
-          border-radius: 0 !important;
-          overflow: hidden !important;
-        }
-
-        dialog#modalNovaVistoria > div,
-        dialog#modalVerVistoria > div {
-          width: 100% !important;
-          height: 100% !important;
-          max-height: none !important;
-          overflow-y: auto !important;
-          -webkit-overflow-scrolling: touch;
-          display: block !important;
-          border-radius: 0 !important;
-          padding: 1rem 1rem 2rem 1rem !important;
-          background-color: white !important;
-        }
-
-        .dark dialog#modalNovaVistoria > div,
-        .dark dialog#modalVerVistoria > div {
-          background-color: #0f172a !important;
-        }
-
-        dialog#modalNovaVistoria form,
-        dialog#modalVerVistoria form {
-          display: block !important;
-          overflow: visible !important;
-        }
-
-        dialog#modalNovaVistoria .overflow-hidden,
-        dialog#modalVerVistoria .overflow-hidden {
-          overflow: visible !important;
-        }
-
-        dialog#modalNovaVistoria .overflow-y-auto,
-        dialog#modalVerVistoria .overflow-y-auto {
-          overflow: visible !important;
-          height: auto !important;
-          max-height: none !important;
-        }
-
-        dialog#modalNovaVistoria .flex-1,
-        dialog#modalVerVistoria .flex-1 {
-          flex: none !important;
-        }
-
-        dialog#modalNovaVistoria .max-h-\[90vh\],
-        dialog#modalVerVistoria .max-h-\[90vh\] {
-          max-height: none !important;
-        }
-
-        dialog#modalNovaVistoria .shrink-0,
-        dialog#modalVerVistoria .shrink-0 {
-          flex-shrink: unset !important;
-        }
-
-        /* Animação apenas na div cartão dos modais de vistoria */
-        dialog#modalNovaVistoria[open] > div,
-        dialog#modalVerVistoria[open] > div {
-          animation: fadeInModal 0.25s ease-out both !important;
-        }
-
-        /* #modal-vistoria (gestão técnica) - wrapper div based */
-        #modal-vistoria > div:not(.absolute) {
-          overflow-y: auto !important;
-        }
-
-        /* 8. Ajustes de cabeçalhos premium (.glass-premium) e seus botões no mobile */
-        .glass-premium {
-          padding: 1rem !important;
-          border-radius: 1.25rem !important;
-          flex-direction: column !important;
-          align-items: flex-start !important;
-          gap: 1rem !important;
-        }
-
-        .glass-premium .absolute {
-          display: none !important;
-        }
-
-        .glass-premium h2,
-        .glass-premium h1 {
-          font-size: 1.125rem !important; /* text-lg */
-          line-height: 1.5rem !important;
-        }
-
-        .glass-premium p {
-          font-size: 0.75rem !important; /* text-xs */
-        }
-
-        .glass-premium .w-12.h-12,
-        .glass-premium .w-14.h-14 {
-          width: 2.25rem !important; /* w-9 */
-          height: 2.25rem !important; /* h-9 */
-          border-radius: 0.625rem !important;
-        }
-
-        .glass-premium .w-12.h-12 i,
-        .glass-premium .w-14.h-14 i {
-          font-size: 0.875rem !important; /* text-sm */
-        }
-
-        .glass-premium .flex.flex-wrap,
-        .glass-premium .flex-wrap {
-          width: 100% !important;
-          flex-direction: column !important;
-          gap: 0.5rem !important;
-        }
-
-        .glass-premium button,
-        .glass-premium a.btn,
-        .glass-premium .btn,
-        .glass-premium input,
-        .glass-premium .relative,
-        .glass-premium .group {
-          width: 100% !important;
-          flex: 1 1 auto !important;
-        }
-
-        .glass-premium button,
-        .glass-premium a.btn,
-        .glass-premium .btn {
-          padding: 0.5rem 0.75rem !important;
-          font-size: 9px !important;
-          border-radius: 0.75rem !important;
-          letter-spacing: 0.05em !important;
-          justify-content: center !important;
-          display: inline-flex !important;
-          align-items: center !important;
-        }
-
-        .glass-premium input {
-          padding-top: 0.5rem !important;
-          padding-bottom: 0.5rem !important;
-          font-size: 11px !important;
-        }
-      }
     </style>
   </head>
 
-  <body class="min-h-screen bg-[#f8fafc] dark:bg-[#020617]">
+  <body class="min-h-screen bg-[#f8fafc] dark:bg-[#090d16] text-slate-800 dark:text-slate-100">
     <div id="toast-container"></div>
     <div class="flex">
       
-      <!-- ✅ SIDEBAR LATERAL -->
+      <!-- ✅ SIDEBAR LATERAL PROFISSIONAL -->
       {% if current_user.is_authenticated %}
-      <aside id="sidebar" class="flex flex-col shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
+      <aside id="sidebar" class="flex flex-col">
         
         <!-- TOP: LOGO -->
-        <div class="py-2 px-3 flex items-center justify-center h-16 shrink-0 border-b border-slate-900/10 dark:border-white/10">
-          <img src="{% if sys_config and sys_config.sidebar_logo %}{{ url_for('static', filename='uploads/layout/' ~ sys_config.sidebar_logo, v='2') }}{% else %}{{ url_for('static', filename='imgsidebar.png', v='2') }}{% endif %}" class="w-auto max-w-[90%] object-contain drop-shadow-sm" style="height: {{ sys_config.sidebar_logo_height or 44 }}px;" alt="Logo">
+        <div class="px-4 flex items-center justify-between h-16 shrink-0 border-b border-slate-100 dark:border-slate-800/80">
+          <div class="flex items-center gap-3 overflow-hidden">
+            <img src="{% if sys_config and sys_config.sidebar_logo %}{{ url_for('static', filename='uploads/layout/' ~ sys_config.sidebar_logo, v='2') }}{% else %}{{ url_for('static', filename='imgsidebar.png', v='2') }}{% endif %}" class="w-auto max-w-[180px] object-contain" style="height: {{ sys_config.sidebar_logo_height or 36 }}px;" alt="Logo">
+          </div>
+          <!-- Mobile Close Button inside sidebar -->
+          <button onclick="document.getElementById('sidebar').classList.remove('mobile-open')" class="lg:hidden p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+            <i class="fa-solid fa-xmark text-sm"></i>
+          </button>
         </div>
 
-        <!-- MIDDLE: MENU -->
-        <nav class="flex-1 overflow-y-auto overflow-x-hidden p-4 space-y-1.5 custom-scrollbar pb-24">
+        <!-- MIDDLE: MENU DE NAVEGAÇÃO -->
+        <nav class="flex-1 overflow-y-auto overflow-x-hidden p-3 space-y-1 custom-scrollbar">
           
             {% set menu_items = [
               ('Dashboard', 'dashboard', 'fa-chart-pie', 'dashboard'),
@@ -814,19 +387,21 @@
             {% endfor %}
 
             {% if ns_gerenc.has_any %}
-            <div class="py-3 px-4 text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-gray-500">Gerenciamento</div>
+            <div class="px-3 pt-3 pb-1 text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+              Gerenciamento
+            </div>
             {% for label, route, icon, perm in menu_items %}
               {% if current_user.has_permission(perm) %}
               {% set is_active = (request.endpoint == route) %}
               <a href="{{ url_for(route) }}" 
-                 class="flex items-center gap-3.5 px-4 py-3 rounded-2xl transition-all duration-300 group
+                 class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] transition-colors group
                         {% if is_active %}
-                          bg-blue-600 text-white shadow-xl shadow-blue-500/30 scale-[1.02]
+                          bg-slate-900 text-white font-semibold shadow-sm dark:bg-white dark:text-slate-900
                         {% else %}
-                          text-slate-500 dark:text-gray-400 hover:bg-slate-900/5 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white
+                          text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800/60 font-medium
                         {% endif %}">
-                <i class="fa-solid {{ icon }} w-5 text-center text-base {% if is_active %}text-white{% else %}text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200{% endif %} transition-colors"></i>
-                <span class="text-[13px] font-bold tracking-tight">{{ label }}</span>
+                <i class="fa-solid {{ icon }} w-4 text-center text-sm {% if is_active %}text-white dark:text-slate-900{% else %}text-slate-400 group-hover:text-slate-700 dark:text-slate-500 dark:group-hover:text-slate-300{% endif %} transition-colors"></i>
+                <span class="truncate">{{ label }}</span>
               </a>
               {% endif %}
             {% endfor %}
@@ -834,52 +409,53 @@
 
           {% if current_user.has_permission('frota') or current_user.has_permission('monitoramento_aparelhos') or current_user.has_permission('monitoramento_historico') or current_user.has_permission('monitoramento_config') %}
           <!-- ✅ MONITORAMENTO COLLAPSIBLE -->
-          <div class="space-y-1 mb-2">
+          <div class="pt-2">
+            {% set is_monit_active = (request.path.startswith('/monitoramento') or request.endpoint == 'tracking') %}
             <button onclick="toggleSubmenu('submenu-monitoramento', this)" 
-                    class="w-full flex items-center justify-between gap-3.5 px-4 py-3 rounded-2xl transition-all duration-300 group
-                           {% if request.path.startswith('/monitoramento') or request.endpoint == 'tracking' %}
-                             bg-teal-600/10 text-teal-600 dark:text-teal-400 border border-teal-500/20
+                    class="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl text-[13px] transition-colors group
+                           {% if is_monit_active %}
+                             bg-slate-100 text-slate-900 font-semibold dark:bg-slate-800/80 dark:text-white
                            {% else %}
-                             text-slate-500 dark:text-gray-400 hover:bg-slate-900/5 dark:hover:bg-white/5
+                             text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60 font-medium
                            {% endif %}">
-              <div class="flex items-center gap-3.5">
-                <i class="fa-solid fa-satellite-dish w-5 text-center text-base transition-colors {% if request.path.startswith('/monitoramento') or request.endpoint == 'tracking' %}text-teal-500{% else %}text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200{% endif %}"></i>
-                <span class="text-[13px] font-bold tracking-tight">Monitoramento</span>
+              <div class="flex items-center gap-3 truncate">
+                <i class="fa-solid fa-satellite-dish w-4 text-center text-sm transition-colors {% if is_monit_active %}text-slate-800 dark:text-slate-200{% else %}text-slate-400 group-hover:text-slate-700 dark:text-slate-500 dark:group-hover:text-slate-300{% endif %}"></i>
+                <span class="truncate">Monitoramento</span>
               </div>
-              <i class="fa-solid fa-chevron-down text-[10px] chevron-rotate {% if request.path.startswith('/monitoramento') or request.endpoint == 'tracking' %}open-chevron{% endif %}"></i>
+              <i class="fa-solid fa-chevron-down text-[10px] text-slate-400 chevron-rotate {% if is_monit_active %}open-chevron{% endif %}"></i>
             </button>
             
-            <div id="submenu-monitoramento" class="submenu-container {% if request.path.startswith('/monitoramento') or request.endpoint == 'tracking' %}open{% endif %} ml-4 border-l border-slate-900/5 dark:border-white/5 pl-2 space-y-1 mt-1">
+            <div id="submenu-monitoramento" class="submenu-container {% if is_monit_active %}open{% endif %} ml-4 border-l border-slate-200 dark:border-slate-800/80 pl-2 space-y-0.5 mt-1">
                 {% if current_user.has_permission('frota') %}
                 <a href="{{ url_for('tracking') }}" 
-                   class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-[12px] font-bold transition-all
-                          {% if request.endpoint == 'tracking' %}text-teal-500 bg-teal-500/5{% else %}text-slate-500 dark:text-gray-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-900/5 dark:hover:bg-white/5{% endif %}">
-                  <i class="fa-solid fa-map-location-dot w-4 text-center opacity-70"></i>
-                  Mapa ao Vivo
+                   class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-[12px] transition-colors
+                          {% if request.endpoint == 'tracking' %}bg-slate-200/70 dark:bg-slate-800 text-slate-900 dark:text-white font-semibold{% else %}text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/70 dark:hover:bg-slate-800/40 font-medium{% endif %}">
+                  <i class="fa-solid fa-map-location-dot w-3.5 text-center text-[11px] opacity-70"></i>
+                  <span>Mapa ao Vivo</span>
                 </a>
                 {% endif %}
                 {% if current_user.has_permission('monitoramento_aparelhos') %}
                 <a href="{{ url_for('monitoramento_aparelhos') }}" 
-                   class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-[12px] font-bold transition-all
-                          {% if request.endpoint == 'monitoramento_aparelhos' %}text-teal-500 bg-teal-500/5{% else %}text-slate-500 dark:text-gray-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-900/5 dark:hover:bg-white/5{% endif %}">
-                  <i class="fa-solid fa-microchip w-4 text-center opacity-70"></i>
-                  Aparelhos GPS
+                   class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-[12px] transition-colors
+                          {% if request.endpoint == 'monitoramento_aparelhos' %}bg-slate-200/70 dark:bg-slate-800 text-slate-900 dark:text-white font-semibold{% else %}text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/70 dark:hover:bg-slate-800/40 font-medium{% endif %}">
+                  <i class="fa-solid fa-microchip w-3.5 text-center text-[11px] opacity-70"></i>
+                  <span>Aparelhos GPS</span>
                 </a>
                 {% endif %}
                 {% if current_user.has_permission('monitoramento_historico') %}
                 <a href="{{ url_for('monitoramento_historico') }}" 
-                   class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-[12px] font-bold transition-all
-                          {% if request.endpoint == 'monitoramento_historico' %}text-teal-500 bg-teal-500/5{% else %}text-slate-500 dark:text-gray-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-900/5 dark:hover:bg-white/5{% endif %}">
-                  <i class="fa-solid fa-clock-rotate-left w-4 text-center opacity-70"></i>
-                  Histórico de Rotas
+                   class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-[12px] transition-colors
+                          {% if request.endpoint == 'monitoramento_historico' %}bg-slate-200/70 dark:bg-slate-800 text-slate-900 dark:text-white font-semibold{% else %}text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/70 dark:hover:bg-slate-800/40 font-medium{% endif %}">
+                  <i class="fa-solid fa-clock-rotate-left w-3.5 text-center text-[11px] opacity-70"></i>
+                  <span>Histórico de Rotas</span>
                 </a>
                 {% endif %}
                 {% if current_user.has_permission('monitoramento_config') %}
                 <a href="{{ url_for('monitoramento_config') }}" 
-                   class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-[12px] font-bold transition-all
-                          {% if request.endpoint == 'monitoramento_config' %}text-teal-500 bg-teal-500/5{% else %}text-slate-500 dark:text-gray-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-900/5 dark:hover:bg-white/5{% endif %}">
-                  <i class="fa-solid fa-gears w-4 text-center opacity-70"></i>
-                  Configurações
+                   class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-[12px] transition-colors
+                          {% if request.endpoint == 'monitoramento_config' %}bg-slate-200/70 dark:bg-slate-800 text-slate-900 dark:text-white font-semibold{% else %}text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/70 dark:hover:bg-slate-800/40 font-medium{% endif %}">
+                  <i class="fa-solid fa-gears w-3.5 text-center text-[11px] opacity-70"></i>
+                  <span>Configurações</span>
                 </a>
                 {% endif %}
             </div>
@@ -888,93 +464,101 @@
 
           {% if current_user.has_permission('gestao_mapas') %}
           <!-- ✅ MAPAS COLLAPSIBLE -->
-          <div class="space-y-1 mb-2">
+          <div class="pt-1">
+            {% set is_mapas_active = (request.path.startswith('/mapa-rede') or request.path.startswith('/rede-registros') or request.endpoint == 'simulador_roteadores') %}
             <button onclick="toggleSubmenu('submenu-mapas', this)" 
-                    class="w-full flex items-center justify-between gap-3.5 px-4 py-3 rounded-2xl transition-all duration-300 group
-                           {% if request.path.startswith('/mapa-rede') or request.path.startswith('/rede-registros') %}
-                             bg-indigo-600/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20
+                    class="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl text-[13px] transition-colors group
+                           {% if is_mapas_active %}
+                             bg-slate-100 text-slate-900 font-semibold dark:bg-slate-800/80 dark:text-white
                            {% else %}
-                             text-slate-500 dark:text-gray-400 hover:bg-slate-900/5 dark:hover:bg-white/5
+                             text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60 font-medium
                            {% endif %}">
-              <div class="flex items-center gap-3.5">
-                <i class="fa-solid fa-map-location-dot w-5 text-center text-base transition-colors {% if request.path.startswith('/mapa-rede') or request.path.startswith('/rede-registros') %}text-indigo-500{% else %}text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200{% endif %}"></i>
-                <span class="text-[13px] font-bold tracking-tight">Rede & Mapas</span>
+              <div class="flex items-center gap-3 truncate">
+                <i class="fa-solid fa-network-wired w-4 text-center text-sm transition-colors {% if is_mapas_active %}text-slate-800 dark:text-slate-200{% else %}text-slate-400 group-hover:text-slate-700 dark:text-slate-500 dark:group-hover:text-slate-300{% endif %}"></i>
+                <span class="truncate">Rede & Mapas</span>
               </div>
-              <i class="fa-solid fa-chevron-down text-[10px] chevron-rotate {% if request.path.startswith('/mapa-rede') or request.path.startswith('/rede-registros') %}open-chevron{% endif %}"></i>
+              <i class="fa-solid fa-chevron-down text-[10px] text-slate-400 chevron-rotate {% if is_mapas_active %}open-chevron{% endif %}"></i>
             </button>
             
-            <div id="submenu-mapas" class="submenu-container {% if request.path.startswith('/mapa-rede') or request.path.startswith('/rede-registros') %}open{% endif %} ml-4 border-l border-slate-900/5 dark:border-white/5 pl-2 space-y-1 mt-1">
+            <div id="submenu-mapas" class="submenu-container {% if is_mapas_active %}open{% endif %} ml-4 border-l border-slate-200 dark:border-slate-800/80 pl-2 space-y-0.5 mt-1">
                 {% if current_user.has_permission('gestao_mapas') %}
                 <a href="{{ url_for('mapa_rede') }}" 
-                   class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-[12px] font-bold transition-all
-                          {% if request.endpoint == 'mapa_rede' %}text-indigo-500 bg-indigo-500/5{% else %}text-slate-500 dark:text-gray-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-900/5 dark:hover:bg-white/5{% endif %}">
-                  <i class="fa-solid fa-network-wired w-4 text-center opacity-70"></i>
-                  Projeto de Rede
+                   class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-[12px] transition-colors
+                          {% if request.endpoint == 'mapa_rede' %}bg-slate-200/70 dark:bg-slate-800 text-slate-900 dark:text-white font-semibold{% else %}text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/70 dark:hover:bg-slate-800/40 font-medium{% endif %}">
+                  <i class="fa-solid fa-diagram-project w-3.5 text-center text-[11px] opacity-70"></i>
+                  <span>Projeto de Rede</span>
                 </a>
                 {% endif %}
                 <a href="{{ url_for('rede_registros') }}" 
-                   class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-[12px] font-bold transition-all
-                          {% if request.endpoint == 'rede_registros' %}text-indigo-500 bg-indigo-500/5{% else %}text-slate-500 dark:text-gray-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-900/5 dark:hover:bg-white/5{% endif %}">
-                  <i class="fa-solid fa-database w-4 text-center opacity-70"></i>
-                  Registros de Rede
+                   class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-[12px] transition-colors
+                          {% if request.endpoint == 'rede_registros' %}bg-slate-200/70 dark:bg-slate-800 text-slate-900 dark:text-white font-semibold{% else %}text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/70 dark:hover:bg-slate-800/40 font-medium{% endif %}">
+                  <i class="fa-solid fa-database w-3.5 text-center text-[11px] opacity-70"></i>
+                  <span>Registros de Rede</span>
+                </a>
+                <a href="{{ url_for('simulador_roteadores') }}" 
+                   class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-[12px] transition-colors
+                          {% if request.endpoint == 'simulador_roteadores' %}bg-slate-200/70 dark:bg-slate-800 text-slate-900 dark:text-white font-semibold{% else %}text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/70 dark:hover:bg-slate-800/40 font-medium{% endif %}">
+                  <i class="fa-solid fa-server w-3.5 text-center text-[11px] opacity-70"></i>
+                  <span>Simulador de Roteadores</span>
                 </a>
             </div>
           </div>
           {% endif %}
 
           {% if current_user.has_permission('checklist_mobile') or current_user.has_permission('treinamentos_mobile') or current_user.has_permission('manutencao_os') or current_user.has_permission('controle_ferramentas') %}
-          <div class="py-3 px-4 text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-gray-500 mt-6">Operacional</div>
+          <div class="px-3 pt-3 pb-1 text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+            Operacional
+          </div>
           
           {% if current_user.has_permission('checklist_mobile') %}
           <a href="{{ url_for('checklist_mobile') }}" 
-             class="flex items-center gap-3.5 px-4 py-3 rounded-2xl transition-all duration-300 group
+             class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] transition-colors group
                     {% if request.endpoint == 'checklist_mobile' %}
-                      bg-blue-600 text-white shadow-xl shadow-blue-500/30 scale-[1.02]
+                      bg-slate-900 text-white font-semibold shadow-sm dark:bg-white dark:text-slate-900
                     {% else %}
-                      text-slate-500 dark:text-gray-400 hover:bg-slate-900/5 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white
+                      text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800/60 font-medium
                     {% endif %}">
-            <i class="fa-solid fa-mobile-button w-5 text-center text-base {% if request.endpoint == 'checklist_mobile' %}text-white{% else %}text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200{% endif %} transition-colors"></i>
-            <span class="text-[13px] font-bold tracking-tight">Checklist Técnico</span>
+            <i class="fa-solid fa-mobile-button w-4 text-center text-sm {% if request.endpoint == 'checklist_mobile' %}text-white dark:text-slate-900{% else %}text-slate-400 group-hover:text-slate-700 dark:text-slate-500 dark:group-hover:text-slate-300{% endif %} transition-colors"></i>
+            <span class="truncate">Checklist Técnico</span>
           </a>
           {% endif %}
 
           {% if current_user.has_permission('controle_ferramentas') %}
           <a href="{{ url_for('controle_ferramentas') }}" 
-             class="flex items-center gap-3.5 px-4 py-3 rounded-2xl transition-all duration-300 group
+             class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] transition-colors group
                     {% if request.endpoint == 'controle_ferramentas' %}
-                      bg-emerald-600 text-white shadow-xl shadow-emerald-500/30 scale-[1.02]
+                      bg-slate-900 text-white font-semibold shadow-sm dark:bg-white dark:text-slate-900
                     {% else %}
-                      text-slate-500 dark:text-gray-400 hover:bg-slate-900/5 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white
+                      text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800/60 font-medium
                     {% endif %}">
-            <i class="fa-solid fa-toolbox w-5 text-center text-base {% if request.endpoint == 'controle_ferramentas' %}text-white{% else %}text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200{% endif %} transition-colors"></i>
-            <span class="text-[13px] font-bold tracking-tight">Controle Ferramentas</span>
+            <i class="fa-solid fa-toolbox w-4 text-center text-sm {% if request.endpoint == 'controle_ferramentas' %}text-white dark:text-slate-900{% else %}text-slate-400 group-hover:text-slate-700 dark:text-slate-500 dark:group-hover:text-slate-300{% endif %} transition-colors"></i>
+            <span class="truncate">Controle Ferramentas</span>
           </a>
           {% endif %}
 
           {% if current_user.has_permission('treinamentos_mobile') %}
           <a href="{{ url_for('treinamentos_mobile') }}" 
-             class="flex items-center gap-3.5 px-4 py-3 rounded-2xl transition-all duration-300 group
+             class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] transition-colors group
                     {% if request.endpoint == 'treinamentos_mobile' %}
-                      bg-teal-600 text-white shadow-xl shadow-teal-500/30 scale-[1.02]
+                      bg-slate-900 text-white font-semibold shadow-sm dark:bg-white dark:text-slate-900
                     {% else %}
-                      text-slate-500 dark:text-gray-400 hover:bg-slate-900/5 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white
+                      text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800/60 font-medium
                     {% endif %}">
-            <i class="fa-solid fa-graduation-cap w-5 text-center text-base {% if request.endpoint == 'treinamentos_mobile' %}text-white{% else %}text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200{% endif %} transition-colors"></i>
-            <span class="text-[13px] font-bold tracking-tight">Treinamentos</span>
+            <i class="fa-solid fa-graduation-cap w-4 text-center text-sm {% if request.endpoint == 'treinamentos_mobile' %}text-white dark:text-slate-900{% else %}text-slate-400 group-hover:text-slate-700 dark:text-slate-500 dark:group-hover:text-slate-300{% endif %} transition-colors"></i>
+            <span class="truncate">Treinamentos</span>
           </a>
           {% endif %}
 
           {% if current_user.has_permission('manutencao_os') %}
           <a href="{{ url_for('manutencao_os') }}" 
-             class="flex items-center gap-3.5 px-4 py-3 rounded-2xl transition-all duration-300 group
+             class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] transition-colors group
                     {% if request.endpoint == 'manutencao_os' %}
-                      bg-orange-600 text-white shadow-xl shadow-orange-500/30 scale-[1.02]
+                      bg-slate-900 text-white font-semibold shadow-sm dark:bg-white dark:text-slate-900
                     {% else %}
-                      text-slate-500 dark:text-gray-400 hover:bg-slate-900/5 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white
+                      text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800/60 font-medium
                     {% endif %}">
-            <i class="fa-solid fa-screwdriver-wrench w-5 text-center text-base {% if request.endpoint == 'manutencao_os' %}text-white{% else %}text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200{% endif %} transition-colors"></i>
-
-            <span class="text-[13px] font-bold tracking-tight">Manutenção O.S.</span>
+            <i class="fa-solid fa-screwdriver-wrench w-4 text-center text-sm {% if request.endpoint == 'manutencao_os' %}text-white dark:text-slate-900{% else %}text-slate-400 group-hover:text-slate-700 dark:text-slate-500 dark:group-hover:text-slate-300{% endif %} transition-colors"></i>
+            <span class="truncate">Manutenção O.S.</span>
           </a>
           {% endif %}
           {% endif %}
@@ -1006,30 +590,30 @@
 
           {% if ns.has_any_gestao %}
           <!-- ✅ GESTÃO TÉCNICA COLLAPSIBLE -->
-          <div class="space-y-1">
+          <div class="pt-1">
+            {% set is_gestao_active = (request.endpoint == 'gestao_tecnica') %}
             <button onclick="toggleSubmenu('submenu-gestao', this)" 
-                    class="w-full flex items-center justify-between gap-3.5 px-4 py-3 rounded-2xl transition-all duration-300 group
-                           {% if request.endpoint == 'gestao_tecnica' %}
-                             bg-purple-600/10 text-purple-600 dark:text-purple-400 border border-purple-500/20
+                    class="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl text-[13px] transition-colors group
+                           {% if is_gestao_active %}
+                             bg-slate-100 text-slate-900 font-semibold dark:bg-slate-800/80 dark:text-white
                            {% else %}
-                             text-slate-500 dark:text-gray-400 hover:bg-slate-900/5 dark:hover:bg-white/5
+                             text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60 font-medium
                            {% endif %}">
-              <div class="flex items-center gap-3.5">
-                <i class="fa-solid fa-chart-line w-5 text-center text-base transition-colors {% if request.endpoint == 'gestao_tecnica' %}text-purple-500{% else %}text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200{% endif %}"></i>
-                <span class="text-[13px] font-bold tracking-tight">Gestão Técnica</span>
+              <div class="flex items-center gap-3 truncate">
+                <i class="fa-solid fa-chart-line w-4 text-center text-sm transition-colors {% if is_gestao_active %}text-slate-800 dark:text-slate-200{% else %}text-slate-400 group-hover:text-slate-700 dark:text-slate-500 dark:group-hover:text-slate-300{% endif %}"></i>
+                <span class="truncate">Gestão Técnica</span>
               </div>
-              <i class="fa-solid fa-chevron-down text-[10px] chevron-rotate {% if request.endpoint == 'gestao_tecnica' %}open-chevron{% endif %}"></i>
+              <i class="fa-solid fa-chevron-down text-[10px] text-slate-400 chevron-rotate {% if is_gestao_active %}open-chevron{% endif %}"></i>
             </button>
             
-            <div id="submenu-gestao" class="submenu-container {% if request.endpoint == 'gestao_tecnica' %}open{% endif %} ml-4 border-l border-slate-900/5 dark:border-white/5 pl-2 space-y-1 mt-1">
+            <div id="submenu-gestao" class="submenu-container {% if is_gestao_active %}open{% endif %} ml-4 border-l border-slate-200 dark:border-slate-800/80 pl-2 space-y-0.5 mt-1">
               {% for id, label, icon in tech_tabs %}
                 {% if current_user.has_permission('gestao_' ~ id) %}
                 <a href="{{ url_for('gestao_tecnica', tab=id) }}" 
                    data-tab="{{ id }}"
-                   class="sidebar-tab-link flex items-center gap-3 px-4 py-2.5 rounded-xl text-[12px] font-bold transition-all
-                          hover:bg-slate-900/5 dark:hover:bg-white/5 text-slate-500 dark:text-gray-400 hover:text-slate-800 dark:hover:text-white">
-                  <i class="fa-solid {{ icon }} w-4 text-center opacity-70"></i>
-                  {{ label }}
+                   class="sidebar-tab-link flex items-center gap-2.5 px-3 py-2 rounded-lg text-[12px] transition-colors text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/70 dark:hover:bg-slate-800/40 font-medium">
+                  <i class="fa-solid {{ icon }} w-3.5 text-center text-[11px] opacity-70"></i>
+                  <span>{{ label }}</span>
                 </a>
                 {% endif %}
               {% endfor %}
@@ -1037,148 +621,147 @@
           </div>
           {% endif %}
 
-
-            {% if current_user.has_permission('usuarios') or current_user.has_permission('avisos') or current_user.has_permission('config_checklist') or current_user.has_permission('logs') or current_user.has_permission('config_layout') or current_user.has_permission('config_ferramentas') %}
-            <!-- ✅ CONFIGURAÇÕES E ADMINISTRAÇÃO COLLAPSIBLE (A + B) -->
-            <div class="pt-4 border-t border-slate-900/5 dark:border-white/5 mt-6">
-              <div class="py-2 px-4 text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-gray-500 mb-1">Configurações & Admin</div>
-              
-              <div class="space-y-1">
-                <button onclick="toggleSubmenu('submenu-configuracoes', this)" 
-                        class="w-full flex items-center justify-between gap-3.5 px-4 py-3 rounded-2xl transition-all duration-300 group
-                               {% if request.endpoint in ['config_layout', 'users', 'config_checklist', 'config_ferramentas', 'logs', 'avisos'] %}
-                                 bg-slate-800 text-white dark:bg-white dark:text-slate-900 shadow-lg border border-slate-700 dark:border-slate-200
-                               {% else %}
-                                 text-slate-500 dark:text-gray-400 hover:bg-slate-900/5 dark:hover:bg-white/5
-                               {% endif %}">
-                  <div class="flex items-center gap-3.5">
-                    <i class="fa-solid fa-gears w-5 text-center text-base transition-colors {% if request.endpoint in ['config_layout', 'users', 'config_checklist', 'config_ferramentas', 'logs', 'avisos'] %}text-emerald-400 dark:text-emerald-600{% else %}text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200{% endif %}"></i>
-                    <span class="text-[13px] font-bold tracking-tight">Configurações do Sistema</span>
-                  </div>
-                  <i class="fa-solid fa-chevron-down text-[10px] chevron-rotate {% if request.endpoint in ['config_layout', 'users', 'config_checklist', 'config_ferramentas', 'logs', 'avisos'] %}open-chevron{% endif %}"></i>
-                </button>
-                
-                <div id="submenu-configuracoes" class="submenu-container {% if request.endpoint in ['config_layout', 'users', 'config_checklist', 'config_ferramentas', 'logs', 'avisos'] %}open{% endif %} ml-4 border-l border-slate-900/5 dark:border-white/5 pl-2 space-y-1 mt-1">
-                    {% if current_user.has_permission('config_layout') %}
-                    <a href="{{ url_for('config_layout') }}" 
-                       class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-[12px] font-bold transition-all
-                              {% if request.endpoint == 'config_layout' %}text-emerald-500 bg-emerald-500/5 font-extrabold{% else %}text-slate-500 dark:text-gray-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-900/5 dark:hover:bg-white/5{% endif %}">
-                      <i class="fa-solid fa-palette w-4 text-center opacity-70"></i>
-                      Identidade & Layout
-                    </a>
-                    {% endif %}
-
-                    {% if current_user.has_permission('usuarios') %}
-                    <a href="{{ url_for('users') }}" 
-                       class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-[12px] font-bold transition-all
-                              {% if request.endpoint == 'users' %}text-emerald-500 bg-emerald-500/5 font-extrabold{% else %}text-slate-500 dark:text-gray-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-900/5 dark:hover:bg-white/5{% endif %}">
-                      <i class="fa-solid fa-users-gear w-4 text-center opacity-70"></i>
-                      Usuários & Permissões
-                    </a>
-                    {% endif %}
-
-                    {% if current_user.has_permission('config_checklist') %}
-                    <a href="{{ url_for('config_checklist') }}" 
-                       class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-[12px] font-bold transition-all
-                              {% if request.endpoint == 'config_checklist' %}text-emerald-500 bg-emerald-500/5 font-extrabold{% else %}text-slate-500 dark:text-gray-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-900/5 dark:hover:bg-white/5{% endif %}">
-                      <i class="fa-solid fa-sliders w-4 text-center opacity-70"></i>
-                      Config. Checklist
-                    </a>
-                    {% endif %}
-
-                    {% if current_user.has_permission('config_ferramentas') %}
-                    <a href="{{ url_for('config_ferramentas') }}" 
-                       class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-[12px] font-bold transition-all
-                              {% if request.endpoint == 'config_ferramentas' %}text-emerald-500 bg-emerald-500/5 font-extrabold{% else %}text-slate-500 dark:text-gray-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-900/5 dark:hover:bg-white/5{% endif %}">
-                      <i class="fa-solid fa-toolbox w-4 text-center opacity-70"></i>
-                      Config. Ferramentas
-                    </a>
-                    {% endif %}
-
-                    {% if current_user.has_permission('logs') %}
-                    <a href="{{ url_for('logs') }}" 
-                       class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-[12px] font-bold transition-all
-                              {% if request.endpoint == 'logs' %}text-emerald-500 bg-emerald-500/5 font-extrabold{% else %}text-slate-500 dark:text-gray-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-900/5 dark:hover:bg-white/5{% endif %}">
-                      <i class="fa-solid fa-terminal w-4 text-center opacity-70"></i>
-                      Logs Auditoria
-                    </a>
-                    {% endif %}
-
-                    {% if current_user.has_permission('avisos') %}
-                    <a href="{{ url_for('avisos') }}" 
-                       class="flex items-center gap-3 px-4 py-2.5 rounded-xl text-[12px] font-bold transition-all
-                              {% if request.endpoint == 'avisos' %}text-emerald-500 bg-emerald-500/5 font-extrabold{% else %}text-slate-500 dark:text-gray-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-900/5 dark:hover:bg-white/5{% endif %}">
-                      <i class="fa-solid fa-bullhorn w-4 text-center opacity-70"></i>
-                      Comunicados
-                    </a>
-                    {% endif %}
-                </div>
+          {% if current_user.has_permission('usuarios') or current_user.has_permission('avisos') or current_user.has_permission('config_checklist') or current_user.has_permission('logs') or current_user.has_permission('config_layout') or current_user.has_permission('config_ferramentas') %}
+          <!-- ✅ CONFIGURAÇÕES & ADMINISTRAÇÃO -->
+          <div class="pt-2">
+            <div class="px-3 pt-2 pb-1 text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+              Sistema
+            </div>
+            
+            {% set is_config_active = request.endpoint in ['config_layout', 'users', 'config_checklist', 'config_ferramentas', 'logs', 'avisos'] %}
+            <button onclick="toggleSubmenu('submenu-configuracoes', this)" 
+                    class="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl text-[13px] transition-colors group
+                           {% if is_config_active %}
+                             bg-slate-100 text-slate-900 font-semibold dark:bg-slate-800/80 dark:text-white
+                           {% else %}
+                             text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60 font-medium
+                           {% endif %}">
+              <div class="flex items-center gap-3 truncate">
+                <i class="fa-solid fa-gears w-4 text-center text-sm transition-colors {% if is_config_active %}text-slate-800 dark:text-slate-200{% else %}text-slate-400 group-hover:text-slate-700 dark:text-slate-500 dark:group-hover:text-slate-300{% endif %}"></i>
+                <span class="truncate">Configurações</span>
               </div>
+              <i class="fa-solid fa-chevron-down text-[10px] text-slate-400 chevron-rotate {% if is_config_active %}open-chevron{% endif %}"></i>
+            </button>
+            
+            <div id="submenu-configuracoes" class="submenu-container {% if is_config_active %}open{% endif %} ml-4 border-l border-slate-200 dark:border-slate-800/80 pl-2 space-y-0.5 mt-1">
+                {% if current_user.has_permission('config_layout') %}
+                <a href="{{ url_for('config_layout') }}" 
+                   class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-[12px] transition-colors
+                          {% if request.endpoint == 'config_layout' %}bg-slate-200/70 dark:bg-slate-800 text-slate-900 dark:text-white font-semibold{% else %}text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/70 dark:hover:bg-slate-800/40 font-medium{% endif %}">
+                  <i class="fa-solid fa-palette w-3.5 text-center text-[11px] opacity-70"></i>
+                  <span>Identidade & Layout</span>
+                </a>
+                {% endif %}
+
+                {% if current_user.has_permission('usuarios') %}
+                <a href="{{ url_for('users') }}" 
+                   class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-[12px] transition-colors
+                          {% if request.endpoint == 'users' %}bg-slate-200/70 dark:bg-slate-800 text-slate-900 dark:text-white font-semibold{% else %}text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/70 dark:hover:bg-slate-800/40 font-medium{% endif %}">
+                  <i class="fa-solid fa-users-gear w-3.5 text-center text-[11px] opacity-70"></i>
+                  <span>Usuários & Permissões</span>
+                </a>
+                {% endif %}
+
+                {% if current_user.has_permission('config_checklist') %}
+                <a href="{{ url_for('config_checklist') }}" 
+                   class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-[12px] transition-colors
+                          {% if request.endpoint == 'config_checklist' %}bg-slate-200/70 dark:bg-slate-800 text-slate-900 dark:text-white font-semibold{% else %}text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/70 dark:hover:bg-slate-800/40 font-medium{% endif %}">
+                  <i class="fa-solid fa-sliders w-3.5 text-center text-[11px] opacity-70"></i>
+                  <span>Config. Checklist</span>
+                </a>
+                {% endif %}
+
+                {% if current_user.has_permission('config_ferramentas') %}
+                <a href="{{ url_for('config_ferramentas') }}" 
+                   class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-[12px] transition-colors
+                          {% if request.endpoint == 'config_ferramentas' %}bg-slate-200/70 dark:bg-slate-800 text-slate-900 dark:text-white font-semibold{% else %}text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/70 dark:hover:bg-slate-800/40 font-medium{% endif %}">
+                  <i class="fa-solid fa-toolbox w-3.5 text-center text-[11px] opacity-70"></i>
+                  <span>Config. Ferramentas</span>
+                </a>
+                {% endif %}
+
+                {% if current_user.has_permission('logs') %}
+                <a href="{{ url_for('logs') }}" 
+                   class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-[12px] transition-colors
+                          {% if request.endpoint == 'logs' %}bg-slate-200/70 dark:bg-slate-800 text-slate-900 dark:text-white font-semibold{% else %}text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/70 dark:hover:bg-slate-800/40 font-medium{% endif %}">
+                  <i class="fa-solid fa-terminal w-3.5 text-center text-[11px] opacity-70"></i>
+                  <span>Logs de Auditoria</span>
+                </a>
+                {% endif %}
+
+                {% if current_user.has_permission('avisos') %}
+                <a href="{{ url_for('avisos') }}" 
+                   class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-[12px] transition-colors
+                          {% if request.endpoint == 'avisos' %}bg-slate-200/70 dark:bg-slate-800 text-slate-900 dark:text-white font-semibold{% else %}text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/70 dark:hover:bg-slate-800/40 font-medium{% endif %}">
+                  <i class="fa-solid fa-bullhorn w-3.5 text-center text-[11px] opacity-70"></i>
+                  <span>Comunicados</span>
+                </a>
+                {% endif %}
             </div>
-            {% endif %}
+          </div>
+          {% endif %}
 
+          {% if current_user.has_permission('whatsapp_conversas') or current_user.has_permission('whatsapp_evolution') %}
+          <div class="px-3 pt-3 pb-1 text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 flex items-center gap-1.5">
+            <span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+            WhatsApp
+          </div>
 
-            {% if current_user.has_permission('whatsapp_conversas') or current_user.has_permission('whatsapp_evolution') %}
-            <div class="py-3 px-4 text-[11px] font-black uppercase tracking-[0.2em] text-emerald-600 dark:text-emerald-500 mt-6 flex items-center gap-2">
-              <span class="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-              Integração WhatsApp
-            </div>
+          {% if current_user.has_permission('whatsapp_conversas') %}
+          <a href="{{ url_for('whatsapp_conversas') }}" 
+             class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] transition-colors group
+                    {% if request.endpoint == 'whatsapp_conversas' %}
+                      bg-slate-900 text-white font-semibold shadow-sm dark:bg-white dark:text-slate-900
+                    {% else %}
+                      text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800/60 font-medium
+                    {% endif %}">
+            <i class="fa-regular fa-comments w-4 text-center text-sm {% if request.endpoint == 'whatsapp_conversas' %}text-white dark:text-slate-900{% else %}text-slate-400 group-hover:text-emerald-600 dark:text-slate-500 dark:group-hover:text-emerald-400{% endif %} transition-colors"></i>
+            <span class="truncate">Conversas</span>
+          </a>
+          {% endif %}
 
-            {% if current_user.has_permission('whatsapp_conversas') %}
-            <a href="{{ url_for('whatsapp_conversas') }}" 
-               class="flex items-center gap-3.5 px-4 py-3 rounded-2xl transition-all duration-300 group
-                      {% if request.endpoint == 'whatsapp_conversas' %}
-                        bg-emerald-600 text-white shadow-xl shadow-emerald-500/30 scale-[1.02]
-                      {% else %}
-                        text-slate-500 dark:text-gray-400 hover:bg-slate-900/5 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white
-                      {% endif %}">
-              <i class="fa-regular fa-comments w-5 text-center text-base {% if request.endpoint == 'whatsapp_conversas' %}text-white{% else %}text-slate-400 group-hover:text-emerald-500 dark:group-hover:text-emerald-400{% endif %} transition-colors"></i>
-              <span class="text-[13px] font-bold tracking-tight">Conversas</span>
-            </a>
-            {% endif %}
-
-            {% if current_user.is_admin or current_user.has_permission('whatsapp_evolution') or current_user.has_permission('integracoes') %}
-            <a href="{{ url_for('integracoes') }}" 
-               class="flex items-center gap-3.5 px-4 py-3 rounded-2xl transition-all duration-300 group
-                      {% if request.endpoint in ['integracoes', 'whatsapp_config'] %}
-                        bg-emerald-600 text-white shadow-xl shadow-emerald-500/30 scale-[1.02]
-                      {% else %}
-                        text-slate-500 dark:text-gray-400 hover:bg-slate-900/5 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white
-                      {% endif %}">
-              <i class="fa-solid fa-plug w-5 text-center text-base {% if request.endpoint in ['integracoes', 'whatsapp_config'] %}text-white{% else %}text-slate-400 group-hover:text-emerald-500 dark:group-hover:text-emerald-400{% endif %} transition-colors"></i>
-              <span class="text-[13px] font-bold tracking-tight">Integrações</span>
-            </a>
-            {% endif %}
-            {% endif %}
+          {% if current_user.is_admin or current_user.has_permission('whatsapp_evolution') or current_user.has_permission('integracoes') %}
+          <a href="{{ url_for('integracoes') }}" 
+             class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] transition-colors group
+                    {% if request.endpoint in ['integracoes', 'whatsapp_config'] %}
+                      bg-slate-900 text-white font-semibold shadow-sm dark:bg-white dark:text-slate-900
+                    {% else %}
+                      text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800/60 font-medium
+                    {% endif %}">
+            <i class="fa-solid fa-plug w-4 text-center text-sm {% if request.endpoint in ['integracoes', 'whatsapp_config'] %}text-white dark:text-slate-900{% else %}text-slate-400 group-hover:text-slate-700 dark:text-slate-500 dark:group-hover:text-slate-300{% endif %} transition-colors"></i>
+            <span class="truncate">Integrações</span>
+          </a>
+          {% endif %}
+          {% endif %}
         </nav>
 
-        <!-- BOTTOM: ACTIONS -->
-        <div class="p-4 border-t border-slate-900/5 dark:border-white/5 space-y-1.5">
-          <button id="btnTheme" class="w-full flex items-center gap-3.5 px-4 py-3 rounded-2xl transition-all duration-300 group text-slate-500 dark:text-gray-400 hover:bg-slate-900/5 dark:hover:bg-white/5">
-            <i class="fa-solid fa-moon w-5 text-center text-base text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200 transition-colors" id="themeIcon"></i>
-            <span class="text-[13px] font-bold tracking-tight">Mudar Tema</span>
+        <!-- BOTTOM: ACTIONS & THEME -->
+        <div class="p-3 border-t border-slate-100 dark:border-slate-800/80 space-y-1">
+          <button id="btnTheme" class="w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-colors text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60 text-xs font-medium">
+            <i class="fa-solid fa-moon w-4 text-center text-sm text-slate-400" id="themeIcon"></i>
+            <span>Mudar Tema</span>
           </button>
 
           <!-- MOBILE ONLY (EXIBIDO APENAS NO MENU LATERAL MOBILE) -->
-          <div class="lg:hidden space-y-1.5 pt-2 border-t border-slate-900/5 dark:border-white/5">
+          <div class="lg:hidden space-y-1 pt-2 border-t border-slate-100 dark:border-slate-800/80">
             <button onclick="openModal('modalSenha')" 
-               class="w-full flex items-center gap-3.5 px-4 py-2.5 rounded-2xl transition-all duration-300 group text-slate-500 dark:text-gray-400 hover:bg-slate-900/5 dark:hover:bg-white/5">
-              <i class="fa-solid fa-key w-5 text-center text-base text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-200 transition-colors"></i>
-              <span class="text-[13px] font-bold tracking-tight">Alterar Senha</span>
+               class="w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-colors text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800/60 text-xs font-medium">
+              <i class="fa-solid fa-key w-4 text-center text-sm text-slate-400"></i>
+              <span>Alterar Senha</span>
             </button>
 
-            <a href="{{ url_for('logout') }}" class="flex items-center gap-3.5 px-4 py-2.5 rounded-2xl text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all duration-300 group">
-              <i class="fa-solid fa-right-from-bracket w-5 text-center text-base transition-transform group-hover:translate-x-1"></i>
-              <span class="text-[13px] font-bold tracking-tight">Sair da Conta</span>
+            <a href="{{ url_for('logout') }}" class="flex items-center gap-3 px-3 py-2 rounded-xl text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors text-xs font-medium">
+              <i class="fa-solid fa-right-from-bracket w-4 text-center text-sm"></i>
+              <span>Sair da Conta</span>
             </a>
 
-            <div class="flex items-center gap-3 p-3 rounded-2xl bg-gradient-to-r from-slate-900/5 to-slate-900/10 dark:from-white/5 dark:to-white/10 border border-slate-900/10 dark:border-white/10 mt-2 shadow-sm">
-              <div class="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-sky-500 flex items-center justify-center text-white font-black shrink-0 shadow-md">
+            <div class="flex items-center gap-2.5 p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/60 dark:border-slate-700/50 mt-1">
+              <div class="w-8 h-8 rounded-lg bg-slate-800 dark:bg-slate-700 text-white flex items-center justify-center font-bold text-xs shrink-0">
                 {{ current_user.username[0] | upper if current_user and current_user.username else 'U' }}
               </div>
               <div class="min-w-0 flex-1">
-                <div class="text-[11px] font-black text-slate-800 dark:text-white truncate uppercase tracking-tight">{{ current_user.username }}</div>
-                <div class="text-[9px] font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest">{{ current_user.role or 'Usuário' }}</div>
+                <div class="text-xs font-semibold text-slate-800 dark:text-white truncate uppercase">{{ current_user.username }}</div>
+                <div class="text-[10px] text-slate-500 dark:text-slate-400 truncate">{{ current_user.role or 'Usuário' }}</div>
               </div>
             </div>
           </div>
@@ -1188,175 +771,147 @@
       {% endif %}
 
       <!-- CONTEÚDO PRINCIPAL -->
-      <div id="main-content" class="flex flex-col min-h-screen flex-1 min-w-0 bg-[#f8fafc] dark:bg-[#020617]">
+      <div id="main-content" class="flex flex-col min-h-screen flex-1 min-w-0 bg-[#f8fafc] dark:bg-[#090d16]">
         
-        <!-- TOPBAR (Modern & Functional) -->
+        <!-- TOPBAR (Clean & Modern SaaS Header) -->
         {% if not hide_header %}
-        <header class="h-16 border-b border-slate-900/5 dark:border-white/5 flex items-center justify-between px-4 sm:px-8 sticky top-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl z-40 flex-nowrap">
-          <div class="flex items-center gap-6 flex-nowrap flex-shrink-0">
-            <button id="btnMobileToggle" class="lg:hidden p-3 rounded-2xl bg-slate-900/5 dark:bg-white/5 text-slate-500 hover:text-slate-900 dark:hover:text-white transition-all active:scale-95">
-              <i class="fa-solid fa-bars-staggered text-lg"></i>
+        <header class="h-16 border-b border-slate-200/70 dark:border-slate-800/70 flex items-center justify-between px-4 sm:px-8 sticky top-0 bg-white/90 dark:bg-[#0d131f]/90 backdrop-blur-md z-40 flex-nowrap">
+          <div class="flex items-center gap-4 flex-nowrap flex-shrink-0">
+            <button id="btnMobileToggle" class="lg:hidden p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors">
+              <i class="fa-solid fa-bars-staggered text-sm"></i>
             </button>
             
             <div class="hidden sm:flex flex-col whitespace-nowrap flex-shrink-0">
-              <div class="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Painel de Controle</div>
-              <div class="text-xs font-bold text-slate-800 dark:text-white truncate max-w-[220px]" title="{{ page_title or 'Checklist Veicular' }}">{{ page_title or 'Checklist Veicular' }}</div>
+              <div class="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Painel de Controle</div>
+              <div class="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate max-w-[240px]" title="{{ page_title or 'Checklist Veicular' }}">{{ page_title or 'Checklist Veicular' }}</div>
             </div>
           </div>
           
-          <div class="flex items-center gap-4 flex-nowrap min-w-0">
-              <!-- ✅ CLIMA E RELÓGIO (RESPONSIVO) -->
-              <div class="flex items-center gap-3 md:gap-4 md:px-4 border-r border-slate-900/5 dark:border-white/5 whitespace-nowrap flex-nowrap flex-shrink-0">
-                <div class="flex items-center gap-2 flex-nowrap">
-                  <div class="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-500 flex-shrink-0" id="weather-icon-box">
-                    <i class="fa-solid fa-sun text-sm" id="weather-icon"></i>
-                  </div>
+          <div class="flex items-center gap-3 flex-nowrap min-w-0">
+              <!-- ✅ CLIMA E RELÓGIO (COMPACTO E ELEGANTE) -->
+              <div class="flex items-center gap-2.5 md:gap-3 md:px-3 border-r border-slate-200/70 dark:border-slate-800/70 whitespace-nowrap flex-nowrap flex-shrink-0">
+                <div class="flex items-center gap-2 px-2.5 py-1 rounded-lg bg-slate-100/80 dark:bg-slate-800/70 border border-slate-200/50 dark:border-slate-700/50">
+                  <i class="fa-solid fa-sun text-xs text-amber-500" id="weather-icon"></i>
                   <div class="text-left hidden md:block">
-                    <div class="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Seropédica</div>
-                    <div class="text-xs font-black text-slate-700 dark:text-white leading-none" id="weather-temp">--°C</div>
+                    <span class="text-[11px] font-semibold text-slate-700 dark:text-slate-200" id="weather-temp">--°C</span>
                   </div>
-                  <div class="text-[11px] font-black text-slate-700 dark:text-white md:hidden" id="weather-temp-mobile">--°C</div>
+                  <span class="text-[11px] font-semibold text-slate-700 dark:text-slate-200 md:hidden" id="weather-temp-mobile">--°C</span>
                 </div>
                 
-                <div class="flex items-center gap-2 flex-nowrap">
-                  <div class="w-8 h-8 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-500 flex-shrink-0">
-                    <i class="fa-solid fa-clock text-sm"></i>
-                  </div>
-                  <div id="topbar-clock" class="text-[11px] md:text-xs font-black text-slate-700 dark:text-white leading-none font-mono min-w-[65px] md:min-w-[75px] text-center">00:00:00</div>
+                <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100/80 dark:bg-slate-800/70 border border-slate-200/50 dark:border-slate-700/50">
+                  <i class="fa-regular fa-clock text-xs text-slate-400"></i>
+                  <div id="topbar-clock" class="text-[11px] font-semibold text-slate-700 dark:text-slate-200 font-mono">00:00:00</div>
                 </div>
               </div>
 
-             <div class="flex items-center gap-1 sm:gap-2 pr-4 border-r border-slate-900/5 dark:border-white/5 flex-nowrap flex-shrink-0">
+             <div class="flex items-center gap-1 sm:gap-1.5 pr-3 border-r border-slate-200/70 dark:border-slate-800/70 flex-nowrap flex-shrink-0">
                 <!-- ✅ SUPORTE WHATSAPP -->
                 <a href="https://wa.me/5521996994117" target="_blank" title="Suporte Técnico"
-                   class="p-2 rounded-xl text-emerald-500 hover:bg-emerald-500/10 transition-all flex-shrink-0">
-                  <i class="fa-brands fa-whatsapp text-lg md:text-xl"></i>
+                   class="p-2 rounded-lg text-slate-500 hover:text-emerald-600 dark:text-slate-400 dark:hover:text-emerald-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex-shrink-0">
+                  <i class="fa-brands fa-whatsapp text-base"></i>
                 </a>
 
-                <button onclick="toggleNotifications()" class="p-2 rounded-xl text-slate-400 hover:bg-slate-900/5 dark:hover:bg-white/5 transition-all relative flex-shrink-0">
-                  <i class="fa-solid fa-bell text-base md:text-lg"></i>
-                  <span id="notif-badge" class="hidden absolute top-1.5 right-1.5 px-1 min-w-[14px] h-[14px] bg-red-500 text-white text-[8px] font-black rounded-full flex items-center justify-center border border-white dark:border-slate-900 animate-bounce">0</span>
+                <button onclick="toggleNotifications()" title="Notificações" class="p-2 rounded-lg text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors relative flex-shrink-0">
+                  <i class="fa-regular fa-bell text-base"></i>
+                  <span id="notif-badge" class="hidden absolute top-1 right-1 px-1.5 min-w-[14px] h-[14px] bg-rose-500 text-white text-[8px] font-bold rounded-full flex items-center justify-center">0</span>
                 </button>
 
-                <button onclick="toggleHelp()" title="Informações e Manuais" class="p-2 rounded-xl text-slate-400 hover:bg-slate-900/5 dark:hover:bg-white/5 transition-all flex-shrink-0">
-                  <i class="fa-solid fa-circle-question text-base md:text-lg"></i>
+                <button onclick="toggleHelp()" title="Informações e Manuais" class="p-2 rounded-lg text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex-shrink-0">
+                  <i class="fa-regular fa-circle-question text-base"></i>
                 </button>
 
                 <!-- ✅ STATUS DO SISTEMA -->
-                <div class="flex items-center gap-2 px-2 md:px-3 py-1.5 rounded-xl bg-emerald-500/5 border border-emerald-500/10 ml-1 md:ml-2 flex-shrink-0">
-                  <span class="relative flex h-2 w-2 flex-shrink-0">
-                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                    <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                  </span>
-                  <span class="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest hidden md:block">Online</span>
+                <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-50/80 dark:bg-emerald-950/30 border border-emerald-200/60 dark:border-emerald-800/40 ml-1 flex-shrink-0">
+                  <span class="inline-block w-2 h-2 rounded-full bg-emerald-500"></span>
+                  <span class="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wide hidden md:block">Online</span>
                 </div>
               </div>
 
-              <!-- ✅ CARD DO USUÁRIO LOGADO (Exibido apenas em Desktop/Tablet - Oculto no Mobile) -->
-              <div class="hidden lg:block relative flex-shrink-0 ml-2 select-none">
+              <!-- ✅ CARD DO USUÁRIO LOGADO -->
+              <div class="hidden lg:block relative flex-shrink-0 ml-1 select-none">
                 <button id="btnUserDropdown" onclick="toggleUserDropdown(event)" type="button" 
-                        class="flex items-center gap-3 px-3.5 py-1.5 rounded-2xl bg-slate-900/5 dark:bg-white/5 hover:bg-slate-900/10 dark:hover:bg-white/10 border border-slate-900/10 dark:border-white/10 hover:border-blue-500/30 dark:hover:border-blue-400/30 shadow-sm hover:shadow-md hover:shadow-blue-500/5 transition-all duration-300 text-left group focus:outline-none focus:ring-2 focus:ring-blue-500/20">
-                  <!-- Avatar Badge com Gradientes e Glow -->
-                  <div class="relative">
-                    <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-sky-500 text-white flex items-center justify-center text-xs font-black shrink-0 shadow-md shadow-blue-500/20 group-hover:scale-105 transition-transform duration-300">
-                      {{ current_user.username[0] | upper if current_user and current_user.username else 'U' }}
-                    </div>
-                    <span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 border-2 border-white dark:border-slate-900 rounded-full shadow-sm flex items-center justify-center">
-                      <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                    </span>
+                        class="flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl bg-slate-100/70 dark:bg-slate-800/70 hover:bg-slate-200/70 dark:hover:bg-slate-700/70 border border-slate-200/60 dark:border-slate-700/50 transition-colors text-left group focus:outline-none">
+                  <!-- Avatar Badge -->
+                  <div class="w-7 h-7 rounded-lg bg-slate-800 dark:bg-slate-700 text-white flex items-center justify-center text-xs font-bold shrink-0">
+                    {{ current_user.username[0] | upper if current_user and current_user.username else 'U' }}
                   </div>
 
                   <!-- Informações da Pessoa Logada -->
                   <div class="hidden sm:flex flex-col min-w-0 pr-1">
-                    <div class="text-[12px] font-black text-slate-800 dark:text-white truncate tracking-tight leading-none mb-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                    <div class="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate leading-none mb-0.5">
                       {{ current_user.username }}
                     </div>
-                    <div class="flex items-center gap-1.5">
-                      <span class="px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider rounded-md bg-blue-500/10 dark:bg-blue-400/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
-                        {{ current_user.role or 'Usuário' }}
-                      </span>
+                    <div class="text-[10px] text-slate-500 dark:text-slate-400 leading-none">
+                      {{ current_user.role or 'Usuário' }}
                     </div>
                   </div>
 
-                  <i class="fa-solid fa-chevron-down text-[10px] text-slate-400 group-hover:text-blue-500 transition-all duration-300 ml-0.5 transform group-hover:translate-y-0.5" id="userDropdownChevron"></i>
+                  <i class="fa-solid fa-chevron-down text-[10px] text-slate-400 transition-transform ml-0.5" id="userDropdownChevron"></i>
                 </button>
 
-                <!-- MENU EXPANSÍVEL DO USUÁRIO (REDESENHADO & MODERNO) -->
-                <div id="userProfileDropdown" class="hidden absolute right-0 mt-3 w-64 bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl border border-slate-200/80 dark:border-white/10 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.15)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.5)] p-2 z-[100] transition-all transform origin-top-right">
+                <!-- MENU EXPANSÍVEL DO USUÁRIO -->
+                <div id="userProfileDropdown" class="hidden absolute right-0 mt-2 w-60 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-dropdown p-2 z-[100] transition-all transform origin-top-right">
                   
-                  <!-- Cabeçalho do Card de Perfil -->
-                  <div class="relative overflow-hidden rounded-xl p-3.5 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 dark:from-slate-800/80 dark:to-slate-950 text-white mb-2 shadow-inner border border-white/10">
-                    <!-- Glow Decorativo no fundo -->
-                    <div class="absolute -top-6 -right-6 w-20 h-20 bg-blue-500/20 rounded-full blur-xl pointer-events-none"></div>
-                    
-                    <div class="flex items-center gap-3 relative z-10">
-                      <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-500 to-sky-400 flex items-center justify-center text-sm font-black text-white shrink-0 shadow-md border border-white/20">
+                  <!-- Cabeçalho do Perfil -->
+                  <div class="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-lg mb-1.5 border border-slate-100 dark:border-slate-800">
+                    <div class="flex items-center gap-2.5">
+                      <div class="w-8 h-8 rounded-lg bg-slate-800 dark:bg-slate-700 text-white flex items-center justify-center text-xs font-bold shrink-0">
                         {{ current_user.username[0] | upper if current_user and current_user.username else 'U' }}
                       </div>
                       <div class="min-w-0 flex-1">
-                        <div class="text-xs font-black truncate uppercase tracking-tight text-white">{{ current_user.username }}</div>
-                        <div class="text-[9px] font-bold text-emerald-400 uppercase tracking-widest mt-0.5 flex items-center gap-1.5">
-                          <span class="relative flex h-1.5 w-1.5">
-                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                            <span class="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
-                          </span>
-                          Sessão Ativa
-                        </div>
+                        <div class="text-xs font-bold truncate uppercase text-slate-800 dark:text-white">{{ current_user.username }}</div>
+                        <div class="text-[10px] text-slate-500 dark:text-slate-400 capitalize">{{ current_user.role or 'Usuário' }}</div>
                       </div>
-                    </div>
-
-                    <div class="mt-2.5 pt-2 border-t border-white/10 flex items-center justify-between text-[9px] font-bold uppercase tracking-wider text-slate-300">
-                      <span>Perfil / Função</span>
-                      <span class="px-2 py-0.5 rounded-md bg-white/10 text-white border border-white/10 font-extrabold">{{ current_user.role or 'Usuário' }}</span>
                     </div>
                   </div>
 
                   <!-- Ações Principais -->
-                  <div class="space-y-1 p-0.5">
-                    <button type="button" onclick="openModal('modalSenha'); closeUserDropdown();" 
-                            class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-900/5 dark:hover:bg-white/5 transition-all duration-200 group text-left">
-                      <div class="flex items-center gap-3">
-                        <div class="w-7 h-7 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-500 group-hover:scale-110 transition-transform">
-                          <i class="fa-solid fa-key text-xs"></i>
-                        </div>
-                        <span class="group-hover:text-slate-900 dark:group-hover:text-white transition-colors">Alterar Senha</span>
+                  <div class="space-y-0.5">
+                    {% if current_user.is_admin %}
+                    <button type="button" onclick="openOnlineUsersModal(); closeUserDropdown();" 
+                            class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-left group">
+                      <div class="flex items-center gap-2.5">
+                        <i class="fa-solid fa-users-viewfinder text-slate-400 group-hover:text-blue-500 w-4 text-center transition-colors"></i>
+                        <span class="font-semibold text-slate-800 dark:text-slate-100">Usuários Online</span>
                       </div>
-                      <i class="fa-solid fa-chevron-right text-[9px] text-slate-300 dark:text-slate-600 group-hover:translate-x-0.5 transition-transform"></i>
+                      <span id="topbar-online-badge" class="px-1.5 py-0.5 text-[9px] font-bold rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                        -- on
+                      </span>
+                    </button>
+                    {% endif %}
+
+                    <button type="button" onclick="openModal('modalSenha'); closeUserDropdown();" 
+                            class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-left">
+                      <div class="flex items-center gap-2.5">
+                        <i class="fa-solid fa-key text-slate-400 w-4 text-center"></i>
+                        <span>Alterar Senha</span>
+                      </div>
                     </button>
 
                     <button type="button" onclick="document.getElementById('btnTheme').click();" 
-                            class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-900/5 dark:hover:bg-white/5 transition-all duration-200 group text-left">
-                      <div class="flex items-center gap-3">
-                        <div class="w-7 h-7 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-500 group-hover:scale-110 transition-transform">
-                          <i class="fa-solid fa-circle-half-stroke text-xs"></i>
-                        </div>
-                        <span class="group-hover:text-slate-900 dark:group-hover:text-white transition-colors">Alternar Tema</span>
+                            class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-left">
+                      <div class="flex items-center gap-2.5">
+                        <i class="fa-solid fa-circle-half-stroke text-slate-400 w-4 text-center"></i>
+                        <span>Alternar Tema</span>
                       </div>
-                      <i class="fa-solid fa-chevron-right text-[9px] text-slate-300 dark:text-slate-600 group-hover:translate-x-0.5 transition-transform"></i>
                     </button>
 
                     <button type="button" onclick="toggleHelp(); closeUserDropdown();" 
-                            class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-900/5 dark:hover:bg-white/5 transition-all duration-200 group text-left">
-                      <div class="flex items-center gap-3">
-                        <div class="w-7 h-7 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-500 group-hover:scale-110 transition-transform">
-                          <i class="fa-solid fa-circle-question text-xs"></i>
-                        </div>
-                        <span class="group-hover:text-slate-900 dark:group-hover:text-white transition-colors">Ajuda & Manuais</span>
+                            class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-left">
+                      <div class="flex items-center gap-2.5">
+                        <i class="fa-solid fa-circle-question text-slate-400 w-4 text-center"></i>
+                        <span>Ajuda & Manuais</span>
                       </div>
-                      <i class="fa-solid fa-chevron-right text-[9px] text-slate-300 dark:text-slate-600 group-hover:translate-x-0.5 transition-transform"></i>
                     </button>
 
-                    <div class="my-1 border-t border-slate-100 dark:border-white/5"></div>
+                    <div class="my-1 border-t border-slate-100 dark:border-slate-800"></div>
 
                     <a href="{{ url_for('logout') }}" 
-                       class="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-bold text-red-500 hover:bg-red-500/10 transition-all duration-200 group">
-                      <div class="flex items-center gap-3">
-                        <div class="w-7 h-7 rounded-lg bg-red-500/10 flex items-center justify-center text-red-500 group-hover:scale-110 transition-transform">
-                          <i class="fa-solid fa-right-from-bracket text-xs"></i>
-                        </div>
-                        <span class="group-hover:font-extrabold transition-all">Sair da Conta</span>
+                       class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors">
+                      <div class="flex items-center gap-2.5">
+                        <i class="fa-solid fa-right-from-bracket w-4 text-center"></i>
+                        <span>Sair da Conta</span>
                       </div>
-                      <i class="fa-solid fa-arrow-right text-[10px] text-red-400 group-hover:translate-x-1 transition-transform"></i>
                     </a>
                   </div>
 
@@ -1367,8 +922,7 @@
         </header>
         {% endif %}
 
-        <main class="{% if hide_header %}p-0 h-screen overflow-hidden{% else %}p-4 md:p-6 lg:p-10{% endif %}">
-
+        <main class="{% if hide_header %}p-0 h-screen overflow-hidden{% else %}p-4 md:p-6 lg:p-8{% endif %}">
           {% block content %}{% endblock %}
         </main>
       </div>
@@ -1376,28 +930,28 @@
 
     <!-- ✅ MODAL SENHA -->
     {% if current_user.is_authenticated %}
-    <div id="modalSenha" class="fixed inset-0 hidden items-center justify-center z-[100]">
-      <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="closeModal('modalSenha')"></div>
-      <div class="relative w-[92%] max-w-md rounded-3xl border shadow-2xl p-8 bg-white dark:bg-slate-900 border-slate-900/10 dark:border-white/10">
-        <h3 class="text-2xl font-black text-slate-900 dark:text-white mb-2">Segurança</h3>
-        <p class="text-sm text-slate-500 dark:text-gray-400 mb-6">Atualize sua senha de acesso ao sistema.</p>
+    <div id="modalSenha" class="fixed inset-0 hidden items-center justify-center z-[100] p-4">
+      <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onclick="closeModal('modalSenha')"></div>
+      <div class="relative w-full max-w-md rounded-2xl border shadow-2xl p-6 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800">
+        <h3 class="text-xl font-bold text-slate-900 dark:text-white mb-1">Segurança da Conta</h3>
+        <p class="text-xs text-slate-500 dark:text-slate-400 mb-5">Atualize sua senha de acesso ao sistema.</p>
         
-        <form method="post" action="{{ url_for('perfil_alterar_senha') }}" class="space-y-4">
+        <form method="post" action="{{ url_for('perfil_alterar_senha') }}" class="space-y-3.5">
           <div>
-            <label class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2 block">Senha Atual</label>
-            <input id="current_password" type="password" name="current_password" required class="w-full rounded-2xl px-4 py-3 border bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white border-slate-900/5 dark:border-white/5 outline-none focus:ring-4 focus:ring-blue-500/20 transition-all">
+            <label class="text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5 block">Senha Atual</label>
+            <input id="current_password" type="password" name="current_password" required class="w-full rounded-xl px-3.5 py-2.5 border bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white border-slate-200 dark:border-slate-700 outline-none focus:border-slate-900 dark:focus:border-white focus:ring-1 focus:ring-slate-900 dark:focus:ring-white transition-all text-sm">
           </div>
           <div>
-            <label class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2 block">Nova Senha</label>
-            <input id="new_password" type="password" name="new_password" minlength="6" required class="w-full rounded-2xl px-4 py-3 border bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white border-slate-900/5 dark:border-white/5 outline-none focus:ring-4 focus:ring-blue-500/20 transition-all">
+            <label class="text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5 block">Nova Senha</label>
+            <input id="new_password" type="password" name="new_password" minlength="6" required class="w-full rounded-xl px-3.5 py-2.5 border bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white border-slate-200 dark:border-slate-700 outline-none focus:border-slate-900 dark:focus:border-white focus:ring-1 focus:ring-slate-900 dark:focus:ring-white transition-all text-sm">
           </div>
           <div>
-            <label class="text-xs font-bold uppercase tracking-widest text-slate-400 mb-2 block">Confirmar Nova Senha</label>
-            <input id="confirm_password" type="password" name="confirm_password" minlength="6" required class="w-full rounded-2xl px-4 py-3 border bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white border-slate-900/5 dark:border-white/5 outline-none focus:ring-4 focus:ring-blue-500/20 transition-all">
+            <label class="text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5 block">Confirmar Nova Senha</label>
+            <input id="confirm_password" type="password" name="confirm_password" minlength="6" required class="w-full rounded-xl px-3.5 py-2.5 border bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white border-slate-200 dark:border-slate-700 outline-none focus:border-slate-900 dark:focus:border-white focus:ring-1 focus:ring-slate-900 dark:focus:ring-white transition-all text-sm">
           </div>
-          <div class="flex gap-3 pt-4">
-            <button type="button" onclick="closeModal('modalSenha')" class="flex-1 py-3 text-sm font-bold text-slate-400 hover:text-slate-600 transition-colors">Cancelar</button>
-            <button type="submit" class="flex-[2] bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold shadow-xl shadow-blue-500/40 transition-all active:scale(0.95)">Salvar Alterações</button>
+          <div class="flex gap-2.5 pt-3">
+            <button type="button" onclick="closeModal('modalSenha')" class="flex-1 py-2.5 text-xs font-semibold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white transition-colors">Cancelar</button>
+            <button type="submit" class="flex-[2] bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 rounded-xl font-semibold text-xs py-2.5 shadow-sm transition-all">Salvar Alterações</button>
           </div>
         </form>
       </div>
@@ -1411,19 +965,19 @@
         if (!container) return;
         
         const toast = document.createElement('div');
-        toast.className = `toast toast-${type} shadow-2xl relative overflow-hidden`;
+        toast.className = `toast toast-${type} relative overflow-hidden`;
         
         const icons = {
             'success': 'fa-circle-check text-emerald-500',
-            'error': 'fa-circle-xmark text-red-500',
+            'error': 'fa-circle-xmark text-rose-500',
             'info': 'fa-circle-info text-blue-500',
             'warning': 'fa-circle-exclamation text-amber-500'
         };
         const icon = icons[type] || icons.info;
         
         toast.innerHTML = `
-          <i class="fa-solid ${icon} text-lg"></i>
-          <span class="text-sm font-bold text-slate-800 dark:text-white">${message}</span>
+          <i class="fa-solid ${icon} text-base"></i>
+          <span class="text-xs font-semibold text-slate-800 dark:text-white">${message}</span>
           <div class="toast-progress">
             <div class="toast-progress-bar"></div>
           </div>
@@ -1434,7 +988,7 @@
         
         setTimeout(() => {
           toast.classList.remove('show');
-          setTimeout(() => toast.remove(), 400);
+          setTimeout(() => toast.remove(), 350);
         }, 4000);
       }
 
@@ -1451,7 +1005,7 @@
         {% endif %}
       {% endwith %}
 
-      // Sidebar Logic
+      // Sidebar Mobile Logic
       (function() {
         const sidebar = document.getElementById('sidebar');
         const btnMobile = document.getElementById('btnMobileToggle');
@@ -1461,7 +1015,7 @@
         if (btnMobile) btnMobile.addEventListener('click', () => sidebar.classList.toggle('mobile-open'));
         
         document.addEventListener('click', (e) => {
-          if (window.innerWidth <= 1024 && !sidebar.contains(e.target) && !btnMobile.contains(e.target)) {
+          if (window.innerWidth <= 1024 && !sidebar.contains(e.target) && !btnMobile?.contains(e.target)) {
             sidebar.classList.remove('mobile-open');
           }
         });
@@ -1530,7 +1084,7 @@
         const btn = document.getElementById("btnTheme");
         const icon = document.getElementById("themeIcon");
         function isDark() { return document.documentElement.classList.contains("dark"); }
-        function sync() { if(icon) icon.className = isDark() ? "fa-solid fa-sun w-5 text-center" : "fa-solid fa-moon w-5 text-center"; }
+        function sync() { if(icon) icon.className = isDark() ? "fa-solid fa-sun w-4 text-center text-sm" : "fa-solid fa-moon w-4 text-center text-sm"; }
         sync();
         if(btn) btn.addEventListener("click", () => {
           const next = isDark() ? "light" : "dark";
@@ -1555,36 +1109,27 @@
             if (tempMobileEl) tempMobileEl.textContent = temp + '°C';
             
             const iconEl = document.getElementById('weather-icon');
-            const boxEl = document.getElementById('weather-icon-box');
-            
-            if (iconEl && boxEl) {
-              // Mapeamento simples de weathercode (WMO)
+            if (iconEl) {
               if (code === 0) {
-                iconEl.className = 'fa-solid fa-sun text-sm';
-                boxEl.className = 'w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-500';
+                iconEl.className = 'fa-solid fa-sun text-xs text-amber-500';
               } else if (code <= 3) {
-                iconEl.className = 'fa-solid fa-cloud-sun text-sm';
-                boxEl.className = 'w-8 h-8 rounded-lg bg-blue-400/10 flex items-center justify-center text-blue-400';
+                iconEl.className = 'fa-solid fa-cloud-sun text-xs text-amber-400';
               } else if (code <= 48) {
-                iconEl.className = 'fa-solid fa-cloud text-sm';
-                boxEl.className = 'w-8 h-8 rounded-lg bg-slate-400/10 flex items-center justify-center text-slate-400';
+                iconEl.className = 'fa-solid fa-cloud text-xs text-slate-400';
               } else if (code <= 67) {
-                iconEl.className = 'fa-solid fa-cloud-showers-heavy text-sm';
-                boxEl.className = 'w-8 h-8 rounded-lg bg-indigo-400/10 flex items-center justify-center text-indigo-400';
+                iconEl.className = 'fa-solid fa-cloud-showers-heavy text-xs text-blue-500';
               } else {
-                iconEl.className = 'fa-solid fa-cloud-bolt text-sm';
-                boxEl.className = 'w-8 h-8 rounded-lg bg-red-400/10 flex items-center justify-center text-red-400';
+                iconEl.className = 'fa-solid fa-cloud-bolt text-xs text-indigo-500';
               }
             }
           }
         } catch (e) {
-          console.error("Erro ao carregar o clima de Seropédica:", e);
+          console.error("Erro ao carregar o clima:", e);
         }
       }
 
-      // Ciclo de vida do clima
       updateWeather();
-      setInterval(updateWeather, 900000); // Atualiza a cada 15 minutos
+      setInterval(updateWeather, 900000);
 
       // ✅ GESTÃO DE NOTIFICAÇÕES (DRAWER E BADGE)
       function toggleNotifications() {
@@ -1608,9 +1153,9 @@
         if (!list) return;
         
         list.innerHTML = `
-          <div class="text-center py-20">
-            <div class="animate-spin inline-block w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full mb-4"></div>
-            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Carregando...</p>
+          <div class="text-center py-16">
+            <div class="animate-spin inline-block w-5 h-5 border-2 border-slate-400 border-t-transparent rounded-full mb-3"></div>
+            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Carregando...</p>
           </div>
         `;
         
@@ -1621,40 +1166,40 @@
             updateNotifBadge(data.unread_count);
             if (data.notifications.length === 0) {
               list.innerHTML = `
-                <div class="text-center py-20">
-                  <div class="w-12 h-12 rounded-2xl bg-slate-500/5 flex items-center justify-center text-slate-400 mx-auto mb-4">
-                    <i class="fa-solid fa-bell-slash text-lg"></i>
+                <div class="text-center py-16">
+                  <div class="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400 mx-auto mb-3">
+                    <i class="fa-regular fa-bell-slash text-sm"></i>
                   </div>
-                  <p class="text-xs font-bold text-slate-400">Nenhum comunicado recente</p>
+                  <p class="text-xs font-semibold text-slate-500 dark:text-slate-400">Nenhum comunicado recente</p>
                 </div>
               `;
               return;
             }
             
             list.innerHTML = data.notifications.map(n => `
-              <div onclick="markAsRead(${n.id}, this)" class="p-4 rounded-2xl border transition-all cursor-pointer relative overflow-hidden group ${
+              <div onclick="markAsRead(${n.id}, this)" class="p-3.5 rounded-xl border transition-all cursor-pointer relative overflow-hidden group ${
                 n.is_read 
-                  ? 'bg-slate-500/5 border-slate-900/5 dark:border-white/5 opacity-75 hover:opacity-100' 
-                  : 'bg-blue-500/5 border-blue-500/10 hover:bg-blue-500/10'
+                  ? 'bg-slate-50/50 dark:bg-slate-800/40 border-slate-200/60 dark:border-slate-800/60 opacity-80 hover:opacity-100' 
+                  : 'bg-blue-50/60 dark:bg-blue-950/30 border-blue-200/60 dark:border-blue-800/40 hover:bg-blue-50 dark:hover:bg-blue-950/50'
               }">
-                ${!n.is_read ? '<span class="absolute top-4 right-4 w-2 h-2 rounded-full bg-blue-500"></span>' : ''}
+                ${!n.is_read ? '<span class="absolute top-3 right-3 w-2 h-2 rounded-full bg-blue-600"></span>' : ''}
                 <div class="flex items-center gap-2 mb-1">
-                  <span class="text-[9px] font-black px-2 py-0.5 rounded-full ${
-                    n.is_read ? 'bg-slate-500/10 text-slate-500' : 'bg-blue-500/10 text-blue-500'
-                  } uppercase tracking-wider">${n.sender}</span>
-                  <span class="text-[10px] font-bold text-slate-400">${n.created_at}</span>
+                  <span class="text-[9px] font-bold px-1.5 py-0.5 rounded ${
+                    n.is_read ? 'bg-slate-200/60 dark:bg-slate-700 text-slate-600 dark:text-slate-300' : 'bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300'
+                  } uppercase tracking-wide">${n.sender}</span>
+                  <span class="text-[10px] text-slate-400">${n.created_at}</span>
                 </div>
-                <h4 class="text-sm font-black text-slate-900 dark:text-white mb-1 group-hover:text-blue-500 transition-colors">${n.title}</h4>
-                <p class="text-xs text-slate-500 dark:text-slate-400 whitespace-pre-wrap mt-1 leading-relaxed">${n.message}</p>
+                <h4 class="text-xs font-bold text-slate-900 dark:text-white mb-0.5">${n.title}</h4>
+                <p class="text-xs text-slate-600 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">${n.message}</p>
               </div>
             `).join('');
           }
         } catch (e) {
           console.error("Erro ao carregar notificações:", e);
           list.innerHTML = `
-            <div class="text-center py-20 text-red-500">
-              <i class="fa-solid fa-triangle-exclamation text-2xl mb-2"></i>
-              <p class="text-xs font-bold">Falha ao carregar notificações</p>
+            <div class="text-center py-16 text-rose-500">
+              <i class="fa-solid fa-triangle-exclamation text-xl mb-2"></i>
+              <p class="text-xs font-semibold">Falha ao carregar notificações</p>
             </div>
           `;
         }
@@ -1664,12 +1209,10 @@
         try {
           const res = await fetch(`/api/comunicados/${id}/read`, { method: 'POST' });
           if (res.ok) {
-            element.classList.remove('bg-blue-500/5', 'border-blue-500/10');
-            element.classList.add('bg-slate-500/5', 'border-slate-900/5', 'dark:border-white/5', 'opacity-75');
-            const dot = element.querySelector('.bg-blue-500');
+            element.classList.remove('bg-blue-50/60', 'dark:bg-blue-950/30', 'border-blue-200/60', 'dark:border-blue-800/40');
+            element.classList.add('bg-slate-50/50', 'dark:bg-slate-800/40', 'border-slate-200/60', 'dark:border-slate-800/60', 'opacity-80');
+            const dot = element.querySelector('.bg-blue-600');
             if (dot) dot.remove();
-            
-            // Recarrega badge
             fetchNotifCount();
           }
         } catch (e) {
@@ -1712,9 +1255,9 @@
         if (!content) return;
         
         content.innerHTML = `
-          <div class="text-center py-10">
-            <div class="animate-spin inline-block w-6 h-6 border-2 border-slate-500 border-t-transparent rounded-full mb-4"></div>
-            <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Carregando manual...</p>
+          <div class="text-center py-8">
+            <div class="animate-spin inline-block w-5 h-5 border-2 border-slate-400 border-t-transparent rounded-full mb-3"></div>
+            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Carregando manual...</p>
           </div>
         `;
         
@@ -1727,15 +1270,13 @@
         } catch (e) {
           console.error("Erro ao carregar manual:", e);
           content.innerHTML = `
-            <div class="text-center py-10 text-red-500">
-              <i class="fa-solid fa-triangle-exclamation text-2xl mb-2"></i>
-              <p class="text-xs font-bold">Falha ao carregar manual</p>
+            <div class="text-center py-8 text-rose-500">
+              <i class="fa-solid fa-triangle-exclamation text-xl mb-2"></i>
+              <p class="text-xs font-semibold">Falha ao carregar manual</p>
             </div>
           `;
         }
       }
-
-
 
       // ✅ USER DROPDOWN TOGGLE
       function toggleUserDropdown(event) {
@@ -1767,60 +1308,323 @@
         }
       });
 
-      // Inicializa na carga da página
+      // ✅ USER ONLINE MONITORING & HEARTBEAT (ADMIN & ALL LOGGED USERS)
+      let onlineUsersData = [];
+      let currentOnlineFilter = 'all';
+
+      async function sendHeartbeat() {
+        try {
+          await fetch('/api/user/heartbeat', { method: 'POST' });
+        } catch (e) {}
+      }
+
+      async function fetchOnlineUsersCount() {
+        {% if current_user.is_admin %}
+        try {
+          const res = await fetch('/api/admin/online-users');
+          const data = await res.json();
+          if (data && data.success) {
+            const badge = document.getElementById('topbar-online-badge');
+            if (badge) {
+              badge.textContent = `${data.online_count} on`;
+            }
+          }
+        } catch (e) {}
+        {% endif %}
+      }
+
+      function openOnlineUsersModal() {
+        openModal('modalOnlineUsers');
+        loadOnlineUsersList();
+      }
+
+      async function loadOnlineUsersList() {
+        const listEl = document.getElementById('online-users-list');
+        const kpiOnline = document.getElementById('kpi-online-count');
+        const kpiTotal = document.getElementById('kpi-total-users');
+        const kpiToday = document.getElementById('kpi-today-access');
+
+        if (!listEl) return;
+
+        listEl.innerHTML = `
+          <div class="text-center py-12">
+            <div class="animate-spin inline-block w-6 h-6 border-2 border-slate-400 border-t-transparent rounded-full mb-3"></div>
+            <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Carregando acessos...</p>
+          </div>
+        `;
+
+        try {
+          const res = await fetch('/api/admin/online-users');
+          const data = await res.json();
+          if (data && data.success) {
+            onlineUsersData = data.users || [];
+            
+            if (kpiOnline) kpiOnline.textContent = data.online_count;
+            if (kpiTotal) kpiTotal.textContent = data.total_count;
+            if (kpiToday) kpiToday.textContent = data.today_count;
+
+            const badge = document.getElementById('topbar-online-badge');
+            if (badge) badge.textContent = `${data.online_count} on`;
+
+            renderOnlineUsersTable();
+          } else {
+            listEl.innerHTML = `
+              <div class="text-center py-10 text-rose-500">
+                <i class="fa-solid fa-triangle-exclamation text-xl mb-2"></i>
+                <p class="text-xs font-semibold">${data.error || 'Erro ao carregar dados.'}</p>
+              </div>
+            `;
+          }
+        } catch (e) {
+          listEl.innerHTML = `
+            <div class="text-center py-10 text-rose-500">
+              <i class="fa-solid fa-triangle-exclamation text-xl mb-2"></i>
+              <p class="text-xs font-semibold">Falha ao buscar usuários.</p>
+            </div>
+          `;
+        }
+      }
+
+      function setOnlineUsersFilter(filter, btn) {
+        currentOnlineFilter = filter;
+        document.querySelectorAll('.online-filter-btn').forEach(b => {
+          b.classList.remove('bg-slate-900', 'text-white', 'dark:bg-white', 'dark:text-slate-900');
+          b.classList.add('bg-slate-100', 'text-slate-600', 'dark:bg-slate-800', 'dark:text-slate-300');
+        });
+        if (btn) {
+          btn.classList.remove('bg-slate-100', 'text-slate-600', 'dark:bg-slate-800', 'dark:text-slate-300');
+          btn.classList.add('bg-slate-900', 'text-white', 'dark:bg-white', 'dark:text-slate-900');
+        }
+        renderOnlineUsersTable();
+      }
+
+      function renderOnlineUsersTable() {
+        const listEl = document.getElementById('online-users-list');
+        const searchInput = document.getElementById('online-users-search');
+        const query = (searchInput ? searchInput.value : '').toLowerCase().trim();
+
+        if (!listEl) return;
+
+        let filtered = onlineUsersData.filter(u => {
+          const matchQuery = !query || u.username.toLowerCase().includes(query) || (u.role && u.role.toLowerCase().includes(query));
+          if (!matchQuery) return false;
+
+          if (currentOnlineFilter === 'online') return u.is_online;
+          if (currentOnlineFilter === 'offline') return !u.is_online;
+          if (currentOnlineFilter === 'admin') return u.role && u.role.toLowerCase() === 'admin';
+          return true;
+        });
+
+        if (filtered.length === 0) {
+          listEl.innerHTML = `
+            <div class="text-center py-10 text-slate-400">
+              <i class="fa-regular fa-user-slash text-2xl mb-2"></i>
+              <p class="text-xs font-medium">Nenhum usuário encontrado com os filtros atuais.</p>
+            </div>
+          `;
+          return;
+        }
+
+        listEl.innerHTML = `
+          <div class="divide-y divide-slate-100 dark:divide-slate-800/80">
+            ${filtered.map(u => `
+              <div class="py-3 px-3.5 flex items-center justify-between hover:bg-slate-50/70 dark:hover:bg-slate-800/40 rounded-xl transition-colors">
+                <div class="flex items-center gap-3 min-w-0">
+                  <div class="relative shrink-0">
+                    <div class="w-9 h-9 rounded-lg bg-slate-800 dark:bg-slate-700 text-white flex items-center justify-center text-xs font-bold shadow-sm">
+                      ${u.username ? u.username[0].toUpperCase() : 'U'}
+                    </div>
+                    <span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-white dark:border-slate-900 ${
+                      u.is_online ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'
+                    }"></span>
+                  </div>
+                  <div class="min-w-0">
+                    <div class="flex items-center gap-2">
+                      <span class="text-xs font-bold text-slate-800 dark:text-slate-100 uppercase truncate">${u.username}</span>
+                      ${u.is_current ? '<span class="px-1.5 py-0.2 text-[8px] font-bold uppercase rounded bg-blue-100 text-blue-700 dark:bg-blue-900/60 dark:text-blue-300">Você</span>' : ''}
+                    </div>
+                    <div class="text-[10px] text-slate-400 capitalize mt-0.5">${u.role || 'Usuário'}</div>
+                  </div>
+                </div>
+
+                <div class="flex items-center gap-4 shrink-0 text-right">
+                  <div class="hidden sm:block">
+                    <div class="text-[11px] font-semibold text-slate-700 dark:text-slate-200">${u.last_seen_relative}</div>
+                    <div class="text-[9px] text-slate-400">${u.last_seen}</div>
+                  </div>
+                  <div>
+                    ${u.is_online ? `
+                      <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/40">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                        Online
+                      </span>
+                    ` : `
+                      <span class="inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] font-medium bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400">
+                        Offline
+                      </span>
+                    `}
+                  </div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      }
+
       window.addEventListener('DOMContentLoaded', () => {
         fetchNotifCount();
-        setInterval(fetchNotifCount, 60000); // Atualiza a cada minuto
+        setInterval(fetchNotifCount, 60000);
+        
+        // Heartbeat para presença ativa
+        {% if current_user.is_authenticated %}
+        sendHeartbeat();
+        setInterval(sendHeartbeat, 60000);
+        {% endif %}
+
+        // Atualização de contagem para admin
+        {% if current_user.is_admin %}
+        fetchOnlineUsersCount();
+        setInterval(fetchOnlineUsersCount, 30000);
+        {% endif %}
       });
     </script>
 
     <!-- ✅ NOTIFICATION DRAWER -->
     <div id="drawer-overlay" onclick="toggleNotifications()"></div>
     <aside id="notification-drawer">
-        <div class="p-6 border-b border-slate-900/5 dark:border-white/5 flex items-center justify-between">
+        <div class="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
             <div>
-                <h3 class="text-xl font-black text-slate-900 dark:text-white tracking-tight">Notificações</h3>
-                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Últimos comunicados</p>
+                <h3 class="text-base font-bold text-slate-900 dark:text-white">Notificações</h3>
+                <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider mt-0.5">Últimos comunicados</p>
             </div>
-            <button onclick="toggleNotifications()" class="w-10 h-10 rounded-xl hover:bg-slate-900/5 dark:hover:bg-white/5 text-slate-400 transition-all">
-                <i class="fa-solid fa-xmark text-lg"></i>
+            <button onclick="toggleNotifications()" class="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 transition-colors">
+                <i class="fa-solid fa-xmark text-base"></i>
             </button>
         </div>
-        <div id="notif-list" class="p-4 space-y-3 overflow-y-auto h-[calc(100vh-100px)] custom-scrollbar">
-            <div class="text-center py-20">
-                <div class="animate-spin inline-block w-6 h-6 border-2 border-blue-500 border-t-transparent rounded-full mb-4"></div>
-                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Carregando...</p>
+        <div id="notif-list" class="p-4 space-y-2.5 overflow-y-auto h-[calc(100vh-80px)] custom-scrollbar">
+            <div class="text-center py-16">
+                <div class="animate-spin inline-block w-5 h-5 border-2 border-slate-400 border-t-transparent rounded-full mb-3"></div>
+                <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Carregando...</p>
             </div>
         </div>
     </aside>
 
     <!-- ✅ HELP MODAL -->
     <div id="modalHelp" class="fixed inset-0 hidden items-center justify-center z-[110] p-4">
-        <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="closeModal('modalHelp')"></div>
-        <div class="relative w-full max-w-2xl rounded-[2.5rem] bg-white dark:bg-slate-900 border border-slate-900/10 dark:border-white/10 shadow-2xl overflow-hidden">
-            <div class="p-8 border-b border-slate-900/5 dark:border-white/5 bg-slate-500/5 flex items-center justify-between">
-                <div class="flex items-center gap-4">
-                    <div class="w-12 h-12 rounded-2xl bg-slate-500/10 flex items-center justify-center text-slate-600">
-                        <i class="fa-solid fa-circle-info text-xl"></i>
+        <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onclick="closeModal('modalHelp')"></div>
+        <div class="relative w-full max-w-xl rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden">
+            <div class="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-300">
+                        <i class="fa-regular fa-circle-question text-sm"></i>
                     </div>
                     <div>
-                        <h3 class="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Manual de Operação</h3>
-                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Orientações para o seu perfil</p>
+                        <h3 class="text-base font-bold text-slate-900 dark:text-white">Manual de Operação</h3>
+                        <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Orientações para o seu perfil</p>
                     </div>
                 </div>
-                <button onclick="closeModal('modalHelp')" class="w-10 h-10 rounded-xl hover:bg-slate-900/5 dark:hover:bg-white/5 text-slate-400 transition-all">
-                    <i class="fa-solid fa-xmark text-lg"></i>
+                <button onclick="closeModal('modalHelp')" class="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 transition-colors">
+                    <i class="fa-solid fa-xmark text-base"></i>
                 </button>
             </div>
-            <div class="p-8 max-h-[60vh] overflow-y-auto custom-scrollbar">
-                <div id="help-content" class="text-sm text-slate-600 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">Carregando manuais...</div>
+            <div class="p-6 max-h-[60vh] overflow-y-auto custom-scrollbar">
+                <div id="help-content" class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed whitespace-pre-wrap">Carregando manuais...</div>
             </div>
-            <div class="p-6 bg-slate-50 dark:bg-white/5 border-t border-slate-900/5 dark:border-white/5 text-center">
-                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Em caso de dúvidas persistentes, entre em contato com o suporte.</p>
+            <div class="p-4 bg-slate-50 dark:bg-slate-800/40 border-t border-slate-100 dark:border-slate-800 text-center">
+                <p class="text-[11px] text-slate-400">Em caso de dúvidas persistentes, entre em contato com o suporte.</p>
             </div>
         </div>
     </div>
+
+    <!-- ✅ MODAL MONITORAMENTO DE USUÁRIOS ONLINE & ÚLTIMO ACESSO (ADMIN ONLY) -->
+    {% if current_user.is_admin %}
+    <div id="modalOnlineUsers" class="fixed inset-0 hidden items-center justify-center z-[110] p-4">
+      <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onclick="closeModal('modalOnlineUsers')"></div>
+      <div class="relative w-full max-w-2xl rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+        
+        <!-- Header -->
+        <div class="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between shrink-0">
+          <div class="flex items-center gap-3">
+            <div class="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-700 dark:text-slate-200 shadow-sm">
+              <i class="fa-solid fa-users-viewfinder text-sm"></i>
+            </div>
+            <div>
+              <h3 class="text-base font-bold text-slate-900 dark:text-white">Usuários Online & Acessos</h3>
+              <p class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Monitoramento em tempo real de atividade</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="loadOnlineUsersList()" title="Atualizar dados" class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 transition-colors">
+              <i class="fa-solid fa-rotate-right text-xs"></i>
+            </button>
+            <button onclick="closeModal('modalOnlineUsers')" class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 transition-colors">
+              <i class="fa-solid fa-xmark text-sm"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- KPI Summary Cards -->
+        <div class="grid grid-cols-3 gap-3 p-4 bg-slate-50/50 dark:bg-slate-800/30 border-b border-slate-100 dark:border-slate-800/80 shrink-0">
+          <div class="p-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-200/70 dark:border-slate-700/60 shadow-sm">
+            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Online Agora</div>
+            <div class="text-lg font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-2 mt-0.5">
+              <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span id="kpi-online-count">0</span>
+            </div>
+          </div>
+          <div class="p-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-200/70 dark:border-slate-700/60 shadow-sm">
+            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Ativos Hoje</div>
+            <div class="text-lg font-bold text-slate-800 dark:text-slate-100 mt-0.5" id="kpi-today-access">0</div>
+          </div>
+          <div class="p-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-200/70 dark:border-slate-700/60 shadow-sm">
+            <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Cadastrados</div>
+            <div class="text-lg font-bold text-slate-800 dark:text-slate-100 mt-0.5" id="kpi-total-users">0</div>
+          </div>
+        </div>
+
+        <!-- Search & Filter Controls -->
+        <div class="p-4 border-b border-slate-100 dark:border-slate-800 space-y-3 shrink-0">
+          <div class="relative">
+            <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-xs text-slate-400"></i>
+            <input type="text" id="online-users-search" oninput="renderOnlineUsersTable()" placeholder="Buscar por nome ou função..." class="w-full pl-9 pr-4 py-2 rounded-xl text-xs bg-slate-100/80 dark:bg-slate-800/80 border border-slate-200/70 dark:border-slate-700/70 text-slate-800 dark:text-white placeholder:text-slate-400 outline-none focus:border-slate-400 transition-colors">
+          </div>
+          
+          <div class="flex items-center gap-2 text-xs overflow-x-auto">
+            <button type="button" onclick="setOnlineUsersFilter('all', this)" class="online-filter-btn px-3 py-1.5 rounded-lg font-semibold bg-slate-900 text-white dark:bg-white dark:text-slate-900 transition-colors">
+              Todos
+            </button>
+            <button type="button" onclick="setOnlineUsersFilter('online', this)" class="online-filter-btn px-3 py-1.5 rounded-lg font-semibold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 hover:bg-slate-200 transition-colors">
+              🟢 Apenas Online
+            </button>
+            <button type="button" onclick="setOnlineUsersFilter('offline', this)" class="online-filter-btn px-3 py-1.5 rounded-lg font-semibold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 hover:bg-slate-200 transition-colors">
+              ⚪ Offline
+            </button>
+            <button type="button" onclick="setOnlineUsersFilter('admin', this)" class="online-filter-btn px-3 py-1.5 rounded-lg font-semibold bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300 hover:bg-slate-200 transition-colors">
+              Admins
+            </button>
+          </div>
+        </div>
+
+        <!-- Users List -->
+        <div id="online-users-list" class="p-3 overflow-y-auto flex-1 custom-scrollbar max-h-[45vh]">
+          <div class="text-center py-12">
+            <div class="animate-spin inline-block w-6 h-6 border-2 border-slate-400 border-t-transparent rounded-full mb-3"></div>
+            <p class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Carregando...</p>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="p-3 bg-slate-50 dark:bg-slate-800/40 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px] text-slate-400 shrink-0">
+          <span>Usuários com atividade nos últimos 5 minutos são listados como online.</span>
+          <button type="button" onclick="closeModal('modalOnlineUsers')" class="px-3 py-1.5 rounded-lg bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-200 font-semibold hover:bg-slate-300 transition-colors">
+            Fechar
+          </button>
+        </div>
+
+      </div>
+    </div>
+    {% endif %}
+
   </body>
 </html>
 
-{# accessibility helper: onkeydown= handler present #}

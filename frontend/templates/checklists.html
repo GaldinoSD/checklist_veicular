@@ -4,10 +4,7 @@
 
 <!-- ✅ HEADER PREMIUM CHECKLISTS COMPACT -->
 <div class="mb-8 animate-premium">
-    <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6 glass-premium p-6 rounded-[2rem] shadow-xl overflow-hidden relative">
-        <!-- Decorativos -->
-        <div class="absolute -top-24 -right-24 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl"></div>
-        <div class="absolute -bottom-24 -left-24 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl"></div>
+    <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-4 border-b border-slate-200 dark:border-white/5 mb-6">
 
         <div class="flex items-center gap-5 relative z-10">
             <div class="w-12 h-12 rounded-[1.25rem] bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-2xl shadow-blue-500/20">
@@ -37,7 +34,7 @@
             </form>
 
             <form method="post" action="{{ url_for('checklists_import') }}">
-                <button class="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-emerald-500/20 transition-all active:scale-95 flex items-center gap-2">
+                <button class="px-4 py-2 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 rounded-xl font-semibold text-xs shadow-sm transition-all flex items-center gap-2 cursor-pointer">
                     <i class="fa-solid fa-file-import text-xs"></i> Importar
                 </button>
             </form>
@@ -45,20 +42,20 @@
     </div>
 </div>
 
-<div class="card-premium p-6">
+<div class="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl shadow-sm overflow-hidden p-6">
 
   <!-- ======================= TABELA ======================= -->
-  <div class="overflow-x-auto rounded-lg">
-    <table class="min-w-full text-sm">
+  <div class="overflow-x-auto">
+    <table class="w-full text-left text-xs text-slate-600 dark:text-slate-300">
 
-      <thead>
-        <tr class="text-slate-600 dark:text-gray-300 border-b border-slate-900/10 dark:border-white/10 text-left">
-          <th class="px-4 py-2 w-40">Data</th>
-          <th class="px-4 py-2 w-32">Placa</th>
-          <th class="px-4 py-2 w-40">Técnico</th>
-          <th class="px-4 py-2 w-24 text-right">KM</th>
-          <th class="px-4 py-2 w-32">Status</th>
-          <th class="px-4 py-2 w-28 text-center">Detalhes</th>
+      <thead class="bg-slate-50/80 dark:bg-slate-800/80 border-b border-slate-200/80 dark:border-slate-800 text-[11px] font-extrabold text-slate-400 dark:text-slate-400 uppercase tracking-wider">
+        <tr>
+          <th class="px-6 py-4 w-40">Data</th>
+          <th class="px-4 py-4 w-32">Placa</th>
+          <th class="px-4 py-4 w-40">Técnico</th>
+          <th class="px-4 py-4 w-24 text-right">KM</th>
+          <th class="px-4 py-4 w-32">Status</th>
+          <th class="px-6 py-4 w-28 text-center">Detalhes</th>
         </tr>
       </thead>
 
@@ -110,15 +107,19 @@
 
             <!-- Tbody para o cabeçalho do grupo (sempre visível) -->
             <tbody>
-              <tr class="bg-slate-900/5 dark:bg-white/5 cursor-pointer hover:bg-slate-900/10 dark:hover:bg-white/10 transition-all select-none" 
+              <tr class="bg-slate-50/90 dark:bg-slate-800/90 border-y border-slate-200/80 dark:border-slate-800 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-all select-none" 
                   onclick="toggleMonthGroup({{ ns.group_index }})">
-                <td colspan="6" class="px-4 py-3 text-blue-700 dark:text-blue-300 font-black uppercase tracking-wider text-xs">
+                <td colspan="6" class="px-6 py-3.5 text-blue-700 dark:text-blue-300 font-extrabold uppercase tracking-wider text-xs">
                   <div class="flex items-center justify-between">
-                    <span class="flex items-center gap-2">
-                      <i class="fa-solid fa-calendar-days text-blue-500"></i>
-                      {{ grupo }}
+                    <span class="flex items-center gap-2.5">
+                      <div class="w-7 h-7 rounded-lg bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center border border-blue-200 dark:border-blue-900/50">
+                        <i class="fa-solid fa-calendar-days text-xs"></i>
+                      </div>
+                      <span>{{ grupo }}</span>
                     </span>
-                    <i id="chevron-group-{{ ns.group_index }}" class="fa-solid fa-chevron-down text-[10px] transition-transform duration-300 {% if ns.is_first %}rotate-180{% endif %}"></i>
+                    <div class="w-6 h-6 rounded-full bg-slate-200/60 dark:bg-slate-700/60 flex items-center justify-center text-slate-500 dark:text-slate-400">
+                      <i id="chevron-group-{{ ns.group_index }}" class="fa-solid fa-chevron-down text-[10px] transition-transform duration-300 {% if ns.is_first %}rotate-180{% endif %}"></i>
+                    </div>
                   </div>
                 </td>
               </tr>
@@ -131,56 +132,52 @@
             {% set ns.is_first = false %}
           {% endif %}
 
-          <tr class="border-b border-slate-900/10 dark:border-white/10 hover:bg-slate-900/5 dark:hover:bg-white/5 transition">
+          <tr class="border-b border-slate-200/80 dark:border-slate-800 hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition">
 
             <!-- Data -->
-            <td class="px-4 py-2 whitespace-nowrap">
+            <td class="px-6 py-4 whitespace-nowrap font-semibold">
               {{ c.date.strftime('%d/%m/%Y %H:%M') }}
             </td>
 
             <!-- Placa -->
-            <td class="px-4 py-2">
+            <td class="px-4 py-4 font-mono font-bold">
               {{ c.vehicle.plate if c.vehicle else '-' }}
             </td>
 
             <!-- Técnico -->
-            <td class="px-4 py-2">
+            <td class="px-4 py-4">
               {{ c.technician or '-' }}
             </td>
 
             <!-- KM - alinhado à direita -->
-            <td class="px-4 py-2 text-right">
+            <td class="px-4 py-4 text-right font-mono text-slate-500">
               {{ c.km }}
             </td>
 
             <!-- Status -->
-            <td class="px-4 py-2">
+            <td class="px-4 py-4">
               {% if c.status == 'OK' %}
-                <span class="px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider
-                            bg-emerald-100/80 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400
-                            border border-emerald-500/30">
-                  {{ c.status }}
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900/50">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> OK
                 </span>
               {% else %}
-                <span class="px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider
-                            bg-rose-100/80 dark:bg-rose-500/20 text-rose-700 dark:text-rose-400
-                            border border-rose-500/30">
-                  {{ c.status }}
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-900/50">
+                  <span class="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse"></span> {{ c.status }}
                 </span>
               {% endif %}
             </td>
 
             <!-- Detalhes -->
-            <td class="px-4 py-2 text-center">
-              <div class="flex items-center justify-center gap-3">
-                <button type="button" class="w-8 h-8 flex items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 hover:bg-blue-500 hover:text-white transition-all shadow-sm"
+            <td class="px-6 py-4 text-center whitespace-nowrap">
+              <div class="flex items-center justify-center gap-2">
+                <button type="button" class="px-2.5 py-1.5 text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800 font-semibold rounded-lg transition text-xs inline-flex items-center gap-1.5 cursor-pointer"
                    onclick="showChecklistDetail({{ c.id }})" title="Ver Detalhes">
-                   <i class="fa-solid fa-eye text-sm"></i>
+                   <i class="fa-solid fa-eye text-[11px]"></i> Ver
                 </button>
                 
                 <form action="{{ url_for('checklist_delete', cid=c.id) }}" method="POST" onsubmit="return confirm('Tem certeza que deseja excluir este checklist?');">
-                  <button type="submit" class="w-8 h-8 flex items-center justify-center rounded-xl bg-rose-500/10 text-rose-600 hover:bg-rose-500 hover:text-white transition-all shadow-sm" title="Excluir">
-                    <i class="fa-solid fa-trash-can text-sm"></i>
+                  <button type="submit" class="p-1.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition cursor-pointer" title="Excluir">
+                    <i class="fa-solid fa-trash-can text-xs"></i>
                   </button>
                 </form>
               </div>

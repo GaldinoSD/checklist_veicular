@@ -897,3 +897,72 @@ def calculate_power_budget():
         }
     })
 
+
+# ==============================================================================
+# 💡 API REST: PROJETOS DE REDE (Network Projects)
+# ==============================================================================
+@network_bp.route("/api/network/projects", methods=["GET"])
+@login_required
+def get_network_projects():
+    if not current_user.has_permission("gestao_mapas"):
+        return jsonify({"error": "Unauthorized"}), 403
+    projects = NetworkProject.query.order_by(NetworkProject.id.desc()).all()
+    return jsonify({
+        "success": True,
+        "projects": [{
+            "id": p.id,
+            "name": p.name,
+            "description": p.description,
+            "status": p.status,
+            "created_at": p.created_at.strftime("%d/%m/%Y %H:%M") if p.created_at else None
+        } for p in projects]
+    })
+
+
+@network_bp.route("/api/network/projects", methods=["POST"])
+@login_required
+def create_network_project():
+    if not current_user.has_permission("gestao_mapas"):
+        return jsonify({"error": "Unauthorized"}), 403
+    data = _req_json()
+    name = data.get("name", "").strip()
+    description = data.get("description", "").strip()
+    if not name:
+        return jsonify({"success": False, "error": "Nome do projeto é obrigatório."}), 400
+    
+    project = NetworkProject(
+        name=name,
+        description=description,
+        status="planning",
+        created_by=current_user.id
+    )
+    db.session.add(project)
+    db.session.commit()
+    
+    return jsonify({
+        "success": True,
+        "project": {
+            "id": project.id,
+            "name": project.name,
+            "description": project.description,
+            "status": project.status,
+            "created_at": project.created_at.strftime("%d/%m/%Y %H:%M") if project.created_at else None
+        }
+    })
+
+
+@network_bp.route("/api/network/projects/<int:project_id>", methods=["DELETE"])
+@login_required
+def delete_network_project(project_id):
+    if not current_user.has_permission("gestao_mapas"):
+        return jsonify({"error": "Unauthorized"}), 403
+    
+    project = NetworkProject.query.get(project_id)
+    if not project:
+        return jsonify({"success": False, "error": "Projeto não encontrado."}), 404
+        
+    db.session.delete(project)
+    db.session.commit()
+    return jsonify({"success": True})
+
+

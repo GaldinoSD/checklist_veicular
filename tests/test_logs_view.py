@@ -16,15 +16,12 @@ class TestLogsView(unittest.TestCase):
             
             # 3. Testar a presença dos novos componentes de Terminal CLI no HTML gerado
             checks = {
-                "Fira Code Font Link": "fonts.googleapis.com/css2?family=Fira+Code",
-                "Terminal CSS Style classes": "glass-terminal",
-                "Windows buttons mockup": "bg-rose-500/80 inline-block",
-                "Boot Information mockup": "CHECKLIST-VEICULAR [Version 2.5.0]",
-                "CLI Flag label for Period": "--period",
-                "CLI Flag label for Search": "--search",
-                "Dynamic command line simulator": "cliCmdDisplay",
-                "Blinking Shell Cursor": "animate-blink",
-                "Grep display output": "grep -i"
+                "Page Title": "Auditoria",
+                "Search input field": 'id="filtro"',
+                "Date Period input field": 'id="periodo"',
+                "Table Body ID": 'id="tbodyLogs"',
+                "Total Logs badge": "Total de Logs",
+                "Table header cell": "Descrição da Ação"
             }
               
             for name, query in checks.items():

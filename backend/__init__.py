@@ -89,6 +89,23 @@ def create_app():
             if not session_token or not token or token != session_token:
                 abort(400, description="CSRF token missing or invalid.")
 
+    @app.before_request
+    def update_user_activity():
+        """Atualiza a última atividade e IP do usuário logado."""
+        if current_user.is_authenticated:
+            if request.path.startswith('/static/'):
+                return
+            from backend.utils import agora
+            now = agora()
+            # Atualiza apenas se last_seen for nulo ou há mais de 45 segundos para poupar o banco
+            if not current_user.last_seen or (now - current_user.last_seen).total_seconds() > 45:
+                try:
+                    current_user.last_seen = now
+                    current_user.last_ip = request.remote_addr
+                    db.session.commit()
+                except Exception:
+                    db.session.rollback()
+
     # ==========================================
     # FILTROS DE TEMPLATE JINJA2
     # ==========================================
@@ -181,6 +198,9 @@ def create_app():
         """Garante as migrações leves no PostgreSQL."""
         stmts = [
             text('ALTER TABLE "user" ADD COLUMN IF NOT EXISTS role VARCHAR(20)'),
+            text('ALTER TABLE "user" ADD COLUMN IF NOT EXISTS last_login TIMESTAMP'),
+            text('ALTER TABLE "user" ADD COLUMN IF NOT EXISTS last_seen TIMESTAMP'),
+            text('ALTER TABLE "user" ADD COLUMN IF NOT EXISTS last_ip VARCHAR(45)'),
             text('ALTER TABLE vehicle ADD COLUMN IF NOT EXISTS type VARCHAR(20) DEFAULT \'carro\''),
             text('ALTER TABLE vehicle ADD COLUMN IF NOT EXISTS driver_id INTEGER REFERENCES "user"(id)'),
             text('ALTER TABLE vehicle ADD COLUMN IF NOT EXISTS map_icon VARCHAR(50) DEFAULT \'fa-location-arrow\''),

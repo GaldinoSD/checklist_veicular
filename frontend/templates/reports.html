@@ -4,10 +4,7 @@
 
 <!-- ✅ HEADER PREMIUM RELATÓRIOS COMPACT -->
 <div class="mb-8 animate-premium">
-    <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-6 glass-premium p-6 rounded-[2rem] shadow-xl overflow-hidden relative">
-        <!-- Decorativos -->
-        <div class="absolute -top-24 -right-24 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl"></div>
-        <div class="absolute -bottom-24 -left-24 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl"></div>
+    <div class="flex flex-col xl:flex-row xl:items-center justify-between gap-6 pb-4 border-b border-slate-200 dark:border-white/5 mb-6">
 
         <div class="flex items-center gap-5 relative z-10">
             <div class="w-12 h-12 rounded-[1.25rem] bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-2xl shadow-blue-500/20">
@@ -43,24 +40,24 @@
     </div>
 </div>
 
-<div class="card-premium p-6">
-  <h3 class="text-sm font-black text-slate-800 dark:text-white uppercase tracking-wider mb-6">Arquivos Gerados</h3>
-
-  <div class="h-px bg-slate-900/10 dark:bg-white/10 mb-8"></div>
-
-  <h2 class="text-lg font-semibold mb-4 text-slate-900 dark:text-white">Arquivos Gerados</h2>
+<div class="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl shadow-sm overflow-hidden p-6">
+  <div class="p-4 border-b border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 flex items-center justify-between mb-6 rounded-2xl">
+    <h3 class="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-2">
+      <i class="fa-solid fa-file-pdf text-blue-500"></i> Arquivos Gerados
+    </h3>
+  </div>
 
   {% set ns = namespace(last_group=None) %}
 
-  <div class="overflow-x-auto rounded-lg">
-    <table class="min-w-full text-sm">
+  <div class="overflow-x-auto">
+    <table class="w-full text-left text-xs text-slate-600 dark:text-slate-300">
 
-      <thead>
-        <tr class="text-slate-600 dark:text-gray-300 border-b border-slate-900/10 dark:border-white/10 text-left">
-          <th class="px-4 py-2 w-[45%]">Nome</th>
-          <th class="px-4 py-2 w-[15%] text-right">Tamanho</th>
-          <th class="px-4 py-2 w-[20%]">Modificado</th>
-          <th class="px-4 py-2 w-[20%] text-center">Ações</th>
+      <thead class="bg-slate-50/80 dark:bg-slate-800/80 border-b border-slate-200/80 dark:border-slate-800 text-[11px] font-extrabold text-slate-400 dark:text-slate-400 uppercase tracking-wider">
+        <tr>
+          <th class="px-6 py-4 w-[45%]">Nome</th>
+          <th class="px-4 py-4 w-[15%] text-right">Tamanho</th>
+          <th class="px-4 py-4 w-[20%]">Modificado</th>
+          <th class="px-6 py-4 w-[20%] text-center">Ações</th>
         </tr>
       </thead>
 
@@ -82,41 +79,46 @@
 
         {# SOMENTE MOSTRA O BLOCO SE O MÊS MUDAR #}
         {% if grupo != ns.last_group %}
-          <tr class="bg-slate-900/5 dark:bg-white/5">
-            <td colspan="4" class="px-4 py-2 text-blue-700 dark:text-blue-300 font-semibold uppercase tracking-wide">
-              📁 {{ grupo }}
+          <tr class="bg-slate-50/90 dark:bg-slate-800/90 border-y border-slate-200/80 dark:border-slate-800 select-none">
+            <td colspan="4" class="px-6 py-3.5 text-blue-700 dark:text-blue-300 font-extrabold uppercase tracking-wider text-xs">
+              <div class="flex items-center gap-2.5">
+                <div class="w-7 h-7 rounded-lg bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center border border-blue-200 dark:border-blue-900/50">
+                  <i class="fa-solid fa-calendar-days text-xs"></i>
+                </div>
+                <span>{{ grupo }}</span>
+              </div>
             </td>
           </tr>
           {% set ns.last_group = grupo %}
         {% endif %}
 
-        <tr class="border-b border-slate-900/10 dark:border-white/10 hover:bg-slate-900/5 dark:hover:bg-white/5 transition">
+        <tr class="border-b border-slate-200/80 dark:border-slate-800 hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition">
 
-          <td class="px-4 py-2 break-all">
+          <td class="px-6 py-4 break-all font-semibold">
             {{ f.name }}
           </td>
 
-          <td class="px-4 py-2 text-right whitespace-nowrap">
+          <td class="px-4 py-4 text-right whitespace-nowrap font-mono text-slate-500">
             {{ (f.size // 1024) }} KB
           </td>
 
-          <td class="px-4 py-2 whitespace-nowrap">
+          <td class="px-4 py-4 whitespace-nowrap">
             {{ f.mtime.strftime('%d/%m/%Y %H:%M') }}
           </td>
 
-          <td class="px-4 py-2 text-center whitespace-nowrap">
+          <td class="px-6 py-4 text-center whitespace-nowrap">
 
-            <a class="bg-emerald-700 hover:bg-emerald-600 text-white rounded px-3 py-1 transition"
+            <a class="px-2.5 py-1.5 text-slate-600 dark:text-slate-300 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-slate-100 dark:hover:bg-slate-800 font-semibold rounded-lg transition text-xs inline-flex items-center gap-1.5 cursor-pointer"
                href="{{ url_for('report_download', nome=f.name) }}">
-               Baixar
+               <i class="fa-solid fa-download text-[11px]"></i> Baixar
             </a>
 
             <form method="post"
                   action="{{ url_for('report_delete', nome=f.name) }}"
-                  class="inline-block ml-2"
+                  class="inline-block ml-1"
                   onsubmit="return confirm('Excluir relatório {{ f.name }}?');">
-              <button class="bg-red-700 hover:bg-red-600 text-white rounded px-3 py-1 transition">
-                Excluir
+              <button class="p-1.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition cursor-pointer" title="Excluir">
+                <i class="fa-solid fa-trash-can text-xs"></i>
               </button>
             </form>
 
@@ -126,7 +128,7 @@
 
         {% else %}
         <tr>
-          <td class="py-3 text-slate-500 dark:text-gray-400 text-center" colspan="4">
+          <td class="py-6 text-slate-500 dark:text-gray-400 text-center uppercase text-[10px] font-black tracking-widest" colspan="4">
             Nenhum arquivo encontrado.
           </td>
         </tr>

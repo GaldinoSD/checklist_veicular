@@ -168,13 +168,24 @@
     .ftth-select option { background:#1e293b; color:#fff; }
 
     /* Buttons */
-    .ftth-btn-primary { padding:12px 24px; background:linear-gradient(135deg,#4f46e5,#6366f1); color:#fff; border:none; border-radius:14px; font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.1em; cursor:pointer; transition:all .2s; flex:1; text-align:center; box-shadow:0 4px 14px rgba(79,70,229,.35); }
-    .ftth-btn-primary:hover { transform:translateY(-1px); box-shadow:0 6px 20px rgba(79,70,229,.45); }
+    .ftth-btn-primary { padding:10px 20px; background:#3b82f6; color:#fff; border:none; border-radius:12px; font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.1em; cursor:pointer; transition:all .2s; flex:1; text-align:center; }
+    .ftth-btn-primary:hover { background:#2563eb; }
     .ftth-btn-primary:active { transform:scale(.97); }
-    .ftth-btn-danger { padding:12px 24px; background:rgba(239,68,68,.15); color:#f87171; border:1px solid rgba(239,68,68,.2); border-radius:14px; font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.1em; cursor:pointer; transition:all .2s; }
-    .ftth-btn-danger:hover { background:#ef4444; color:#fff; }
-    .ftth-btn-ghost { padding:12px 24px; background:transparent; color:rgba(255,255,255,.4); border:none; border-radius:14px; font-size:10px; font-weight:900; text-transform:uppercase; letter-spacing:.15em; cursor:pointer; transition:all .2s; }
-    .ftth-btn-ghost:hover { color:#fff; }
+    .ftth-btn-danger { padding:10px 20px; background:rgba(239,68,68,.1); color:#f87171; border:1px solid rgba(239,68,68,.2); border-radius:12px; font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.1em; cursor:pointer; transition:all .2s; }
+    .ftth-btn-danger:hover { background:rgba(239,68,68,.2); color:#fff; }
+    .ftth-btn-ghost { padding:10px 20px; background:transparent; color:rgba(255,255,255,.5); border:1px solid rgba(255,255,255,.1); border-radius:12px; font-size:10px; font-weight:900; text-transform:uppercase; letter-spacing:.15em; cursor:pointer; transition:all .2s; }
+    .ftth-btn-ghost:hover { color:#fff; background:rgba(255,255,255,.05); }
+
+    /* Laser light flow animation for fiber connection lines */
+    @keyframes fiberPulseFlow {
+        from { stroke-dashoffset: 40; }
+        to { stroke-dashoffset: 0; }
+    }
+    .fiber-flow-animation {
+        stroke-dasharray: 6 12;
+        animation: fiberPulseFlow 1.2s linear infinite;
+    }
+
 
     /* Changelog item */
     .ftth-log-item { padding:8px 16px; border-bottom:1px solid rgba(255,255,255,.03); display:flex; align-items:center; gap:10px; }
@@ -206,20 +217,22 @@
 
         <!-- SIDEBAR -->
         <div id="ftth-sidebar" class="ftth-sidebar">
-            <!-- Header -->
-            <div style="padding:16px 20px; border-bottom:1px solid rgba(255,255,255,.06); display:flex; align-items:center; justify-content:space-between; flex-shrink:0; background:rgba(255,255,255,.02);">
-                <div style="display:flex; align-items:center; gap:10px;">
-                    <div style="width:34px; height:34px; border-radius:10px; background:linear-gradient(135deg,#4f46e5,#6366f1); display:flex; align-items:center; justify-content:center; color:#fff; font-size:14px;">
-                        <i class="fa-solid fa-network-wired"></i>
+            <!-- Header do Sidebar -->
+            <div style="padding:12px 16px; border-bottom:1px solid rgba(255,255,255,.06); display:flex; flex-direction:column; gap:8px; flex-shrink:0; background:rgba(255,255,255,.02);">
+                <div style="display:flex; align-items:center; justify-content:space-between; width:100%;">
+                    <div style="display:flex; align-items:center; gap:8px;">
+                        <div style="width:26px; height:26px; border-radius:6px; background:linear-gradient(135deg,#4f46e5,#6366f1); display:flex; align-items:center; justify-content:center; color:#fff; font-size:11px;">
+                            <i class="fa-solid fa-folder-open"></i>
+                        </div>
+                        <div>
+                            <div style="font-size:11px; font-weight:900; color:#fff; letter-spacing:.02em;" id="sidebar-project-name">Sem Projeto Ativo</div>
+                            <div style="font-size:8px; font-weight:700; color:rgba(255,255,255,.3); text-transform:uppercase; letter-spacing:.05em;" id="sidebar-project-status">EDICAO BLOQUEADA</div>
+                        </div>
                     </div>
-                    <div>
-                        <div style="font-size:12px; font-weight:900; color:#fff; letter-spacing:.02em;">Projeto FTTH</div>
-                        <div style="font-size:9px; font-weight:700; color:rgba(255,255,255,.3); text-transform:uppercase; letter-spacing:.1em;">Engenharia de Rede</div>
-                    </div>
+                    <button onclick="openProjectSelectionModal()" style="margin-left:auto; font-size:8px; font-weight:900; text-transform:uppercase; letter-spacing:.05em; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1); padding:4px 8px; border-radius:6px; color:rgba(255,255,255,.6); cursor:pointer; transition:all .2s;" onmouseover="this.style.color='#fff'; this.style.background='rgba(255,255,255,.1)'" onmouseout="this.style.color='rgba(255,255,255,.6)'; this.style.background='rgba(255,255,255,.05)'">
+                        Alterar
+                    </button>
                 </div>
-                <button onclick="toggleSidebar()" style="width:30px; height:30px; border-radius:8px; background:rgba(255,255,255,.05); border:none; color:rgba(255,255,255,.4); cursor:pointer; display:flex; align-items:center; justify-content:center; transition:all .2s;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='rgba(255,255,255,.4)'">
-                    <i class="fa-solid fa-chevron-left" style="font-size:10px;"></i>
-                </button>
             </div>
 
             <!-- Tabs -->
@@ -730,23 +743,23 @@
             </div>
 
             <!-- Toolbar Actions (Clean Floating Center Bar) -->
-            <div style="display:flex; gap:6px; align-items:center; background:rgba(255,255,255,.03); padding:4px 8px; border-radius:12px; border:1px solid rgba(255,255,255,.06);">
-                <button onclick="addCustomModule('olt')" style="background:rgba(56,189,248,.15); border:1px solid rgba(56,189,248,.3); color:#38bdf8; padding:6px 12px; border-radius:8px; font-size:9px; font-weight:900; cursor:pointer;"><i class="fa-solid fa-server"></i> + OLT GPON</button>
-                <button onclick="addCustomModule('dio')" style="background:rgba(167,139,250,.15); border:1px solid rgba(167,139,250,.3); color:#c084fc; padding:6px 12px; border-radius:8px; font-size:9px; font-weight:900; cursor:pointer;"><i class="fa-solid fa-box-archive"></i> + Módulo DIO</button>
-                <button onclick="addCustomModule('splitter')" style="background:rgba(245,158,11,.15); border:1px solid rgba(245,158,11,.3); color:#fbbf24; padding:6px 12px; border-radius:8px; font-size:9px; font-weight:900; cursor:pointer;"><i class="fa-solid fa-code-branch"></i> + Splitter PLC</button>
-                <button onclick="addCustomModule('incoming_cable')" style="background:rgba(99,102,241,.15); border:1px solid rgba(99,102,241,.3); color:#818cf8; padding:6px 12px; border-radius:8px; font-size:9px; font-weight:900; cursor:pointer;"><i class="fa-solid fa-plus-circle"></i> + Cabo Entrada</button>
-                <button onclick="addCustomModule('outgoing_cable')" style="background:rgba(34,197,94,.15); border:1px solid rgba(34,197,94,.3); color:#4ade80; padding:6px 12px; border-radius:8px; font-size:9px; font-weight:900; cursor:pointer;"><i class="fa-solid fa-plus-circle"></i> + Cabo Saída</button>
-                <span style="color:rgba(255,255,255,.15); font-size:12px;">|</span>
-                <button onclick="autoFuseFibers()" style="background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.1); color:#e2e8f0; padding:6px 10px; border-radius:8px; font-size:9px; font-weight:900; cursor:pointer;">⚡ Auto-Fusão</button>
-                <button onclick="clearAllFusions()" style="background:rgba(239,68,68,.15); border:1px solid rgba(239,68,68,.3); color:#f87171; padding:6px 10px; border-radius:8px; font-size:9px; font-weight:900; cursor:pointer;">🗑️ Limpar</button>
+            <div style="display:flex; gap:6px; align-items:center; background:rgba(255,255,255,.02); padding:4px 8px; border-radius:12px; border:1px solid rgba(255,255,255,.06);">
+                <button onclick="addCustomModule('olt')" style="background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.08); color:rgba(255,255,255,.75); padding:6px 12px; border-radius:8px; font-size:9px; font-weight:800; cursor:pointer; transition:all .2s;" onmouseover="this.style.background='rgba(56,189,248,.12)'; this.style.color='#38bdf8'; this.style.borderColor='rgba(56,189,248,.25)';" onmouseout="this.style.background='rgba(255,255,255,.03)'; this.style.color='rgba(255,255,255,.75)'; this.style.borderColor='rgba(255,255,255,.08)';"><i class="fa-solid fa-server"></i> + OLT GPON</button>
+                <button onclick="addCustomModule('dio')" style="background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.08); color:rgba(255,255,255,.75); padding:6px 12px; border-radius:8px; font-size:9px; font-weight:800; cursor:pointer; transition:all .2s;" onmouseover="this.style.background='rgba(167,139,250,.12)'; this.style.color='#c084fc'; this.style.borderColor='rgba(167,139,250,.25)';" onmouseout="this.style.background='rgba(255,255,255,.03)'; this.style.color='rgba(255,255,255,.75)'; this.style.borderColor='rgba(255,255,255,.08)';"><i class="fa-solid fa-box-archive"></i> + DIO</button>
+                <button onclick="addCustomModule('splitter')" style="background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.08); color:rgba(255,255,255,.75); padding:6px 12px; border-radius:8px; font-size:9px; font-weight:800; cursor:pointer; transition:all .2s;" onmouseover="this.style.background='rgba(245,158,11,.12)'; this.style.color='#fbbf24'; this.style.borderColor='rgba(245,158,11,.25)';" onmouseout="this.style.background='rgba(255,255,255,.03)'; this.style.color='rgba(255,255,255,.75)'; this.style.borderColor='rgba(255,255,255,.08)';"><i class="fa-solid fa-code-branch"></i> + Splitter</button>
+                <button onclick="addCustomModule('incoming_cable')" style="background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.08); color:rgba(255,255,255,.75); padding:6px 12px; border-radius:8px; font-size:9px; font-weight:800; cursor:pointer; transition:all .2s;" onmouseover="this.style.background='rgba(99,102,241,.12)'; this.style.color='#818cf8'; this.style.borderColor='rgba(99,102,241,.25)';" onmouseout="this.style.background='rgba(255,255,255,.03)'; this.style.color='rgba(255,255,255,.75)'; this.style.borderColor='rgba(255,255,255,.08)';"><i class="fa-solid fa-plus-circle"></i> + Cabo Entrada</button>
+                <button onclick="addCustomModule('outgoing_cable')" style="background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.08); color:rgba(255,255,255,.75); padding:6px 12px; border-radius:8px; font-size:9px; font-weight:800; cursor:pointer; transition:all .2s;" onmouseover="this.style.background='rgba(34,197,94,.12)'; this.style.color='#4ade80'; this.style.borderColor='rgba(34,197,94,.25)';" onmouseout="this.style.background='rgba(255,255,255,.03)'; this.style.color='rgba(255,255,255,.75)'; this.style.borderColor='rgba(255,255,255,.08)';"><i class="fa-solid fa-plus-circle"></i> + Cabo Saída</button>
+                <span style="color:rgba(255,255,255,.15); font-size:12px; margin:0 4px;">|</span>
+                <button onclick="autoFuseFibers()" style="background:rgba(34,197,94,.08); border:1px solid rgba(34,197,94,.20); color:#4ade80; padding:6px 12px; border-radius:8px; font-size:9px; font-weight:900; cursor:pointer; transition:all .2s;" onmouseover="this.style.background='rgba(34,197,94,.16)'" onmouseout="this.style.background='rgba(34,197,94,.08)'">⚡ Auto-Fusão</button>
+                <button onclick="clearAllFusions()" style="background:rgba(239,68,68,.08); border:1px solid rgba(239,68,68,.20); color:#f87171; padding:6px 12px; border-radius:8px; font-size:9px; font-weight:900; cursor:pointer; transition:all .2s;" onmouseover="this.style.background='rgba(239,68,68,.16)'" onmouseout="this.style.background='rgba(239,68,68,.08)'">🗑️ Limpar</button>
             </div>
 
             <!-- Header Action Buttons -->
             <div style="display:flex; gap:8px; align-items:center;">
                 <span id="fusion-count-badge" class="status-badge status-active" style="font-size:8px;">0 Fusões</span>
-                <button class="ftth-btn-ghost" onclick="printStudioDiagram()" style="padding:8px 14px; font-size:9px; border:1px solid rgba(255,255,255,.1);"><i class="fa-solid fa-print"></i> Diagrama</button>
-                <button class="ftth-btn-primary" onclick="saveStudioData()" style="padding:8px 16px; font-size:9px;"><i class="fa-solid fa-floppy-disk"></i> Salvar</button>
-                <button class="ftth-btn-ghost" onclick="closeModal('modal-studio')" style="padding:8px 14px; font-size:9px;"><i class="fa-solid fa-xmark"></i> Fechar</button>
+                <button class="ftth-btn-ghost" onclick="printStudioDiagram()" style="padding:6px 12px; font-size:9px; border:1px solid rgba(255,255,255,.1); border-radius:10px;"><i class="fa-solid fa-print"></i> Diagrama</button>
+                <button class="ftth-btn-primary" onclick="saveStudioData()" style="padding:6px 16px; font-size:9px; background:#2563eb; border:none; border-radius:10px;"><i class="fa-solid fa-floppy-disk"></i> Salvar</button>
+                <button class="ftth-btn-ghost" onclick="closeModal('modal-studio')" style="padding:6px 12px; font-size:9px; border-radius:10px;"><i class="fa-solid fa-xmark"></i> Fechar</button>
             </div>
         </div>
 
@@ -758,8 +771,8 @@
             <!-- Absolute Draggable CAD Module Cards Container -->
             <div id="studio-canvas-cards" style="position:absolute; inset:0; min-width:2000px; min-height:1500px; z-index:6;"></div>
 
-            <!-- Floating Top-Right Mini Fusion List Panel -->
-            <div style="position:absolute; top:16px; right:16px; width:340px; max-height:260px; background:rgba(15,23,42,.9); backdrop-filter:blur(16px); border:1px solid rgba(255,255,255,.1); border-radius:16px; padding:12px; z-index:20; box-shadow:0 10px 30px rgba(0,0,0,0.6); display:flex; flex-direction:column; gap:8px;">
+            <!-- Floating Top-Right Mini Fusion List Panel (Hidden from UI, kept in DOM for script stability) -->
+            <div style="display:none !important; position:absolute; top:16px; right:16px; width:340px; max-height:260px; background:rgba(15,23,42,.9); backdrop-filter:blur(16px); border:1px solid rgba(255,255,255,.1); border-radius:16px; padding:12px; z-index:20; box-shadow:0 10px 30px rgba(0,0,0,0.6); flex-direction:column; gap:8px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,.08); padding-bottom:6px;">
                     <span style="font-size:10px; font-weight:900; color:#fff; text-transform:uppercase; letter-spacing:.05em;"><i class="fa-solid fa-list-check" style="color:#6366f1;"></i> Fusões Conectadas</span>
                     <span id="fusion-count-badge" class="status-badge status-active" style="font-size:8px;">0 Fusões</span>
@@ -821,6 +834,50 @@
     </div>
 </div>
 
+<!-- ==============================================================================
+     MODAL: GERENCIAMENTO E CICLO DE VIDA DE PROJETOS DE REDE
+     ============================================================================== -->
+<div class="ftth-modal-overlay" id="modal-project" style="z-index: 10000; display:flex;">
+    <div class="ftth-modal" style="width:580px; max-width:90vw; background:#0f172a; border:1px solid rgba(255,255,255,.12); border-radius:24px; padding:28px; box-shadow:0 30px 80px rgba(0,0,0,0.9); display:flex; flex-direction:column; gap:16px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(255,255,255,.08); padding-bottom:14px;">
+            <div style="display:flex; align-items:center; gap:12px;">
+                <div style="width:40px; height:40px; border-radius:12px; background:rgba(99,102,241,.15); border:1px solid rgba(99,102,241,.3); display:flex; align-items:center; justify-content:center; color:#818cf8; font-size:18px;">
+                    <i class="fa-solid fa-folder-open"></i>
+                </div>
+                <div>
+                    <h3 style="font-size:16px; font-weight:900; color:#fff; margin:0;">Projetos de Expansão de Rede</h3>
+                    <p style="font-size:9px; color:rgba(255,255,255,.4); font-weight:700; margin:2px 0 0 0; text-transform:uppercase; letter-spacing:0.05em;">Selecione ou crie um projeto para habilitar as ferramentas CAD</p>
+                </div>
+            </div>
+            <button id="btn-close-project-modal" onclick="closeProjectModal()" style="background:transparent; border:none; color:rgba(255,255,255,.4); cursor:pointer; font-size:16px; display:none;" title="Fechar"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+
+        <!-- Seletor / Lista de Projetos -->
+        <div style="flex:1; max-height:240px; overflow-y:auto; display:flex; flex-direction:column; gap:8px; padding-right:4px;" id="project-list-container">
+            <p style="font-size:11px; color:rgba(255,255,255,.3); text-align:center; padding:20px;">Carregando projetos...</p>
+        </div>
+
+        <!-- Formulário: Criar Novo Projeto -->
+        <div style="border-top:1px solid rgba(255,255,255,.08); padding-top:16px;">
+            <h4 style="font-size:11px; font-weight:900; color:#818cf8; text-transform:uppercase; letter-spacing:.05em; margin-bottom:12px;"><i class="fa-solid fa-plus-circle"></i> Criar Novo Projeto</h4>
+            <form id="form-create-project" onsubmit="handleCreateProject(event)" style="display:flex; flex-direction:column; gap:10px;">
+                <div>
+                    <label style="display:block; font-size:9px; font-weight:800; color:rgba(255,255,255,.5); text-transform:uppercase; margin-bottom:4px;">Nome do Projeto</label>
+                    <input type="text" id="new-project-name" required class="ftth-input" style="width:100%; font-size:11px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); border-radius:10px; padding:8px 12px; color:#fff;" placeholder="Ex: Ampliação Sul - Fibra Óptica 2026">
+                </div>
+                <div>
+                    <label style="display:block; font-size:9px; font-weight:800; color:rgba(255,255,255,.5); text-transform:uppercase; margin-bottom:4px;">Descrição / Meta</label>
+                    <textarea id="new-project-desc" class="ftth-input" style="width:100%; font-size:11px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.08); border-radius:10px; padding:8px 12px; color:#fff; min-height:48px;" placeholder="Ex: Projeto de cobertura GPON da área residencial sul..."></textarea>
+                </div>
+                <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:8px;">
+                    <button type="submit" class="ftth-btn-primary" style="padding:8px 20px; font-size:10px; background:#4f46e5; border:none; box-shadow:none; cursor:pointer;"><i class="fa-solid fa-check"></i> Criar Projeto</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+
 <!-- Leaflet CDN -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -841,6 +898,8 @@ let nodeMarkers = {}, edgePolylines = {};
 let drawingCablePoints = [], drawingCableLine = null;
 let measurePoints = [], measureLine = null, measureTooltips = [];
 let areaPoints = [], areaPolygon = null;
+let currentProject = null;
+let projectsList = [];
 
 // Node type configuration
 const NODE_TYPES = {
@@ -883,8 +942,191 @@ let labelLayer = null;
 // ─── INITIALIZATION ───
 document.addEventListener('DOMContentLoaded', () => {
     initMap();
-    loadAllData();
+    initProjectSystem();
 });
+
+// ─── PROJECT LIFE-CYCLE MANAGEMENT ───
+function initProjectSystem() {
+    // Try to restore project from localStorage
+    const savedProj = localStorage.getItem('ftth_current_project');
+    if (savedProj) {
+        try {
+            currentProject = JSON.parse(savedProj);
+            updateProjectUI();
+            loadAllData();
+        } catch(e) {
+            currentProject = null;
+            openProjectSelectionModal();
+        }
+    } else {
+        openProjectSelectionModal();
+    }
+}
+
+async function loadProjects() {
+    const listContainer = document.getElementById('project-list-container');
+    if (!listContainer) return;
+    listContainer.innerHTML = '<p style="font-size:11px; color:rgba(255,255,255,.4); text-align:center; padding:15px;"><i class="fa-solid fa-spinner fa-spin"></i> Carregando projetos...</p>';
+    
+    try {
+        const res = await fetch('/api/network/projects');
+        const data = await res.json();
+        if (data.success && data.projects) {
+            projectsList = data.projects;
+            if (projectsList.length === 0) {
+                listContainer.innerHTML = `
+                    <div style="text-align:center; padding:20px; border:1px dashed rgba(255,255,255,.1); border-radius:14px; background:rgba(255,255,255,.01);">
+                        <i class="fa-solid fa-folder-open" style="font-size:24px; color:rgba(255,255,255,.15); margin-bottom:8px;"></i>
+                        <p style="font-size:11px; color:rgba(255,255,255,.4); margin:0;">Nenhum projeto encontrado. Crie um projeto abaixo para iniciar.</p>
+                    </div>
+                `;
+            } else {
+                listContainer.innerHTML = projectsList.map(p => {
+                    const isSelected = currentProject && currentProject.id === p.id;
+                    const statusLabels = { planning: 'Planejamento', approved: 'Aprovado', in_progress: 'Em Andamento', completed: 'Concluído' };
+                    const statusLabel = statusLabels[p.status] || p.status;
+                    
+                    return `
+                        <div style="display:flex; align-items:center; justify-content:space-between; padding:10px 14px; background:${isSelected ? 'rgba(99,102,241,.12)' : 'rgba(255,255,255,.02)'}; border:1px solid ${isSelected ? '#6366f1' : 'rgba(255,255,255,.06)'}; border-radius:14px; transition:all .2s; cursor:pointer;" onclick="selectProject(${p.id})">
+                            <div style="flex:1; min-width:0; padding-right:10px;">
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <strong style="font-size:12px; color:#fff;">${escHtml(p.name)}</strong>
+                                    <span style="font-size:8px; font-weight:800; padding:2px 6px; border-radius:6px; background:rgba(255,255,255,.08); color:rgba(255,255,255,.6);">${statusLabel.toUpperCase()}</span>
+                                </div>
+                                <p style="font-size:10px; color:rgba(255,255,255,.4); margin:4px 0 0 0; text-overflow:ellipsis; overflow:hidden; white-space:nowrap;">${escHtml(p.description || 'Sem descrição')}</p>
+                            </div>
+                            <div style="display:flex; align-items:center; gap:6px;" onclick="event.stopPropagation();">
+                                <button class="ftth-btn-danger" style="padding:4px 8px; font-size:9px; border-radius:6px;" onclick="deleteProject(${p.id})">
+                                    <i class="fa-solid fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+    } catch(err) {
+        listContainer.innerHTML = '<p style="font-size:11px; color:#f87171; text-align:center; padding:15px;">Erro ao carregar projetos.</p>';
+    }
+}
+
+function selectProject(projectId) {
+    const proj = projectsList.find(p => p.id === projectId);
+    if (!proj) return;
+    currentProject = proj;
+    localStorage.setItem('ftth_current_project', JSON.stringify(proj));
+    updateProjectUI();
+    closeProjectModal();
+    loadAllData();
+    showToast(`Projeto "${proj.name}" ativo!`, 'success');
+}
+
+async function handleCreateProject(e) {
+    e.preventDefault();
+    const nameInput = document.getElementById('new-project-name');
+    const descInput = document.getElementById('new-project-desc');
+    const name = nameInput.value.trim();
+    const description = descInput.value.trim();
+    
+    if (!name) return;
+    
+    try {
+        const res = await fetch('/api/network/projects', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ name, description })
+        });
+        const data = await res.json();
+        if (data.success && data.project) {
+            showToast('Projeto criado com sucesso!', 'success');
+            nameInput.value = '';
+            descInput.value = '';
+            loadProjects().then(() => {
+                selectProject(data.project.id);
+            });
+        } else {
+            showToast(data.error || 'Erro ao criar projeto', 'error');
+        }
+    } catch(err) {
+        showToast('Erro de conexão', 'error');
+    }
+}
+
+async function deleteProject(projectId) {
+    if (!confirm('Deseja realmente excluir este projeto? Todos os elementos vinculados continuarão existindo, mas perderão a associação.')) return;
+    
+    try {
+        const res = await fetch(`/api/network/projects/${projectId}`, { method: 'DELETE' });
+        const data = await res.json();
+        if (data.success) {
+            showToast('Projeto excluído!', 'success');
+            if (currentProject && currentProject.id === projectId) {
+                currentProject = null;
+                localStorage.removeItem('ftth_current_project');
+                updateProjectUI();
+            }
+            loadProjects();
+        } else {
+            showToast(data.error || 'Erro ao excluir projeto', 'error');
+        }
+    } catch(err) {
+        showToast('Erro de conexão', 'error');
+    }
+}
+
+function openProjectSelectionModal() {
+    const modal = document.getElementById('modal-project');
+    if (modal) {
+        modal.style.display = 'flex';
+        modal.classList.add('open');
+    }
+    const closeBtn = document.getElementById('btn-close-project-modal');
+    if (closeBtn) {
+        closeBtn.style.display = 'block';
+    }
+    loadProjects();
+}
+
+function closeProjectModal() {
+    const modal = document.getElementById('modal-project');
+    if (modal) {
+        modal.style.display = 'none';
+        modal.classList.remove('open');
+    }
+}
+
+function updateProjectUI() {
+    const sidebarName = document.getElementById('sidebar-project-name');
+    const sidebarStatus = document.getElementById('sidebar-project-status');
+    const drawingTools = document.querySelectorAll('.ftth-tool-btn');
+    
+    if (currentProject) {
+        if (sidebarName) sidebarName.textContent = currentProject.name;
+        if (sidebarStatus) {
+            sidebarStatus.textContent = 'PROJETO ATIVO';
+            sidebarStatus.style.color = '#4ade80';
+        }
+        // Habilita ferramentas
+        drawingTools.forEach(btn => {
+            btn.style.opacity = '1';
+            btn.style.pointerEvents = 'auto';
+        });
+    } else {
+        if (sidebarName) sidebarName.textContent = 'Sem Projeto Ativo';
+        if (sidebarStatus) {
+            sidebarStatus.textContent = 'EDIÇÃO BLOQUEADA';
+            sidebarStatus.style.color = '#ef4444';
+        }
+        // Desabilita ferramentas de desenho, deixa apenas navegar, medir distância e área
+        drawingTools.forEach(btn => {
+            const isNavOrMeasure = btn.id === 'mode-navigate' || btn.id === 'mode-measure_distance' || btn.id === 'mode-measure_area';
+            if (!isNavOrMeasure) {
+                btn.style.opacity = '0.3';
+                btn.style.pointerEvents = 'none';
+            }
+        });
+    }
+}
 
 function initMap() {
     map = L.map('map', { zoomControl:false, attributionControl:false }).setView([-22.7686, -43.7061], 13);
@@ -928,15 +1170,31 @@ function setMapLayer(key) {
 
 // ─── DATA LOADING ───
 async function loadAllData() {
+    if (!currentProject) {
+        nodesData = [];
+        edgesData = [];
+        layersData = [];
+        renderMap();
+        renderElementsList();
+        renderLayersList();
+        loadDashboard();
+        return;
+    }
     try {
         const [nodesRes, edgesRes, layersRes] = await Promise.all([
             fetch('/api/network/nodes').then(r=>r.json()),
             fetch('/api/network/edges').then(r=>r.json()),
             fetch('/api/network/layers').then(r=>r.json()),
         ]);
-        nodesData = nodesRes.nodes || [];
-        edgesData = edgesRes.edges || [];
+        
+        const allNodes = nodesRes.nodes || [];
+        const allEdges = edgesRes.edges || [];
+        
+        // Filter elements belonging to the active project
+        nodesData = allNodes.filter(n => n.details && n.details.project_id === currentProject.id);
+        edgesData = allEdges.filter(e => e.details && e.details.project_id === currentProject.id);
         layersData = layersRes.layers || [];
+        
         renderMap();
         renderElementsList();
         renderLayersList();
@@ -1111,6 +1369,11 @@ function onMapClick(e) {
 
 // ─── MODES ───
 function setMode(mode) {
+    if (!currentProject && mode !== 'navigate' && mode !== 'measure_distance' && mode !== 'measure_area') {
+        showToast('É necessário selecionar ou criar um projeto primeiro!', 'warning');
+        openProjectSelectionModal();
+        return;
+    }
     // Cleanup previous mode
     if (activeMode === 'measure_distance') clearMeasurement();
     if (activeMode === 'measure_area') clearAreaMeasurement();
@@ -1291,8 +1554,11 @@ async function saveNode() {
         capacity: document.getElementById('node-capacity').value.trim(),
         observations: document.getElementById('node-observations').value.trim(),
         layer: (NODE_TYPES[nodeType]||{}).layer || 'infrastructure',
-        details: {},
+        details: editId ? (nodesData.find(n => n.id == editId)?.details || {}) : {},
     };
+    if (currentProject) {
+        payload.details.project_id = currentProject.id;
+    }
     if (!payload.name) { showToast('Nome é obrigatório', 'error'); return; }
 
     try {
@@ -1512,8 +1778,11 @@ async function saveCable() {
         color: document.getElementById('cable-color').value || '#6366f1',
         thickness: 3,
         layer: 'cables',
-        details: {},
+        details: editId ? (edgesData.find(e => e.id == editId)?.details || {}) : {},
     };
+    if (currentProject) {
+        payload.details.project_id = currentProject.id;
+    }
 
     try {
         const url = editId ? `/api/network/edges/${editId}` : '/api/network/edges';
@@ -2203,14 +2472,18 @@ function renderStudioSpliceTray() {
                 destLabel = `${cableDst ? cableDst.name : 'Saída #' + f.to_id} (Fibra ${f.to_fiber})`;
             }
 
+            const att = calculatePathAttenuation(f);
             return `<div style="display:flex; align-items:center; justify-content:space-between; padding:6px 10px; background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.06); border-radius:8px; font-size:9px;">
-                <div style="display:flex; align-items:center; gap:6px; overflow:hidden;">
+                <div style="display:flex; align-items:center; gap:6px; overflow:hidden; flex:1;">
                     <span style="width:8px; height:8px; border-radius:50%; background:${fiberSrc.hex}; flex-shrink:0;"></span>
                     <span style="color:#fff; font-weight:800; white-space:nowrap;">${cableSrc ? cableSrc.name : 'Entrada'} (F${f.from_fiber})</span>
                     <i class="fa-solid fa-arrow-right" style="color:#6366f1; font-size:8px;"></i>
-                    <span style="color:#4ade80; font-weight:800; white-space:nowrap;">${destLabel}</span>
+                    <span style="color:#4ade80; font-weight:800; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${destLabel}</span>
                 </div>
-                <button onclick="removeFusion(${idx})" style="background:rgba(239,68,68,.15); border:none; color:#f87171; padding:2px 6px; border-radius:4px; font-size:8px; font-weight:900; cursor:pointer;">✕</button>
+                <div style="display:flex; align-items:center; gap:6px; flex-shrink:0;">
+                    <span style="color:#fbbf24; font-weight:800; font-size:8px; padding:2px 4px; border-radius:4px; background:rgba(245,158,11,.1); border:1px solid rgba(245,158,11,.2);" title="${att.path}">${att.loss} dB</span>
+                    <button onclick="removeFusion(${idx})" style="background:rgba(239,68,68,.15); border:none; color:#f87171; padding:2px 6px; border-radius:4px; font-size:8px; font-weight:900; cursor:pointer;">✕</button>
+                </div>
             </div>`;
         }).join('');
 
@@ -2671,12 +2944,12 @@ function drawFusionSVGCanvas() {
             const glow = document.createElementNS('http://www.w3.org/2000/svg', 'path');
             glow.setAttribute('d', pathData);
             glow.setAttribute('stroke', fiberSrc.hex);
-            glow.setAttribute('stroke-width', '4');
+            glow.setAttribute('stroke-width', '5');
             glow.setAttribute('fill', 'none');
-            glow.setAttribute('opacity', '0.25');
+            glow.setAttribute('opacity', '0.2');
             svg.appendChild(glow);
 
-            // Core clean solid CAD line (Smooth rounded corners, zero movement, zero dashes)
+            // Core clean solid CAD line
             const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
             path.setAttribute('d', pathData);
             path.setAttribute('stroke', fiberSrc.hex);
@@ -2684,6 +2957,34 @@ function drawFusionSVGCanvas() {
             path.setAttribute('fill', 'none');
             path.setAttribute('opacity', '1');
             svg.appendChild(path);
+
+            // Laser pulse laser glow animated overlay
+            const pulse = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            pulse.setAttribute('d', pathData);
+            pulse.setAttribute('stroke', '#ffffff');
+            pulse.setAttribute('stroke-width', '1.5');
+            pulse.setAttribute('fill', 'none');
+            pulse.setAttribute('opacity', '0.6');
+            pulse.classList.add('fiber-flow-animation');
+            svg.appendChild(pulse);
+
+            // Attenuation calculation & Tooltip event listeners
+            const att = calculatePathAttenuation(f);
+            const tooltipContent = `
+                <div style="font-weight:900; color:#818cf8; margin-bottom:4px; text-transform:uppercase; letter-spacing:0.05em; font-size:10px;"><i class="fa-solid fa-calculator"></i> Orçamento de Rota Óptica</div>
+                <div style="font-weight:800; font-size:11px; margin-bottom:4px; color:#fff;">Atenuação Total: <span style="color:#fbbf24;">${att.loss} dB</span></div>
+                ${att.power !== 'N/A' ? `<div style="font-weight:800; font-size:11px; margin-bottom:6px; color:#fff;">Potência Recebida: <span style="color:#4ade80;">${att.power}</span></div>` : ''}
+                <div style="color:rgba(255,255,255,0.6); max-width:260px; line-height:1.4; border-top:1px solid rgba(255,255,255,0.1); padding-top:4px; font-size:9px;">${att.path}</div>
+            `;
+
+            // Enable mouse events specifically for this interactive path
+            [path, pulse].forEach(pEl => {
+                pEl.setAttribute('pointer-events', 'visibleStroke');
+                pEl.style.cursor = 'help';
+                pEl.addEventListener('mouseover', (e) => showStudioTooltip(e, tooltipContent));
+                pEl.addEventListener('mousemove', (e) => showStudioTooltip(e, tooltipContent));
+                pEl.addEventListener('mouseout', hideStudioTooltip);
+            });
         }
     });
 
@@ -2734,6 +3035,130 @@ function drawFusionSVGCanvas() {
             });
         });
     });
+}
+
+// ─── OPTICAL PATH BUDGET & TOOLTIPS ───
+function calculatePathAttenuation(f) {
+    let loss = 0.05; // Base splice loss in dB
+    let pathSegments = ["Fusão (0.05 dB)"];
+    let sourcePower = null;
+
+    // Detect Source Module/Cable
+    const srcOlt = studioCustomIncoming.find(m => m.id == f.from_cable_id && m.type === 'olt');
+    if (srcOlt) {
+        sourcePower = 3.0; // SFP GPON typical dBm output
+        pathSegments.unshift("Porta PON OLT (+3.00 dBm)");
+    } else {
+        const srcCable = [...studioCustomIncoming, ...edgesData].find(c => c.id == f.from_cable_id);
+        if (srcCable) {
+            const distKm = (srcCable.distance_m || 0) / 1000;
+            const cableLoss = distKm * 0.25; // 0.25 dB/km for G.652 singlemode fibre
+            loss += cableLoss;
+            pathSegments.unshift(`Cabo Entrada: ${srcCable.name} (${distKm.toFixed(2)} km · Perda: ${cableLoss.toFixed(2)} dB)`);
+        }
+    }
+
+    // Detect Destination Module/Cable/Port
+    if (f.to_type === 'splitter') {
+        const spl = (activeStudioNode.splitters || []).find(s => s.id == f.to_id) || studioCustomOutgoing.find(s => s.id == f.to_id);
+        if (spl) {
+            const ratio = spl.ratio || '1x8';
+            const splitterLosses = { '1x2': 3.7, '1x4': 7.2, '1x8': 10.5, '1x16': 13.8, '1x32': 17.0, '1x64': 20.5 };
+            const splLoss = splitterLosses[ratio] || 10.5;
+            loss += splLoss;
+            pathSegments.push(`Splitter PLC ${ratio} (Perda: ${splLoss.toFixed(1)} dB)`);
+        }
+    } else if (f.to_type === 'dio') {
+        loss += 0.30; // Coupling connector loss
+        pathSegments.push("DIO SC/APC (Mating Loss: 0.30 dB)");
+    } else {
+        const dstCable = [...studioCustomOutgoing, ...edgesData].find(c => c.id == f.to_id);
+        if (dstCable) {
+            const distKm = (dstCable.distance_m || 0) / 1000;
+            const cableLoss = distKm * 0.25;
+            loss += cableLoss;
+            pathSegments.push(`Cabo Saída: ${dstCable.name} (${distKm.toFixed(2)} km · Perda: ${cableLoss.toFixed(2)} dB)`);
+        }
+    }
+
+    return {
+        loss: loss.toFixed(2),
+        path: pathSegments.join(" ➔ "),
+        power: sourcePower ? (sourcePower - loss).toFixed(2) + " dBm" : "N/A"
+    };
+}
+
+function showStudioTooltip(e, content) {
+    let tooltip = document.getElementById('studio-svg-tooltip');
+    if (!tooltip) {
+        tooltip = document.createElement('div');
+        tooltip.id = 'studio-svg-tooltip';
+        tooltip.style.position = 'fixed';
+        tooltip.style.background = 'rgba(15, 23, 42, 0.95)';
+        tooltip.style.border = '1px solid rgba(255, 255, 255, 0.15)';
+        tooltip.style.borderRadius = '10px';
+        tooltip.style.padding = '10px 14px';
+        tooltip.style.fontSize = '10px';
+        tooltip.style.color = '#fff';
+        tooltip.style.boxShadow = '0 10px 25px rgba(0,0,0,0.5)';
+        tooltip.style.pointerEvents = 'none';
+        tooltip.style.zIndex = '99999';
+        document.body.appendChild(tooltip);
+    }
+    tooltip.innerHTML = content;
+    tooltip.style.display = 'block';
+    tooltip.style.left = (e.clientX + 15) + 'px';
+    tooltip.style.top = (e.clientY + 15) + 'px';
+}
+
+function hideStudioTooltip() {
+    const tooltip = document.getElementById('studio-svg-tooltip');
+    if (tooltip) tooltip.style.display = 'none';
+}
+
+// ─── SEQUENTIAL AUTO-FUSING METHOD ───
+function autoFuseFibers() {
+    const incomingCables = studioCustomIncoming;
+    const outgoingCables = studioCustomOutgoing;
+
+    if (incomingCables.length === 0 || outgoingCables.length === 0) {
+        showToast('É necessário ter ao menos um cabo de Entrada e um de Saída para efetuar a auto-fusão.', 'warning');
+        return;
+    }
+
+    let fusionsCount = 0;
+    for (let i = 0; i < Math.min(incomingCables.length, outgoingCables.length); i++) {
+        const inCable = incomingCables[i];
+        const outCable = outgoingCables[i];
+
+        const inFibers = inCable.fiber_count || 12;
+        const outFibers = outCable.fiber_count || 12;
+        const limit = Math.min(inFibers, outFibers);
+
+        for (let f = 1; f <= limit; f++) {
+            const exists = studioFusions.some(x => x.from_cable_id == inCable.id && x.from_fiber == f);
+            if (!exists) {
+                studioFusions.push({
+                    from_cable_id: inCable.id,
+                    from_tube: 1,
+                    from_fiber: f,
+                    to_type: outCable.type === 'splitter' ? 'splitter' : (outCable.type === 'dio' ? 'dio' : 'cable'),
+                    to_id: outCable.id,
+                    to_tube: 1,
+                    to_fiber: f,
+                    loss_db: 0.05
+                });
+                fusionsCount++;
+            }
+        }
+    }
+
+    if (fusionsCount > 0) {
+        renderStudioSpliceTray();
+        showToast(`Auto-fusão realizada em ${fusionsCount} fibra(s)!`, 'success');
+    } else {
+        showToast('Nenhuma nova fibra pôde ser auto-fundida.', 'info');
+    }
 }
 
 function selectSourceFiber(cableId, tube, fiber) {
@@ -2961,42 +3386,57 @@ function addEquipmentToRack() {
 async function saveStudioData() {
     if (!activeStudioNode) return;
     try {
-        const promises = [
-            fetch(`/api/network/nodes/${activeStudioNode.id}/fusions`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ fusions: studioFusions })
-            }),
-            fetch(`/api/network/nodes/${activeStudioNode.id}/connections`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ connections: studioConnections })
-            })
-        ];
+        // 1. Save fusions
+        await fetch(`/api/network/nodes/${activeStudioNode.id}/fusions`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fusions: studioFusions })
+        });
 
-        // Also persist all splitter ports
+        // 2. Save connections
+        await fetch(`/api/network/nodes/${activeStudioNode.id}/connections`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ connections: studioConnections })
+        });
+
+        // 3. Save splitter ports
         if (activeStudioNode.splitters && activeStudioNode.splitters.length > 0) {
-            activeStudioNode.splitters.forEach(s => {
-                promises.push(
-                    fetch(`/api/network/splitters/${s.id}`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ ports: s.ports })
-                    })
-                );
-            });
+            for (const s of activeStudioNode.splitters) {
+                await fetch(`/api/network/splitters/${s.id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ports: s.ports })
+                });
+            }
         }
 
-        await Promise.all(promises);
+        // 4. Save node details containing fusions, connections, customIncoming and customOutgoing modules
+        const currentDetails = activeStudioNode.details || {};
+        const mergedDetails = {
+            ...currentDetails,
+            project_id: currentProject ? currentProject.id : null,
+            fusions: studioFusions,
+            connections: studioConnections,
+            customIncoming: studioCustomIncoming,
+            customOutgoing: studioCustomOutgoing
+        };
 
-        // Update activeStudioNode details in memory
-        if (!activeStudioNode.details) activeStudioNode.details = {};
-        activeStudioNode.details.fusions = studioFusions;
-        activeStudioNode.details.connections = studioConnections;
+        const resNode = await fetch(`/api/network/nodes/${activeStudioNode.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ details: mergedDetails })
+        });
+        const nodeData = await resNode.json();
 
-        showToast('🎉 Mapeamento salvo com sucesso!', 'success');
-        closeModal('modal-studio');
-        loadAllData();
+        if (nodeData.success) {
+            activeStudioNode.details = mergedDetails;
+            showToast('🎉 Mapeamento e cabos salvos com sucesso!', 'success');
+            closeModal('modal-studio');
+            loadAllData();
+        } else {
+            showToast(nodeData.error || 'Erro ao salvar cabos do estúdio', 'error');
+        }
     } catch(err) {
         console.error(err);
         showToast('Erro ao salvar mapeamento', 'error');

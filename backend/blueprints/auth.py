@@ -74,6 +74,12 @@ def login():
         u = User.query.filter_by(username=username.upper()).first()
         if u and u.check_password(password):
             _clear_attempts(client_ip)  # Login OK → limpa histórico
+            now = agora()
+            u.last_login = now
+            u.last_seen = now
+            u.last_ip = client_ip
+            db.session.commit()
+            
             login_user(u)
             registrar_log(f"Login efetuado: {u.username}")
 
@@ -379,7 +385,7 @@ def api_frota_stats():
     type_caminhao = Vehicle.query.filter_by(type="caminhao").count()
     type_van = Vehicle.query.filter_by(type="van").count()
 
-    return json.dumps({
+    return jsonify({
         "fleet_health": fleet_health,
         "total_cost_month": float(total_cost),
         "checklists_today": checklists_today,
@@ -402,12 +408,18 @@ def api_frota_stats():
 
 
 
-# --- API DASHBOARD GESTÃO (DADOS REAIS) ---
+# --- API DASHBOARD GESTÃO (DADOS REAIS E FOCO EM PLANTÕES & ESCALAS) ---
 @auth_bp.route("/api/gestao/dashboard_stats")
 @supervisor_allowed
 def api_gestao_stats():
     now = agora()
-    start_month = now.replace(day=1, hour=0, minute=0, second=0)
+    today_date = now.date()
+    
+    # Período padrão: mês corrente
+    start_dt = now.replace(day=1, hour=0, minute=0, second=0)
+    # Fim do mês corrente
+    next_month = (start_dt.replace(day=28) + timedelta(days=4)).replace(day=1)
+    end_dt = (next_month - timedelta(seconds=1))
 
     # Coleta filtro de período da URL se houver
     periodo = request.args.get("periodo", "").strip()
@@ -416,157 +428,408 @@ def api_gestao_stats():
             start_str, end_str = periodo.split(" - ")
             start_dt = datetime.strptime(start_str.strip(), "%Y-%m-%d")
             end_dt = datetime.strptime(end_str.strip(), "%Y-%m-%d").replace(hour=23, minute=59, second=59)
-            start_month = start_dt
-            now = end_dt
         except Exception:
             pass
 
-    # 1. LMS Completion (Porcentagem de atribuições concluídas com aprovação no LMS)
+    filter_start_date = start_dt.date()
+    filter_end_date = end_dt.date()
+
+    # Dicionários de consulta rápida para evitar N+1
+    users_dict = {u.id: u for u in User.query.all()}
+    teams_dict = {t.id: t for t in Team.query.all()}
+    config = SystemConfig.query.first()
+
+    weekday_map = {
+        0: "Segunda-feira",
+        1: "Terça-feira",
+        2: "Quarta-feira",
+        3: "Quinta-feira",
+        4: "Sexta-feira",
+        5: "Sábado",
+        6: "Domingo"
+    }
+
+    def to_date(val):
+        if not val:
+            return None
+        if isinstance(val, date) and not isinstance(val, datetime):
+            return val
+        if isinstance(val, datetime):
+            return val.date()
+        if isinstance(val, str):
+            try:
+                return datetime.strptime(val[:10], "%Y-%m-%d").date()
+            except Exception:
+                pass
+        return None
+
+    # Carrega Feriados Nacionais, Estaduais (RJ) e Municipais (Seropédica)
+    import holidays
+    years = [filter_start_date.year, filter_end_date.year, today_date.year, today_date.year + 1]
+    years = sorted(list(set(years)))
+    h_dict = holidays.Brazil(subdiv="RJ", years=years)
+    for y in years:
+        # 1. Santo Antônio (Padroeiro de Seropédica - 13 de Junho)
+        h_dict[date(y, 6, 13)] = "Santo Antônio (Padroeiro)"
+        
+        # 2. Corpus Christi (60 dias após a Páscoa)
+        a = y % 19
+        b = y // 100
+        c = y % 100
+        d = b // 4
+        e = b % 4
+        f = (b + 8) // 25
+        g = (b - f + 1) // 3
+        h = (19 * a + b - d - g + 15) % 30
+        i = c // 4
+        k = c % 4
+        l = (32 + 2 * e + 2 * i - h - k) % 7
+        m = (a + 11 * h + 22 * l) // 451
+        month = (h + l - 7 * m + 114) // 31
+        day = ((h + l - 7 * m + 114) % 31) + 1
+        easter_date = date(y, month, day)
+        corpus_christi = easter_date + timedelta(days=60)
+        h_dict[corpus_christi] = "Corpus Christi"
+        
+        # 3. Emancipação de Seropédica (12 de Outubro)
+        h_dict.pop(date(y, 10, 12), None)
+        h_dict[date(y, 10, 12)] = "N. Sra Aparecida / Emancipação"
+
+    # 1. Carregar todas as escalas manuais
+    all_manual_scales = Scale.query.filter(db.or_(Scale.status != "INATIVO", Scale.status == None)).all()
+    manual_dates_set = set()
+    for s in all_manual_scales:
+        sd = to_date(s.date)
+        if sd:
+            manual_dates_set.add(sd)
+
+    # Unificação de escalas: manuais + automáticas por rodízio aos sábados + feriados oficiais
+    unified_scales = []
+
+    for s in all_manual_scales:
+        s_date = to_date(s.date)
+        if not s_date:
+            continue
+        tech_names = []
+        tech_ids = []
+        if s.technician_ids:
+            tids = [int(x.strip()) for x in s.technician_ids.split(",") if x.strip().isdigit()]
+            tech_ids = [tid for tid in tids if tid in users_dict]
+            tech_names = [users_dict[tid].username for tid in tech_ids]
+        elif s.user_id and s.user_id in users_dict:
+            tech_ids = [s.user_id]
+            tech_names = [users_dict[s.user_id].username]
+
+        team_names = []
+        if s.team_ids:
+            tm_ids = [int(x.strip()) for x in s.team_ids.split(",") if x.strip().isdigit()]
+            team_names = [teams_dict[tmid].name for tmid in tm_ids if tmid in teams_dict]
+        elif s.team_id and s.team_id in teams_dict:
+            team_names = [teams_dict[s.team_id].name]
+
+        # Se não há técnicos específicos gravados no campo technician_ids, utiliza os membros da equipe vinculada
+        if not tech_names:
+            if s.team_ids:
+                tm_ids = [int(x.strip()) for x in s.team_ids.split(",") if x.strip().isdigit()]
+                for tmid in tm_ids:
+                    if tmid in teams_dict and teams_dict[tmid].members:
+                        for m in teams_dict[tmid].members:
+                            tech_names.append(m.username)
+                            tech_ids.append(m.id)
+            elif s.team_id and s.team_id in teams_dict and teams_dict[s.team_id].members:
+                for m in teams_dict[s.team_id].members:
+                    tech_names.append(m.username)
+                    tech_ids.append(m.id)
+
+        scale_type_raw = (s.type or "Plantão").strip()
+        type_lower = scale_type_raw.lower()
+        obs_lower = (s.obs or "").lower()
+
+        # Identificação robusta de tipo (incluindo feriados de calendário)
+        is_holiday = (s_date in h_dict) or ("fer" in type_lower) or ("fer" in obs_lower)
+        if is_holiday:
+            canonical_type = "Feriado"
+            h_name = h_dict.get(s_date)
+            if h_name and ("plant" in type_lower or "escala" in type_lower or "geral" in type_lower or "fer" in type_lower or not scale_type_raw):
+                scale_type_raw = f"Feriado: {h_name}"
+        elif "dom" in type_lower or s_date.weekday() == 6:
+            canonical_type = "Domingo"
+        elif "sab" in type_lower or s_date.weekday() == 5:
+            canonical_type = "Sábado"
+        else:
+            canonical_type = scale_type_raw.capitalize()
+
+        unified_scales.append({
+            "id": s.id,
+            "date": s_date,
+            "type": canonical_type,
+            "raw_type": scale_type_raw,
+            "team_name": ", ".join(team_names) if team_names else "Geral",
+            "techs": tech_names,
+            "tech_ids": tech_ids,
+            "obs": s.obs or (f"Feriado: {h_dict[s_date]}" if s_date in h_dict else ""),
+            "is_automatic": False
+        })
+
+    # Janela de cálculo para projeções e feriados (passado recente até futuro próximo)
+    calc_start = min(filter_start_date, today_date - timedelta(days=90))
+    calc_end = max(filter_end_date, today_date + timedelta(days=150))
+
+    # Inclusão de Feriados Oficiais que não possuem escala manual cadastrada ainda
+    for h_date, h_name in h_dict.items():
+        if calc_start <= h_date <= calc_end and h_date not in manual_dates_set:
+            unified_scales.append({
+                "id": None,
+                "date": h_date,
+                "type": "Feriado",
+                "raw_type": f"Feriado: {h_name}",
+                "team_name": "Plantão de Feriado",
+                "techs": [],
+                "tech_ids": [],
+                "obs": f"Feriado Oficial: {h_name}",
+                "is_automatic": True
+            })
+
+    # Gerar sábados automáticos caso não haja escala manual para a data
+    config_scale_start = to_date(config.scale_start_date) if (config and config.scale_start_date) else None
+    if config and config_scale_start and config.scale_rotation_order:
+        rotation_order = [int(x) for x in config.scale_rotation_order.split(",") if x.strip().isdigit()]
+        if rotation_order:
+            curr = calc_start
+            while curr <= calc_end:
+                if curr.weekday() == 5 and curr >= config_scale_start and curr not in manual_dates_set and curr not in h_dict:
+                    weeks = (curr - config_scale_start).days // 7
+                    team_idx = weeks % len(rotation_order)
+                    team_id = rotation_order[team_idx]
+                    team = teams_dict.get(team_id)
+                    team_name = team.name if team else "Equipe Rodízio"
+                    team_techs = [m.username for m in team.members] if (team and team.members) else []
+                    team_tech_ids = [m.id for m in team.members] if (team and team.members) else []
+
+                    unified_scales.append({
+                        "id": None,
+                        "date": curr,
+                        "type": "Sábado",
+                        "raw_type": f"Plantão: {team_name}",
+                        "team_name": team_name,
+                        "techs": team_techs,
+                        "tech_ids": team_tech_ids,
+                        "obs": "Escala automática por rodízio de equipes",
+                        "is_automatic": True
+                    })
+                curr += timedelta(days=1)
+
+    # Ordenar escalas cronologicamente
+    unified_scales.sort(key=lambda x: x["date"])
+
+    # 2. Filtragem de Métricas no Período Selecionado
+    period_scales = [s for s in unified_scales if filter_start_date <= s["date"] <= filter_end_date]
+
+    sabados_count = sum(1 for s in period_scales if s["type"] == "Sábado")
+    domingos_count = sum(1 for s in period_scales if s["type"] == "Domingo")
+    feriados_count = sum(1 for s in period_scales if s["type"] == "Feriado")
+    outros_count = sum(1 for s in period_scales if s["type"] not in ["Sábado", "Domingo", "Feriado"])
+    total_plantoes = len(period_scales)
+
+    unique_techs_period = set()
+    tech_plantao_counts = defaultdict(lambda: {"total": 0, "sabados": 0, "domingos": 0, "feriados": 0, "name": ""})
+    team_plantao_counts = defaultdict(int)
+
+    for s in period_scales:
+        if s["team_name"]:
+            team_plantao_counts[s["team_name"]] += 1
+        for tid in s["tech_ids"]:
+            unique_techs_period.add(tid)
+            u = users_dict.get(tid)
+            tname = u.username if u else f"Técnico #{tid}"
+            tech_plantao_counts[tid]["name"] = tname
+            tech_plantao_counts[tid]["total"] += 1
+            if s["type"] == "Sábado":
+                tech_plantao_counts[tid]["sabados"] += 1
+            elif s["type"] == "Domingo":
+                tech_plantao_counts[tid]["domingos"] += 1
+            elif s["type"] == "Feriado":
+                tech_plantao_counts[tid]["feriados"] += 1
+
+    # Ranking de técnicos por plantão
+    ranking_tecnicos = []
+    for tid, info in sorted(tech_plantao_counts.items(), key=lambda x: x[1]["total"], reverse=True):
+        perc = int((info["total"] / total_plantoes * 100)) if total_plantoes > 0 else 0
+        ranking_tecnicos.append({
+            "id": tid,
+            "name": info["name"],
+            "total": info["total"],
+            "sabados": info["sabados"],
+            "domingos": info["domingos"],
+            "feriados": info["feriados"],
+            "perc": perc
+        })
+
+    # 3. Dois Próximos Plantões Programados (Hero Cards)
+    future_scales = [s for s in unified_scales if s["date"] >= today_date]
+    dois_proximos_plantoes = []
+    for idx, s in enumerate(future_scales[:2]):
+        diff_days = (s["date"] - today_date).days
+        if diff_days == 0:
+            rel_label = "Hoje"
+        elif diff_days == 1:
+            rel_label = "Amanhã"
+        elif diff_days < 7 and s["date"].weekday() == 5:
+            rel_label = "Neste Sábado"
+        elif diff_days < 7 and s["date"].weekday() == 6:
+            rel_label = "Neste Domingo"
+        else:
+            rel_label = f"Em {diff_days} dias"
+
+        dois_proximos_plantoes.append({
+            "order": idx + 1,
+            "is_today": (diff_days == 0),
+            "date": str(s["date"]),
+            "date_formatted": s["date"].strftime("%d/%m/%Y"),
+            "weekday": weekday_map.get(s["date"].weekday(), ""),
+            "days_diff": diff_days,
+            "relative_label": rel_label,
+            "type": s["type"],
+            "raw_type": s["raw_type"],
+            "team_name": s["team_name"],
+            "techs": s["techs"],
+            "obs": s["obs"],
+            "is_automatic": s["is_automatic"]
+        })
+
+    proximo_plantao_data = dois_proximos_plantoes[0] if dois_proximos_plantoes else None
+
+    # 4. Lista dos Próximos Plantões Programados (até 8 futuros)
+    proximos_list = []
+    for s in future_scales[:8]:
+        d_diff = (s["date"] - today_date).days
+        if d_diff == 0:
+            d_label = "Hoje"
+        elif d_diff == 1:
+            d_label = "Amanhã"
+        else:
+            d_label = f"Em {d_diff}d"
+
+        proximos_list.append({
+            "date": str(s["date"]),
+            "date_formatted": s["date"].strftime("%d/%m/%Y"),
+            "weekday": weekday_map.get(s["date"].weekday(), ""),
+            "type": s["type"],
+            "team_name": s["team_name"],
+            "techs": s["techs"],
+            "obs": s["obs"],
+            "is_automatic": s["is_automatic"],
+            "relative_label": d_label
+        })
+
+    # 5. Timeline / Evolução Mensal dos Plantões (Últimos 5 meses + Próximos 2 meses)
+    month_labels = []
+    timeline_sabados = []
+    timeline_domingos = []
+    timeline_feriados = []
+
+    base_month = now.replace(day=1)
+    month_names_pt = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"]
+
+    for offset in range(-4, 3):
+        # Deslocamento em meses
+        m_year = base_month.year + (base_month.month - 1 + offset) // 12
+        m_month = (base_month.month - 1 + offset) % 12 + 1
+        m_start = date(m_year, m_month, 1)
+        next_m = (m_start.replace(day=28) + timedelta(days=4)).replace(day=1)
+        m_end = next_m - timedelta(days=1)
+
+        m_scales = [s for s in unified_scales if m_start <= s["date"] <= m_end]
+        m_label = f"{month_names_pt[m_month - 1]}/{str(m_year)[2:]}"
+
+        month_labels.append(m_label)
+        timeline_sabados.append(sum(1 for s in m_scales if s["type"] == "Sábado"))
+        timeline_domingos.append(sum(1 for s in m_scales if s["type"] == "Domingo"))
+        timeline_feriados.append(sum(1 for s in m_scales if s["type"] == "Feriado"))
+
+    # 6. Informações de Prontidão Operacional & Equipes
+    next_30_days = today_date + timedelta(days=30)
+    proximos_30d_scales = [s for s in unified_scales if today_date <= s["date"] <= next_30_days]
+    total_30d = len(proximos_30d_scales)
+    cobertos_30d = sum(1 for s in proximos_30d_scales if s["techs"] or (s["is_automatic"] and s["team_name"] != "Plantão de Feriado"))
+    taxa_cobertura_pct = int((cobertos_30d / total_30d * 100)) if total_30d > 0 else 100
+
+    # Alertas de feriados nos próximos 60 dias
+    next_60_days = today_date + timedelta(days=60)
+    feriados_alertas = []
+    for s in unified_scales:
+        if s["type"] == "Feriado" and today_date <= s["date"] <= next_60_days:
+            diff_d = (s["date"] - today_date).days
+            tem_escala = bool(s["techs"] and len(s["techs"]) > 0)
+            feriados_alertas.append({
+                "date_formatted": s["date"].strftime("%d/%m"),
+                "weekday": weekday_map.get(s["date"].weekday(), ""),
+                "name": s["raw_type"].replace("Feriado:", "").strip() if "Feriado:" in s["raw_type"] else (s["obs"] or "Feriado"),
+                "days_diff": diff_d,
+                "relative_label": "Hoje" if diff_d == 0 else ("Amanhã" if diff_d == 1 else f"Em {diff_d} dias"),
+                "tem_escala": tem_escala,
+                "techs": s["techs"]
+            })
+
+    # Equipes técnicas ativas
+    equipes_status = []
+    for team in Team.query.all():
+        equipes_status.append({
+            "id": team.id,
+            "name": team.name,
+            "color": team.color or "#f59e0b",
+            "members_count": len(team.members) if team.members else 0,
+            "leader": team.leader.username if team.leader else "Sem líder"
+        })
+
+    prontidao_info = {
+        "taxa_cobertura_pct": taxa_cobertura_pct,
+        "total_30d": total_30d,
+        "cobertos_30d": cobertos_30d,
+        "feriados_alertas": feriados_alertas[:4],
+        "equipes_status": equipes_status
+    }
+
+    # Escalas por Equipe (Cobertura)
+    equipes_cobertura = []
+    for tname, cnt in sorted(team_plantao_counts.items(), key=lambda x: x[1], reverse=True):
+        equipes_cobertura.append({"team": tname, "count": cnt})
+
+    # 7. Dados adicionais do ecossistema técnico (Auditorias, LMS, RFO, Geradores, etc.)
     total_assigns = TrainingAssignment.query.count()
     approved_assigns = TrainingAssignment.query.filter_by(status="aprovado").count()
     lms_completion = int((approved_assigns / total_assigns * 100)) if total_assigns > 0 else 0
 
-    # 2. Auditorias consolidadas (Checklists de supervisor + Supervisão em Campo + Rota Exata + Vistorias no período)
     audits = Checklist.query.join(User, db.func.lower(Checklist.technician) == db.func.lower(User.username)).filter(
         User.role == "supervisor",
-        Checklist.date >= start_month,
-        Checklist.date <= now
+        Checklist.date >= start_dt,
+        Checklist.date <= end_dt
     ).count()
 
     supervisoes = SupervisaoTecnica.query.filter(
-        SupervisaoTecnica.date >= start_month.date(),
-        SupervisaoTecnica.date <= now.date()
+        SupervisaoTecnica.date >= filter_start_date,
+        SupervisaoTecnica.date <= filter_end_date
     ).count()
 
     rotas = RotaExata.query.filter(
-        RotaExata.date >= start_month.date(),
-        RotaExata.date <= now.date()
+        RotaExata.date >= filter_start_date,
+        RotaExata.date <= filter_end_date
     ).count()
 
     vistorias = Vistoria.query.filter(
-        Vistoria.created_at >= start_month,
-        Vistoria.created_at <= now
+        Vistoria.created_at >= start_dt,
+        Vistoria.created_at <= end_dt
     ).count()
 
     total_audits = audits + supervisoes + rotas + vistorias
 
-    # 3. RFO e Tarefas
     rfo_active = RFO.query.filter_by(status="ABERTO").count()
     tasks_pending = Task.query.filter(Task.status != "CONCLUÍDO").count()
 
-    # 4. Atividades consolidado (Volume de Checklists + Vistorias + RFOs no período)
-    act_labels = []
-    act_values = []
-    
-    delta_days = (now - start_month).days
-    max_days = min(delta_days, 15) if delta_days > 0 else 7
-    
-    for i in range(max_days, -1, -1):
-        day = (now - timedelta(days=i)).date()
-        checklists_count = Checklist.query.filter(db.func.date(Checklist.date) == day).count()
-        vistorias_count = Vistoria.query.filter(db.func.date(Vistoria.created_at) == day).count()
-        rfos_count = RFO.query.filter(RFO.date == day).count()
-        
-        total_day_act = checklists_count + vistorias_count + rfos_count
-        
-        act_labels.append(day.strftime("%d/%m"))
-        act_values.append(total_day_act)
-
-    # 5. RFO por Tipo / Categoria
-    rfo_types = db.session.query(RFO.problem_type, db.func.count(RFO.id)).group_by(RFO.problem_type).all()
-    rfo_dist = {t[0] if t[0] else "Outros": t[1] for t in rfo_types}
-
-    # 6. Ranking real de Técnicos (Baseado no somatório dos scores de treinamentos LMS aprovados)
-    top_users = db.session.query(
-        User.username,
-        db.func.sum(TrainingAssignment.best_score).label('total_score')
-    ).join(
-        TrainingAssignment, User.id == TrainingAssignment.user_id
-    ).filter(
-        TrainingAssignment.status == "aprovado"
-    ).group_by(
-        User.id
-    ).order_by(
-        db.text('total_score DESC')
-    ).limit(5).all()
-    
-    ranking = []
-    for u in top_users:
-        ranking.append({
-            "name": u[0],
-            "points": int(u[1]) if u[1] else 0
-        })
-
-    # 7. Alertas de Geradores (Nível de combustível <= 30%)
-    generator_alerts = []
-    low_fuel_generators = Generator.query.all()
-    for g in low_fuel_generators:
-        if g.capacity_total and g.capacity_total > 0 and g.current_qty is not None:
-            perc = int((g.current_qty / g.capacity_total * 100))
-            if perc <= 30:
-                generator_alerts.append({
-                    "name": g.name,
-                    "perc": perc
-                })
-
-    # 8. Tarefas Críticas Pendentes (Prioridade Alta)
-    critical_tasks = []
-    crit_task_objs = Task.query.filter(
-        Task.status != "CONCLUÍDO",
-        Task.priority == "ALTA"
-    ).order_by(Task.deadline.asc()).limit(5).all()
-    
-    for t in crit_task_objs:
-        critical_tasks.append({
-            "title": t.title,
-            "responsible": t.responsible.username if t.responsible else "Não atribuído",
-            "priority": t.priority
-        })
-
-    # 9. Saúde Real da Frota no período
-    total_fleet = Checklist.query.filter(Checklist.date >= start_month, Checklist.date <= now).count()
-    ok_fleet = Checklist.query.filter(Checklist.date >= start_month, Checklist.date <= now, Checklist.status == "OK").count()
+    total_fleet = Checklist.query.filter(Checklist.date >= start_dt, Checklist.date <= end_dt).count()
+    ok_fleet = Checklist.query.filter(Checklist.date >= start_dt, Checklist.date <= end_dt, Checklist.status == "OK").count()
     real_fleet_health = int((ok_fleet / total_fleet * 100)) if total_fleet > 0 else 100
 
-    # 10. Escalas de Plantão Ativo Hoje
-    today_date = now.date()
-    escalas_hoje = []
-    escalas_objs = Scale.query.filter(Scale.date == today_date, Scale.status == "ATIVO").all()
-    
-    # Adiciona a escala automática de sábado se for o caso e não houver manual cadastrada
-    if not escalas_objs and today_date.weekday() == 5:
-        config = SystemConfig.query.first()
-        if config and config.scale_start_date and config.scale_rotation_order:
-            if today_date >= config.scale_start_date:
-                rotation_order = [int(x) for x in config.scale_rotation_order.split(",") if x.strip().isdigit()]
-                if rotation_order:
-                    weeks = (today_date - config.scale_start_date).days // 7
-                    team_idx = weeks % len(rotation_order)
-                    team_id = rotation_order[team_idx]
-                    
-                    team = Team.query.get(team_id)
-                    if team:
-                        tech_names = [member.username for member in team.members if member.role == "tech"]
-                        escalas_hoje.append({
-                            "type": f"Plantão: {team.name}",
-                            "obs": "Escala automática por rodízio de equipes",
-                            "techs": tech_names
-                        })
-
-    for esc in escalas_objs:
-        tech_names = []
-        if esc.technician_ids:
-            ids = [int(i.strip()) for i in esc.technician_ids.split(",") if i.strip().isdigit()]
-            users = User.query.filter(User.id.in_(ids)).all()
-            tech_names = [u.username for u in users]
-        
-        escalas_hoje.append({
-            "type": esc.type or "Plantão",
-            "obs": esc.obs or "Sem observações",
-            "techs": tech_names
-        })
-
-    # 11. Últimos Encerramentos Diários
     recent_encerramentos = []
     enc_objs = Encerramento.query.order_by(Encerramento.date.desc()).limit(5).all()
     for enc in enc_objs:
@@ -576,18 +839,40 @@ def api_gestao_stats():
             "closing_time": enc.closing_time or "N/A"
         })
 
-    return json.dumps({
+    return jsonify({
+        "plantao_kpis": {
+            "total_plantoes": total_plantoes,
+            "sabados_count": sabados_count,
+            "domingos_count": domingos_count,
+            "feriados_count": feriados_count,
+            "outros_count": outros_count,
+            "total_tecnicos_escalados": len(unique_techs_period),
+            "periodo_label": f"{filter_start_date.strftime('%d/%m/%Y')} até {filter_end_date.strftime('%d/%m/%Y')}"
+        },
+        "proximo_plantao": proximo_plantao_data,
+        "dois_proximos_plantoes": dois_proximos_plantoes,
+        "proximos_plantoes": proximos_list,
+        "prontidao_info": prontidao_info,
+        "ranking_tecnicos_plantoes": ranking_tecnicos,
+        "equipes_cobertura": equipes_cobertura,
+        "timeline_plantoes": {
+            "labels": month_labels,
+            "sabados": timeline_sabados,
+            "domingos": timeline_domingos,
+            "feriados": timeline_feriados
+        },
+        "distribuicao_tipos": {
+            "Sábado": sabados_count,
+            "Domingo": domingos_count,
+            "Feriado": feriados_count,
+            "Outros": outros_count
+        },
+        # Legados e complementares
         "lms_completion": lms_completion,
         "total_audits_month": total_audits,
         "fleet_health": real_fleet_health,
         "rfo_active": rfo_active,
         "tasks_pending": tasks_pending,
-        "atividades_history": {"labels": act_labels, "values": act_values},
-        "rfo_by_type": rfo_dist,
-        "ranking": ranking,
-        "generator_alerts": generator_alerts,
-        "critical_tasks": critical_tasks,
-        "escalas_hoje": escalas_hoje,
         "recent_encerramentos": recent_encerramentos
     })
 
@@ -891,3 +1176,149 @@ def logs():
         limit=limit,
         total_logs=total_logs
     )
+
+
+# ----------------- MONITORAMENTO DE USUÁRIOS ONLINE & ÚLTIMO ACESSO (ADMIN ONLY) -----------------
+@auth_bp.route("/api/admin/online-users", methods=["GET"])
+@login_required
+def api_admin_online_users():
+    """Retorna lista de usuários com status online e último acesso para administradores com recuperação histórica."""
+    if not current_user.is_admin:
+        return jsonify({"success": False, "error": "Acesso restrito a administradores."}), 403
+
+    from sqlalchemy import func
+
+    now = agora()
+    today_date = now.date()
+
+    # O usuário logado está ativo agora
+    current_user.last_seen = now
+    current_user.last_ip = request.remote_addr
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+
+    users = User.query.all()
+
+    # Pré-carregar os máximos históricos para otimizar desempenho
+    hist_logs = dict(db.session.query(func.upper(Log.usuario), func.max(Log.data_hora)).group_by(func.upper(Log.usuario)).all())
+    hist_checklists = dict(db.session.query(func.upper(Checklist.technician), func.max(Checklist.date)).group_by(func.upper(Checklist.technician)).all())
+    hist_movs = dict(db.session.query(func.upper(VehicleMov.responsavel), func.max(VehicleMov.data_hora)).group_by(func.upper(VehicleMov.responsavel)).all())
+    hist_vistorias = dict(db.session.query(Vistoria.created_by, func.max(Vistoria.created_at)).filter(Vistoria.created_by.isnot(None)).group_by(Vistoria.created_by).all())
+
+    data = []
+    online_count = 0
+    today_count = 0
+    need_commit = False
+
+    for u in users:
+        uname_upper = u.username.upper() if u.username else ""
+        candidate_dates = []
+
+        if u.last_seen:
+            candidate_dates.append(u.last_seen)
+        if u.last_login:
+            candidate_dates.append(u.last_login)
+
+        # Fallback para registros históricos
+        if uname_upper in hist_logs and hist_logs[uname_upper]:
+            candidate_dates.append(hist_logs[uname_upper])
+        if uname_upper in hist_checklists and hist_checklists[uname_upper]:
+            candidate_dates.append(hist_checklists[uname_upper])
+        if uname_upper in hist_movs and hist_movs[uname_upper]:
+            candidate_dates.append(hist_movs[uname_upper])
+        if u.id in hist_vistorias and hist_vistorias[u.id]:
+            candidate_dates.append(hist_vistorias[u.id])
+
+        best_date = max(candidate_dates) if candidate_dates else None
+
+        # Se encontrou histórico mais recente que u.last_seen, atualiza
+        if best_date and (not u.last_seen or best_date > u.last_seen):
+            u.last_seen = best_date
+            if not u.last_login:
+                u.last_login = best_date
+            need_commit = True
+
+        is_online = False
+        last_seen_str = "Nunca acessou"
+        last_seen_rel = "Nunca acessou"
+        last_login_str = "Nunca acessou"
+
+        if best_date:
+            diff = (now - best_date).total_seconds()
+            
+            # Considera online se a atividade for nos últimos 5 minutos
+            if diff <= 300:
+                is_online = True
+                online_count += 1
+
+            if best_date.date() == today_date:
+                today_count += 1
+
+            last_seen_str = best_date.strftime("%d/%m/%Y às %H:%M:%S")
+
+            if diff < 60:
+                last_seen_rel = "Agora mesmo"
+            elif diff < 3600:
+                mins = int(diff // 60)
+                last_seen_rel = f"Há {mins} min"
+            elif diff < 86400 and best_date.date() == today_date:
+                last_seen_rel = f"Hoje às {best_date.strftime('%H:%M')}"
+            elif best_date.date() == (today_date - timedelta(days=1)):
+                last_seen_rel = f"Ontem às {best_date.strftime('%H:%M')}"
+            else:
+                last_seen_rel = best_date.strftime("%d/%m/%Y às %H:%M")
+
+        if u.last_login:
+            last_login_str = u.last_login.strftime("%d/%m/%Y às %H:%M")
+
+        data.append({
+            "id": u.id,
+            "username": u.username,
+            "role": u.role or "Usuário",
+            "is_online": is_online,
+            "last_seen": last_seen_str,
+            "last_seen_relative": last_seen_rel,
+            "last_seen_raw": best_date.isoformat() if best_date else "",
+            "last_login": last_login_str,
+            "last_ip": u.last_ip or "-",
+            "is_current": (u.id == current_user.id)
+        })
+
+    if need_commit:
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
+
+    # Ordenação inteligente: Online primeiro, depois por data mais recente de acesso, e por fim os que nunca acessaram
+    data.sort(key=lambda item: (
+        not item["is_online"],
+        not item["is_current"],
+        -(datetime.fromisoformat(item["last_seen_raw"]).timestamp()) if item["last_seen_raw"] else float('inf'),
+        item["username"]
+    ))
+
+    return jsonify({
+        "success": True,
+        "online_count": online_count,
+        "total_count": len(users),
+        "today_count": today_count,
+        "users": data
+    })
+
+
+@auth_bp.route("/api/user/heartbeat", methods=["GET", "POST"])
+@login_required
+def api_user_heartbeat():
+    """Mantém a presença online do usuário ativo na aba aberta."""
+    now = agora()
+    try:
+        current_user.last_seen = now
+        current_user.last_ip = request.remote_addr
+        db.session.commit()
+        return jsonify({"success": True, "timestamp": now.isoformat()})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"success": False, "error": str(e)}), 500

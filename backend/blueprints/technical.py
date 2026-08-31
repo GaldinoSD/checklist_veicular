@@ -71,6 +71,13 @@ def gestao_tecnica():
     return render_template("gestao_tecnica.html", tecnicos=tecnicos, tecnicos_js_data=tecnicos_js_data, powerbi_url=powerbi_url)
 
 
+@technical_bp.route("/simulador-roteadores")
+@login_required
+def simulador_roteadores():
+    return render_template("simulador_roteadores.html")
+
+
+
 
 
 # --- AUXILIARES E USUÁRIOS ---

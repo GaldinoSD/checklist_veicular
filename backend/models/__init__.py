@@ -22,12 +22,23 @@ class User(UserMixin, db.Model):
     phone = db.Column(db.String(20))
     telegram_chat_id = db.Column(db.String(100))
     permissions = db.Column(db.Text) # JSON string
+    last_login = db.Column(db.DateTime, nullable=True)
+    last_seen = db.Column(db.DateTime, nullable=True)
+    last_ip = db.Column(db.String(45), nullable=True)
 
     def set_password(self, pwd: str):
         self.password_hash = generate_password_hash(pwd)
 
     def check_password(self, pwd: str) -> bool:
         return check_password_hash(self.password_hash, pwd)
+
+    @property
+    def is_online(self):
+        if not self.last_seen:
+            return False
+        from backend.utils import agora
+        diff = (agora() - self.last_seen).total_seconds()
+        return 0 <= diff <= 300
 
     @property
     def is_admin(self):
