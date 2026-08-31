@@ -512,209 +512,211 @@
 </dialog>
 
 <!-- ===================================
-     ✅ MODAL: VISUALIZAR VISTORIA
+     ✅ MODAL: VISUALIZAR VISTORIA (DISCRETO & EXECUTIVO)
      =================================== -->
-<dialog id="modalVerVistoria" class="bg-transparent backdrop:bg-slate-900/50 backdrop:backdrop-blur-md outline-none border-none p-0 max-w-[95vw] w-[880px] rounded-[2rem] overflow-hidden shadow-2xl">
-    <div class="bg-white/95 dark:bg-slate-900/95 border border-slate-900/10 dark:border-white/10 rounded-[2rem] p-6 backdrop-blur-xl flex flex-col max-h-[90vh]">
+<dialog id="modalVerVistoria" class="bg-transparent backdrop:bg-slate-900/50 backdrop:backdrop-blur-md outline-none border-none p-0 max-w-[95vw] w-[960px] rounded-2xl overflow-hidden shadow-2xl">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-2xl p-6 flex flex-col max-h-[90vh] text-left">
         
-        <!-- Header -->
-        <div class="flex items-center justify-between pb-4 border-b border-slate-900/5 dark:border-white/5 mb-4 shrink-0">
+        <!-- Header Discreto -->
+        <div class="flex items-start justify-between pb-4 border-b border-slate-100 dark:border-white/5 mb-4 shrink-0 gap-4">
             <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-[1.25rem] bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
-                    <i class="fa-solid fa-magnifying-glass text-lg"></i>
+                <div class="w-10 h-10 rounded-xl bg-slate-100 dark:bg-white/5 flex items-center justify-center text-slate-700 dark:text-slate-300 shrink-0">
+                    <i class="fa-solid fa-car-side"></i>
                 </div>
                 <div>
-                    <h3 class="text-lg font-black text-slate-800 dark:text-white tracking-tight" id="verModalTitle">Detalhes da Vistoria</h3>
-                    <p class="text-xs text-slate-400" id="verModalSubtitle">Carregando informações...</p>
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <h3 class="text-base font-black text-slate-800 dark:text-white" id="verModalTitle">Vistoria #---</h3>
+                        <span id="verModalStatusBadge" class="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border"></span>
+                    </div>
+                    <p class="text-xs text-slate-400 mt-0.5" id="verModalSubtitle">Carregando informações...</p>
                 </div>
             </div>
-            <button onclick="closeVerVistoriaModal()" class="w-8 h-8 rounded-xl bg-slate-900/5 dark:bg-white/5 hover:bg-slate-900/10 dark:hover:bg-white/10 transition-all flex items-center justify-center text-slate-500 dark:text-slate-400">
-                <i class="fa-solid fa-xmark text-sm"></i>
-            </button>
+            <div class="flex items-center gap-3">
+                <div id="verModalSummaryPills" class="hidden sm:flex items-center gap-1.5"></div>
+                <button type="button" onclick="closeVerVistoriaModal()" class="w-8 h-8 rounded-lg hover:bg-slate-100 dark:hover:bg-white/5 flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-white transition-all">
+                    <i class="fa-solid fa-xmark text-sm"></i>
+                </button>
+            </div>
         </div>
 
         <!-- Loader -->
         <div id="verModalLoader" class="flex flex-col items-center justify-center py-20 gap-3">
-            <div class="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-            <p class="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Buscando vistoria no servidor...</p>
+            <div class="w-10 h-10 border-3 border-slate-300 border-t-slate-800 dark:border-white/20 dark:border-t-white rounded-full animate-spin"></div>
+            <p class="text-xs font-bold text-slate-400 uppercase tracking-widest">Carregando vistoria...</p>
         </div>
 
         <!-- Content (Oculto ao carregar) -->
-        <div id="verModalContent" class="hidden flex-1 overflow-y-auto pr-2 custom-scrollbar">
-            <!-- Top Summary Card -->
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 rounded-2xl bg-slate-900/5 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 mb-6">
-                <div>
-                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider block">Veículo</span>
-                    <span class="text-sm font-black text-slate-800 dark:text-white" id="verModalVehiclePlate">-</span>
+        <div id="verModalContent" class="hidden flex-1 overflow-y-auto pr-1 custom-scrollbar space-y-4">
+            
+            <!-- Abas / Segmented Control Discreto -->
+            <div class="flex items-center justify-between gap-2 border-b border-slate-100 dark:border-white/5 pb-3 flex-wrap">
+                <div class="flex items-center gap-1 bg-slate-100 dark:bg-white/5 p-1 rounded-xl">
+                    <button type="button" onclick="switchVerVistoriaView('table')" id="btnVerViewTable"
+                            class="px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-white dark:bg-slate-800 text-slate-800 dark:text-white shadow-sm flex items-center gap-1.5">
+                        <i class="fa-solid fa-table-list text-xs"></i> Tabela de Itens & Fotos
+                    </button>
+                    <button type="button" onclick="switchVerVistoriaView('map')" id="btnVerViewMap"
+                            class="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white flex items-center gap-1.5">
+                        <i class="fa-solid fa-map-location-dot text-xs"></i> Mapa 2D da Lataria
+                    </button>
                 </div>
-                <div>
-                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider block">Quilometragem (KM)</span>
-                    <span class="text-sm font-black text-slate-800 dark:text-white" id="verModalKM">-</span>
+                <div id="verModalMetaChips" class="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-3">
+                    <span id="verModalChipKM"><i class="fa-solid fa-gauge mr-1"></i> <strong class="text-slate-700 dark:text-slate-200" id="verModalKMVal">-</strong></span>
+                    <span id="verModalChipTurno"><i class="fa-regular fa-clock mr-1"></i> <span id="verModalTurnoVal">-</span></span>
                 </div>
-                <div>
-                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider block">Turno / Local</span>
-                    <span class="text-sm font-black text-slate-850 dark:text-slate-200" id="verModalTurnoLocal">-</span>
+            </div>
+
+            <!-- View 1: Tabela Estruturada & Limpa -->
+            <div id="verVistoriaTableView" class="space-y-4">
+                <div class="overflow-x-auto max-h-[48vh] custom-scrollbar border border-slate-200/80 dark:border-white/10 rounded-xl">
+                    <table class="w-full text-left text-xs border-collapse">
+                        <thead class="bg-slate-50 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 font-bold uppercase text-[10px] tracking-wider sticky top-0 z-10 border-b border-slate-200/80 dark:border-white/10">
+                            <tr>
+                                <th class="py-2.5 px-3 w-10 text-center">#</th>
+                                <th class="py-2.5 px-3">Item / Parte</th>
+                                <th class="py-2.5 px-3">Partes Específicas</th>
+                                <th class="py-2.5 px-3 w-32">Situação</th>
+                                <th class="py-2.5 px-3">Descrição da Avaria</th>
+                                <th class="py-2.5 px-3 w-44">Fotos do Item</th>
+                            </tr>
+                        </thead>
+                        <tbody id="verModalItemsTbody" class="divide-y divide-slate-100 dark:divide-white/5 bg-white dark:bg-slate-900">
+                            <!-- Preenchido via JavaScript -->
+                        </tbody>
+                    </table>
                 </div>
-                <div>
-                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-wider block">Status Geral</span>
-                    <span id="verModalStatusBadge" class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-xs font-bold border mt-0.5">
-                        -
+
+                <!-- Fotos Gerais da Vistoria -->
+                <div id="verModalFotosGeraisContainer" class="hidden p-3 bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 rounded-xl text-xs">
+                    <span class="font-bold text-slate-700 dark:text-slate-300 block mb-2 text-[11px] uppercase tracking-wider">
+                        <i class="fa-solid fa-images mr-1"></i> Fotos Gerais da Vistoria:
                     </span>
+                    <div id="verModalFotosGeraisList" class="flex flex-wrap gap-2"></div>
+                </div>
+
+                <!-- Observações Gerais da Vistoria -->
+                <div id="verModalObsContainer" class="hidden p-3 bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 rounded-xl text-xs">
+                    <span class="font-bold text-slate-700 dark:text-slate-300 block mb-1 text-[11px] uppercase tracking-wider">
+                        <i class="fa-regular fa-comment-dots mr-1"></i> Observações Gerais:
+                    </span>
+                    <p id="verModalObservacoes" class="text-slate-600 dark:text-slate-400 italic whitespace-pre-wrap"></p>
                 </div>
             </div>
 
-            <!-- General Observations -->
-            <div id="verModalObsContainer" class="p-4 rounded-2xl border border-blue-500/10 bg-blue-500/[0.02] mb-6 hidden">
-                <span class="text-[9px] font-black text-blue-500 uppercase tracking-wider block mb-1">Observações Gerais da Vistoria</span>
-                <p class="text-xs text-slate-700 dark:text-slate-200 whitespace-pre-wrap font-medium" id="verModalObservacoes"></p>
-            </div>
+            <!-- View 2: Mapa Visual 2D (Acionado pela aba) -->
+            <div id="verVistoriaMapView" class="hidden flex-col items-center justify-center p-4 bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 rounded-xl">
+                <p class="text-xs text-slate-500 mb-3 text-center">
+                    Representação gráfica da lataria (partes com avarias destacadas em <span class="text-amber-600 font-bold">laranja</span>). Clique na parte para ver na tabela.
+                </p>
+                
+                <!-- Container Carro Detalhes -->
+                <div id="ver_svg_container_carro" class="w-full flex items-center justify-center">
+                    <svg id="modal_svg_ver" viewBox="0 0 200 400" class="w-full max-w-[180px] mx-auto select-none">
+                        <!-- Pneus/Rodas -->
+                        <rect data-part="pneus" data-sub="de" x="15" y="80" width="22" height="46" rx="6" fill="#1E293B" stroke="#475569" stroke-width="1.5" class="transition duration-200 part-ok" />
+                        <rect data-part="pneus" data-sub="dd" x="163" y="80" width="22" height="46" rx="6" fill="#1E293B" stroke="#475569" stroke-width="1.5" class="transition duration-200 part-ok" />
+                        <rect data-part="pneus" data-sub="te" x="15" y="274" width="22" height="46" rx="6" fill="#1E293B" stroke="#475569" stroke-width="1.5" class="transition duration-200 part-ok" />
+                        <rect data-part="pneus" data-sub="td" x="163" y="274" width="22" height="46" rx="6" fill="#1E293B" stroke="#475569" stroke-width="1.5" class="transition duration-200 part-ok" />
 
-            <!-- Evaluated Items Grid -->
-                <!-- Mobile Tab Switcher -->
-                <div class="flex lg:hidden gap-2 mb-4 shrink-0">
-                    <button type="button" onclick="switchVistoriaTab('modalVerVistoria', 'map')" id="btnTabVerMap" class="tab-btn-map flex-1 py-2 text-xs font-black rounded-xl bg-emerald-500 text-white shadow-lg transition-all">🗺️ Mapa Visual</button>
-                    <button type="button" onclick="switchVistoriaTab('modalVerVistoria', 'list')" id="btnTabVerList" class="tab-btn-list flex-1 py-2 text-xs font-black rounded-xl bg-slate-100 text-slate-700 dark:bg-white/5 dark:text-slate-300 transition-all">📝 Lista de Itens</button>
+                        <circle data-part="calotas" data-sub="de" cx="26" cy="103" r="7" fill="#94A3B8" stroke="#cbd5e1" stroke-width="1" class="transition duration-200 part-ok" />
+                        <circle data-part="calotas" data-sub="dd" cx="174" cy="103" r="7" fill="#94A3B8" stroke="#cbd5e1" stroke-width="1" class="transition duration-200 part-ok" />
+                        <circle data-part="calotas" data-sub="te" cx="26" cy="297" r="7" fill="#94A3B8" stroke="#cbd5e1" stroke-width="1" class="transition duration-200 part-ok" />
+                        <circle data-part="calotas" data-sub="td" cx="174" cy="297" r="7" fill="#94A3B8" stroke="#cbd5e1" stroke-width="1" class="transition duration-200 part-ok" />
+
+                        <path data-part="lateral_esquerda" d="M35 75 C30 150 30 250 35 325" fill="none" stroke="#64748B" stroke-width="6" stroke-linecap="round" class="transition duration-200 part-ok" />
+                        <path data-part="lateral_direita" d="M165 75 C170 150 170 250 165 325" fill="none" stroke="#64748B" stroke-width="6" stroke-linecap="round" class="transition duration-200 part-ok" />
+
+                        <path d="M35 75 C35 55 50 45 100 45 C150 45 165 55 165 75 L165 325 C165 345 150 355 100 355 C50 355 35 345 35 325 Z" fill="#E2E8F0" stroke="#475569" stroke-width="2" />
+
+                        <path data-part="capo" d="M37 75 C37 57 50 47 100 47 C150 47 163 57 163 75 L163 130 L37 130 Z" fill="#F1F5F9" stroke="#94A3B8" stroke-width="1.5" class="transition duration-200 part-ok" />
+                        <rect data-part="teto" x="37" y="145" width="126" height="125" rx="8" fill="#F1F5F9" stroke="#94A3B8" stroke-width="1.5" class="transition duration-200 part-ok" />
+                        <path data-part="porta_malas" d="M37 285 L163 285 L163 325 C163 343 150 353 100 353 C50 353 37 343 37 325 Z" fill="#F1F5F9" stroke="#94A3B8" stroke-width="1.5" class="transition duration-200 part-ok" />
+
+                        <path data-part="para_choque_dianteiro" d="M45 46 C60 41 140 41 155 46" fill="none" stroke="#334155" stroke-width="7" stroke-linecap="round" class="transition duration-200 part-ok" />
+                        <path data-part="para_choque_traseiro" d="M45 354 C60 359 140 359 155 354" fill="none" stroke="#334155" stroke-width="7" stroke-linecap="round" class="transition duration-200 part-ok" />
+
+                        <path data-part="vidros_parabrisa" data-sub="diant" d="M44 140 L156 140 L146 125 L54 125 Z" fill="#38BDF8" fill-opacity="0.6" stroke="#0284C7" stroke-width="1" class="transition duration-200 part-ok" />
+                        <path data-part="vidros_parabrisa" data-sub="tras" d="M44 275 L156 275 L148 285 L52 285 Z" fill="#38BDF8" fill-opacity="0.6" stroke="#0284C7" stroke-width="1" class="transition duration-200 part-ok" />
+                        <rect data-part="vidros_parabrisa" data-sub="vlde" x="34" y="148" width="4" height="56" rx="1" fill="#38BDF8" fill-opacity="0.6" stroke="#0284C7" stroke-width="1" class="transition duration-200 part-ok" />
+                        <rect data-part="vidros_parabrisa" data-sub="vldd" x="162" y="148" width="4" height="56" rx="1" fill="#38BDF8" fill-opacity="0.6" stroke="#0284C7" stroke-width="1" class="transition duration-200 part-ok" />
+                        <rect data-part="vidros_parabrisa" data-sub="vlte" x="34" y="211" width="4" height="56" rx="1" fill="#38BDF8" fill-opacity="0.6" stroke="#0284C7" stroke-width="1" class="transition duration-200 part-ok" />
+                        <rect data-part="vidros_parabrisa" data-sub="vltd" x="162" y="211" width="4" height="56" rx="1" fill="#38BDF8" fill-opacity="0.6" stroke="#0284C7" stroke-width="1" class="transition duration-200 part-ok" />
+
+                        <path data-part="farois_lanternas" data-sub="fe" d="M38 65 Q48 65 48 55" fill="none" stroke="#FDE047" stroke-width="4" stroke-linecap="round" class="transition duration-200 part-ok" />
+                        <path data-part="farois_lanternas" data-sub="fd" d="M162 65 Q152 65 152 55" fill="none" stroke="#FDE047" stroke-width="4" stroke-linecap="round" class="transition duration-200 part-ok" />
+                        <path data-part="farois_lanternas" data-sub="le" d="M38 345 Q48 345 48 351" fill="none" stroke="#EF4444" stroke-width="4" stroke-linecap="round" class="transition duration-200 part-ok" />
+                        <path data-part="farois_lanternas" data-sub="ld" d="M162 345 Q152 345 152 351" fill="none" stroke="#EF4444" stroke-width="4" stroke-linecap="round" class="transition duration-200 part-ok" />
+
+                        <path data-part="retrovisores" data-sub="esq" d="M28 135 C20 135 20 145 28 145" fill="none" stroke="#475569" stroke-width="4" stroke-linecap="round" class="transition duration-200 part-ok" />
+                        <path data-part="retrovisores" data-sub="dir" d="M172 135 C180 135 180 145 172 145" fill="none" stroke="#475569" stroke-width="4" stroke-linecap="round" class="transition duration-200 part-ok" />
+                    </svg>
                 </div>
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-                    <!-- Coluna Esquerda: Mapa 2D -->
-                    <div class="lg:col-span-1 bg-slate-50/70 border border-slate-900/10 rounded-2xl p-4 flex flex-col items-center justify-center
-                                dark:bg-black/10 dark:border-white/10 vistoria-map-col" id="modalVerVistoriaMapCol">
-                        <p class="text-[11px] text-slate-500 mb-4 text-center dark:text-gray-400">
-                            Mapa de avarias (clique nas áreas <span class="text-amber-500 font-bold font-black">laranjas</span> para detalhes)
-                        </p>
-                        
-                        <!-- Container Carro Detalhes -->
-                        <div id="ver_svg_container_carro" class="w-full flex items-center justify-center">
-                            <svg id="modal_svg_ver" viewBox="0 0 200 400" class="w-full max-w-[180px] mx-auto select-none">
-                                <!-- Pneus/Rodas -->
-                                <rect data-part="pneus" data-sub="de" x="15" y="80" width="22" height="46" rx="6" fill="#1E293B" stroke="#475569" stroke-width="1.5" class="transition duration-200 part-ok" />
-                                <rect data-part="pneus" data-sub="dd" x="163" y="80" width="22" height="46" rx="6" fill="#1E293B" stroke="#475569" stroke-width="1.5" class="transition duration-200 part-ok" />
-                                <rect data-part="pneus" data-sub="te" x="15" y="274" width="22" height="46" rx="6" fill="#1E293B" stroke="#475569" stroke-width="1.5" class="transition duration-200 part-ok" />
-                                <rect data-part="pneus" data-sub="td" x="163" y="274" width="22" height="46" rx="6" fill="#1E293B" stroke="#475569" stroke-width="1.5" class="transition duration-200 part-ok" />
 
-                                <circle data-part="calotas" data-sub="de" cx="26" cy="103" r="7" fill="#94A3B8" stroke="#cbd5e1" stroke-width="1" class="transition duration-200 part-ok" />
-                                <circle data-part="calotas" data-sub="dd" cx="174" cy="103" r="7" fill="#94A3B8" stroke="#cbd5e1" stroke-width="1" class="transition duration-200 part-ok" />
-                                <circle data-part="calotas" data-sub="te" cx="26" cy="297" r="7" fill="#94A3B8" stroke="#cbd5e1" stroke-width="1" class="transition duration-200 part-ok" />
-                                <circle data-part="calotas" data-sub="td" cx="174" cy="297" r="7" fill="#94A3B8" stroke="#cbd5e1" stroke-width="1" class="transition duration-200 part-ok" />
+                <!-- Container Moto Detalhes -->
+                <div id="ver_svg_container_moto" class="w-full hidden flex items-center justify-center">
+                    <svg id="modal_svg_ver_moto" viewBox="0 0 200 400" class="w-full max-w-[180px] mx-auto select-none">
+                        <!-- Pneus -->
+                        <rect data-part="pneus" data-sub="de" x="91" y="40" width="18" height="42" rx="4" fill="#1E293B" stroke="#475569" stroke-width="1.5" class="transition duration-200 part-ok" />
+                        <rect data-part="pneus" data-sub="te" x="91" y="290" width="18" height="48" rx="4" fill="#1E293B" stroke="#475569" stroke-width="1.5" class="transition duration-200 part-ok" />
 
-                                <path data-part="lateral_esquerda" d="M35 75 C30 150 30 250 35 325" fill="none" stroke="#64748B" stroke-width="6" stroke-linecap="round" class="transition duration-200 part-ok" />
-                                <path data-part="lateral_direita" d="M165 75 C170 150 170 250 165 325" fill="none" stroke="#64748B" stroke-width="6" stroke-linecap="round" class="transition duration-200 part-ok" />
+                        <!-- Calotas (Rodas) -->
+                        <circle data-part="calotas" data-sub="de" cx="100" cy="61" r="5" fill="#94A3B8" stroke="#cbd5e1" stroke-width="1" class="transition duration-200 part-ok" />
+                        <circle data-part="calotas" data-sub="te" cx="100" cy="314" r="5" fill="#94A3B8" stroke="#cbd5e1" stroke-width="1" class="transition duration-200 part-ok" />
 
-                                <path d="M35 75 C35 55 50 45 100 45 C150 45 165 55 165 75 L165 325 C165 345 150 355 100 355 C50 355 35 345 35 325 Z" fill="#E2E8F0" stroke="#475569" stroke-width="2" />
+                        <!-- Chassi / Corpo Principal -->
+                        <polygon points="96,61 104,61 104,314 96,314" fill="#E2E8F0" stroke="#475569" stroke-width="1.5" />
 
-                                <path data-part="capo" d="M37 75 C37 57 50 47 100 47 C150 47 163 57 163 75 L163 130 L37 130 Z" fill="#F1F5F9" stroke="#94A3B8" stroke-width="1.5" class="transition duration-200 part-ok" />
-                                <rect data-part="teto" x="37" y="145" width="126" height="125" rx="8" fill="#F1F5F9" stroke="#94A3B8" stroke-width="1.5" class="transition duration-200 part-ok" />
-                                <path data-part="porta_malas" d="M37 285 L163 285 L163 325 C163 343 150 353 100 353 C50 353 37 343 37 325 Z" fill="#F1F5F9" stroke="#94A3B8" stroke-width="1.5" class="transition duration-200 part-ok" />
+                        <!-- Laterais -->
+                        <path data-part="lateral_esquerda" d="M90 130 C80 180 80 230 90 280" fill="none" stroke="#64748B" stroke-width="5" stroke-linecap="round" class="transition duration-200 part-ok" />
+                        <path data-part="lateral_direita" d="M110 130 C120 180 120 230 110 280" fill="none" stroke="#64748B" stroke-width="5" stroke-linecap="round" class="transition duration-200 part-ok" />
 
-                                <path data-part="para_choque_dianteiro" d="M45 46 C60 41 140 41 155 46" fill="none" stroke="#334155" stroke-width="7" stroke-linecap="round" class="transition duration-200 part-ok" />
-                                <path data-part="para_choque_traseiro" d="M45 354 C60 359 140 359 155 354" fill="none" stroke="#334155" stroke-width="7" stroke-linecap="round" class="transition duration-200 part-ok" />
+                        <!-- Tanque (Capô) -->
+                        <path data-part="capo" d="M 88 120 C 88 95, 112 95, 112 120 L 114 175 C 114 190, 86 190, 86 175 Z" fill="#F1F5F9" stroke="#94A3B8" stroke-width="1.5" class="transition duration-200 part-ok" />
 
-                                <path data-part="vidros_parabrisa" data-sub="diant" d="M44 140 L156 140 L146 125 L54 125 Z" fill="#38BDF8" fill-opacity="0.6" stroke="#0284C7" stroke-width="1" class="transition duration-200 part-ok" />
-                                <path data-part="vidros_parabrisa" data-sub="tras" d="M44 275 L156 275 L148 285 L52 285 Z" fill="#38BDF8" fill-opacity="0.6" stroke="#0284C7" stroke-width="1" class="transition duration-200 part-ok" />
-                                <rect data-part="vidros_parabrisa" data-sub="vlde" x="34" y="148" width="4" height="56" rx="1" fill="#38BDF8" fill-opacity="0.6" stroke="#0284C7" stroke-width="1" class="transition duration-200 part-ok" />
-                                <rect data-part="vidros_parabrisa" data-sub="vldd" x="162" y="148" width="4" height="56" rx="1" fill="#38BDF8" fill-opacity="0.6" stroke="#0284C7" stroke-width="1" class="transition duration-200 part-ok" />
-                                <rect data-part="vidros_parabrisa" data-sub="vlte" x="34" y="211" width="4" height="56" rx="1" fill="#38BDF8" fill-opacity="0.6" stroke="#0284C7" stroke-width="1" class="transition duration-200 part-ok" />
-                                <rect data-part="vidros_parabrisa" data-sub="vltd" x="162" y="211" width="4" height="56" rx="1" fill="#38BDF8" fill-opacity="0.6" stroke="#0284C7" stroke-width="1" class="transition duration-200 part-ok" />
+                        <!-- Assento (Teto) -->
+                        <polygon data-part="teto" points="88,185 112,185 110,245 90,245" fill="#F1F5F9" stroke="#94A3B8" stroke-width="1.5" class="transition duration-200 part-ok" />
 
-                                <path data-part="farois_lanternas" data-sub="fe" d="M38 65 Q48 65 48 55" fill="none" stroke="#FDE047" stroke-width="4" stroke-linecap="round" class="transition duration-200 part-ok" />
-                                <path data-part="farois_lanternas" data-sub="fd" d="M162 65 Q152 65 152 55" fill="none" stroke="#FDE047" stroke-width="4" stroke-linecap="round" class="transition duration-200 part-ok" />
-                                <path data-part="farois_lanternas" data-sub="le" d="M38 345 Q48 345 48 351" fill="none" stroke="#EF4444" stroke-width="4" stroke-linecap="round" class="transition duration-200 part-ok" />
-                                <path data-part="farois_lanternas" data-sub="ld" d="M162 345 Q152 345 152 351" fill="none" stroke="#EF4444" stroke-width="4" stroke-linecap="round" class="transition duration-200 part-ok" />
+                        <!-- Baú (Porta Malas) -->
+                        <rect data-part="porta_malas" x="78" y="250" width="44" height="36" rx="4" fill="#F1F5F9" stroke="#94A3B8" stroke-width="1.5" class="transition duration-200 part-ok" />
 
-                                <path data-part="retrovisores" data-sub="esq" d="M28 135 C20 135 20 145 28 145" fill="none" stroke="#475569" stroke-width="4" stroke-linecap="round" class="transition duration-200 part-ok" />
-                                <path data-part="retrovisores" data-sub="dir" d="M172 135 C180 135 180 145 172 145" fill="none" stroke="#475569" stroke-width="4" stroke-linecap="round" class="transition duration-200 part-ok" />
-                            </svg>
-                        </div>
+                        <!-- Guidão (Para-choque dianteiro) -->
+                        <path data-part="para_choque_dianteiro" d="M 60 90 L 140 90" fill="none" stroke="#334155" stroke-width="6" stroke-linecap="round" class="transition duration-200 part-ok" />
 
-                        <!-- Container Moto Detalhes -->
-                        <div id="ver_svg_container_moto" class="w-full hidden flex items-center justify-center">
-                            <svg id="modal_svg_ver_moto" viewBox="0 0 200 400" class="w-full max-w-[180px] mx-auto select-none">
-                                <!-- Pneus -->
-                                <rect data-part="pneus" data-sub="de" x="91" y="40" width="18" height="42" rx="4" fill="#1E293B" stroke="#475569" stroke-width="1.5" class="transition duration-200 part-ok" />
-                                <rect data-part="pneus" data-sub="te" x="91" y="290" width="18" height="48" rx="4" fill="#1E293B" stroke="#475569" stroke-width="1.5" class="transition duration-200 part-ok" />
+                        <!-- Relação (Para-choque traseiro) -->
+                        <path data-part="para_choque_traseiro" d="M 88 280 L 88 325" fill="none" stroke="#334155" stroke-width="5" stroke-linecap="round" class="transition duration-200 part-ok" />
 
-                                <!-- Calotas (Rodas) -->
-                                <circle data-part="calotas" data-sub="de" cx="100" cy="61" r="5" fill="#94A3B8" stroke="#cbd5e1" stroke-width="1" class="transition duration-200 part-ok" />
-                                <circle data-part="calotas" data-sub="te" cx="100" cy="314" r="5" fill="#94A3B8" stroke="#cbd5e1" stroke-width="1" class="transition duration-200 part-ok" />
+                        <!-- Escapamento (Vidros/Para-brisa) -->
+                        <rect data-part="vidros_parabrisa" data-sub="diant" x="114" y="255" width="8" height="60" fill="#38BDF8" fill-opacity="0.6" stroke="#0284C7" stroke-width="1" class="transition duration-200 part-ok" />
 
-                                <!-- Chassi / Corpo Principal -->
-                                <polygon points="96,61 104,61 104,314 96,314" fill="#E2E8F0" stroke="#475569" stroke-width="1.5" />
+                        <!-- Faróis e Lanternas -->
+                        <path data-part="farois_lanternas" data-sub="fe" d="M 94 36 Q 100 32 106 36" fill="none" stroke="#FDE047" stroke-width="4" stroke-linecap="round" class="transition duration-200 part-ok" />
+                        <path data-part="farois_lanternas" data-sub="le" d="M 94 336 Q 100 340 106 336" fill="none" stroke="#EF4444" stroke-width="4" stroke-linecap="round" class="transition duration-200 part-ok" />
 
-                                <!-- Laterais -->
-                                <path data-part="lateral_esquerda" d="M90 130 C80 180 80 230 90 280" fill="none" stroke="#64748B" stroke-width="5" stroke-linecap="round" class="transition duration-200 part-ok" />
-                                <path data-part="lateral_direita" d="M110 130 C120 180 120 230 110 280" fill="none" stroke="#64748B" stroke-width="5" stroke-linecap="round" class="transition duration-200 part-ok" />
-
-                                <!-- Tanque (Capô) -->
-                                <path data-part="capo" d="M 88 120 C 88 95, 112 95, 112 120 L 114 175 C 114 190, 86 190, 86 175 Z" fill="#F1F5F9" stroke="#94A3B8" stroke-width="1.5" class="transition duration-200 part-ok" />
-
-                                <!-- Assento (Teto) -->
-                                <polygon data-part="teto" points="88,185 112,185 110,245 90,245" fill="#F1F5F9" stroke="#94A3B8" stroke-width="1.5" class="transition duration-200 part-ok" />
-
-                                <!-- Baú (Porta Malas) -->
-                                <rect data-part="porta_malas" x="78" y="250" width="44" height="36" rx="4" fill="#F1F5F9" stroke="#94A3B8" stroke-width="1.5" class="transition duration-200 part-ok" />
-
-                                <!-- Guidão (Para-choque dianteiro) -->
-                                <path data-part="para_choque_dianteiro" d="M 60 90 L 140 90" fill="none" stroke="#334155" stroke-width="6" stroke-linecap="round" class="transition duration-200 part-ok" />
-
-                                <!-- Relação (Para-choque traseiro) -->
-                                <path data-part="para_choque_traseiro" d="M 88 280 L 88 325" fill="none" stroke="#334155" stroke-width="5" stroke-linecap="round" class="transition duration-200 part-ok" />
-
-                                <!-- Escapamento (Vidros/Para-brisa) -->
-                                <rect data-part="vidros_parabrisa" data-sub="diant" x="114" y="255" width="8" height="60" fill="#38BDF8" fill-opacity="0.6" stroke="#0284C7" stroke-width="1" class="transition duration-200 part-ok" />
-
-                                <!-- Faróis e Lanternas -->
-                                <path data-part="farois_lanternas" data-sub="fe" d="M 94 36 Q 100 32 106 36" fill="none" stroke="#FDE047" stroke-width="4" stroke-linecap="round" class="transition duration-200 part-ok" />
-                                <path data-part="farois_lanternas" data-sub="le" d="M 94 336 Q 100 340 106 336" fill="none" stroke="#EF4444" stroke-width="4" stroke-linecap="round" class="transition duration-200 part-ok" />
-
-                                <!-- Retrovisores -->
-                                <path data-part="retrovisores" data-sub="esq" d="M70 90 C60 76 55 76 65 70" fill="none" stroke="#475569" stroke-width="2.5" stroke-linecap="round" class="transition duration-200 part-ok" />
-                                <path data-part="retrovisores" data-sub="dir" d="M130 90 C140 76 145 76 135 70" fill="none" stroke="#475569" stroke-width="2.5" stroke-linecap="round" class="transition duration-200 part-ok" />
-                            </svg>
-                        </div>
-                    </div>
-
-                    <!-- Coluna Direita: Detalhes -->
-                    <div class="lg:col-span-2 hidden lg:grid grid-cols-1 gap-4 vistoria-list-col" id="verModalItemsGrid">
-                        <!-- Section: Avarias Encontradas -->
-                        <div id="verModalAvariasSection" class="hidden">
-                            <h4 class="text-xs font-black text-amber-600 dark:text-amber-400 uppercase tracking-widest mb-2.5 flex items-center gap-1.5">
-                                <i class="fa-solid fa-triangle-exclamation"></i> Avarias Encontradas
-                            </h4>
-                            <div id="verModalAvariasGrid" class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                <!-- Cards de Avaria Dinâmicos -->
-                            </div>
-                        </div>
-
-                        <!-- Section: Itens em Conformidade (OK) -->
-                        <div id="verModalConformesSection" class="hidden">
-                            <h4 class="text-xs font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest mb-2.5 flex items-center gap-1.5">
-                                <i class="fa-solid fa-circle-check"></i> Itens em Conformidade (OK)
-                            </h4>
-                            <div id="verModalConformesGrid" class="grid grid-cols-2 sm:grid-cols-3 gap-2 bg-slate-900/5 dark:bg-white/5 p-3 rounded-2xl border border-slate-900/5 dark:border-white/5">
-                                <!-- Pills OK Dinâmicos -->
-                            </div>
-                        </div>
-                    </div>
+                        <!-- Retrovisores -->
+                        <path data-part="retrovisores" data-sub="esq" d="M70 90 C60 76 55 76 65 70" fill="none" stroke="#475569" stroke-width="2.5" stroke-linecap="round" class="transition duration-200 part-ok" />
+                        <path data-part="retrovisores" data-sub="dir" d="M130 90 C140 76 145 76 135 70" fill="none" stroke="#475569" stroke-width="2.5" stroke-linecap="round" class="transition duration-200 part-ok" />
+                    </svg>
                 </div>
             </div>
+        </div>
 
-        <!-- Footer -->
-        <div class="border-t border-slate-900/5 dark:border-white/5 pt-4 mt-4 shrink-0 flex items-center justify-between">
+        <!-- Footer Discreto -->
+        <div class="border-t border-slate-100 dark:border-white/5 pt-4 mt-4 shrink-0 flex items-center justify-between gap-3 flex-wrap">
+            <div id="verModalDeleteContainer"></div>
             <div class="flex items-center gap-2">
-                <div id="verModalDeleteContainer"></div>
                 <a id="verModalPdfBtn" href="#" target="_blank"
-                   class="px-5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1">
-                    <i class="fa-solid fa-file-pdf"></i> Gerar PDF
+                   class="px-4 py-2 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 rounded-xl font-bold text-xs tracking-wider shadow-sm transition-all flex items-center gap-1.5">
+                    <i class="fa-solid fa-file-pdf text-xs"></i> Gerar PDF
                 </a>
                 <button id="verModalEditBtn" type="button"
-                   class="px-5 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1">
-                    <i class="fa-solid fa-pen-to-square"></i> Editar
+                   class="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl font-bold text-xs tracking-wider shadow-sm transition-all flex items-center gap-1.5">
+                    <i class="fa-solid fa-pen-to-square text-xs"></i> Editar
+                </button>
+                <button onclick="closeVerVistoriaModal()"
+                        class="px-4 py-2 bg-slate-200 hover:bg-slate-300 dark:bg-white/10 dark:hover:bg-white/20 text-slate-700 dark:text-slate-200 rounded-xl font-bold text-xs tracking-wider transition-all">
+                    Fechar
                 </button>
             </div>
-            <button onclick="closeVerVistoriaModal()"
-                    class="px-5 py-2 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-750 dark:text-slate-300 rounded-xl text-xs font-black uppercase tracking-wider transition-all">
-                Fechar
-            </button>
         </div>
     </div>
 </dialog>
@@ -1307,17 +1309,52 @@ window.onerror = function(message, source, lineno, colno, error) {
 
         // Ver Vistoria Lógica
         const modalVer = document.getElementById('modalVerVistoria');
+        
+        window.switchVerVistoriaView = function(view) {
+            const tableView = document.getElementById('verVistoriaTableView');
+            const mapView = document.getElementById('verVistoriaMapView');
+            const btnTable = document.getElementById('btnVerViewTable');
+            const btnMap = document.getElementById('btnVerViewMap');
+            
+            if (view === 'map') {
+                if (tableView) tableView.classList.add('hidden');
+                if (mapView) {
+                    mapView.classList.remove('hidden');
+                    mapView.classList.add('flex');
+                }
+                if (btnMap) {
+                    btnMap.className = "px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-white dark:bg-slate-800 text-slate-800 dark:text-white shadow-sm flex items-center gap-1.5";
+                }
+                if (btnTable) {
+                    btnTable.className = "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white flex items-center gap-1.5";
+                }
+            } else {
+                if (mapView) {
+                    mapView.classList.add('hidden');
+                    mapView.classList.remove('flex');
+                }
+                if (tableView) tableView.classList.remove('hidden');
+                if (btnTable) {
+                    btnTable.className = "px-3 py-1.5 rounded-lg text-xs font-bold transition-all bg-white dark:bg-slate-800 text-slate-800 dark:text-white shadow-sm flex items-center gap-1.5";
+                }
+                if (btnMap) {
+                    btnMap.className = "px-3 py-1.5 rounded-lg text-xs font-semibold transition-all text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white flex items-center gap-1.5";
+                }
+            }
+        };
+
         window.openVerVistoriaModal = function() {
-            if (typeof switchVistoriaTab === 'function') {
-                switchVistoriaTab('modalVerVistoria', 'map');
+            if (typeof switchVerVistoriaView === 'function') {
+                switchVerVistoriaView('table');
             }
             modalVer.showModal();
             document.body.classList.add('overflow-hidden');
-        }
+        };
+        
         window.closeVerVistoriaModal = function() {
             modalVer.close();
             document.body.classList.remove('overflow-hidden');
-        }
+        };
 
         window.openVistoriaDetailModal = function(vistoriaId) {
             openVerVistoriaModal();
@@ -1338,10 +1375,14 @@ window.onerror = function(message, source, lineno, colno, error) {
                     return response.json();
                 })
                 .then(data => {
-                    document.getElementById('verModalTitle').textContent = `Vistoria #${data.id}`;
-                    document.getElementById('verModalSubtitle').textContent = `${data.created_at}`;
-                    document.getElementById('verModalVehiclePlate').textContent = data.plate;
-                    document.getElementById('verModalKM').textContent = data.km ? `${data.km} KM` : "-";
+                    document.getElementById('verModalTitle').textContent = `Vistoria #${data.id} • ${data.plate}`;
+                    
+                    const turnoFormatted = data.turno === 'inicio' ? 'Início do Expediente' : (data.turno === 'durante' ? 'Durante Expediente' : 'Fim do Expediente');
+                    const localFormatted = data.local ? ` • ${data.local}` : '';
+                    document.getElementById('verModalSubtitle').textContent = `Técnico/Turno: ${turnoFormatted}${localFormatted} • Data: ${data.created_at}`;
+                    
+                    document.getElementById('verModalKMVal').textContent = data.km ? `${data.km} KM` : "-";
+                    document.getElementById('verModalTurnoVal').textContent = turnoFormatted;
                     
                     // Configura link do PDF
                     document.getElementById('verModalPdfBtn').href = `/vistorias/${data.id}/pdf`;
@@ -1355,23 +1396,19 @@ window.onerror = function(message, source, lineno, colno, error) {
                     // Configura botão de exclusão no rodapé do modal
                     document.getElementById('verModalDeleteContainer').innerHTML = `
                         <form action="/vistorias/${data.id}/excluir" method="POST" class="inline" onsubmit="return confirm('Deseja realmente excluir esta vistoria e todas as fotos associadas?');">
-                            <button type="submit" class="px-5 py-2 bg-red-500/10 hover:bg-red-500/20 text-red-600 rounded-xl text-xs font-black uppercase tracking-wider transition-all">
-                                <i class="fa-solid fa-trash-can mr-1"></i> Excluir Vistoria
+                            <button type="submit" class="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/30 dark:hover:bg-rose-900/40 text-rose-700 dark:text-rose-400 border border-rose-200/60 dark:border-rose-800/40 rounded-xl text-xs font-bold transition-all">
+                                <i class="fa-solid fa-trash-can mr-1"></i> Excluir
                             </button>
                         </form>
                     `;
                     
-                    const turnoFormatted = data.turno === 'inicio' ? 'Início do Expediente' : (data.turno === 'durante' ? 'Durante Expediente' : 'Fim do Expediente');
-                    const localFormatted = data.local ? ` · ${data.local}` : '';
-                    document.getElementById('verModalTurnoLocal').textContent = `${turnoFormatted}${localFormatted}`;
-                    
                     const badge = document.getElementById('verModalStatusBadge');
                     if (data.status_geral === 'avarias') {
-                        badge.className = "inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-xs font-bold border mt-0.5 bg-amber-500/10 border-amber-500/20 text-amber-700";
-                        badge.innerHTML = "<span>⚠️ Com avarias</span>";
+                        badge.className = "text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400 border border-rose-200 dark:border-rose-800/40";
+                        badge.innerHTML = '<i class="fa-solid fa-triangle-exclamation text-[8px] mr-0.5"></i> Com Avarias';
                     } else {
-                        badge.className = "inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-xs font-bold border mt-0.5 bg-emerald-500/10 border-emerald-500/20 text-emerald-700";
-                        badge.innerHTML = "<span>✅ OK</span>";
+                        badge.className = "text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/40";
+                        badge.innerHTML = '<i class="fa-solid fa-circle-check text-[8px] mr-0.5"></i> Conforme (OK)';
                     }
                     
                     // Alternar o SVG de detalhes com base no tipo
@@ -1387,6 +1424,7 @@ window.onerror = function(message, source, lineno, colno, error) {
                         }
                     }
                     
+                    // Observações Gerais
                     const obsContainer = document.getElementById('verModalObsContainer');
                     const obsText = document.getElementById('verModalObservacoes');
                     if (data.observacoes && data.observacoes.trim() !== '') {
@@ -1394,6 +1432,29 @@ window.onerror = function(message, source, lineno, colno, error) {
                         obsContainer.classList.remove('hidden');
                     } else {
                         obsContainer.classList.add('hidden');
+                    }
+                    
+                    // Fotos Gerais
+                    const fotosGeraisContainer = document.getElementById('verModalFotosGeraisContainer');
+                    const fotosGeraisList = document.getElementById('verModalFotosGeraisList');
+                    fotosGeraisList.innerHTML = '';
+                    if (data.fotos_gerais && data.fotos_gerais.length > 0) {
+                        fotosGeraisContainer.classList.remove('hidden');
+                        data.fotos_gerais.forEach(filename => {
+                            const a = document.createElement('a');
+                            a.href = "javascript:void(0)";
+                            a.onclick = () => openLightbox(`/static/vistorias_fotos/${filename}`);
+                            a.className = "group relative block w-14 h-14 overflow-hidden rounded-xl border border-slate-200 dark:border-white/10 shadow-sm hover:border-slate-400 transition-all";
+                            a.innerHTML = `
+                                <img src="/static/vistorias_fotos/${filename}" class="w-full h-full object-cover group-hover:scale-105 transition-transform" alt="Foto Geral" />
+                                <div class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[10px]">
+                                    <i class="fa-solid fa-up-right-and-down-left-from-center"></i>
+                                </div>
+                            `;
+                            fotosGeraisList.appendChild(a);
+                        });
+                    } else {
+                        fotosGeraisContainer.classList.add('hidden');
                     }
                     
                     const subLabels = (data.vehicle_type === "moto") ? {
@@ -1415,20 +1476,13 @@ window.onerror = function(message, source, lineno, colno, error) {
                         vlte: "Vidro Lateral Tras. Esq.", vltd: "Vidro Lateral Tras. Dir."
                     };
 
-                    const avariasSection = document.getElementById('verModalAvariasSection');
-                    const conformesSection = document.getElementById('verModalConformesSection');
-                    const avariasGrid = document.getElementById('verModalAvariasGrid');
-                    const conformesGrid = document.getElementById('verModalConformesGrid');
+                    const tbody = document.getElementById('verModalItemsTbody');
+                    tbody.innerHTML = '';
                     
-                    avariasGrid.innerHTML = "";
-                    conformesGrid.innerHTML = "";
-                    avariasSection.classList.add('hidden');
-                    conformesSection.classList.add('hidden');
-                    
-                    let temAvaria = false;
-                    let temConforme = false;
+                    let countOk = 0;
+                    let countAvaria = 0;
 
-                    data.items.forEach(item => {
+                    (data.items || []).forEach((item, idx) => {
                         let cleanObs = item.obs || "";
                         let activeSubs = [];
                         const partsMatch = cleanObs.match(/^\[parts:([^\]]+)\]\s*(.*)/);
@@ -1437,79 +1491,67 @@ window.onerror = function(message, source, lineno, colno, error) {
                             cleanObs = partsMatch[2];
                         }
                         
-                        if (item.status === 'avaria') {
-                            temAvaria = true;
-                            const itemEl = document.createElement('div');
-                            itemEl.className = "p-4 rounded-[1.25rem] border border-amber-500/20 bg-amber-500/[0.02] dark:border-amber-500/30 dark:bg-amber-500/[0.04] transition-all flex flex-col justify-between hover:scale-[1.01] hover:border-amber-500/40 relative overflow-hidden shadow-sm";
-                            itemEl.id = `ver_card_${item.key}`;
-                            
-                            const accentBar = document.createElement('div');
-                            accentBar.className = "absolute top-0 left-0 right-0 h-1 bg-amber-500";
-                            itemEl.appendChild(accentBar);
-                            
-                            let subInfoHTML = "";
-                            if (activeSubs.length > 0) {
-                                const subTextList = activeSubs.map(s => subLabels[s] || s).join(", ");
-                                subInfoHTML = `
-                                    <div class="mb-2">
-                                        <span class="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-0.5">Partes Afetadas</span>
-                                        <span class="text-xs font-bold text-slate-700 dark:text-slate-350 bg-slate-900/5 dark:bg-white/5 px-2.5 py-1 rounded-lg border border-slate-900/5 dark:border-white/5 inline-block">${subTextList}</span>
-                                    </div>
-                                `;
-                            }
-
-                            let photosHTML = "";
-                            if (item.fotos && item.fotos.length > 0) {
-                                photosHTML = `
-                                    <div class="mt-2.5 pt-2.5 border-t border-slate-900/5 dark:border-white/5">
-                                        <span class="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-1">Fotos do Item</span>
-                                        <div class="grid grid-cols-3 gap-2">
-                                            ${item.fotos.map(filename => `
-                                                <a href="javascript:void(0)" onclick="openLightbox('/static/vistorias_fotos/${filename}')" class="block overflow-hidden rounded-xl border border-slate-900/10 dark:border-white/10 hover:opacity-85 transition-all">
-                                                    <img src="/static/vistorias_fotos/${filename}" class="w-full h-16 object-cover hover:scale-105 transition-transform duration-350" alt="Foto da avaria" />
-                                                </a>
-                                            `).join("")}
-                                        </div>
-                                    </div>
-                                `;
-                            }
-                            
-                            const obsInfo = cleanObs.trim() !== "" ? cleanObs : "Nenhuma descrição fornecida.";
-                            
-                            itemEl.innerHTML += `
-                                <div>
-                                    <div class="flex items-start justify-between gap-2 mb-2.5">
-                                        <div>
-                                            <span class="text-[9px] font-black text-amber-500 uppercase tracking-widest block mb-0.5">Avaria Detectada</span>
-                                            <h5 class="text-xs font-black text-slate-800 dark:text-white tracking-tight">${item.label}</h5>
-                                        </div>
-                                        <span class="px-2 py-0.5 rounded-lg text-[9px] font-black uppercase bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400">Avaria</span>
-                                    </div>
-                                    
-                                    ${subInfoHTML}
-                                    
-                                    <div class="mt-2">
-                                        <span class="text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider block mb-0.5">Descrição</span>
-                                        <p class="text-xs text-slate-700 dark:text-slate-350 font-bold bg-white dark:bg-slate-850 p-2.5 rounded-xl border border-slate-900/5 dark:border-white/5 shadow-sm">${obsInfo}</p>
-                                    </div>
+                        const isAvaria = item.status === 'avaria';
+                        if (isAvaria) countAvaria++; else countOk++;
+                        
+                        let subInfoHTML = '<span class="text-slate-300 dark:text-slate-600">-</span>';
+                        if (activeSubs.length > 0) {
+                            const subTextList = activeSubs.map(s => subLabels[s] || s).join(", ");
+                            subInfoHTML = `<span class="inline-block px-2 py-0.5 bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-slate-300 rounded text-[10px] font-medium border border-slate-200/60 dark:border-white/10">${subTextList}</span>`;
+                        }
+                        
+                        let photosHTML = '<span class="text-slate-300 dark:text-slate-600">-</span>';
+                        if (item.fotos && item.fotos.length > 0) {
+                            photosHTML = `
+                                <div class="flex items-center gap-1.5 flex-wrap">
+                                    ${item.fotos.map(filename => `
+                                        <a href="javascript:void(0)" onclick="openLightbox('/static/vistorias_fotos/${filename}')" 
+                                           class="group relative block w-9 h-9 overflow-hidden rounded-lg border border-slate-200 dark:border-white/10 shadow-sm hover:border-slate-400 transition-all shrink-0">
+                                            <img src="/static/vistorias_fotos/${filename}" class="w-full h-full object-cover group-hover:scale-105 transition-transform" alt="Foto" />
+                                            <div class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[8px]">
+                                                <i class="fa-solid fa-up-right-and-down-left-from-center"></i>
+                                            </div>
+                                        </a>
+                                    `).join("")}
                                 </div>
-                                ${photosHTML}
                             `;
-                            
-                            avariasGrid.appendChild(itemEl);
+                        }
+                        
+                        let statusChip = isAvaria
+                            ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400 border border-rose-200/60 dark:border-rose-800/40">
+                                <i class="fa-solid fa-triangle-exclamation text-[8px]"></i> Avaria
+                               </span>`
+                            : `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/40">
+                                <i class="fa-solid fa-circle-check text-[8px]"></i> OK
+                               </span>`;
+                        
+                        const tr = document.createElement('tr');
+                        tr.id = `ver_row_${item.key}`;
+                        tr.className = `hover:bg-slate-50/70 dark:hover:bg-white/[0.02] transition-colors ${isAvaria ? 'bg-rose-50/20 dark:bg-rose-950/10' : ''}`;
+                        tr.innerHTML = `
+                            <td class="py-2.5 px-3 text-center text-slate-400 font-mono text-[11px]">${idx + 1}</td>
+                            <td class="py-2.5 px-3 font-bold text-slate-800 dark:text-slate-100">${item.label}</td>
+                            <td class="py-2.5 px-3">${subInfoHTML}</td>
+                            <td class="py-2.5 px-3">${statusChip}</td>
+                            <td class="py-2.5 px-3 text-slate-600 dark:text-slate-300 text-[11px]">
+                                ${cleanObs.trim() ? `<span class="${isAvaria ? 'text-rose-600 dark:text-rose-400 font-medium' : ''}">${cleanObs}</span>` : '<span class="text-slate-300 dark:text-slate-600">-</span>'}
+                            </td>
+                            <td class="py-2.5 px-3">${photosHTML}</td>
+                        `;
+                        tbody.appendChild(tr);
 
-                            // Destaque da parte no mapa 2D
+                        // Destaque da parte no mapa 2D
+                        if (isAvaria) {
                             if (activeSubs.length > 0) {
                                 activeSubs.forEach(sub => {
                                     const matchingParts = document.querySelectorAll(`#modal_svg_ver [data-part="${item.key}"][data-sub="${sub}"], #modal_svg_ver_moto [data-part="${item.key}"][data-sub="${sub}"]`);
                                     matchingParts.forEach(part => {
                                         part.className.baseVal = "transition duration-200 part-avaria";
                                         part.onclick = () => {
-                                            itemEl.scrollIntoView({ behavior: "smooth", block: "center" });
-                                            itemEl.classList.add("pulse-highlight");
-                                            setTimeout(() => {
-                                                itemEl.classList.remove("pulse-highlight");
-                                            }, 1500);
+                                            switchVerVistoriaView('table');
+                                            tr.scrollIntoView({ behavior: "smooth", block: "center" });
+                                            tr.classList.add("pulse-highlight");
+                                            setTimeout(() => tr.classList.remove("pulse-highlight"), 1500);
                                         };
                                     });
                                 });
@@ -1518,34 +1560,24 @@ window.onerror = function(message, source, lineno, colno, error) {
                                 matchingParts.forEach(part => {
                                     part.className.baseVal = "transition duration-200 part-avaria";
                                     part.onclick = () => {
-                                        itemEl.scrollIntoView({ behavior: "smooth", block: "center" });
-                                        itemEl.classList.add("pulse-highlight");
-                                        setTimeout(() => {
-                                            itemEl.classList.remove("pulse-highlight");
-                                        }, 1500);
+                                        switchVerVistoriaView('table');
+                                        tr.scrollIntoView({ behavior: "smooth", block: "center" });
+                                        tr.classList.add("pulse-highlight");
+                                        setTimeout(() => tr.classList.remove("pulse-highlight"), 1500);
                                     };
                                 });
                             }
-                        } else {
-                            temConforme = true;
-                            const pillEl = document.createElement('div');
-                            pillEl.className = "flex items-center gap-2 px-3 py-2.5 bg-white dark:bg-slate-800 rounded-xl border border-slate-900/5 dark:border-white/5 select-none hover:bg-slate-50 dark:hover:bg-slate-750 transition-colors";
-                            pillEl.innerHTML = `
-                                <span class="text-emerald-500 text-xs flex items-center justify-center">
-                                    <i class="fa-solid fa-circle-check"></i>
-                                </span>
-                                <span class="text-xs font-bold text-slate-700 dark:text-slate-200 truncate">${item.label}</span>
-                            `;
-                            conformesGrid.appendChild(pillEl);
                         }
                     });
 
-                    if (temAvaria) {
-                        avariasSection.classList.remove('hidden');
-                    }
-                    if (temConforme) {
-                        conformesSection.classList.remove('hidden');
-                    }
+                    // Summary Pills in Header
+                    const summaryPills = document.getElementById('verModalSummaryPills');
+                    summaryPills.classList.remove('hidden');
+                    summaryPills.innerHTML = `
+                        <span class="px-2 py-0.5 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 rounded-lg text-[10px] font-bold">${data.items.length} itens</span>
+                        <span class="px-2 py-0.5 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 rounded-lg text-[10px] font-bold">${countOk} OK</span>
+                        ${countAvaria > 0 ? `<span class="px-2 py-0.5 bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400 rounded-lg text-[10px] font-bold">${countAvaria} Avaria${countAvaria > 1 ? 's' : ''}</span>` : ''}
+                    `;
                     
                     document.getElementById('verModalLoader').classList.add('hidden');
                     document.getElementById('verModalContent').classList.remove('hidden');
@@ -1554,9 +1586,9 @@ window.onerror = function(message, source, lineno, colno, error) {
                     console.error(err);
                     document.getElementById('verModalSubtitle').textContent = "Falha ao carregar detalhes.";
                     document.getElementById('verModalLoader').innerHTML = `
-                        <div class="text-red-500 text-3xl mb-2">❌</div>
-                        <p class="text-xs font-bold text-red-500 uppercase tracking-widest">Falha de Conexão</p>
-                        <button onclick="closeVerVistoriaModal()" class="mt-4 px-4 py-2 bg-slate-800 text-white rounded-xl text-xs font-bold uppercase">Fechar</button>
+                        <div class="text-rose-500 text-2xl mb-1"><i class="fa-solid fa-circle-exclamation"></i></div>
+                        <p class="text-xs font-bold text-rose-500">Falha ao buscar dados da vistoria</p>
+                        <button onclick="closeVerVistoriaModal()" class="mt-3 px-4 py-1.5 bg-slate-800 text-white rounded-xl text-xs font-bold">Fechar</button>
                     `;
                 });
         };

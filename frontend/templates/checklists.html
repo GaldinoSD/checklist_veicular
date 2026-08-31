@@ -207,64 +207,86 @@
 
 </div>
 
-<!-- ✅ MODAL CHECKLIST DETAIL (PREMIUM BLUR) -->
+<!-- ✅ MODAL CHECKLIST DETAIL (DISCRETO & EXECUTIVO) -->
 <div id="modalChecklistDetail" class="fixed inset-0 hidden items-center justify-center z-[100] p-4">
   <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="closeModal('modalChecklistDetail')"></div>
-  <div class="relative w-full max-w-4xl rounded-[2rem] bg-white dark:bg-slate-900 border border-slate-900/10 dark:border-white/10 shadow-2xl overflow-hidden animate-premium flex flex-col max-h-[90vh]">
-    <!-- Header -->
-    <div class="p-6 border-b border-slate-900/5 dark:border-white/5 bg-slate-50 dark:bg-slate-900/20 flex items-center justify-between shrink-0">
-      <div>
-        <h3 id="modalChecklistTitle" class="text-2xl font-black text-slate-900 dark:text-white">Checklist #---</h3>
-        <p id="modalChecklistSubtitle" class="text-[10px] font-black text-blue-600 uppercase tracking-widest mt-1">Detalhes do checklist</p>
-      </div>
-      <button onclick="closeModal('modalChecklistDetail')" class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-slate-200 dark:hover:bg-white/10 text-slate-400 transition-all">
-        <i class="fa-solid fa-xmark"></i>
-      </button>
-    </div>
-    <!-- Content -->
-    <div class="flex-1 overflow-y-auto p-6 custom-scrollbar space-y-6">
-      <!-- Info Cards -->
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div class="p-4 bg-slate-50 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 rounded-2xl">
-          <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest text-slate-400/80">Data</p>
-          <p id="modalChecklistDate" class="text-xs font-bold text-slate-800 dark:text-white mt-1">-</p>
+  <div class="relative w-full max-w-4xl rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 shadow-2xl overflow-hidden flex flex-col max-h-[90vh] text-left">
+    
+    <!-- Header Discreto -->
+    <div class="p-6 border-b border-slate-100 dark:border-white/5 flex items-start justify-between gap-4 shrink-0">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-slate-100 dark:bg-white/5 flex items-center justify-center text-slate-700 dark:text-slate-300 shrink-0">
+          <i class="fa-solid fa-clipboard-check"></i>
         </div>
-        <div class="p-4 bg-slate-50 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 rounded-2xl">
-          <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest text-slate-400/80">Veículo (Placa)</p>
-          <p id="modalChecklistVehicle" class="text-xs font-bold text-slate-800 dark:text-white mt-1">-</p>
-        </div>
-        <div class="p-4 bg-slate-50 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 rounded-2xl">
-          <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest text-slate-400/80">Técnico</p>
-          <p id="modalChecklistTech" class="text-xs font-bold text-slate-800 dark:text-white mt-1">-</p>
-        </div>
-        <div class="p-4 bg-slate-50 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 rounded-2xl">
-          <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest text-slate-400/80">KM</p>
-          <p id="modalChecklistKM" class="text-xs font-bold text-slate-800 dark:text-white mt-1">-</p>
+        <div>
+          <div class="flex items-center gap-2 flex-wrap">
+            <h3 id="modalChecklistTitle" class="text-base font-black text-slate-800 dark:text-white">Checklist #---</h3>
+            <span id="modalChecklistStatusBadge" class="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border"></span>
+          </div>
+          <p id="modalChecklistSubtitle" class="text-xs text-slate-400 mt-0.5">Carregando informações...</p>
         </div>
       </div>
-
-      <!-- Checklist Items -->
-      <div>
-        <h4 class="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-3">Itens Verificados</h4>
-        <div id="modalChecklistItems" class="space-y-3">
-          <!-- Items dynamically loaded -->
-        </div>
-      </div>
-
-      <!-- Photos Gallery -->
-      <div id="modalChecklistPhotosContainer" class="hidden">
-        <h4 class="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-3">Galeria de Fotos</h4>
-        <div id="modalChecklistPhotos" class="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <!-- Photos dynamically loaded -->
-        </div>
+      <div class="flex items-center gap-3">
+        <div id="modalChecklistSummaryPills" class="hidden sm:flex items-center gap-1.5"></div>
+        <button type="button" onclick="closeModal('modalChecklistDetail')" class="w-8 h-8 rounded-lg hover:bg-slate-100 dark:hover:bg-white/5 flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-white transition-all">
+          <i class="fa-solid fa-xmark text-sm"></i>
+        </button>
       </div>
     </div>
-    <!-- Footer -->
-    <div class="p-6 border-t border-slate-900/5 dark:border-white/5 bg-slate-50/50 dark:bg-white/5 flex justify-end gap-3 shrink-0">
-      <a id="modalChecklistPdfBtn" href="#" target="_blank" class="px-5 py-2.5 bg-gradient-to-br from-rose-600 to-rose-800 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-rose-900/20 transition-all active:scale-95 flex items-center gap-2">
-        <i class="fa-solid fa-file-pdf text-xs"></i> PDF Completo
+
+    <!-- Content: Tabela Estruturada & Limpa -->
+    <div class="flex-1 overflow-y-auto p-6 custom-scrollbar space-y-4">
+      
+      <!-- Tabela Compacta de Itens -->
+      <div class="overflow-x-auto max-h-[50vh] custom-scrollbar border border-slate-200/80 dark:border-white/10 rounded-xl">
+        <table class="w-full text-left text-xs border-collapse">
+          <thead class="bg-slate-50 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 font-bold uppercase text-[10px] tracking-wider sticky top-0 z-10 border-b border-slate-200/80 dark:border-white/10">
+            <tr>
+              <th class="py-2.5 px-3 w-10 text-center">#</th>
+              <th class="py-2.5 px-3">Item Inspecionado</th>
+              <th class="py-2.5 px-3 w-40">Resposta / Situação</th>
+              <th class="py-2.5 px-3">Justificativa / Observação</th>
+            </tr>
+          </thead>
+          <tbody id="modalChecklistItemsTbody" class="divide-y divide-slate-100 dark:divide-white/5 bg-white dark:bg-slate-900">
+            <tr>
+              <td colspan="4" class="text-center py-8 text-slate-400 text-xs">
+                <i class="fa-solid fa-spinner animate-spin mr-2"></i> Carregando itens...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Observações Gerais (se houver) -->
+      <div id="modalChecklistNotesContainer" class="hidden p-3 bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 rounded-xl text-xs">
+        <span class="font-bold text-slate-700 dark:text-slate-300 block mb-1 text-[11px] uppercase tracking-wider">
+          <i class="fa-regular fa-comment-dots mr-1"></i> Observações Gerais:
+        </span>
+        <p id="modalChecklistNotes" class="text-slate-600 dark:text-slate-400 italic"></p>
+      </div>
+
+      <!-- Photos Gallery (se houver) -->
+      <div id="modalChecklistPhotosContainer" class="hidden pt-2">
+        <span class="font-bold text-slate-700 dark:text-slate-300 block mb-2 text-[11px] uppercase tracking-wider">
+          <i class="fa-solid fa-camera mr-1"></i> Registros Fotográficos:
+        </span>
+        <div id="modalChecklistPhotos" class="grid grid-cols-3 sm:grid-cols-6 gap-2.5">
+          <!-- Injetado dinamicamente -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer Discreto -->
+    <div class="px-6 py-4 bg-slate-50 dark:bg-white/[0.02] border-t border-slate-100 dark:border-white/5 flex items-center justify-end gap-3 shrink-0">
+      <a id="modalChecklistPdfBtn" href="#" target="_blank"
+         class="px-4 py-2 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 rounded-xl font-bold text-xs tracking-wider shadow-sm transition-all flex items-center gap-1.5">
+        <i class="fa-solid fa-file-pdf text-xs"></i> Gerar PDF Completo
       </a>
-      <button type="button" onclick="closeModal('modalChecklistDetail')" class="px-6 py-2.5 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] hover:text-slate-600 transition-colors">Fechar</button>
+      <button type="button" onclick="closeModal('modalChecklistDetail')"
+              class="px-4 py-2 bg-slate-200 hover:bg-slate-300 dark:bg-white/10 dark:hover:bg-white/20 text-slate-700 dark:text-slate-200 rounded-xl font-bold text-xs tracking-wider transition-all">
+        Fechar
+      </button>
     </div>
   </div>
 </div>
@@ -286,67 +308,100 @@ async function showChecklistDetail(cid) {
         const data = await response.json();
         
         // Fill header
-        document.getElementById('modalChecklistTitle').innerText = `Checklist #${data.id}`;
+        document.getElementById('modalChecklistTitle').innerText = `Checklist #${data.id} • ${data.plate}`;
+        document.getElementById('modalChecklistSubtitle').innerText = `Técnico: ${data.technician} • Data: ${data.date} • KM: ${data.km}`;
+        
+        // Status Badge
+        const badge = document.getElementById('modalChecklistStatusBadge');
+        if (data.status === 'OK') {
+            badge.className = "text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/40";
+            badge.innerHTML = '<i class="fa-solid fa-circle-check text-[8px] mr-0.5"></i> Conforme (OK)';
+        } else {
+            badge.className = "text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400 border border-rose-200 dark:border-rose-800/40";
+            badge.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-[8px] mr-0.5"></i> ${data.status}`;
+        }
         
         // Set PDF Link
         document.getElementById('modalChecklistPdfBtn').href = `/checklists/${data.id}/pdf`;
         
-        // Fill Stats
-        document.getElementById('modalChecklistDate').innerText = data.date;
-        document.getElementById('modalChecklistVehicle').innerText = data.plate;
-        document.getElementById('modalChecklistTech').innerText = data.technician;
-        document.getElementById('modalChecklistKM').innerText = `${data.km} km`;
-        
-        // Fill Items
-        const itemsContainer = document.getElementById('modalChecklistItems');
-        itemsContainer.innerHTML = '';
+        // Fill Items Table
+        const tbody = document.getElementById('modalChecklistItemsTbody');
+        tbody.innerHTML = '';
         
         const items = data.items || {};
-        for (const [nome, val] of Object.entries(items)) {
-            const hasJustification = val.justificativa && val.justificativa.trim() !== '';
-            const respText = Array.isArray(val.resposta) ? val.resposta.join(', ') : val.resposta;
-            
-            let colorClasses = "bg-white text-slate-700 border border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700";
-            if (hasJustification) {
-                colorClasses = "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300";
-            } else if (respText === 'Sim' || respText === 'Bom' || respText === 'OK') {
-                colorClasses = "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300";
-            }
-            
-            const cardBorderClass = hasJustification 
-                ? "border-rose-500/30 bg-rose-50/50 dark:bg-rose-900/10 dark:border-rose-500/20"
-                : "border-slate-900/5 dark:border-white/5 bg-slate-50 dark:bg-white/5";
-            
-            let itemHtml = `
-                <div class="p-4 rounded-2xl border ${cardBorderClass}">
-                    <div class="flex items-center justify-between gap-4">
-                        <div class="flex-1">
-                            <h4 class="text-sm font-bold text-slate-800 dark:text-white">${nome}</h4>
-                        </div>
-                        <div class="shrink-0">
-                            <span class="inline-flex px-3 py-1.5 rounded-xl text-xs font-bold shadow-sm ${colorClasses}">
-                                ${respText || '-'}
-                            </span>
-                        </div>
-                    </div>
-            `;
-            
-            if (hasJustification) {
-                itemHtml += `
-                    <div class="mt-4 p-3 rounded-xl bg-white/60 dark:bg-slate-900/40 border border-rose-500/20 dark:border-rose-500/10">
-                        <p class="text-[10px] font-bold text-rose-600 dark:text-rose-400 uppercase tracking-widest mb-1 flex items-center gap-1.5">
-                            <i class="fa-solid fa-triangle-exclamation"></i> Justificativa / Observação
-                        </p>
-                        <p class="text-sm text-slate-700 dark:text-slate-300">${val.justificativa}</p>
-                    </div>
+        const entries = Object.entries(items);
+        let countOk = 0;
+        let countNonOk = 0;
+        
+        if (entries.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="4" class="text-center py-6 text-slate-400 text-xs">Nenhum item registrado.</td></tr>`;
+        } else {
+            entries.forEach(([nome, val], idx) => {
+                const hasJustification = val.justificativa && val.justificativa.trim() !== '';
+                const respText = Array.isArray(val.resposta) ? val.resposta.join(', ') : (val.resposta || '-');
+                
+                let isGood = (!hasJustification) && (
+                    respText === 'Sim' || respText === 'Bom' || respText === 'OK' || 
+                    respText === 'No nível' || respText === 'Sem avaria' || respText === 'Boa'
+                );
+                
+                let chipHtml = '';
+                if (hasJustification || respText === 'Não' || respText === 'Ruim' || respText === 'Com avaria') {
+                    countNonOk++;
+                    chipHtml = `
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400 border border-rose-200/60 dark:border-rose-800/40">
+                            <i class="fa-solid fa-triangle-exclamation text-[8px]"></i> ${respText}
+                        </span>
+                    `;
+                } else if (isGood) {
+                    countOk++;
+                    chipHtml = `
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/40">
+                            <i class="fa-solid fa-circle-check text-[8px]"></i> ${respText}
+                        </span>
+                    `;
+                } else {
+                    countOk++;
+                    chipHtml = `
+                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-700 dark:bg-white/5 dark:text-slate-300 border border-slate-200/60 dark:border-white/10">
+                            ${respText}
+                        </span>
+                    `;
+                }
+                
+                const tr = document.createElement('tr');
+                tr.className = 'hover:bg-slate-50/70 dark:hover:bg-white/[0.02] transition-colors';
+                tr.innerHTML = `
+                    <td class="py-2.5 px-3 text-center text-slate-400 font-mono text-[11px]">${idx + 1}</td>
+                    <td class="py-2.5 px-3 font-bold text-slate-800 dark:text-slate-100">${nome}</td>
+                    <td class="py-2.5 px-3">${chipHtml}</td>
+                    <td class="py-2.5 px-3 text-slate-600 dark:text-slate-300 text-[11px]">
+                        ${hasJustification ? `<span class="text-rose-600 dark:text-rose-400 font-medium">${val.justificativa}</span>` : '<span class="text-slate-300 dark:text-slate-600">-</span>'}
+                    </td>
                 `;
-            }
-            
-            itemHtml += `</div>`;
-            itemsContainer.insertAdjacentHTML('beforeend', itemHtml);
+                tbody.appendChild(tr);
+            });
         }
         
-        // Fill Photos
+        // Summary Pills in Header
+        const pillsContainer = document.getElementById('modalChecklistSummaryPills');
+        pillsContainer.classList.remove('hidden');
+        pillsContainer.innerHTML = `
+            <span class="px-2 py-0.5 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 rounded-lg text-[10px] font-bold">${entries.length} itens</span>
+            <span class="px-2 py-0.5 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 rounded-lg text-[10px] font-bold">${countOk} Conforme</span>
+            ${countNonOk > 0 ? `<span class="px-2 py-0.5 bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400 rounded-lg text-[10px] font-bold">${countNonOk} Não Conforme</span>` : ''}
+        `;
+        
+        // Notes
+        const notesContainer = document.getElementById('modalChecklistNotesContainer');
+        if (data.notes && data.notes.trim() !== '') {
+            notesContainer.classList.remove('hidden');
+            document.getElementById('modalChecklistNotes').innerText = data.notes;
+        } else {
+            notesContainer.classList.add('hidden');
+        }
+        
+        // Photos
         const photosContainer = document.getElementById('modalChecklistPhotosContainer');
         const photosGrid = document.getElementById('modalChecklistPhotos');
         photosGrid.innerHTML = '';
@@ -355,10 +410,10 @@ async function showChecklistDetail(cid) {
             photosContainer.classList.remove('hidden');
             data.photos.forEach(p => {
                 const photoHtml = `
-                    <a href="${p}" target="_blank" rel="noopener" class="group relative block overflow-hidden rounded-xl aspect-square border border-slate-900/10 dark:border-white/10">
-                        <img src="${p}" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" alt="Foto checklist">
-                        <div class="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                            <i class="fa-solid fa-expand text-white text-base"></i>
+                    <a href="${p}" target="_blank" rel="noopener" class="group relative block overflow-hidden rounded-xl aspect-square border border-slate-200 dark:border-white/10 shadow-sm hover:border-slate-400 transition-all">
+                        <img src="${p}" class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" alt="Foto checklist">
+                        <div class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
+                            <i class="fa-solid fa-up-right-and-down-left-from-center text-xs"></i>
                         </div>
                     </a>
                 `;
