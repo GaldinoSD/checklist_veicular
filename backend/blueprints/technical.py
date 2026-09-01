@@ -4396,6 +4396,13 @@ def avisos():
                     db.session.commit()
                     registrar_log(f"Comunicado excluído: {a.title}")
                     flash("Comunicado excluído.", "success")
+
+        elif acao == "limpar_todos_avisos":
+            AnnouncementRead.query.delete()
+            Announcement.query.delete()
+            db.session.commit()
+            registrar_log(f"Todo o histórico de comunicados e envios foi limpo por {current_user.username}")
+            flash("✅ Todo o histórico de envios e notificações foi limpo com sucesso para todos os usuários.", "success")
                     
         elif acao == "salvar_informacoes":
             role_group = request.form.get("role_group", "").strip()
@@ -4508,7 +4515,8 @@ def avisos():
 
     # GET
     cleanup_old_announcements()
-    notifications = Announcement.query.order_by(Announcement.created_at.desc()).all()
+    total_notificacoes = Announcement.query.count()
+    notifications = Announcement.query.order_by(Announcement.created_at.desc()).limit(20).all()
     
     # Busca todos os manuais
     manuais_records = Manual.query.all()
@@ -4540,9 +4548,22 @@ def avisos():
         db.session.add(email_config)
         db.session.commit()
     
+    fila_programada = get_scheduled_alerts_queue(days_ahead=365)
+    fila_programada_json = []
+    for item in fila_programada:
+        item_copy = dict(item)
+        if isinstance(item_copy.get("target_date"), (date, datetime)):
+            item_copy["target_date"] = item_copy["target_date"].isoformat()
+        if isinstance(item_copy.get("trigger_date"), (date, datetime)):
+            item_copy["trigger_date"] = item_copy["trigger_date"].isoformat()
+        fila_programada_json.append(item_copy)
+    
     return render_template(
         "avisos.html", 
         notificacoes=notifications, 
+        total_notificacoes=total_notificacoes,
+        fila_programada=fila_programada,
+        fila_programada_json=fila_programada_json,
         manuais=manuais, 
         usuarios=usuarios, 
         regras=regras,
@@ -4552,6 +4573,93 @@ def avisos():
     )
 
 
+
+@technical_bp.route("/api/avisos/fila-programada")
+@login_required
+def api_avisos_fila_programada():
+    """Returns the scheduled alerts queue for the upcoming year."""
+    days = request.args.get("days", 365, type=int)
+    queue = get_scheduled_alerts_queue(days_ahead=days)
+    
+    # Format target_date and trigger_date for JSON
+    serializable = []
+    for item in queue:
+        item_copy = dict(item)
+        if isinstance(item_copy.get("target_date"), (date, datetime)):
+            item_copy["target_date"] = item_copy["target_date"].isoformat()
+        if isinstance(item_copy.get("trigger_date"), (date, datetime)):
+            item_copy["trigger_date"] = item_copy["trigger_date"].isoformat()
+        serializable.append(item_copy)
+        
+    return jsonify({
+        "success": True,
+        "total": len(serializable),
+        "queue": serializable
+    })
+
+
+
+
+@technical_bp.route("/api/avisos/historico")
+@login_required
+def api_avisos_historico():
+    """Paginated announcements history for 'load more' functionality."""
+    page = request.args.get("page", 1, type=int)
+    per_page = 20
+    
+    pagination = Announcement.query.order_by(
+        Announcement.created_at.desc()
+    ).paginate(page=page, per_page=per_page, error_out=False)
+    
+    items = []
+    for n in pagination.items:
+        target_label = "Todos"
+        target_type = "all"
+        if n.user:
+            target_label = n.user.username
+            target_type = "user"
+        elif n.target_role and n.target_role != "all":
+            target_label = n.target_role.capitalize()
+            target_type = "role"
+        
+        expires_text = ""
+        if n.expires_at:
+            try:
+                diff = n.expires_at - agora()
+                secs = diff.total_seconds()
+                if secs <= 0:
+                    expires_text = "Expirado"
+                else:
+                    days = int(secs // 86400)
+                    if days > 0:
+                        expires_text = f"Expira em {days}d"
+                    else:
+                        hours = int((secs % 86400) // 3600)
+                        if hours > 0:
+                            expires_text = f"Expira em {hours}h"
+                        else:
+                            expires_text = f"Expira em {int((secs % 3600) // 60)}min"
+            except Exception:
+                expires_text = n.expires_at.strftime("%d/%m/%Y %H:%M")
+        
+        items.append({
+            "id": n.id,
+            "title": n.title,
+            "message": n.content or "",
+            "created_at": n.created_at.strftime("%d/%m/%Y %H:%M:%S"),
+            "target_label": target_label,
+            "target_type": target_type,
+            "expires_text": expires_text
+        })
+    
+    return jsonify({
+        "success": True,
+        "items": items,
+        "total": pagination.total,
+        "pages": pagination.pages,
+        "current_page": pagination.page,
+        "has_next": pagination.has_next
+    })
 
 @technical_bp.route("/api/comunicados/recent")
 @login_required
@@ -4614,6 +4722,274 @@ def api_comunicados_read(aid):
         db.session.add(read)
         db.session.commit()
     return jsonify({"status": "ok"})
+def get_technicians_for_scale(esc):
+    """
+    Returns the exact list of User objects (technicians) assigned to a given Scale.
+    Priority:
+    1. If specific technician_ids (or user_id) are defined, return ONLY those specific technicians.
+    2. Only if NO specific technicians are defined, fallback to the members of the specified team(s).
+    """
+    techs = []
+    seen_ids = set()
+    
+    # 1. Técnicos explícitos (technician_ids ou user_id)
+    raw_tech_ids = getattr(esc, "technician_ids", None)
+    raw_user_id = getattr(esc, "user_id", None)
+    
+    explicit_user_ids = []
+    if raw_tech_ids:
+        parts = [x.strip() for x in str(raw_tech_ids).split(",") if x.strip()]
+        for p in parts:
+            if p.isdigit():
+                explicit_user_ids.append(int(p))
+            else:
+                u_by_name = User.query.filter(User.username.ilike(p)).first()
+                if u_by_name and u_by_name.id not in seen_ids:
+                    seen_ids.add(u_by_name.id)
+                    techs.append(u_by_name)
+                    
+    if raw_user_id:
+        explicit_user_ids.append(raw_user_id)
+        
+    if explicit_user_ids:
+        for uid in set(explicit_user_ids):
+            if uid not in seen_ids:
+                u = User.query.get(uid)
+                if u:
+                    seen_ids.add(u.id)
+                    techs.append(u)
+                    
+        # Se há técnicos específicos explicitamente configurados na escala, retorna APENAS eles!
+        if techs:
+            return techs
+
+    # 2. Se NÃO houver técnicos individuais selecionados na escala, usa os membros das equipes vinculadas
+    team_ids = []
+    if getattr(esc, "team_ids", None):
+        team_ids.extend([int(x.strip()) for x in str(esc.team_ids).split(",") if x.strip().isdigit()])
+    if getattr(esc, "team_id", None):
+        team_ids.append(esc.team_id)
+        
+    for tid in set(team_ids):
+        t = Team.query.get(tid)
+        if t:
+            for m in t.members:
+                if m.id not in seen_ids and (m.role == "tech" or getattr(m, 'is_tech', False) or True):
+                    seen_ids.add(m.id)
+                    techs.append(m)
+                    
+    return techs
+
+
+def get_scheduled_alerts_queue(days_ahead=365):
+    """
+    Computes all future scheduled notifications (Escalas/Plantões and Holidays)
+    that have deterministic future dates and queued alerts.
+    """
+    today_dt = agora().date()
+    end_dt = today_dt + timedelta(days=days_ahead)
+    
+    rule_scale = SystemRule.query.filter_by(slug="scale_alert").first()
+    rule_scale_enabled = rule_scale.is_enabled if rule_scale else True
+    scale_trigger_days = rule_scale.trigger_days if (rule_scale and rule_scale.trigger_days is not None) else 4
+    scale_channels = [c.strip() for c in (rule_scale.channels.split(",") if rule_scale and rule_scale.channels else ["system", "whatsapp"])]
+    
+    rule_late = SystemRule.query.filter_by(slug="late_checklist").first()
+    holiday_trigger_days = rule_late.trigger_days if (rule_late and rule_late.trigger_days is not None) else 4
+    
+    config = SystemConfig.query.first()
+    rotation_order = []
+    if config and config.scale_rotation_order:
+        rotation_order = [int(x.strip()) for x in config.scale_rotation_order.split(",") if x.strip().isdigit()]
+    
+    # 1. Carrega dicionário completo de feriados oficiais
+    h_dict = {}
+    try:
+        import holidays
+        years = list({today_dt.year, end_dt.year})
+        h_dict = holidays.Brazil(subdiv="RJ", years=years)
+        
+        for y in years:
+            h_dict[date(y, 6, 13)] = "Santo Antônio (Padroeiro)"
+            a = y % 19
+            b = y // 100
+            c = y % 100
+            d = b // 4
+            e = b % 4
+            f = (b + 8) // 25
+            g = (b - f + 1) // 3
+            h = (19 * a + b - d - g + 15) % 30
+            i = c // 4
+            k = c % 4
+            l = (32 + 2 * e + 2 * i - h - k) % 7
+            m = (a + 11 * h + 22 * l) // 451
+            month = (h + l - 7 * m + 114) // 31
+            day = ((h + l - 7 * m + 114) % 31) + 1
+            easter_date = date(y, month, day)
+            corpus_christi = easter_date + timedelta(days=60)
+            h_dict[corpus_christi] = "Corpus Christi"
+            h_dict.pop(date(y, 10, 12), None)
+            h_dict[date(y, 10, 12)] = "N. Sra Aparecida / Emancipação"
+    except Exception as h_err:
+        print("Erro ao carregar feriados:", h_err)
+
+    queue_items = []
+    
+    # 2. Carrega todas as escalas manuais no período (incluindo plantões de feriados)
+    manual_scales = Scale.query.filter(
+        Scale.date >= today_dt,
+        Scale.date <= end_dt,
+        Scale.status == "ATIVO"
+    ).order_by(Scale.date.asc()).all()
+    
+    manual_dates = {s.date for s in manual_scales}
+    
+    for s in manual_scales:
+        techs = get_technicians_for_scale(s)
+        trigger_date = s.date - timedelta(days=scale_trigger_days)
+        
+        status = "AGUARDANDO"
+        if trigger_date < today_dt:
+            status = "PROCESSADO"
+        elif trigger_date == today_dt:
+            status = "HOJE"
+            
+        team_names = []
+        if s.team_ids:
+            for tid in [int(x) for x in str(s.team_ids).split(",") if x.strip().isdigit()]:
+                tm = Team.query.get(tid)
+                if tm:
+                    team_names.append(tm.name)
+        elif s.team_id:
+            tm = Team.query.get(s.team_id)
+            if tm:
+                team_names.append(tm.name)
+                
+        is_holiday = (s.date in h_dict) or (s.type and "feriado" in s.type.lower())
+        h_name = h_dict.get(s.date, "Feriado")
+        
+        if is_holiday:
+            title = f"Plantão de Feriado: {h_name}"
+            category = "Plantão de Feriado (Escalados)"
+            scale_label = f"FERIADO ({h_name.upper()})"
+            sample_msg = f"Olá {{usuario}}, você está escalado para o plantão do feriado '{h_name}' no dia {s.date.strftime('%d/%m/%Y')}."
+        else:
+            scale_label = s.type.upper() if s.type else "PLANTÃO"
+            title = f"Plantão: {scale_label}"
+            category = "Plantão Manual"
+            sample_msg = f"Olá {{usuario}}, você está escalado para o plantão de '{scale_label}' no dia {s.date.strftime('%d/%m/%Y')}."
+            
+        if rule_scale and rule_scale.msg_system:
+            sample_msg = rule_scale.msg_system.replace("{escala}", scale_label).replace("{data}", s.date.strftime('%d/%m/%Y'))
+            
+        queue_items.append({
+            "id": f"manual_{s.id}",
+            "type": "scale",
+            "is_holiday_event": is_holiday,
+            "category": category,
+            "title": title,
+            "scale_type": scale_label,
+            "target_date": s.date,
+            "target_date_str": s.date.strftime("%d/%m/%Y"),
+            "target_weekday": s.date.strftime("%A"),
+            "trigger_date": trigger_date,
+            "trigger_date_str": trigger_date.strftime("%d/%m/%Y"),
+            "days_until_event": (s.date - today_dt).days,
+            "days_until_trigger": (trigger_date - today_dt).days,
+            "status": status,
+            "is_enabled": rule_scale_enabled,
+            "teams": team_names or ["Designação Individual"],
+            "technicians": [{"id": u.id, "username": u.username.upper(), "phone": u.phone or ""} for u in techs],
+            "channels": scale_channels,
+            "obs": s.obs or ("Plantão para cobertura durante o feriado" if is_holiday else "Sem observações adicionais"),
+            "sample_message": sample_msg
+        })
+        
+    # 3. Gera os sábados de rodízio automático que não possuem escala manual
+    if config and config.scale_start_date and rotation_order:
+        curr = today_dt
+        while curr <= end_dt:
+            if curr.weekday() == 5 and curr >= config.scale_start_date:
+                if curr not in manual_dates:
+                    weeks = (curr - config.scale_start_date).days // 7
+                    team_idx = weeks % len(rotation_order)
+                    team_id = rotation_order[team_idx]
+                    team = Team.query.get(team_id)
+                    
+                    if team:
+                        techs = [m for m in team.members if m.role == "tech" or getattr(m, 'is_tech', False) or True]
+                        trigger_date = curr - timedelta(days=scale_trigger_days)
+                        
+                        status = "AGUARDANDO"
+                        if trigger_date < today_dt:
+                            status = "PROCESSADO"
+                        elif trigger_date == today_dt:
+                            status = "HOJE"
+                            
+                        sample_msg = f"Olá {{usuario}}, você está escalado para o plantão de 'Plantão: {team.name}' no dia {curr.strftime('%d/%m/%Y')}."
+                        if rule_scale and rule_scale.msg_system:
+                            sample_msg = rule_scale.msg_system.replace("{escala}", f"Plantão: {team.name}").replace("{data}", curr.strftime('%d/%m/%Y'))
+                            
+                        queue_items.append({
+                            "id": f"auto_{curr.isoformat()}",
+                            "type": "scale",
+                            "is_holiday_event": False,
+                            "category": "Rodízio Automático",
+                            "title": f"Plantão: {team.name}",
+                            "scale_type": "SÁBADO (RODÍZIO)",
+                            "target_date": curr,
+                            "target_date_str": curr.strftime("%d/%m/%Y"),
+                            "target_weekday": "Sábado",
+                            "trigger_date": trigger_date,
+                            "trigger_date_str": trigger_date.strftime("%d/%m/%Y"),
+                            "days_until_event": (curr - today_dt).days,
+                            "days_until_trigger": (trigger_date - today_dt).days,
+                            "status": status,
+                            "is_enabled": rule_scale_enabled,
+                            "teams": [team.name],
+                            "technicians": [{"id": u.id, "username": u.username.upper(), "phone": u.phone or ""} for u in team.members],
+                            "channels": scale_channels,
+                            "obs": "Escala automática por rodízio de equipes aos sábados",
+                            "sample_message": sample_msg
+                        })
+            curr += timedelta(days=1)
+            
+    # 4. Feriados oficiais (Aviso Geral para Todos os Colaboradores)
+    for h_date, h_name in sorted(h_dict.items()):
+        if today_dt <= h_date <= end_dt:
+            trigger_date = h_date - timedelta(days=holiday_trigger_days)
+            status = "AGUARDANDO"
+            if trigger_date < today_dt:
+                status = "PROCESSADO"
+            elif trigger_date == today_dt:
+                status = "HOJE"
+                
+            queue_items.append({
+                "id": f"holiday_{h_date.isoformat()}",
+                "type": "holiday",
+                "is_holiday_event": True,
+                "category": "Feriado Oficial (Aviso Geral)",
+                "title": f"Feriado: {h_name}",
+                "scale_type": "FERIADO GERAL",
+                "target_date": h_date,
+                "target_date_str": h_date.strftime("%d/%m/%Y"),
+                "target_weekday": h_date.strftime("%A"),
+                "trigger_date": trigger_date,
+                "trigger_date_str": trigger_date.strftime("%d/%m/%Y"),
+                "days_until_event": (h_date - today_dt).days,
+                "days_until_trigger": (trigger_date - today_dt).days,
+                "status": status,
+                "is_enabled": True,
+                "teams": ["Todos os Colaboradores"],
+                "technicians": [],
+                "channels": ["system"],
+                "obs": "Aviso geral de feriado para organização de toda a equipe",
+                "sample_message": f"Prezados, informamos que no dia {h_date.strftime('%d/%m/%Y')} será feriado: {h_name}. Programe-se!"
+            })
+        
+    # Ordena toda a fila por data do evento
+    queue_items.sort(key=lambda x: x["target_date"])
+    return queue_items
 
 
 def execute_system_audit():
@@ -4750,7 +5126,7 @@ def execute_system_audit():
                         rule_slug=rule.slug,
                         user_id=uid,
                         channel="system",
-                        recipient=target_role or "user",
+                        recipient=user_target.username if user_target else (target_role or "Todos"),
                         message=sys_content,
                         status="SENT"
                     )
@@ -4819,79 +5195,105 @@ def execute_system_audit():
     rule_scale = regras_dict.get("scale_alert")
     if "scale_alert" in enabled_rules and rule_scale:
         trigger_days = rule_scale.trigger_days if rule_scale.trigger_days is not None else 4
-        target_date = today_dt + timedelta(days=trigger_days)
+        max_horizon_days = max(trigger_days, 7)
         
-        scales = Scale.query.filter(Scale.date == target_date, Scale.status == "ATIVO").all()
-        
-        if target_date.weekday() == 5:
-            config = SystemConfig.query.first()
-            if config and config.scale_start_date and config.scale_rotation_order and not scales:
-                if target_date >= config.scale_start_date:
-                    rotation_order = [int(x) for x in config.scale_rotation_order.split(",") if x.strip().isdigit()]
-                    if rotation_order:
-                        weeks = (target_date - config.scale_start_date).days // 7
-                        team_idx = weeks % len(rotation_order)
-                        team_id = rotation_order[team_idx]
-                        
-                        team = Team.query.get(team_id)
-                        if team:
-                            class TempScale:
-                                def __init__(self, team_id, date, type_name):
-                                    self.team_id = team_id
-                                    self.team_ids = None
-                                    self.technician_ids = None
-                                    self.user_id = None
-                                    self.date = date
-                                    self.type = type_name
-                                    self.obs = "Escala automática por rodízio de equipes"
-                            scales.append(TempScale(team.id, target_date, f"Plantão: {team.name}"))
+        import holidays
+        years = list({today_dt.year, (today_dt + timedelta(days=max_horizon_days)).year})
+        h_dict_audit = holidays.Brazil(subdiv="RJ", years=years)
+        for y in years:
+            h_dict_audit[date(y, 6, 13)] = "Santo Antônio (Padroeiro)"
+            a = y % 19
+            b = y // 100
+            c = y % 100
+            d = b // 4
+            e = b % 4
+            f = (b + 8) // 25
+            g = (b - f + 1) // 3
+            h = (19 * a + b - d - g + 15) % 30
+            i = c // 4
+            k = c % 4
+            l = (32 + 2 * e + 2 * i - h - k) % 7
+            m = (a + 11 * h + 22 * l) // 451
+            month = (h + l - 7 * m + 114) // 31
+            day = ((h + l - 7 * m + 114) % 31) + 1
+            easter_date = date(y, month, day)
+            corpus_christi = easter_date + timedelta(days=60)
+            h_dict_audit[corpus_christi] = "Corpus Christi"
+            h_dict_audit.pop(date(y, 10, 12), None)
+            h_dict_audit[date(y, 10, 12)] = "N. Sra Aparecida / Emancipação"
 
-        for esc in scales:
-            title = f"📅 Plantão Confirmado: {esc.type}"
-            content = f"Olá, você está escalado para o plantão de '{esc.type}' no dia {target_date.strftime('%d/%m/%Y')} (daqui a {trigger_days} dias). obs: {esc.obs or 'Sem observações'}"
+        for offset in range(0, max_horizon_days + 1):
+            check_date = today_dt + timedelta(days=offset)
+            days_until = offset
             
-            tech_ids = set()
-            if esc.team_ids:
-                team_ids_list = [int(x.strip()) for x in esc.team_ids.split(",") if x.strip().isdigit()]
-                for tid in team_ids_list:
-                    team = Team.query.get(tid)
-                    if team:
-                        for member in team.members:
-                            if member.role == "tech":
-                                tech_ids.add(member.id)
-            elif esc.team_id:
-                team = Team.query.get(esc.team_id)
-                if team:
-                    for member in team.members:
-                        if member.role == "tech":
-                            tech_ids.add(member.id)
+            # Só envia notificações se estiver dentro do intervalo de trigger_days configurado
+            # (Se for feriado ou escala, permite até max_horizon_days caso configurado)
+            if days_until > trigger_days and days_until > 6:
+                continue
 
-            if esc.technician_ids:
-                user_ids_list = [int(x.strip()) for x in esc.technician_ids.split(",") if x.strip().isdigit()]
-                for uid in user_ids_list:
-                    tech_ids.add(uid)
-            elif esc.user_id:
-                tech_ids.add(esc.user_id)
+            scales = Scale.query.filter(Scale.date == check_date, Scale.status == "ATIVO").all()
+            
+            if check_date.weekday() == 5:
+                config = SystemConfig.query.first()
+                if config and config.scale_start_date and config.scale_rotation_order and not scales:
+                    if check_date >= config.scale_start_date:
+                        rotation_order = [int(x) for x in config.scale_rotation_order.split(",") if x.strip().isdigit()]
+                        if rotation_order:
+                            weeks = (check_date - config.scale_start_date).days // 7
+                            team_idx = weeks % len(rotation_order)
+                            team_id = rotation_order[team_idx]
+                            
+                            team = Team.query.get(team_id)
+                            if team:
+                                class TempScale:
+                                    def __init__(self, team_id, date, type_name):
+                                        self.team_id = team_id
+                                        self.team_ids = None
+                                        self.technician_ids = None
+                                        self.user_id = None
+                                        self.date = date
+                                        self.type = type_name
+                                        self.obs = "Escala automática por rodízio de equipes"
+                                scales.append(TempScale(team.id, check_date, f"Plantão: {team.name}"))
 
-            for uid in tech_ids:
-                tech_user = User.query.get(uid)
-                if tech_user:
+            for esc in scales:
+                is_holiday = (check_date in h_dict_audit) or (esc.type and "feriado" in str(esc.type).lower())
+                h_name = h_dict_audit.get(check_date, "Feriado")
+
+                if is_holiday:
+                    title = f"📅 Plantão de Feriado ({h_name}): {esc.type}"
+                    if days_until == 0:
+                        content = f"Atenção: você está escalado para o plantão do feriado '{h_name}' de HOJE ({check_date.strftime('%d/%m/%Y')}). obs: {esc.obs or 'Sem observações'}"
+                    else:
+                        content = f"Olá, você está escalado para o plantão do feriado '{h_name}' no dia {check_date.strftime('%d/%m/%Y')} (daqui a {days_until} dia{'s' if days_until != 1 else ''}). obs: {esc.obs or 'Sem observações'}"
+                    escala_label = f"Feriado ({h_name})"
+                else:
+                    title = f"📅 Plantão Confirmado: {esc.type}"
+                    if days_until == 0:
+                        content = f"Atenção: você está escalado para o plantão de '{esc.type}' de HOJE ({check_date.strftime('%d/%m/%Y')}). obs: {esc.obs or 'Sem observações'}"
+                    else:
+                        content = f"Olá, você está escalado para o plantão de '{esc.type}' no dia {check_date.strftime('%d/%m/%Y')} (daqui a {days_until} dia{'s' if days_until != 1 else ''}). obs: {esc.obs or 'Sem observações'}"
+                    escala_label = esc.type
+                
+                tech_users = get_technicians_for_scale(esc)
+
+                for tech_user in tech_users:
                     placeholders = {
                         "usuario": tech_user.username.capitalize(),
-                        "escala": esc.type,
-                        "data": target_date.strftime('%d/%m/%Y')
+                        "escala": escala_label,
+                        "data": check_date.strftime('%d/%m/%Y')
                     }
                     sent = dispatch_alert(rule_scale, tech_user, title, content, placeholders)
                     scales_notified += sent
 
-    # 2. Automação de Feriados, Sábados e Domingos (late_checklist / auditoria geral)
+    # 2. Automação de Feriados Oficiais (Aviso Geral para Todos)
     rule_late = regras_dict.get("late_checklist")
     if "late_checklist" in enabled_rules and rule_late:
         trigger_days = rule_late.trigger_days if rule_late.trigger_days is not None else 4
-        target_date = today_dt + timedelta(days=trigger_days)
+        max_horizon_days = max(trigger_days, 7)
         
         import holidays
-        years = [target_date.year]
+        years = list({today_dt.year, (today_dt + timedelta(days=max_horizon_days)).year})
         h_dict = holidays.Brazil(subdiv="RJ", years=years)
         
         for y in years:
@@ -4916,39 +5318,27 @@ def execute_system_audit():
             h_dict.pop(date(y, 10, 12), None)
             h_dict[date(y, 10, 12)] = "N. Sra Aparecida / Emancipação"
 
-        if target_date in h_dict:
-            h_name = h_dict[target_date]
-            title = f"🎉 Feriado Próximo: {h_name}"
-            content = f"Prezados, informamos que no dia {target_date.strftime('%d/%m/%Y')} (daqui a {trigger_days} dias) será feriado: {h_name}. Programe-se!"
-            
-            exists = Announcement.query.filter_by(title=title, target_role="all").first()
-            if not exists:
-                ann = Announcement(
-                    title=title,
-                    content=content,
-                    target_role="all",
-                    expires_at=datetime.combine(target_date, datetime.max.time()),
-                    created_by=None
-                )
-                db.session.add(ann)
-                checklists_reminded += 1
-
-        if target_date.weekday() in {5, 6}:
-            day_name = "Sábado" if target_date.weekday() == 5 else "Domingo"
-            title = f"📢 Plantão de Fim de Semana ({day_name})"
-            content = f"Atenção equipe! O próximo {day_name} ({target_date.strftime('%d/%m/%Y')}) terá escala operacional. Verifique sua designação na aba Escalas do sistema."
-            
-            exists = Announcement.query.filter_by(title=title, target_role="tech").first()
-            if not exists:
-                ann = Announcement(
-                    title=title,
-                    content=content,
-                    target_role="tech",
-                    expires_at=datetime.combine(target_date, datetime.max.time()),
-                    created_by=None
-                )
-                db.session.add(ann)
-                checklists_reminded += 1
+        for offset in range(0, max_horizon_days + 1):
+            check_holiday_date = today_dt + timedelta(days=offset)
+            if check_holiday_date in h_dict:
+                h_name = h_dict[check_holiday_date]
+                title = f"🎉 Feriado Próximo: {h_name}"
+                if offset == 0:
+                    content = f"Prezados, informamos que HOJE ({check_holiday_date.strftime('%d/%m/%Y')}) é feriado: {h_name}. Bom descanso / bom trabalho a todos!"
+                else:
+                    content = f"Prezados, informamos que no dia {check_holiday_date.strftime('%d/%m/%Y')} (daqui a {offset} dia{'s' if offset != 1 else ''}) será feriado: {h_name}. Programe-se!"
+                
+                exists = Announcement.query.filter_by(title=title, target_role="all").first()
+                if not exists:
+                    ann = Announcement(
+                        title=title,
+                        content=content,
+                        target_role="all",
+                        expires_at=datetime.combine(check_holiday_date, datetime.max.time()),
+                        created_by=None
+                    )
+                    db.session.add(ann)
+                    checklists_reminded += 1
 
         # Lembrete de Checklist diário não preenchido hoje
         today_scales = Scale.query.filter(Scale.date == today_dt, Scale.status == "ATIVO").all()

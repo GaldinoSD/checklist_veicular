@@ -2833,100 +2833,105 @@
 
 <!-- Modal: RFO -->
 <div id="modal-rfo" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden items-center justify-center z-[60] p-4">
-    <div class="bg-white dark:bg-gray-900 w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden max-h-[95vh] flex flex-col">
-        <div class="px-8 py-6 border-b border-slate-900/10 dark:border-white/10 flex justify-between items-center bg-slate-50/50 dark:bg-white/5">
-            <div>
-                <h3 class="text-xl font-bold text-slate-800 dark:text-white">Gerar Relatório de Falha (RFO)</h3>
-                <p class="text-xs text-slate-500 mt-1">Registro detalhado de falhas operacionais e manutenção</p>
+    <div class="bg-white dark:bg-gray-900 w-full max-w-3xl rounded-2xl shadow-2xl overflow-hidden max-h-[95vh] flex flex-col animate-premium">
+        <!-- Header Compacto -->
+        <div class="px-5 py-3 border-b border-slate-900/10 dark:border-white/10 flex justify-between items-center bg-gradient-to-r from-slate-50 to-blue-50/30 dark:from-white/5 dark:to-blue-900/10">
+            <div class="flex items-center gap-3">
+                <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center text-white shadow-lg shadow-red-500/20 flex-shrink-0">
+                    <i class="fa-solid fa-file-circle-exclamation text-xs"></i>
+                </div>
+                <div>
+                    <h3 id="modal-rfo-title" class="text-sm font-extrabold text-slate-800 dark:text-white tracking-tight">Novo Relatório de Falha (RFO)</h3>
+                    <p class="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Registro de falhas operacionais</p>
+                </div>
             </div>
-            <button onclick="closeModal('modal-rfo')" class="w-10 h-10 flex items-center justify-center rounded-full hover:bg-slate-200 dark:hover:bg-white/10 text-slate-400 transition-all">
-                <i class="fa-solid fa-xmark"></i>
+            <button onclick="closeModal('modal-rfo')" class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-200 dark:hover:bg-white/10 text-slate-400 transition-all">
+                <i class="fa-solid fa-xmark text-xs"></i>
             </button>
         </div>
         
-        <form id="form-rfo" class="flex-1 overflow-y-auto p-8 space-y-6">
-            <!-- Bloco 1: Identificação -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <form id="form-rfo" class="flex-1 overflow-y-auto p-5 space-y-4">
+            <!-- Linha 1: Protocolo + Tipo + Técnico -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
                 <div>
-                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Protocolo / Número RFO</label>
-                    <input id="protocol" type="text" name="protocol" required placeholder="Ex: RFO-2024-001" class="w-full bg-slate-50 dark:bg-gray-800 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-red-500/20 outline-none">
+                    <label class="block text-[9px] font-extrabold text-slate-400 uppercase tracking-wider mb-1">Protocolo / Nº RFO</label>
+                    <input id="protocol" type="text" name="protocol" required placeholder="RFO-2024-001" class="w-full bg-slate-50 dark:bg-gray-800 border border-slate-900/10 dark:border-white/10 rounded-lg px-3 py-2 text-xs font-semibold text-slate-700 dark:text-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 outline-none transition-all">
                 </div>
                 <div>
-                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Tipo de Problema</label>
-                    <input id="problem_type" type="text" name="problem_type" required placeholder="Ex: Queda de Link / Rompimento" class="w-full bg-slate-50 dark:bg-gray-800 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-red-500/20 outline-none">
-                </div>
-            </div>
-
-            <!-- Bloco 2: Causas e Ações -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Causa Raiz</label>
-                    <textarea name="root_cause" rows="2" placeholder="Descreva o que originou a falha" class="w-full bg-slate-50 dark:bg-gray-800 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-red-500/20 outline-none"></textarea>
+                    <label class="block text-[9px] font-extrabold text-slate-400 uppercase tracking-wider mb-1">Tipo de Problema</label>
+                    <input id="problem_type" type="text" name="problem_type" required placeholder="Queda de Link / Rompimento" class="w-full bg-slate-50 dark:bg-gray-800 border border-slate-900/10 dark:border-white/10 rounded-lg px-3 py-2 text-xs font-semibold text-slate-700 dark:text-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 outline-none transition-all">
                 </div>
                 <div>
-                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Ações para Solução</label>
-                    <textarea name="solution_actions" rows="2" placeholder="O que foi feito para resolver" class="w-full bg-slate-50 dark:bg-gray-800 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-red-500/20 outline-none"></textarea>
+                    <label class="block text-[9px] font-extrabold text-slate-400 uppercase tracking-wider mb-1">Técnico Responsável</label>
+                    <input id="tech_responsible" type="text" name="tech_responsible" required placeholder="Nome do técnico" class="w-full bg-slate-50 dark:bg-gray-800 border border-slate-900/10 dark:border-white/10 rounded-lg px-3 py-2 text-xs font-semibold text-slate-700 dark:text-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 outline-none transition-all">
                 </div>
             </div>
 
-            <!-- Bloco 3: Tempos -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Linha 2: Causa Raiz + Ações (lado a lado) -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
-                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Início da Manutenção</label>
-                    <input id="maintenance_start" type="datetime-local" name="maintenance_start" required class="w-full bg-slate-50 dark:bg-gray-800 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-red-500/20 outline-none">
+                    <label class="block text-[9px] font-extrabold text-slate-400 uppercase tracking-wider mb-1">Causa Raiz</label>
+                    <textarea name="root_cause" rows="2" placeholder="O que originou a falha" class="w-full bg-slate-50 dark:bg-gray-800 border border-slate-900/10 dark:border-white/10 rounded-lg px-3 py-2 text-xs font-semibold text-slate-700 dark:text-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 outline-none transition-all resize-none"></textarea>
                 </div>
                 <div>
-                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Data/Hora de Resolução</label>
-                    <input id="resolution_time" type="datetime-local" name="resolution_time" required class="w-full bg-slate-50 dark:bg-gray-800 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-red-500/20 outline-none">
+                    <label class="block text-[9px] font-extrabold text-slate-400 uppercase tracking-wider mb-1">Ações para Solução</label>
+                    <textarea name="solution_actions" rows="2" placeholder="O que foi feito para resolver" class="w-full bg-slate-50 dark:bg-gray-800 border border-slate-900/10 dark:border-white/10 rounded-lg px-3 py-2 text-xs font-semibold text-slate-700 dark:text-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 outline-none transition-all resize-none"></textarea>
                 </div>
             </div>
 
-            <!-- Bloco 4: Localização Automatizada -->
-            <div class="p-6 bg-blue-50/50 dark:bg-blue-900/10 rounded-2xl border border-blue-200 dark:border-blue-900/30 space-y-4">
-                <div class="flex justify-between items-center">
-                    <p class="text-[10px] font-bold text-blue-600 dark:text-blue-400 flex items-center gap-2 uppercase">
-                        <i class="fa-solid fa-location-dot"></i> Local da Manutenção
+            <!-- Linha 3: Tempos + Observações -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                    <label class="block text-[9px] font-extrabold text-slate-400 uppercase tracking-wider mb-1">Início da Manutenção</label>
+                    <input id="maintenance_start" type="datetime-local" name="maintenance_start" required class="w-full bg-slate-50 dark:bg-gray-800 border border-slate-900/10 dark:border-white/10 rounded-lg px-3 py-2 text-xs font-semibold text-slate-700 dark:text-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 outline-none transition-all">
+                </div>
+                <div>
+                    <label class="block text-[9px] font-extrabold text-slate-400 uppercase tracking-wider mb-1">Data/Hora de Resolução</label>
+                    <input id="resolution_time" type="datetime-local" name="resolution_time" required class="w-full bg-slate-50 dark:bg-gray-800 border border-slate-900/10 dark:border-white/10 rounded-lg px-3 py-2 text-xs font-semibold text-slate-700 dark:text-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 outline-none transition-all">
+                </div>
+                <div>
+                    <label class="block text-[9px] font-extrabold text-slate-400 uppercase tracking-wider mb-1">Observações Adicionais</label>
+                    <input id="observations" type="text" name="observations" placeholder="Notas extras sobre o serviço" class="w-full bg-slate-50 dark:bg-gray-800 border border-slate-900/10 dark:border-white/10 rounded-lg px-3 py-2 text-xs font-semibold text-slate-700 dark:text-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-400 outline-none transition-all">
+                </div>
+            </div>
+
+            <!-- Linha 4: Localização Compacta -->
+            <div class="p-3 bg-blue-50/60 dark:bg-blue-900/10 rounded-xl border border-blue-200/60 dark:border-blue-900/20">
+                <div class="flex justify-between items-center mb-2">
+                    <p class="text-[9px] font-extrabold text-blue-600 dark:text-blue-400 flex items-center gap-1.5 uppercase tracking-wider">
+                        <i class="fa-solid fa-location-dot text-[8px]"></i> Local da Manutenção
                     </p>
-                    <button type="button" onclick="getRFOPlacement()" class="text-[10px] font-bold text-blue-600 underline">Obter GPS Atual</button>
+                    <button type="button" onclick="getRFOPlacement()" class="text-[9px] font-bold text-blue-600 hover:text-blue-700 underline underline-offset-2 transition-colors">
+                        <i class="fa-solid fa-crosshairs text-[8px] mr-0.5"></i> Obter GPS Atual
+                    </button>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <input id="city" type="text" name="city" placeholder="Cidade" class="bg-white dark:bg-gray-800 border border-slate-900/10 dark:border-white/10 rounded-lg px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-blue-500">
-                    <input id="neighborhood" type="text" name="neighborhood" placeholder="Bairro" class="bg-white dark:bg-gray-800 border border-slate-900/10 dark:border-white/10 rounded-lg px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-blue-500">
-                    <input id="lat" type="text" name="lat" placeholder="Latitude" readonly class="bg-slate-100 dark:bg-gray-700 border border-slate-900/10 dark:border-white/10 rounded-lg px-3 py-2 text-sm outline-none cursor-default">
-                    <input id="lng" type="text" name="lng" placeholder="Longitude" readonly class="bg-slate-100 dark:bg-gray-700 border border-slate-900/10 dark:border-white/10 rounded-lg px-3 py-2 text-sm outline-none cursor-default">
-                </div>
-            </div>
-
-            <!-- Bloco 5: Responsável e Obs -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div class="md:col-span-1">
-                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Técnico Responsável</label>
-                    <input id="tech_responsible" type="text" name="tech_responsible" required placeholder="Nome do técnico" class="w-full bg-slate-50 dark:bg-gray-800 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-red-500/20">
-                </div>
-                <div class="md:col-span-2">
-                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1">Observações Adicionais</label>
-                    <input id="observations" type="text" name="observations" placeholder="Notas extras sobre o serviço" class="w-full bg-slate-50 dark:bg-gray-800 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-red-500/20">
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    <input id="city" type="text" name="city" placeholder="Cidade" class="bg-white dark:bg-gray-800 border border-slate-900/10 dark:border-white/10 rounded-lg px-2.5 py-1.5 text-xs font-semibold outline-none focus:ring-1 focus:ring-blue-500 transition-all">
+                    <input id="neighborhood" type="text" name="neighborhood" placeholder="Bairro" class="bg-white dark:bg-gray-800 border border-slate-900/10 dark:border-white/10 rounded-lg px-2.5 py-1.5 text-xs font-semibold outline-none focus:ring-1 focus:ring-blue-500 transition-all">
+                    <input id="lat" type="text" name="lat" placeholder="Latitude" readonly class="bg-slate-100 dark:bg-gray-700 border border-slate-900/10 dark:border-white/10 rounded-lg px-2.5 py-1.5 text-xs font-semibold outline-none cursor-default text-slate-500">
+                    <input id="lng" type="text" name="lng" placeholder="Longitude" readonly class="bg-slate-100 dark:bg-gray-700 border border-slate-900/10 dark:border-white/10 rounded-lg px-2.5 py-1.5 text-xs font-semibold outline-none cursor-default text-slate-500">
                 </div>
             </div>
 
-            <!-- Bloco 6: Fotos -->
+            <!-- Linha 5: Fotos Compacto -->
             <div>
-                <label class="block text-[10px] font-bold text-slate-400 uppercase mb-2">Registros Fotográficos (Captura ou Upload)</label>
-                <div class="flex items-center gap-4">
-                    <label class="flex-1 border-2 border-dashed border-slate-200 dark:border-white/10 rounded-2xl p-6 flex flex-col items-center justify-center cursor-pointer hover:bg-slate-50 dark:hover:bg-white/5 transition-all group">
-                        <i class="fa-solid fa-camera text-2xl text-slate-300 group-hover:text-red-500 mb-2"></i>
-                        <span class="text-xs text-slate-400 font-medium">Clique para tirar foto ou selecionar arquivos</span>
+                <label class="block text-[9px] font-extrabold text-slate-400 uppercase tracking-wider mb-1.5">Registros Fotográficos</label>
+                <div class="flex items-center gap-3">
+                    <label class="flex-1 border-2 border-dashed border-slate-200 dark:border-white/10 rounded-xl p-3 flex items-center justify-center cursor-pointer hover:bg-slate-50 dark:hover:bg-white/5 transition-all group gap-3">
+                        <i class="fa-solid fa-camera text-lg text-slate-300 group-hover:text-red-500 transition-colors"></i>
+                        <span class="text-[10px] text-slate-400 font-semibold">Clique para tirar foto ou selecionar arquivos</span>
                         <input id="photos" type="file" name="photos[]" multiple accept="image/*" capture="environment" class="hidden" onchange="previewPhotos(this, 'rfo-photo-preview')">
                     </label>
                 </div>
-                <div id="rfo-photo-preview" class="grid grid-cols-4 md:grid-cols-6 gap-3 mt-4"></div>
+                <div id="rfo-photo-preview" class="grid grid-cols-5 md:grid-cols-8 gap-2 mt-2"></div>
             </div>
         </form>
 
-        <div class="p-8 border-t border-slate-900/10 dark:border-white/10 bg-slate-50/50 dark:bg-white/5 flex justify-end gap-3">
-            <button onclick="closeModal('modal-rfo')" class="px-6 py-3 text-slate-600 dark:text-gray-400 font-bold text-sm">Cancelar</button>
-            <button onclick="submitRFO()" class="px-8 py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold text-sm shadow-lg shadow-red-500/30 transition-all active:scale-95 flex items-center gap-2">
-                <i class="fa-solid fa-file-export"></i> Salvar e Gerar Relatório
+        <!-- Footer Compacto -->
+        <div class="px-5 py-3 border-t border-slate-900/10 dark:border-white/10 bg-slate-50/50 dark:bg-white/5 flex justify-end gap-2">
+            <button onclick="closeModal('modal-rfo')" class="px-4 py-2 text-slate-500 dark:text-gray-400 font-bold text-[10px] uppercase tracking-wider hover:bg-slate-100 dark:hover:bg-white/5 rounded-lg transition-all">Cancelar</button>
+            <button onclick="submitRFO()" class="px-5 py-2 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-700 hover:to-rose-700 text-white rounded-lg font-extrabold text-[10px] uppercase tracking-wider shadow-lg shadow-red-500/25 transition-all active:scale-95 flex items-center gap-1.5">
+                <i class="fa-solid fa-file-export text-[9px]"></i> Salvar e Gerar Relatório
             </button>
         </div>
     </div>
@@ -6757,9 +6762,13 @@ function openModalRFO() {
     form.reset();
     document.getElementById('rfo-photo-preview').innerHTML = "";
     
+    // Título do modal para modo criação
+    const titleEl = document.getElementById('modal-rfo-title');
+    if (titleEl) titleEl.textContent = 'Novo Relatório de Falha (RFO)';
+    
     const submitBtn = document.querySelector('#modal-rfo button[onclick^="submitRFO"], #modal-rfo button[onclick^="saveEditRFO"]');
     submitBtn.onclick = submitRFO;
-    submitBtn.innerHTML = '<i class="fa-solid fa-file-export"></i> Salvar e Gerar Relatório';
+    submitBtn.innerHTML = '<i class="fa-solid fa-file-export text-[9px]"></i> Salvar e Gerar Relatório';
     
     openModal('modal-rfo');
 }
@@ -6836,9 +6845,13 @@ function editRFO(id) {
         }
     }
     
+    // Título do modal para modo edição
+    const titleEl = document.getElementById('modal-rfo-title');
+    if (titleEl) titleEl.textContent = `Editar RFO — ${item.number || 'Sem Protocolo'}`;
+    
     const submitBtn = document.querySelector('#modal-rfo button[onclick^="submitRFO"], #modal-rfo button[onclick^="saveEditRFO"]');
     submitBtn.onclick = () => saveEditRFO(id);
-    submitBtn.innerHTML = '<i class="fa-solid fa-save"></i> Salvar Alterações';
+    submitBtn.innerHTML = '<i class="fa-solid fa-save text-[9px]"></i> Salvar Alterações';
     
     openModal('modal-rfo');
 }
