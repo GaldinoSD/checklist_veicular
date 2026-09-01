@@ -11076,8 +11076,13 @@ async function saveCourse() {
 async function deleteCourse(id) {
     if (!confirm('Deseja excluir este treinamento permanentemente?')) return;
     try {
-        await fetch(`/api/gestao/treinamentos_lms/${id}`, {method: 'DELETE'});
-        showToast('Treinamento excluído.', 'info');
+        const res = await fetch(`/api/gestao/treinamentos_lms/${id}`, {method: 'DELETE'});
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+            alert('Erro ao excluir: ' + (data.error || 'Falha no servidor'));
+            return;
+        }
+        showToast('Treinamento excluído com sucesso.', 'info');
         loadLMSCourses();
     } catch(e) {
         alert('Erro ao excluir treinamento.');

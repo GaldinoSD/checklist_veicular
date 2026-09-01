@@ -896,6 +896,36 @@ class EmailConfig(db.Model):
     is_enabled = db.Column(db.Boolean, default=False)
 
 
+class CloudflareConfig(db.Model):
+    __tablename__ = "cloudflare_config"
+    id = db.Column(db.Integer, primary_key=True)
+    bucket_name = db.Column(db.String(150))
+    access_key_id = db.Column(db.String(255))
+    secret_access_key = db.Column(db.String(255))
+    account_id = db.Column(db.String(255))
+    endpoint_url = db.Column(db.String(255))
+    public_url = db.Column(db.String(255))
+    is_enabled = db.Column(db.Boolean, default=False)
+
+
+class TraccarConfig(db.Model):
+    __tablename__ = "traccar_config"
+    id = db.Column(db.Integer, primary_key=True)
+    server_url = db.Column(db.String(255), default="http://localhost:8082")
+    api_token = db.Column(db.String(255))
+    username = db.Column(db.String(100))
+    password = db.Column(db.String(255))
+    is_enabled = db.Column(db.Boolean, default=False)
+
+
+class MetabaseConfig(db.Model):
+    __tablename__ = "metabase_config"
+    id = db.Column(db.Integer, primary_key=True)
+    embed_url = db.Column(db.String(500))
+    secret_key = db.Column(db.String(255))
+    is_enabled = db.Column(db.Boolean, default=False)
+
+
 class WhatsAppLog(db.Model):
     __tablename__ = "whatsapp_log"
     id = db.Column(db.Integer, primary_key=True)

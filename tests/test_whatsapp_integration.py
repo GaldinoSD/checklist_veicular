@@ -374,8 +374,8 @@ class TestWhatsAppIntegration(unittest.TestCase):
         with patch('flask_login.utils._get_user', return_value=admin_user):
             response = self.client.get('/integracoes')
             self.assertEqual(response.status_code, 200)
-            self.assertIn(b"Hub de Integra", response.data)
-            self.assertIn(b"Evolution API", response.data)
+            self.assertIn(b"Central de Integra", response.data)
+            self.assertIn(b"WhatsApp Evolution", response.data)
 
 if __name__ == '__main__':
     unittest.main()

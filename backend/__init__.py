@@ -388,6 +388,36 @@ def create_app():
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     retry_count INTEGER DEFAULT 0
                 )
+            '''),
+            text('''
+                CREATE TABLE IF NOT EXISTS cloudflare_config (
+                    id SERIAL PRIMARY KEY,
+                    bucket_name VARCHAR(150) DEFAULT '',
+                    access_key_id VARCHAR(255) DEFAULT '',
+                    secret_access_key VARCHAR(255) DEFAULT '',
+                    account_id VARCHAR(255) DEFAULT '',
+                    endpoint_url VARCHAR(255) DEFAULT '',
+                    public_url VARCHAR(255) DEFAULT '',
+                    is_enabled BOOLEAN DEFAULT FALSE
+                )
+            '''),
+            text('''
+                CREATE TABLE IF NOT EXISTS traccar_config (
+                    id SERIAL PRIMARY KEY,
+                    server_url VARCHAR(255) DEFAULT 'http://localhost:8082',
+                    api_token VARCHAR(255) DEFAULT '',
+                    username VARCHAR(100) DEFAULT '',
+                    password VARCHAR(255) DEFAULT '',
+                    is_enabled BOOLEAN DEFAULT FALSE
+                )
+            '''),
+            text('''
+                CREATE TABLE IF NOT EXISTS metabase_config (
+                    id SERIAL PRIMARY KEY,
+                    embed_url VARCHAR(500) DEFAULT '',
+                    secret_key VARCHAR(255) DEFAULT '',
+                    is_enabled BOOLEAN DEFAULT FALSE
+                )
             ''')
         ]
         for stmt in stmts:

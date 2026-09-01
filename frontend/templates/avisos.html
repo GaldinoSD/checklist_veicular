@@ -430,168 +430,452 @@
 
     <!-- 🔌 TAB: INTEGRAÇÕES -->
     <div id="content-integracoes" class="avisos-tab-content hidden">
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <!-- WHATSAPP CONFIG -->
-            <div class="card-premium p-8">
-                <div class="flex items-center justify-between mb-6">
-                    <div class="flex items-center gap-4">
-                        <div class="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-600">
-                            <i class="fa-brands fa-whatsapp text-2xl"></i>
-                        </div>
-                        <div>
-                            <h4 class="font-black text-slate-800 dark:text-white tracking-tight">WhatsApp</h4>
-                            <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Evolution API</p>
-                        </div>
-                    </div>
-                    <span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase {% if whatsapp_config.is_enabled %}bg-emerald-500/10 text-emerald-500{% else %}bg-slate-100 dark:bg-white/5 text-slate-400{% endif %}">
-                        {{ 'Ativo' if whatsapp_config.is_enabled else 'Inativo' }}
-                    </span>
+        <!-- Header da Central de Conectividade de Avisos -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 bg-slate-900/5 dark:bg-white/5 p-6 rounded-2xl border border-slate-900/5 dark:border-white/5">
+            <div class="flex items-center gap-4">
+                <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/20 shrink-0">
+                    <i class="fa-solid fa-network-wired text-xl"></i>
                 </div>
-                <form method="post" class="space-y-4">
-                    <input type="hidden" name="acao" value="salvar_integracao_whatsapp">
-                    
-                    <div class="flex items-center justify-between p-3 bg-slate-50 dark:bg-white/5 rounded-xl border border-slate-900/5">
-                        <span class="text-xs font-bold text-slate-700 dark:text-slate-300">Habilitar WhatsApp</span>
-                        <label class="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" name="is_enabled" value="on" {% if whatsapp_config.is_enabled %}checked{% endif %} class="sr-only peer">
-                            <div class="w-11 h-6 bg-slate-200 dark:bg-white/10 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
-                        </label>
+                <div>
+                    <h3 class="text-base font-black text-slate-800 dark:text-white tracking-tight">Canais de Transmissão & Conectores</h3>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">Status em tempo real, credenciais e testes dos canais de notificações e serviços conectados.</p>
+                </div>
+            </div>
+            <button onclick="runAvisosHealthCheck()" id="btn-avisos-health-check" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-black text-[11px] uppercase tracking-widest transition-all shadow-md shadow-blue-500/20 flex items-center gap-2 shrink-0 active:scale-95">
+                <i class="fa-solid fa-arrows-rotate text-xs" id="icon-avisos-health"></i> Verificar Saúde de Todas
+            </button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- 1. WHATSAPP CONFIG -->
+            <div class="card-premium p-6 flex flex-col justify-between" id="avisos-card-whatsapp">
+                <div>
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-600">
+                                <i class="fa-brands fa-whatsapp text-xl"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-black text-slate-800 dark:text-white text-sm">WhatsApp</h4>
+                                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Evolution API</p>
+                            </div>
+                        </div>
+                        <span id="badge-status-whatsapp" class="px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider flex items-center gap-1.5 {% if whatsapp_config and whatsapp_config.is_enabled %}bg-emerald-500/10 text-emerald-600 dark:text-emerald-400{% else %}bg-slate-100 dark:bg-white/5 text-slate-400{% endif %}">
+                            <span class="w-1.5 h-1.5 rounded-full {% if whatsapp_config and whatsapp_config.is_enabled %}bg-emerald-500 animate-pulse{% else %}bg-slate-400{% endif %}"></span>
+                            <span class="badge-text">{{ 'Ativo' if whatsapp_config and whatsapp_config.is_enabled else 'Inativo' }}</span>
+                        </span>
                     </div>
 
-                    <div>
-                        <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1.5 ml-1">Evolution API URL</label>
-                        <input name="api_url" value="{{ whatsapp_config.api_url or '' }}" placeholder="https://api.evolution.com" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-3 text-xs dark:text-white outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all">
+                    <!-- Live Diagnostic Box -->
+                    <div class="mb-5 p-3 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 text-[11px] text-slate-600 dark:text-slate-300">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="text-slate-400 font-bold uppercase text-[9px] tracking-wider">Instância:</span>
+                            <strong class="font-mono text-xs">{{ whatsapp_config.instance_name or 'Não configurada' }}</strong>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-slate-400 font-bold uppercase text-[9px] tracking-wider">Diagnóstico:</span>
+                            <span id="diag-status-whatsapp" class="font-bold text-slate-500">Aguardando checagem...</span>
+                        </div>
                     </div>
 
-                    <div>
-                        <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1.5 ml-1">Evolution API Key</label>
-                        <input type="password" name="apikey" value="{{ whatsapp_config.apikey or '' }}" placeholder="Apikey gerada na Evolution" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-3 text-xs dark:text-white outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all">
-                    </div>
+                    <form method="post" class="space-y-3.5" id="form-integracao-whatsapp">
+                        <input type="hidden" name="acao" value="salvar_integracao_whatsapp">
+                        <input type="hidden" name="is_enabled" value="off">
+                        
+                        <div class="flex items-center justify-between p-3 bg-slate-50 dark:bg-white/5 rounded-xl border border-slate-900/5">
+                            <div>
+                                <span class="text-xs font-bold text-slate-700 dark:text-slate-300 block">Habilitar WhatsApp</span>
+                                <span class="text-[9px] text-slate-400">Envios automáticos via Evolution</span>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" name="is_enabled" value="on" id="toggle-switch-whatsapp" {% if whatsapp_config and whatsapp_config.is_enabled %}checked{% endif %} onchange="toggleIntegrationSwitch('whatsapp', this)" class="sr-only peer">
+                                <div class="w-11 h-6 bg-slate-200 dark:bg-white/10 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                            </label>
+                        </div>
 
-                    <div>
-                        <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1.5 ml-1">Nome da Instância</label>
-                        <input name="instance_name" value="{{ whatsapp_config.instance_name or '' }}" placeholder="Ex: instance_name" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-3 text-xs dark:text-white outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all">
-                    </div>
+                        <div>
+                            <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Evolution API URL</label>
+                            <input name="api_url" value="{{ whatsapp_config.api_url or '' }}" placeholder="https://api.evolution.com" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-xs dark:text-white outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all font-mono">
+                        </div>
 
-                    <div>
-                        <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1.5 ml-1">Destinatários Globais (opcional)</label>
-                        <input name="recipients" value="{{ whatsapp_config.recipients or '' }}" placeholder="Telefones separados por vírgula" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-3 text-xs dark:text-white outline-none focus:ring-4 focus:ring-emerald-500/10 transition-all">
-                    </div>
+                        <div>
+                            <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Evolution API Key</label>
+                            <input type="password" name="apikey" value="{{ whatsapp_config.apikey or '' }}" placeholder="Chave Global da Evolution" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-xs dark:text-white outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all font-mono">
+                        </div>
 
-                    <div class="flex gap-2">
-                        <button type="submit" class="flex-1 py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] uppercase tracking-[0.2em] rounded-xl shadow-lg shadow-emerald-500/20 transition-all active:scale-95">Salvar</button>
-                        <button type="button" onclick="testIntegration('whatsapp')" class="flex-1 py-3 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 font-black text-[10px] uppercase tracking-[0.2em] rounded-xl transition-all">Testar</button>
-                    </div>
-                </form>
+                        <div>
+                            <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Nome da Instância</label>
+                            <input name="instance_name" value="{{ whatsapp_config.instance_name or '' }}" placeholder="Ex: checklist_instance" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-xs dark:text-white outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all font-mono">
+                        </div>
+
+                        <div>
+                            <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Destinatários Globais (opcional)</label>
+                            <input name="recipients" value="{{ whatsapp_config.recipients or '' }}" placeholder="5521999999999, 5521988888888" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-xs dark:text-white outline-none focus:ring-2 focus:ring-emerald-500/20 transition-all font-mono">
+                        </div>
+
+                        <div class="flex gap-2 pt-2">
+                            <button type="submit" class="flex-1 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] uppercase tracking-wider rounded-xl shadow-md shadow-emerald-500/20 transition-all active:scale-95">Salvar</button>
+                            <button type="button" onclick="testIntegrationQuick('whatsapp')" id="btn-test-whatsapp" class="px-4 py-2.5 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 font-black text-[10px] uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5">
+                                <i class="fa-solid fa-bolt text-xs"></i> Testar
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
 
-            <!-- TELEGRAM CONFIG -->
-            <div class="card-premium p-8">
-                <div class="flex items-center justify-between mb-6">
-                    <div class="flex items-center gap-4">
-                        <div class="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-500">
-                            <i class="fa-brands fa-telegram text-2xl"></i>
+            <!-- 2. TELEGRAM BOT CONFIG -->
+            <div class="card-premium p-6 flex flex-col justify-between" id="avisos-card-telegram">
+                <div>
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500">
+                                <i class="fa-brands fa-telegram text-xl"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-black text-slate-800 dark:text-white text-sm">Telegram Bot</h4>
+                                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">NOC & Alertas</p>
+                            </div>
                         </div>
+                        <span id="badge-status-telegram" class="px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider flex items-center gap-1.5 {% if telegram_config and telegram_config.is_enabled %}bg-blue-500/10 text-blue-600 dark:text-blue-400{% else %}bg-slate-100 dark:bg-white/5 text-slate-400{% endif %}">
+                            <span class="w-1.5 h-1.5 rounded-full {% if telegram_config and telegram_config.is_enabled %}bg-blue-500 animate-pulse{% else %}bg-slate-400{% endif %}"></span>
+                            <span class="badge-text">{{ 'Ativo' if telegram_config and telegram_config.is_enabled else 'Inativo' }}</span>
+                        </span>
+                    </div>
+
+                    <!-- Live Diagnostic Box -->
+                    <div class="mb-5 p-3 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 text-[11px] text-slate-600 dark:text-slate-300">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="text-slate-400 font-bold uppercase text-[9px] tracking-wider">Chat ID:</span>
+                            <strong class="font-mono text-xs">{{ telegram_config.chat_id or 'Não configurado' }}</strong>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-slate-400 font-bold uppercase text-[9px] tracking-wider">Diagnóstico:</span>
+                            <span id="diag-status-telegram" class="font-bold text-slate-500">Aguardando checagem...</span>
+                        </div>
+                    </div>
+
+                    <form method="post" class="space-y-3.5" id="form-integracao-telegram">
+                        <input type="hidden" name="acao" value="salvar_integracao_telegram">
+                        <input type="hidden" name="is_enabled" value="off">
+                        
+                        <div class="flex items-center justify-between p-3 bg-slate-50 dark:bg-white/5 rounded-xl border border-slate-900/5">
+                            <div>
+                                <span class="text-xs font-bold text-slate-700 dark:text-slate-300 block">Habilitar Telegram</span>
+                                <span class="text-[9px] text-slate-400">Transmissão para grupos NOC</span>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" name="is_enabled" value="on" id="toggle-switch-telegram" {% if telegram_config and telegram_config.is_enabled %}checked{% endif %} onchange="toggleIntegrationSwitch('telegram', this)" class="sr-only peer">
+                                <div class="w-11 h-6 bg-slate-200 dark:bg-white/10 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500"></div>
+                            </label>
+                        </div>
+
                         <div>
-                            <h4 class="font-black text-slate-800 dark:text-white tracking-tight">Telegram</h4>
-                            <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Telegram Bot API</p>
+                            <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Bot Token</label>
+                            <input type="password" name="bot_token" value="{{ telegram_config.bot_token or '' }}" placeholder="123456789:ABCdefGhI..." class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-xs dark:text-white outline-none focus:ring-2 focus:ring-blue-500/20 transition-all font-mono">
                         </div>
-                    </div>
-                    <span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase {% if telegram_config.is_enabled %}bg-blue-500/10 text-blue-500{% else %}bg-slate-100 dark:bg-white/5 text-slate-400{% endif %}">
-                        {{ 'Ativo' if telegram_config.is_enabled else 'Inativo' }}
-                    </span>
+
+                        <div>
+                            <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Chat ID / Grupo Geral</label>
+                            <input name="chat_id" value="{{ telegram_config.chat_id or '' }}" placeholder="-100123456789 ou ID de usuário" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-xs dark:text-white outline-none focus:ring-2 focus:ring-blue-500/20 transition-all font-mono">
+                        </div>
+
+                        <div class="pt-6"></div>
+
+                        <div class="flex gap-2 pt-2">
+                            <button type="submit" class="flex-1 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-black text-[10px] uppercase tracking-wider rounded-xl shadow-md shadow-blue-500/20 transition-all active:scale-95">Salvar</button>
+                            <button type="button" onclick="testIntegrationQuick('telegram')" id="btn-test-telegram" class="px-4 py-2.5 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 font-black text-[10px] uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5">
+                                <i class="fa-solid fa-bolt text-xs"></i> Testar
+                            </button>
+                        </div>
+                    </form>
                 </div>
-                <form method="post" class="space-y-4">
-                    <input type="hidden" name="acao" value="salvar_integracao_telegram">
-                    
-                    <div class="flex items-center justify-between p-3 bg-slate-50 dark:bg-white/5 rounded-xl border border-slate-900/5">
-                        <span class="text-xs font-bold text-slate-700 dark:text-slate-300">Habilitar Telegram</span>
-                        <label class="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" name="is_enabled" value="on" {% if telegram_config.is_enabled %}checked{% endif %} class="sr-only peer">
-                            <div class="w-11 h-6 bg-slate-200 dark:bg-white/10 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500"></div>
-                        </label>
-                    </div>
-
-                    <div>
-                        <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1.5 ml-1">Bot Token</label>
-                        <input type="password" name="bot_token" value="{{ telegram_config.bot_token or '' }}" placeholder="Ex: 123456789:ABCdefGhI" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-3 text-xs dark:text-white outline-none focus:ring-4 focus:ring-blue-500/10 transition-all">
-                    </div>
-
-                    <div>
-                        <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1.5 ml-1">Grupo/Chat ID Geral (opcional)</label>
-                        <input name="chat_id" value="{{ telegram_config.chat_id or '' }}" placeholder="Ex: -100123456789" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-3 text-xs dark:text-white outline-none focus:ring-4 focus:ring-blue-500/10 transition-all">
-                    </div>
-
-                    <div class="flex gap-2 mt-8">
-                        <button type="submit" class="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white font-black text-[10px] uppercase tracking-[0.2em] rounded-xl shadow-lg shadow-blue-500/20 transition-all active:scale-95">Salvar</button>
-                        <button type="button" onclick="testIntegration('telegram')" class="flex-1 py-3 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 font-black text-[10px] uppercase tracking-[0.2em] rounded-xl transition-all">Testar</button>
-                    </div>
-                </form>
             </div>
 
-            <!-- EMAIL CONFIG -->
-            <div class="card-premium p-8">
-                <div class="flex items-center justify-between mb-6">
-                    <div class="flex items-center gap-4">
-                        <div class="w-12 h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-500">
-                            <i class="fa-solid fa-envelope text-2xl"></i>
+            <!-- 3. EMAIL (SMTP) CONFIG -->
+            <div class="card-premium p-6 flex flex-col justify-between" id="avisos-card-email">
+                <div>
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-500">
+                                <i class="fa-solid fa-envelope text-xl"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-black text-slate-800 dark:text-white text-sm">E-mail (SMTP)</h4>
+                                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Servidor Transacional</p>
+                            </div>
                         </div>
+                        <span id="badge-status-email" class="px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider flex items-center gap-1.5 {% if email_config and email_config.is_enabled %}bg-indigo-500/10 text-indigo-600 dark:text-indigo-400{% else %}bg-slate-100 dark:bg-white/5 text-slate-400{% endif %}">
+                            <span class="w-1.5 h-1.5 rounded-full {% if email_config and email_config.is_enabled %}bg-indigo-500 animate-pulse{% else %}bg-slate-400{% endif %}"></span>
+                            <span class="badge-text">{{ 'Ativo' if email_config and email_config.is_enabled else 'Inativo' }}</span>
+                        </span>
+                    </div>
+
+                    <!-- Live Diagnostic Box -->
+                    <div class="mb-5 p-3 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 text-[11px] text-slate-600 dark:text-slate-300">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="text-slate-400 font-bold uppercase text-[9px] tracking-wider">Host:</span>
+                            <strong class="font-mono text-xs">{{ email_config.smtp_server or 'Não configurado' }}:{{ email_config.smtp_port or 587 }}</strong>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-slate-400 font-bold uppercase text-[9px] tracking-wider">Diagnóstico:</span>
+                            <span id="diag-status-email" class="font-bold text-slate-500">Aguardando checagem...</span>
+                        </div>
+                    </div>
+
+                    <form method="post" class="space-y-3" id="form-integracao-email">
+                        <input type="hidden" name="acao" value="salvar_integracao_email">
+                        <input type="hidden" name="is_enabled" value="off">
+                        <input type="hidden" name="use_ssl" value="off">
+                        
+                        <div class="flex items-center justify-between p-3 bg-slate-50 dark:bg-white/5 rounded-xl border border-slate-900/5">
+                            <div>
+                                <span class="text-xs font-bold text-slate-700 dark:text-slate-300 block">Habilitar E-mail</span>
+                                <span class="text-[9px] text-slate-400">Disparos por SMTP</span>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" name="is_enabled" value="on" id="toggle-switch-email" {% if email_config and email_config.is_enabled %}checked{% endif %} onchange="toggleIntegrationSwitch('email', this)" class="sr-only peer">
+                                <div class="w-11 h-6 bg-slate-200 dark:bg-white/10 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                            </label>
+                        </div>
+
+                        <div class="grid grid-cols-3 gap-2">
+                            <div class="col-span-2">
+                                <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Host SMTP</label>
+                                <input name="smtp_server" value="{{ email_config.smtp_server or '' }}" placeholder="smtp.gmail.com" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl px-3 py-2 text-xs dark:text-white outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all font-mono">
+                            </div>
+                            <div class="col-span-1">
+                                <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Porta</label>
+                                <input type="number" name="smtp_port" value="{{ email_config.smtp_port or 587 }}" placeholder="587" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl px-3 py-2 text-xs dark:text-white outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all font-mono">
+                            </div>
+                        </div>
+
                         <div>
-                            <h4 class="font-black text-slate-800 dark:text-white tracking-tight">E-mail (SMTP)</h4>
-                            <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Servidor SMTP</p>
+                            <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Usuário / Remetente</label>
+                            <input name="smtp_user" value="{{ email_config.smtp_user or '' }}" placeholder="usuario@dominio.com" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl px-3 py-2 text-xs dark:text-white outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all font-mono">
                         </div>
-                    </div>
-                    <span class="px-2 py-0.5 rounded-full text-[9px] font-black uppercase {% if email_config.is_enabled %}bg-indigo-500/10 text-indigo-500{% else %}bg-slate-100 dark:bg-white/5 text-slate-400{% endif %}">
-                        {{ 'Ativo' if email_config.is_enabled else 'Inativo' }}
-                    </span>
+
+                        <div>
+                            <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Senha SMTP</label>
+                            <input type="password" name="smtp_password" value="{{ email_config.smtp_password or '' }}" placeholder="Senha ou Senha de App" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl px-3 py-2 text-xs dark:text-white outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all font-mono">
+                        </div>
+
+                        <div class="flex items-center gap-2 p-2 bg-slate-50 dark:bg-white/5 rounded-xl border border-slate-900/5">
+                            <input type="checkbox" id="avisos_use_ssl" name="use_ssl" value="on" {% if email_config and email_config.use_ssl %}checked{% endif %} class="rounded text-indigo-600 focus:ring-indigo-500">
+                            <label for="avisos_use_ssl" class="text-[10px] font-bold text-slate-700 dark:text-slate-300 cursor-pointer select-none">Usar SSL/TLS (Porta 465)</label>
+                        </div>
+
+                        <div class="flex gap-2 pt-2">
+                            <button type="submit" class="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[10px] uppercase tracking-wider rounded-xl shadow-md shadow-indigo-500/20 transition-all active:scale-95">Salvar</button>
+                            <button type="button" onclick="testIntegrationQuick('email')" id="btn-test-email" class="px-4 py-2.5 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 font-black text-[10px] uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5">
+                                <i class="fa-solid fa-bolt text-xs"></i> Testar
+                            </button>
+                        </div>
+                    </form>
                 </div>
-                <form method="post" class="space-y-3">
-                    <input type="hidden" name="acao" value="salvar_integracao_email">
-                    
-                    <div class="flex items-center justify-between p-3 bg-slate-50 dark:bg-white/5 rounded-xl border border-slate-900/5">
-                        <span class="text-xs font-bold text-slate-700 dark:text-slate-300">Habilitar E-mail</span>
-                        <label class="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" name="is_enabled" value="on" {% if email_config.is_enabled %}checked{% endif %} class="sr-only peer">
-                            <div class="w-11 h-6 bg-slate-200 dark:bg-white/10 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
-                        </label>
-                    </div>
+            </div>
 
-                    <div class="grid grid-cols-3 gap-2">
-                        <div class="col-span-2">
-                            <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1.5 ml-1">Servidor SMTP</label>
-                            <input name="smtp_server" value="{{ email_config.smtp_server or '' }}" placeholder="smtp.gmail.com" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl px-3 py-2 text-xs dark:text-white outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all">
+            <!-- 4. CLOUDFLARE R2 STORAGE -->
+            <div class="card-premium p-6 flex flex-col justify-between" id="avisos-card-cloudflare">
+                <div>
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500">
+                                <i class="fa-brands fa-cloudflare text-xl"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-black text-slate-800 dark:text-white text-sm">Cloudflare R2</h4>
+                                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Object Storage / CDN</p>
+                            </div>
                         </div>
-                        <div class="col-span-1">
-                            <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1.5 ml-1">Porta</label>
-                            <input type="number" name="smtp_port" value="{{ email_config.smtp_port or 587 }}" placeholder="587" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl px-3 py-2 text-xs dark:text-white outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all">
+                        <span id="badge-status-cloudflare" class="px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider flex items-center gap-1.5 {% if cloudflare_config and cloudflare_config.is_enabled %}bg-amber-500/10 text-amber-600 dark:text-amber-400{% else %}bg-slate-100 dark:bg-white/5 text-slate-400{% endif %}">
+                            <span class="w-1.5 h-1.5 rounded-full {% if cloudflare_config and cloudflare_config.is_enabled %}bg-amber-500 animate-pulse{% else %}bg-slate-400{% endif %}"></span>
+                            <span class="badge-text">{{ 'Ativo' if cloudflare_config and cloudflare_config.is_enabled else 'Inativo' }}</span>
+                        </span>
+                    </div>
+
+                    <!-- Live Diagnostic Box -->
+                    <div class="mb-5 p-3 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 text-[11px] text-slate-600 dark:text-slate-300">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="text-slate-400 font-bold uppercase text-[9px] tracking-wider">Bucket:</span>
+                            <strong class="font-mono text-xs">{{ cloudflare_config.bucket_name or 'Não configurado' }}</strong>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-slate-400 font-bold uppercase text-[9px] tracking-wider">Diagnóstico:</span>
+                            <span id="diag-status-cloudflare" class="font-bold text-slate-500">Aguardando checagem...</span>
                         </div>
                     </div>
 
-                    <div>
-                        <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1.5 ml-1">Usuário SMTP</label>
-                        <input name="smtp_user" value="{{ email_config.smtp_user or '' }}" placeholder="Ex: email@dominio.com" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-xs dark:text-white outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all">
+                    <form method="post" class="space-y-3.5" id="form-integracao-cloudflare">
+                        <input type="hidden" name="acao" value="salvar_integracao_cloudflare">
+                        <input type="hidden" name="is_enabled" value="off">
+                        
+                        <div class="flex items-center justify-between p-3 bg-slate-50 dark:bg-white/5 rounded-xl border border-slate-900/5">
+                            <div>
+                                <span class="text-xs font-bold text-slate-700 dark:text-slate-300 block">Habilitar R2 Storage</span>
+                                <span class="text-[9px] text-slate-400">Armazenamento de anexos e mídias</span>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" name="is_enabled" value="on" id="toggle-switch-cloudflare" {% if cloudflare_config and cloudflare_config.is_enabled %}checked{% endif %} onchange="toggleIntegrationSwitch('cloudflare', this)" class="sr-only peer">
+                                <div class="w-11 h-6 bg-slate-200 dark:bg-white/10 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
+                            </label>
+                        </div>
+
+                        <div>
+                            <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Bucket Name</label>
+                            <input name="bucket_name" value="{{ cloudflare_config.bucket_name or '' }}" placeholder="checklist-media-prod" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-xs dark:text-white outline-none focus:ring-2 focus:ring-amber-500/20 transition-all font-mono">
+                        </div>
+
+                        <div>
+                            <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Public Domain / URL</label>
+                            <input name="public_url" value="{{ cloudflare_config.public_url or '' }}" placeholder="https://pub-xyz.r2.dev" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-xs dark:text-white outline-none focus:ring-2 focus:ring-amber-500/20 transition-all font-mono">
+                        </div>
+
+                        <div class="pt-6"></div>
+
+                        <div class="flex gap-2 pt-2">
+                            <button type="submit" class="flex-1 py-2.5 bg-amber-600 hover:bg-amber-700 text-white font-black text-[10px] uppercase tracking-wider rounded-xl shadow-md shadow-amber-500/20 transition-all active:scale-95">Salvar</button>
+                            <button type="button" onclick="testIntegrationQuick('cloudflare')" id="btn-test-cloudflare" class="px-4 py-2.5 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 font-black text-[10px] uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5">
+                                <i class="fa-solid fa-bolt text-xs"></i> Testar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- 5. TRACCAR GPS TELEMETRIA -->
+            <div class="card-premium p-6 flex flex-col justify-between" id="avisos-card-traccar">
+                <div>
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-teal-500/10 flex items-center justify-center text-teal-600">
+                                <i class="fa-solid fa-location-crosshairs text-xl"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-black text-slate-800 dark:text-white text-sm">Traccar GPS</h4>
+                                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Rastreamento da Frota</p>
+                            </div>
+                        </div>
+                        <span id="badge-status-traccar" class="px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider flex items-center gap-1.5 {% if traccar_config and traccar_config.is_enabled %}bg-teal-500/10 text-teal-600 dark:text-teal-400{% else %}bg-slate-100 dark:bg-white/5 text-slate-400{% endif %}">
+                            <span class="w-1.5 h-1.5 rounded-full {% if traccar_config and traccar_config.is_enabled %}bg-teal-500 animate-pulse{% else %}bg-slate-400{% endif %}"></span>
+                            <span class="badge-text">{{ 'Ativo' if traccar_config and traccar_config.is_enabled else 'Inativo' }}</span>
+                        </span>
                     </div>
 
-                    <div>
-                        <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1.5 ml-1">Senha SMTP</label>
-                        <input type="password" name="smtp_password" value="{{ email_config.smtp_password or '' }}" placeholder="Senha ou senha de app" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-xs dark:text-white outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all">
+                    <!-- Live Diagnostic Box -->
+                    <div class="mb-5 p-3 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 text-[11px] text-slate-600 dark:text-slate-300">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="text-slate-400 font-bold uppercase text-[9px] tracking-wider">Host:</span>
+                            <strong class="font-mono text-xs truncate max-w-[170px]">{{ traccar_config.server_url or 'Não configurado' }}</strong>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-slate-400 font-bold uppercase text-[9px] tracking-wider">Diagnóstico:</span>
+                            <span id="diag-status-traccar" class="font-bold text-slate-500">Aguardando checagem...</span>
+                        </div>
                     </div>
 
-                    <div>
-                        <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1.5 ml-1">E-mail Remetente</label>
-                        <input name="from_email" value="{{ email_config.from_email or '' }}" placeholder="Ex: noreply@dominio.com" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-xs dark:text-white outline-none focus:ring-4 focus:ring-indigo-500/10 transition-all">
+                    <form method="post" class="space-y-3.5" id="form-integracao-traccar">
+                        <input type="hidden" name="acao" value="salvar_integracao_traccar">
+                        <input type="hidden" name="is_enabled" value="off">
+                        
+                        <div class="flex items-center justify-between p-3 bg-slate-50 dark:bg-white/5 rounded-xl border border-slate-900/5">
+                            <div>
+                                <span class="text-xs font-bold text-slate-700 dark:text-slate-300 block">Habilitar Traccar GPS</span>
+                                <span class="text-[9px] text-slate-400">Telemetria e posições ao vivo</span>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" name="is_enabled" value="on" id="toggle-switch-traccar" {% if traccar_config and traccar_config.is_enabled %}checked{% endif %} onchange="toggleIntegrationSwitch('traccar', this)" class="sr-only peer">
+                                <div class="w-11 h-6 bg-slate-200 dark:bg-white/10 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-600"></div>
+                            </label>
+                        </div>
+
+                        <div>
+                            <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">URL do Servidor Traccar</label>
+                            <input name="server_url" value="{{ traccar_config.server_url or '' }}" placeholder="http://gps.suaempresa.com:8082" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-xs dark:text-white outline-none focus:ring-2 focus:ring-teal-500/20 transition-all font-mono">
+                        </div>
+
+                        <div>
+                            <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">API Token ou Credencial</label>
+                            <input type="password" name="api_token" value="{{ traccar_config.api_token or '' }}" placeholder="Token de autenticação Traccar" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-xs dark:text-white outline-none focus:ring-2 focus:ring-teal-500/20 transition-all font-mono">
+                        </div>
+
+                        <div class="pt-6"></div>
+
+                        <div class="flex gap-2 pt-2">
+                            <button type="submit" class="flex-1 py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-black text-[10px] uppercase tracking-wider rounded-xl shadow-md shadow-teal-500/20 transition-all active:scale-95">Salvar</button>
+                            <button type="button" onclick="testIntegrationQuick('traccar')" id="btn-test-traccar" class="px-4 py-2.5 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 font-black text-[10px] uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5">
+                                <i class="fa-solid fa-bolt text-xs"></i> Testar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- 6. METABASE BI ANALYTICS -->
+            <div class="card-premium p-6 flex flex-col justify-between" id="avisos-card-metabase">
+                <div>
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-cyan-500/10 flex items-center justify-center text-cyan-600">
+                                <i class="fa-solid fa-chart-line text-xl"></i>
+                            </div>
+                            <div>
+                                <h4 class="font-black text-slate-800 dark:text-white text-sm">Metabase BI</h4>
+                                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Dashboards & Analytics</p>
+                            </div>
+                        </div>
+                        <span id="badge-status-metabase" class="px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider flex items-center gap-1.5 {% if metabase_config and metabase_config.is_enabled %}bg-cyan-500/10 text-cyan-600 dark:text-cyan-400{% else %}bg-slate-100 dark:bg-white/5 text-slate-400{% endif %}">
+                            <span class="w-1.5 h-1.5 rounded-full {% if metabase_config and metabase_config.is_enabled %}bg-cyan-500 animate-pulse{% else %}bg-slate-400{% endif %}"></span>
+                            <span class="badge-text">{{ 'Ativo' if metabase_config and metabase_config.is_enabled else 'Inativo' }}</span>
+                        </span>
                     </div>
 
-                    <div class="flex items-center gap-2 p-2 bg-slate-50 dark:bg-white/5 rounded-xl border border-slate-900/5">
-                        <input type="checkbox" id="use_ssl" name="use_ssl" {% if email_config.use_ssl %}checked{% endif %} class="rounded text-indigo-600 focus:ring-indigo-500">
-                        <label for="use_ssl" class="text-[10px] font-bold text-slate-700 dark:text-slate-300 cursor-pointer select-none">Usar SSL/TLS (Porta 465)</label>
+                    <!-- Live Diagnostic Box -->
+                    <div class="mb-5 p-3 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 text-[11px] text-slate-600 dark:text-slate-300">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="text-slate-400 font-bold uppercase text-[9px] tracking-wider">Embed URL:</span>
+                            <strong class="font-mono text-xs truncate max-w-[170px]">{{ metabase_config.embed_url or 'Não configurado' }}</strong>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-slate-400 font-bold uppercase text-[9px] tracking-wider">Diagnóstico:</span>
+                            <span id="diag-status-metabase" class="font-bold text-slate-500">Aguardando checagem...</span>
+                        </div>
                     </div>
 
-                    <div class="flex gap-2">
-                        <button type="submit" class="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[10px] uppercase tracking-[0.2em] rounded-xl shadow-lg shadow-indigo-500/20 transition-all active:scale-95">Salvar</button>
-                        <button type="button" onclick="testIntegration('email')" class="flex-1 py-3 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 font-black text-[10px] uppercase tracking-[0.2em] rounded-xl transition-all">Testar</button>
-                    </div>
-                </form>
+                    <form method="post" class="space-y-3.5" id="form-integracao-metabase">
+                        <input type="hidden" name="acao" value="salvar_integracao_metabase">
+                        <input type="hidden" name="is_enabled" value="off">
+                        
+                        <div class="flex items-center justify-between p-3 bg-slate-50 dark:bg-white/5 rounded-xl border border-slate-900/5">
+                            <div>
+                                <span class="text-xs font-bold text-slate-700 dark:text-slate-300 block">Habilitar Metabase BI</span>
+                                <span class="text-[9px] text-slate-400">Embed interativo no painel</span>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" name="is_enabled" value="on" id="toggle-switch-metabase" {% if metabase_config and metabase_config.is_enabled %}checked{% endif %} onchange="toggleIntegrationSwitch('metabase', this)" class="sr-only peer">
+                                <div class="w-11 h-6 bg-slate-200 dark:bg-white/10 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-cyan-600"></div>
+                            </label>
+                        </div>
+
+                        <div>
+                            <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Embed URL / Host</label>
+                            <input name="embed_url" value="{{ metabase_config.embed_url or '' }}" placeholder="http://metabase.suaempresa.com" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-xs dark:text-white outline-none focus:ring-2 focus:ring-cyan-500/20 transition-all font-mono">
+                        </div>
+
+                        <div>
+                            <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Secret Key (JWT)</label>
+                            <input type="password" name="secret_key" value="{{ metabase_config.secret_key or '' }}" placeholder="Chave secreta para assinatura JWT" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl px-3.5 py-2.5 text-xs dark:text-white outline-none focus:ring-2 focus:ring-cyan-500/20 transition-all font-mono">
+                        </div>
+
+                        <div class="pt-6"></div>
+
+                        <div class="flex gap-2 pt-2">
+                            <button type="submit" class="flex-1 py-2.5 bg-cyan-600 hover:bg-cyan-700 text-white font-black text-[10px] uppercase tracking-wider rounded-xl shadow-md shadow-cyan-500/20 transition-all active:scale-95">Salvar</button>
+                            <button type="button" onclick="testIntegrationQuick('metabase')" id="btn-test-metabase" class="px-4 py-2.5 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 font-black text-[10px] uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5">
+                                <i class="fa-solid fa-bolt text-xs"></i> Testar
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
@@ -1367,66 +1651,199 @@
         loadRuleLogs(logsCurrentPage + direction);
     }
 
-    async function testIntegration(channel) {
-        let recipientPrompt = "";
-        let bodyData = new FormData();
+    // Toggle instantâneo via AJAX para os Switches das Integrações
+    async function toggleIntegrationSwitch(service, inputEl) {
+        const isEnabled = inputEl.checked;
+        const prevChecked = !isEnabled;
         
-        if (channel === 'whatsapp') {
-            recipientPrompt = prompt("Digite o número de celular com DDD para teste (ex: 21999999999):");
-            if (!recipientPrompt) return;
-            
-            const form = document.querySelector('form[action*="salvar_integracao_whatsapp"]') || document.querySelector('form');
-            const inputs = form.querySelectorAll('input');
-            inputs.forEach(input => {
-                if (input.name) bodyData.append(input.name, input.value);
-            });
-            bodyData.append("recipient", recipientPrompt);
-        } else if (channel === 'telegram') {
-            recipientPrompt = prompt("Digite o Chat ID do Telegram para teste (ex: -100123456789 ou seu ID pessoal):");
-            if (!recipientPrompt) return;
-            
-            const form = document.querySelector('form[action*="salvar_integracao_telegram"]') || document.querySelector('form');
-            const inputs = form.querySelectorAll('input');
-            inputs.forEach(input => {
-                if (input.name) bodyData.append(input.name, input.value);
-            });
-            bodyData.append("recipient", recipientPrompt);
-        } else if (channel === 'email') {
-            recipientPrompt = prompt("Digite o endereço de e-mail de destino para teste:");
-            if (!recipientPrompt) return;
-            
-            const form = document.querySelector('form[action*="salvar_integracao_email"]') || document.querySelector('form');
-            const inputs = form.querySelectorAll('input, select');
-            inputs.forEach(input => {
-                if (input.name) {
-                    if (input.type === 'checkbox') {
-                        bodyData.append(input.name, input.checked ? 'on' : 'off');
-                    } else {
-                        bodyData.append(input.name, input.value);
-                    }
-                }
-            });
-            bodyData.append("recipient", recipientPrompt);
+        // Feedback visual provisório no badge
+        const badge = document.getElementById(`badge-status-${service}`);
+        const diag = document.getElementById(`diag-status-${service}`);
+        if (badge) {
+            badge.className = "px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider flex items-center gap-1.5 bg-slate-100 dark:bg-white/5 text-slate-400";
+            const textSpan = badge.querySelector('.badge-text');
+            if (textSpan) textSpan.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-[8px]"></i> Salvando...';
         }
-        
-        showToast("Disparando mensagem de teste...", "info");
-        
+
         try {
-            const res = await fetch(`/api/test-integration/${channel}`, {
-                method: "POST",
-                body: bodyData
+            const res = await fetch(`/api/integracoes/${service}/toggle`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ is_enabled: isEnabled })
             });
             const data = await res.json();
+            
             if (data.success) {
-                showToast(`✅ Teste de ${channel.toUpperCase()}: ${data.message}`, "success");
+                showToast(data.message || `Integração ${service} ${isEnabled ? 'ativada' : 'desativada'}!`, isEnabled ? "success" : "info");
+                
+                if (!isEnabled) {
+                    updateAvisosBadge(service, {
+                        status: 'disabled',
+                        message: 'Desabilitado nas configurações'
+                    });
+                } else {
+                    testIntegrationQuick(service, true);
+                }
             } else {
-                showToast(`❌ Erro no teste: ${data.error}`, "error");
-                alert(`Falha no teste:\n${data.error}`);
+                showToast(`❌ Falha: ${data.error || 'Erro ao alterar status.'}`, "error");
+                inputEl.checked = prevChecked;
+                if (badge) {
+                    const textSpan = badge.querySelector('.badge-text');
+                    if (textSpan) textSpan.textContent = prevChecked ? 'Ativo' : 'Inativo';
+                }
             }
         } catch (e) {
-            showToast("❌ Erro de comunicação com o servidor.", "error");
+            console.error(e);
+            showToast("❌ Erro de conexão ao alterar status da integração.", "error");
+            inputEl.checked = prevChecked;
         }
     }
+
+    // Health-Check & Live Status para a aba Integrações em Avisos
+    function updateAvisosBadge(service, data) {
+        const badge = document.getElementById(`badge-status-${service}`);
+        const diag = document.getElementById(`diag-status-${service}`);
+        const toggleSwitch = document.getElementById(`toggle-switch-${service}`);
+        if (!badge) return;
+
+        const pulseDot = badge.querySelector('span:first-child');
+        const textSpan = badge.querySelector('.badge-text');
+        const status = (data.status || '').toLowerCase();
+
+        if (status === 'online' || status === 'connected') {
+            badge.className = "px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider flex items-center gap-1.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20";
+            if (pulseDot) pulseDot.className = "w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse";
+            if (textSpan) textSpan.textContent = `Online ${data.latency_ms ? '⚡ ' + data.latency_ms + 'ms' : ''}`;
+            if (diag) {
+                diag.className = "font-bold text-emerald-600 dark:text-emerald-400";
+                diag.textContent = data.message || "Serviço operacional e comunicando";
+            }
+            if (toggleSwitch) toggleSwitch.checked = true;
+        } else if (status === 'disabled') {
+            badge.className = "px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider flex items-center gap-1.5 bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20";
+            if (pulseDot) pulseDot.className = "w-1.5 h-1.5 rounded-full bg-amber-500";
+            if (textSpan) textSpan.textContent = "Desativado";
+            if (diag) {
+                diag.className = "font-bold text-amber-500";
+                diag.textContent = data.message || "Desabilitado nas configurações";
+            }
+            if (toggleSwitch) toggleSwitch.checked = false;
+        } else if (status === 'unconfigured') {
+            badge.className = "px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider flex items-center gap-1.5 bg-slate-100 dark:bg-white/5 text-slate-400 border border-slate-200 dark:border-white/5";
+            if (pulseDot) pulseDot.className = "w-1.5 h-1.5 rounded-full bg-slate-400";
+            if (textSpan) textSpan.textContent = "Não Configurado";
+            if (diag) {
+                diag.className = "font-bold text-slate-400";
+                diag.textContent = data.message || "Preencha as credenciais e salve";
+            }
+        } else {
+            // offline, disconnected, error
+            badge.className = "px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider flex items-center gap-1.5 bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20";
+            if (pulseDot) pulseDot.className = "w-1.5 h-1.5 rounded-full bg-rose-500";
+            if (textSpan) textSpan.textContent = status === 'disconnected' ? "Desconectado" : "Erro Conexão";
+            if (diag) {
+                diag.className = "font-bold text-rose-500";
+                diag.textContent = data.message || "Falha na conexão com o serviço";
+            }
+        }
+    }
+
+    async function runAvisosHealthCheck() {
+        const btn = document.getElementById('btn-avisos-health-check');
+        const icon = document.getElementById('icon-avisos-health');
+        if (btn) btn.disabled = true;
+        if (icon) icon.classList.add('fa-spin');
+
+        try {
+            const res = await fetch('/api/integracoes/status_all');
+            const data = await res.json();
+            if (data.success && data.results) {
+                for (const [srv, srvData] of Object.entries(data.results)) {
+                    updateAvisosBadge(srv, srvData);
+                }
+                showToast("Saúde de todas as integrações verificada com sucesso!", "success");
+            }
+        } catch (e) {
+            console.error(e);
+            showToast("Erro ao verificar status das integrações.", "error");
+        } finally {
+            if (btn) btn.disabled = false;
+            if (icon) icon.classList.remove('fa-spin');
+        }
+    }
+
+    async function testIntegrationQuick(service, isSilent = false) {
+        const btn = document.getElementById(`btn-test-${service}`);
+        let origHtml = '';
+        if (btn) {
+            origHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-xs"></i> Testando...';
+        }
+
+        const form = document.getElementById(`form-integracao-${service}`);
+        const formData = form ? new FormData(form) : new FormData();
+
+        try {
+            const endpoint = service === 'whatsapp' ? '/api/whatsapp/status' : `/api/integracoes/${service}/test`;
+            const method = service === 'whatsapp' ? 'GET' : 'POST';
+            
+            const res = await fetch(endpoint, {
+                method: method,
+                body: method === 'POST' ? formData : undefined
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                if (!isSilent) showToast(`✅ ${service.toUpperCase()}: ${data.message || 'Conexão efetuada com sucesso!'}`, "success");
+                updateAvisosBadge(service, {
+                    status: 'online',
+                    latency_ms: data.latency_ms || 25,
+                    message: data.message
+                });
+            } else {
+                if (!isSilent) showToast(`❌ ${service.toUpperCase()}: ${data.error || 'Falha na conexão.'}`, "error");
+                updateAvisosBadge(service, {
+                    status: 'offline',
+                    message: data.error || 'Falha ao comunicar'
+                });
+            }
+        } catch (e) {
+            console.error(e);
+            if (!isSilent) showToast(`❌ Erro ao testar ${service}: Falha de rede.`, "error");
+            updateAvisosBadge(service, {
+                status: 'offline',
+                message: 'Servidor inacessível ou timeout'
+            });
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = origHtml;
+            }
+        }
+    }
+
+    // Inicialização de Tab e disparador de health-check
+    document.addEventListener('DOMContentLoaded', () => {
+        const urlParams = new URLSearchParams(window.location.search);
+        const tabParam = urlParams.get('tab') || "{{ active_tab or 'comunicados' }}";
+        if (tabParam && document.getElementById('tab-' + tabParam)) {
+            switchAvisosTab(tabParam);
+        }
+        if (tabParam === 'integracoes') {
+            runAvisosHealthCheck();
+        }
+    });
+
+    const originalSwitchTab = switchAvisosTab;
+    switchAvisosTab = function(tab) {
+        originalSwitchTab(tab);
+        if (tab === 'integracoes') {
+            runAvisosHealthCheck();
+        }
+    };
 </script>
 
 {% endblock %}

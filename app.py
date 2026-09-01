@@ -13,6 +13,7 @@ from backend.models import (
     RFO, Solicitacao, SupervisaoTecnica, RotaExata, Team, Task, Patio, Encerramento,
     Scale, Meeting, Note, Activity, SystemRule, Company, Contract, ExternalCollaborator,
     AvariaOS, Log, Vistoria, VistoriaFoto, SystemConfig, WhatsAppConfig, TelegramConfig, EmailConfig, SystemRuleLog,
+    CloudflareConfig, TraccarConfig, MetabaseConfig,
     NetworkNode, NetworkSplitter, NetworkEdge, GPSDevice, GPSLog,
     DocCategory, TechnicalDocument, DocumentFile, DocumentHistory
 )

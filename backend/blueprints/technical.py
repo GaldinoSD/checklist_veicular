@@ -37,6 +37,7 @@ from backend.models import (
     RFO, Solicitacao, SupervisaoTecnica, RotaExata, Team, Task, CompletedActivity, Patio, Encerramento,
     Scale, Meeting, Note, Activity, SystemRule, Company, Contract, ExternalCollaborator, SystemRuleLog,
     AvariaOS, Log, Vistoria, VistoriaFoto, SystemConfig, WhatsAppConfig, TelegramConfig, EmailConfig,
+    CloudflareConfig, TraccarConfig, MetabaseConfig,
     NetworkNode, NetworkSplitter, NetworkEdge, GPSDevice, GPSLog, GPSGeofence, GPSAlert,
     DocCategory, TechnicalDocument, DocumentFile, DocumentHistory
 )
@@ -4464,10 +4465,12 @@ def avisos():
             config.apikey = request.form.get("apikey", "").strip()
             config.instance_name = request.form.get("instance_name", "").strip()
             config.recipients = request.form.get("recipients", "").strip()
-            config.is_enabled = request.form.get("is_enabled") == "on"
+            # Se o checkbox estiver marcado, 'on' estará presente
+            config.is_enabled = "on" in request.form.getlist("is_enabled") or request.form.get("is_enabled") in ("on", "true", "1")
             db.session.commit()
             registrar_log(f"Configuração do Whatsapp atualizada na Central de Avisos")
             flash("✅ Integração WhatsApp salva com sucesso!", "success")
+            return redirect(url_for("avisos", tab="integracoes"))
             
         elif acao == "salvar_integracao_telegram":
             config = TelegramConfig.query.first()
@@ -4476,10 +4479,11 @@ def avisos():
                 db.session.add(config)
             config.bot_token = request.form.get("bot_token", "").strip()
             config.chat_id = request.form.get("chat_id", "").strip()
-            config.is_enabled = request.form.get("is_enabled") == "on"
+            config.is_enabled = "on" in request.form.getlist("is_enabled") or request.form.get("is_enabled") in ("on", "true", "1")
             db.session.commit()
             registrar_log(f"Configuração do Telegram atualizada por {current_user.username}")
             flash("✅ Integração Telegram salva com sucesso!", "success")
+            return redirect(url_for("avisos", tab="integracoes"))
             
         elif acao == "salvar_integracao_email":
             config = EmailConfig.query.first()
@@ -4494,11 +4498,57 @@ def avisos():
             config.smtp_user = request.form.get("smtp_user", "").strip()
             config.smtp_password = request.form.get("smtp_password", "").strip()
             config.from_email = request.form.get("from_email", "").strip()
-            config.use_ssl = request.form.get("use_ssl") == "on"
-            config.is_enabled = request.form.get("is_enabled") == "on"
+            config.use_ssl = "on" in request.form.getlist("use_ssl") or request.form.get("use_ssl") in ("on", "true", "1")
+            config.is_enabled = "on" in request.form.getlist("is_enabled") or request.form.get("is_enabled") in ("on", "true", "1")
             db.session.commit()
             registrar_log(f"Configuração de E-mail (SMTP) atualizada por {current_user.username}")
             flash("✅ Integração E-mail (SMTP) salva com sucesso!", "success")
+            return redirect(url_for("avisos", tab="integracoes"))
+
+        elif acao == "salvar_integracao_cloudflare":
+            config = CloudflareConfig.query.first()
+            if not config:
+                config = CloudflareConfig()
+                db.session.add(config)
+            config.bucket_name = request.form.get("bucket_name", "").strip()
+            config.access_key_id = request.form.get("access_key_id", "").strip()
+            config.secret_access_key = request.form.get("secret_access_key", "").strip()
+            config.account_id = request.form.get("account_id", "").strip()
+            config.endpoint_url = request.form.get("endpoint_url", "").strip()
+            config.public_url = request.form.get("public_url", "").strip()
+            config.is_enabled = "on" in request.form.getlist("is_enabled") or request.form.get("is_enabled") in ("on", "true", "1")
+            db.session.commit()
+            registrar_log(f"Configuração Cloudflare R2 atualizada por {current_user.username}")
+            flash("✅ Integração Cloudflare R2 salva com sucesso!", "success")
+            return redirect(url_for("avisos", tab="integracoes"))
+
+        elif acao == "salvar_integracao_traccar":
+            config = TraccarConfig.query.first()
+            if not config:
+                config = TraccarConfig()
+                db.session.add(config)
+            config.server_url = request.form.get("server_url", "").strip()
+            config.api_token = request.form.get("api_token", "").strip()
+            config.username = request.form.get("username", "").strip()
+            config.password = request.form.get("password", "").strip()
+            config.is_enabled = "on" in request.form.getlist("is_enabled") or request.form.get("is_enabled") in ("on", "true", "1")
+            db.session.commit()
+            registrar_log(f"Configuração Traccar GPS atualizada por {current_user.username}")
+            flash("✅ Integração Traccar GPS salva com sucesso!", "success")
+            return redirect(url_for("avisos", tab="integracoes"))
+
+        elif acao == "salvar_integracao_metabase":
+            config = MetabaseConfig.query.first()
+            if not config:
+                config = MetabaseConfig()
+                db.session.add(config)
+            config.embed_url = request.form.get("embed_url", "").strip()
+            config.secret_key = request.form.get("secret_key", "").strip()
+            config.is_enabled = "on" in request.form.getlist("is_enabled") or request.form.get("is_enabled") in ("on", "true", "1")
+            db.session.commit()
+            registrar_log(f"Configuração Metabase BI atualizada por {current_user.username}")
+            flash("✅ Integração Metabase BI salva com sucesso!", "success")
+            return redirect(url_for("avisos", tab="integracoes"))
             
         elif acao == "atualizar_regra":
             slug = request.form.get("slug", "").strip()
@@ -4573,6 +4623,11 @@ def avisos():
         email_config = EmailConfig()
         db.session.add(email_config)
         db.session.commit()
+
+    cloudflare_config = CloudflareConfig.query.first() or CloudflareConfig()
+    traccar_config = TraccarConfig.query.first() or TraccarConfig()
+    metabase_config = MetabaseConfig.query.first() or MetabaseConfig()
+    active_tab = request.args.get("tab", "comunicados")
     
     fila_programada = get_scheduled_alerts_queue(days_ahead=365)
     fila_programada_json = []
@@ -4595,7 +4650,11 @@ def avisos():
         regras=regras,
         whatsapp_config=whatsapp_config,
         telegram_config=telegram_config,
-        email_config=email_config
+        email_config=email_config,
+        cloudflare_config=cloudflare_config,
+        traccar_config=traccar_config,
+        metabase_config=metabase_config,
+        active_tab=active_tab
     )
 
 
@@ -6535,9 +6594,15 @@ def api_gestao_treinamentos_lms_delete(id):
             AnnouncementRead.query.filter_by(announcement_id=ann.id).delete()
             db.session.delete(ann)
 
-        # Exclui tentativas e atribuições vinculadas
-        TrainingAttempt.query.filter_by(course_id=c.id).delete()
-        TrainingAssignment.query.filter_by(course_id=c.id).delete()
+        # Exclui tentativas vinculadas às atribuições deste curso
+        assign_ids = [a.id for a in TrainingAssignment.query.filter_by(course_id=c.id).all()]
+        if assign_ids:
+            TrainingAttempt.query.filter(TrainingAttempt.assignment_id.in_(assign_ids)).delete(synchronize_session=False)
+
+        # Exclui atribuições, módulos e questões
+        TrainingAssignment.query.filter_by(course_id=c.id).delete(synchronize_session=False)
+        TrainingModule.query.filter_by(course_id=c.id).delete(synchronize_session=False)
+        TrainingQuestion.query.filter_by(course_id=c.id).delete(synchronize_session=False)
 
         db.session.delete(c)
         db.session.commit()
