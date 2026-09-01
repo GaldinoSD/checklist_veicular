@@ -25,12 +25,15 @@
     </div>
 
     <!-- SUB-TABS SEGMENTED CONTROLS -->
-    <div class="flex p-1 bg-slate-100 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 rounded-2xl max-w-md mb-8 relative z-10 shrink-0 mx-auto">
+    <div class="flex p-1 bg-slate-100 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 rounded-2xl max-w-lg mb-8 relative z-10 shrink-0 mx-auto">
         <button onclick="switchMobileTab('lms')" id="btn-mobile-tab-lms" class="mobile-tab-btn flex-1 py-3 text-xs font-black rounded-xl text-slate-800 dark:text-white bg-white dark:bg-white/10 shadow-sm transition-all duration-200">
             🎓 Meus Cursos
         </button>
         <button onclick="switchMobileTab('rpg_crisis')" id="btn-mobile-tab-rpg" class="mobile-tab-btn flex-1 py-3 text-xs font-black rounded-xl text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white transition-all duration-200">
-            ⚡ Simuladores de Crise
+            ⚡ Simuladores
+        </button>
+        <button onclick="switchMobileTab('selos')" id="btn-mobile-tab-selos" class="mobile-tab-btn flex-1 py-3 text-xs font-black rounded-xl text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white transition-all duration-200">
+            🏆 Meus Selos
         </button>
     </div>
 
@@ -40,28 +43,89 @@
         <p class="text-xs font-black text-slate-400 uppercase tracking-widest">Carregando treinamentos...</p>
     </div>
 
-    <!-- EMPTY STATE -->
-    <div id="training-empty" class="hidden animate-premium">
-        <div class="card-premium p-12 text-center">
-            <div class="w-20 h-20 rounded-full bg-teal-500/10 flex items-center justify-center mx-auto mb-6">
-                <i class="fa-solid fa-book-open text-3xl text-teal-500"></i>
-            </div>
-            <h3 class="text-xl font-black text-slate-800 dark:text-white mb-2">Tudo em Dia!</h3>
-            <p class="text-sm text-slate-500">Você não possui treinamentos pendentes no momento.</p>
-        </div>
-    </div>
+    <!-- EMPTY STATE (Full-Width Responsive Card, Clean, Animated & Inspiring) -->
+    <div id="training-empty" class="hidden animate-premium w-full mb-8">
+        <div class="card-premium p-8 md:p-12 w-full border-2 border-emerald-500/20 shadow-xl bg-gradient-to-r from-emerald-500/[0.08] via-emerald-500/[0.02] to-teal-500/[0.08] dark:from-emerald-500/[0.06] dark:via-slate-900/40 dark:to-teal-500/[0.06] relative overflow-hidden rounded-[2rem] md:rounded-[2.5rem]">
+            
+            <!-- Background Decorative Ambient Glows -->
+            <div class="absolute -top-12 -right-12 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
+            <div class="absolute -bottom-12 -left-12 w-48 h-48 bg-teal-500/10 rounded-full blur-3xl pointer-events-none"></div>
 
-    <!-- BADGES SHOWCASE -->
-    <div id="badges-section" class="hidden mb-8 animate-premium">
-        <div class="flex items-center gap-2 mb-4">
-            <i class="fa-solid fa-certificate text-amber-500"></i>
-            <h3 class="text-sm font-black text-slate-800 dark:text-white uppercase tracking-widest">Meus Selos</h3>
+            <div class="flex flex-col md:flex-row items-center justify-between gap-6 md:gap-8 text-center md:text-left relative z-10">
+                
+                <!-- Left: Icon & Text Content -->
+                <div class="flex flex-col md:flex-row items-center gap-6 md:gap-8 flex-1">
+                    <!-- Animated Glowing Halo -->
+                    <div class="relative w-20 h-20 md:w-24 md:h-24 shrink-0 flex items-center justify-center">
+                        <div class="absolute inset-0 rounded-full bg-emerald-500/20 dark:bg-emerald-500/30 animate-ping opacity-40"></div>
+                        <div class="relative w-16 h-16 md:w-20 md:h-20 rounded-full bg-gradient-to-tr from-teal-600 via-teal-500 to-emerald-400 text-white flex items-center justify-center text-2xl md:text-3xl shadow-xl shadow-teal-500/30">
+                            <i class="fa-solid fa-check-double"></i>
+                        </div>
+                    </div>
+
+                    <!-- Texts -->
+                    <div class="space-y-1.5 flex-1 max-w-3xl">
+                        <div class="flex items-center justify-center md:justify-start gap-2 text-[10px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400">
+                            <i class="fa-solid fa-shield-halved"></i>
+                            <span>Status Operacional em Dia</span>
+                        </div>
+                        <h3 class="text-xl md:text-3xl font-black text-slate-800 dark:text-white tracking-tight">
+                            Tudo em Dia por Aqui! ✨
+                        </h3>
+                        <p class="text-xs md:text-sm text-slate-500 dark:text-slate-400 leading-relaxed font-medium" id="training-empty-desc">
+                            Excelente trabalho! Todas as suas capacitações técnicas estão em dia e em total conformidade operacional.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Right: Conformity Badge -->
+                <div class="shrink-0 flex items-center justify-center">
+                    <div class="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-emerald-500/10 dark:bg-emerald-500/15 border border-emerald-500/25 text-emerald-600 dark:text-emerald-400 text-xs font-black uppercase tracking-wider shadow-sm">
+                        <i class="fa-solid fa-circle-check text-sm"></i> Conformidade Garantida
+                    </div>
+                </div>
+
+            </div>
         </div>
-        <div id="badges-container" class="flex gap-3 overflow-x-auto pb-2 custom-scrollbar"></div>
     </div>
 
     <!-- COURSE LIST -->
     <div id="training-list" class="hidden space-y-4 animate-premium"></div>
+
+    <!-- ====================== ABA DEDICADA: MEUS SELOS & CONQUISTAS ====================== -->
+    <div id="selos-view" class="hidden space-y-6 animate-premium">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div class="card-premium p-5 flex items-center gap-4">
+                <div class="w-12 h-12 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-500 text-xl font-black">
+                    <i class="fa-solid fa-certificate"></i>
+                </div>
+                <div>
+                    <div class="text-2xl font-black text-slate-800 dark:text-white" id="selos-count-total">0</div>
+                    <div class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Selos Conquistados</div>
+                </div>
+            </div>
+            <div class="card-premium p-5 flex items-center gap-4">
+                <div class="w-12 h-12 rounded-2xl bg-teal-500/10 flex items-center justify-center text-teal-600 text-xl font-black">
+                    <i class="fa-solid fa-bolt"></i>
+                </div>
+                <div>
+                    <div class="text-2xl font-black text-teal-600" id="selos-total-xp">0 XP</div>
+                    <div class="text-[9px] font-black text-slate-400 uppercase tracking-widest">XP de Capacitação</div>
+                </div>
+            </div>
+            <div class="card-premium p-5 flex items-center gap-4">
+                <div class="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-600 text-xl font-black">
+                    <i class="fa-solid fa-award"></i>
+                </div>
+                <div>
+                    <div class="text-2xl font-black text-emerald-600" id="selos-approved-rate">100%</div>
+                    <div class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Aproveitamento Médio</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="selos-cards-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+    </div>
 
     <!-- ====================== FULLSCREEN: MÓDULO DE LEITURA ====================== -->
     <div id="reader-overlay" class="fixed inset-0 z-[200] bg-white dark:bg-slate-950 hidden flex-col">
@@ -129,38 +193,81 @@
     <!-- ====================== FULLSCREEN: RESULTADO ====================== -->
     <div id="result-overlay" class="fixed inset-0 z-[200] bg-white dark:bg-slate-950 hidden flex-col">
         <div class="flex-1 overflow-y-auto p-6 md:p-10 custom-scrollbar">
-            <div class="max-w-2xl mx-auto text-center">
-                <div id="result-icon" class="w-28 h-28 rounded-full flex items-center justify-center mx-auto mb-8 animate-premium"></div>
-                <h2 id="result-title" class="text-3xl font-black tracking-tight mb-2"></h2>
-                <p id="result-subtitle" class="text-sm text-slate-500 mb-8"></p>
+            
+            <!-- VIEW 1: RESUMO DO RESULTADO & AÇÕES PRINCIPAIS -->
+            <div id="result-summary-pane" class="max-w-xl mx-auto text-center animate-premium">
+                <div id="result-icon" class="w-24 h-24 md:w-28 md:h-28 rounded-full flex items-center justify-center mx-auto mb-6 shadow-xl"></div>
+                <h2 id="result-title" class="text-2xl md:text-3xl font-black tracking-tight mb-2"></h2>
+                <p id="result-subtitle" class="text-xs md:text-sm text-slate-500 mb-6"></p>
                 
-                <div class="flex justify-center gap-6 mb-10">
-                    <div class="text-center">
-                        <div id="result-score" class="text-5xl font-black"></div>
+                <div class="flex justify-center items-center gap-6 p-4 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-900/5 dark:border-white/5 mb-6 max-w-sm mx-auto">
+                    <div class="text-center flex-1">
+                        <div id="result-score" class="text-3xl md:text-4xl font-black"></div>
                         <div class="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1">Sua Nota</div>
                     </div>
-                    <div class="w-px bg-slate-200 dark:bg-white/10"></div>
-                    <div class="text-center">
-                        <div id="result-correct" class="text-5xl font-black text-slate-400"></div>
+                    <div class="w-px h-10 bg-slate-200 dark:bg-white/10"></div>
+                    <div class="text-center flex-1">
+                        <div id="result-correct" class="text-3xl md:text-4xl font-black text-slate-400"></div>
                         <div class="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1">Acertos</div>
                     </div>
                 </div>
 
-                <!-- Badge Earned -->
-                <div id="result-badge-earned" class="hidden mb-8"></div>
+                <!-- Badge Conquistado -->
+                <div id="result-badge-earned" class="hidden mb-6"></div>
 
-                <!-- Corrections -->
-                <div id="result-corrections" class="text-left space-y-4 mb-10"></div>
+                <!-- Painel de Ações e Decisão do Usuário -->
+                <div class="space-y-3 pt-2">
+                    <!-- Botão de Certificado (se aprovado) -->
+                    <div id="result-cert-action" class="hidden">
+                        <button onclick="openCertificateModal(currentCourseId)" class="w-full py-4 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-teal-500/30 transition-all active:scale-95 flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-graduation-cap text-base"></i> Visualizar Meu Certificado Digital
+                        </button>
+                    </div>
 
-                <div class="flex flex-col gap-3">
-                    <button id="result-retry-btn" onclick="closeResult(); startExam(currentCourseId)" class="hidden w-full py-4 bg-amber-500 hover:bg-amber-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-amber-500/30 transition-all active:scale-95">
-                        <i class="fa-solid fa-redo mr-2"></i> Refazer Avaliação
+                    <!-- Botão Seguir para o Gabarito -->
+                    <button onclick="showGabaritoView()" class="w-full py-3.5 bg-teal-500/10 hover:bg-teal-500/20 text-teal-600 dark:text-teal-400 border border-teal-500/20 rounded-2xl font-black text-xs uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-clipboard-check text-sm"></i> Seguir para o Gabarito
                     </button>
-                    <button onclick="closeResult(); loadTrainings()" class="w-full py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl transition-all active:scale-95">
-                        Voltar aos Treinamentos
+
+                    <!-- Botão Refazer se Reprovado -->
+                    <button id="result-retry-btn" onclick="closeResult(); startExam(currentCourseId)" class="hidden w-full py-3.5 bg-amber-500 hover:bg-amber-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-amber-500/25 transition-all active:scale-95 flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-rotate mr-1"></i> Refazer Avaliação
+                    </button>
+
+                    <!-- Botão Voltar ao Início -->
+                    <button onclick="closeResult(); loadTrainings()" class="w-full py-3.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl transition-all active:scale-95 flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-house text-xs"></i> Voltar para o Início
                     </button>
                 </div>
             </div>
+
+            <!-- VIEW 2: GABARITO & RESPOSTAS EXPLICADAS (SEPARADO) -->
+            <div id="result-gabarito-pane" class="max-w-2xl mx-auto hidden animate-premium">
+                <!-- Header do Gabarito -->
+                <div class="flex items-center justify-between pb-4 border-b border-slate-200 dark:border-white/10 mb-6">
+                    <button onclick="showSummaryView()" class="px-4 py-2 bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-white rounded-xl text-xs font-bold hover:bg-slate-200 transition-all flex items-center gap-2">
+                        <i class="fa-solid fa-arrow-left"></i> Voltar ao Resultado
+                    </button>
+                    <div class="text-right">
+                        <h3 class="text-base font-black text-slate-800 dark:text-white">Gabarito Oficial</h3>
+                        <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Respostas e Correções</p>
+                    </div>
+                </div>
+
+                <!-- Lista de Questões Corrigidas -->
+                <div id="result-corrections" class="space-y-4 mb-8 text-left"></div>
+
+                <!-- Ações do Rodapé do Gabarito -->
+                <div class="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-slate-200 dark:border-white/10">
+                    <button onclick="showSummaryView()" class="w-full sm:w-auto px-6 py-3 bg-slate-100 dark:bg-white/10 hover:bg-slate-200 text-slate-700 dark:text-white rounded-2xl font-bold text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-arrow-left mr-1"></i> Resumo da Nota
+                    </button>
+                    <button onclick="closeResult(); loadTrainings()" class="w-full sm:w-auto px-8 py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl transition-all flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-house mr-1"></i> Voltar aos Treinamentos
+                    </button>
+                </div>
+            </div>
+
         </div>
     </div>
 
@@ -224,6 +331,107 @@
             </button>
         </div>
     </div>
+
+    <!-- ====================== MODAL: CERTIFICADO DIGITAL ====================== -->
+    <div id="modal-certificate" class="fixed inset-0 z-[250] bg-slate-950/80 backdrop-blur-md hidden flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-3xl max-w-2xl w-full p-6 md:p-8 shadow-2xl relative animate-premium max-h-[95vh] overflow-y-auto custom-scrollbar">
+            <button onclick="closeCertificateModal()" class="absolute top-5 right-5 w-8 h-8 rounded-xl bg-slate-100 dark:bg-white/10 text-slate-500 hover:bg-slate-200 dark:hover:bg-white/20 flex items-center justify-center transition-all print:hidden">
+                <i class="fa-solid fa-xmark text-sm"></i>
+            </button>
+
+            <!-- Diploma Card (Printable Landscape A4 Authentic Design) -->
+            <div id="certificate-print-area" class="border-4 border-double border-amber-500/50 p-6 md:p-8 rounded-2xl bg-gradient-to-br from-amber-500/[0.04] via-slate-50 to-amber-500/[0.02] dark:from-slate-900 dark:to-slate-950 text-center relative overflow-hidden transition-all duration-300 shadow-xl">
+                <!-- Decorative Corner Accents -->
+                <div class="absolute top-2 left-2 text-amber-500/30 text-2xl"><i class="fa-solid fa-certificate"></i></div>
+                <div class="absolute top-2 right-2 text-amber-500/30 text-2xl"><i class="fa-solid fa-certificate"></i></div>
+                <div class="absolute bottom-2 left-2 text-amber-500/30 text-2xl"><i class="fa-solid fa-certificate"></i></div>
+                <div class="absolute bottom-2 right-2 text-amber-500/30 text-2xl"><i class="fa-solid fa-certificate"></i></div>
+
+                <!-- Top: Company Header & Logo -->
+                <div class="flex items-center justify-between gap-2 mb-3 border-b border-slate-900/10 dark:border-white/10 pb-2">
+                    <div class="flex items-center gap-2 text-left">
+                        <div id="cert-company-logo-wrap" class="h-8 max-w-[140px] flex items-center">
+                            <img id="cert-company-logo-img" src="" alt="Logo" class="max-h-8 max-w-full object-contain hidden">
+                            <div id="cert-company-logo-fallback" class="w-8 h-8 rounded-lg bg-teal-500/10 text-teal-600 flex items-center justify-center text-sm font-black border border-teal-500/20">
+                                <i class="fa-solid fa-building"></i>
+                            </div>
+                        </div>
+                        <div>
+                            <div id="cert-company-name" class="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider">CHECKLIST VEICULAR</div>
+                            <div class="text-[8px] text-slate-400 font-bold uppercase tracking-widest">Unidade de Capacitação Técnica</div>
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <div id="cert-standard-badge" class="inline-block px-2.5 py-1 rounded-full bg-slate-900/5 dark:bg-white/10 text-[8px] font-bold text-slate-600 dark:text-slate-300">
+                            Norma Interna de Qualidade
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-center gap-2 mb-1.5 text-teal-600 dark:text-teal-400">
+                    <i class="fa-solid fa-star text-[9px]"></i>
+                    <i class="fa-solid fa-graduation-cap text-lg"></i>
+                    <span class="text-[10px] font-black uppercase tracking-[0.25em]">Certificação Oficial de Capacitação</span>
+                    <i class="fa-solid fa-star text-[9px]"></i>
+                </div>
+
+                <h2 id="cert-main-title" class="text-xl md:text-2xl font-black text-slate-800 dark:text-white tracking-tight mb-2 uppercase font-serif">CERTIFICADO DE CAPACITAÇÃO TÉCNICA</h2>
+
+                <p class="text-[10px] text-slate-400 mb-1 uppercase font-semibold">Certificamos com louvor e conformidade operacional que o colaborador</p>
+                <div id="cert-student-name" class="text-xl md:text-2xl font-black text-teal-600 dark:text-teal-400 mb-2 tracking-wide underline underline-offset-8 decoration-teal-500/30">
+                    {{ current_user.username }}
+                </div>
+                <p id="cert-main-subtitle" class="text-xs text-slate-500 mb-3 max-w-xl mx-auto leading-relaxed">concluiu com aproveitamento e total conformidade técnica o treinamento operacional de:</p>
+
+                <div class="p-3.5 bg-white dark:bg-white/5 rounded-2xl border border-slate-900/10 dark:border-white/10 mb-3 shadow-sm">
+                    <h3 id="cert-course-title" class="text-sm md:text-base font-black text-slate-800 dark:text-white mb-1.5">Procedimento Operacional</h3>
+                    <div class="flex items-center justify-center gap-3 text-[10px] font-black text-slate-500 dark:text-slate-400 flex-wrap">
+                        <span id="cert-workload"><i class="fa-regular fa-clock mr-1 text-teal-500"></i> Carga: 2.0h</span>
+                        <span>•</span>
+                        <span id="cert-score"><i class="fa-solid fa-chart-simple mr-1 text-emerald-500"></i> Nota: 100%</span>
+                        <span>•</span>
+                        <span id="cert-xp"><i class="fa-solid fa-bolt mr-1 text-amber-500"></i> +150 XP</span>
+                    </div>
+                </div>
+
+                <!-- Cláusula de Validade Interna & Segurança Operacional -->
+                <div class="py-1.5 px-3 mb-3 rounded-xl bg-slate-900/[0.03] dark:bg-white/[0.03] border border-slate-900/5 dark:border-white/5 text-[8px] md:text-[9px] text-slate-500 dark:text-slate-400 flex items-center justify-center gap-1.5">
+                    <i class="fa-solid fa-lock text-teal-500 text-[9px]"></i>
+                    <span id="cert-legal-text" class="font-medium">Válido exclusivamente para fins de capacitação interna e procedimentos operacionais da empresa.</span>
+                </div>
+
+                <!-- Seal & Authentication -->
+                <div class="flex items-center justify-between pt-3 border-t border-slate-900/10 dark:border-white/10">
+                    <div class="text-left">
+                        <div class="text-[8px] font-black text-slate-400 uppercase tracking-widest">Emissão & Registro</div>
+                        <div id="cert-issue-date" class="text-[10px] font-black text-slate-700 dark:text-white">Hoje</div>
+                        <div id="cert-code" class="text-[8px] text-slate-400 font-mono mt-0.5">#CV-LMS-2026</div>
+                        <div id="cert-validity-badge" class="text-[8px] font-bold text-emerald-600 mt-0.5">Vitalício</div>
+                    </div>
+
+                    <div id="cert-badge-wrapper" class="w-12 h-12 rounded-2xl bg-teal-500/15 text-teal-600 flex items-center justify-center text-2xl shadow-inner border border-teal-500/30">
+                        <i id="cert-badge-icon" class="fa-solid fa-award"></i>
+                    </div>
+
+                    <div class="text-right">
+                        <div class="text-[8px] font-black text-slate-400 uppercase tracking-widest">Validação Operacional</div>
+                        <div id="cert-sig-role" class="text-[9px] font-black text-teal-600">Coordenação Técnica & Operações</div>
+                        <div id="cert-issuer-name" class="text-[8px] text-slate-500 font-bold"><i class="fa-solid fa-circle-check text-[7px] mr-1 text-emerald-500"></i>Validação Digital ✓</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Action Buttons -->
+            <div class="flex gap-3 mt-6 print:hidden">
+                <button onclick="printCertificate()" class="flex-1 py-3.5 bg-teal-600 hover:bg-teal-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-teal-500/20 transition-all flex items-center justify-center gap-2 active:scale-95">
+                    <i class="fa-solid fa-print"></i> Imprimir / Salvar PDF
+                </button>
+                <button onclick="closeCertificateModal()" class="px-6 py-3.5 bg-slate-100 dark:bg-white/10 hover:bg-slate-200 text-slate-700 dark:text-white rounded-2xl font-black text-xs uppercase tracking-widest transition-all">
+                    Fechar
+                </button>
+            </div>
+        </div>
+    </div>
 </div>
 
 <style>
@@ -231,10 +439,18 @@
     @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
     .exam-option-btn.selected { border-color: #0d9488 !important; background: rgba(13, 148, 136, 0.08) !important; }
     .exam-option-btn.selected .option-letter { background: #0d9488 !important; color: white !important; }
+    
+    @media print {
+        body * { visibility: hidden !important; }
+        #modal-certificate, #modal-certificate * { visibility: visible !important; }
+        #modal-certificate { position: absolute; left: 0; top: 0; width: 100%; height: 100%; background: white !important; }
+        #certificate-print-area { border: 3px solid #0d9488 !important; box-shadow: none !important; }
+    }
 </style>
 
 <script>
 let allTrainings = [];
+let allBadges = [];
 let currentCourseId = null;
 let courseData = null;
 let currentModuleIdx = 0;
@@ -264,45 +480,42 @@ async function loadTrainings() {
     document.getElementById('training-loading').classList.remove('hidden');
     document.getElementById('training-list').classList.add('hidden');
     document.getElementById('training-empty').classList.add('hidden');
-    document.getElementById('badges-section').classList.add('hidden');
+    document.getElementById('selos-view').classList.add('hidden');
 
     try {
-        // Fetch trainings
-        try {
-            const res = await fetch('/api/treinamentos/meus');
-            if (res.ok) allTrainings = await res.json();
-            else allTrainings = [];
-        } catch(e) { allTrainings = []; }
+        const [resTrainings, resBadges] = await Promise.all([
+            fetch('/api/treinamentos/meus?t=' + Date.now()),
+            fetch('/api/treinamentos/meus_selos?t=' + Date.now())
+        ]);
 
-        // Fetch badges
-        try {
-            const bres = await fetch('/api/treinamentos/meus_selos');
-            if (bres.ok) {
-                const badges = await bres.json();
-                if (badges && badges.length > 0) {
-                    document.getElementById('badges-section').classList.remove('hidden');
-                    document.getElementById('badges-container').innerHTML = badges.map(b => `
-                        <div class="flex-shrink-0 flex flex-col items-center p-4 rounded-2xl border border-slate-900/5 dark:border-white/5 bg-white dark:bg-slate-900 min-w-[110px] hover:scale-105 transition-transform cursor-default" title="${b.title} — ${b.score}%">
-                            <div class="w-14 h-14 rounded-full flex items-center justify-center mb-2 shadow-lg" style="background:${b.badge_color}15; box-shadow: 0 4px 20px ${b.badge_color}30">
-                                <i class="fa-solid ${b.badge_icon} text-2xl" style="color:${b.badge_color}"></i>
-                            </div>
-                            <span class="text-[9px] font-black uppercase tracking-widest text-center leading-tight" style="color:${b.badge_color}">${b.badge_name}</span>
-                            <span class="text-[8px] font-bold text-slate-400 mt-0.5">${b.score}%</span>
-                        </div>
-                    `).join('');
-                }
-            }
-        } catch(e) { /* badges are optional */ }
+        allTrainings = resTrainings.ok ? await resTrainings.json() : [];
+        allBadges = resBadges.ok ? await resBadges.json() : [];
 
+        updateSelosMetrics();
+    } catch(e) {
+        allTrainings = [];
+        allBadges = [];
     } finally {
-        // ALWAYS hide loading
         document.getElementById('training-loading').classList.add('hidden');
     }
 
-    const filtered = allTrainings.filter(t => (t.course_type || 'lms') === currentMobileTab);
+    if (currentMobileTab === 'selos') {
+        renderSelosView();
+        return;
+    }
+
+    const filtered = allTrainings.filter(t => {
+        if (currentMobileTab === 'rpg_crisis') {
+            return t.course_type === 'rpg_crisis';
+        }
+        return t.course_type !== 'rpg_crisis';
+    });
 
     if (!filtered || filtered.length === 0) {
         document.getElementById('training-empty').classList.remove('hidden');
+        document.getElementById('training-empty-desc').textContent = currentMobileTab === 'rpg_crisis'
+            ? 'Nenhum simulador de crise atribuído a você no momento.'
+            : 'Você não possui treinamentos pendentes nesta categoria.';
         document.getElementById('training-list').classList.add('hidden');
         return;
     }
@@ -310,66 +523,257 @@ async function loadTrainings() {
     document.getElementById('training-empty').classList.add('hidden');
     const list = document.getElementById('training-list');
     list.classList.remove('hidden');
-    list.innerHTML = filtered.map(t => {
+
+    const totalApproved = filtered.filter(t => t.status === 'aprovado').length;
+    const totalPending = filtered.length - totalApproved;
+
+    let html = `
+        <!-- Filtros Rápidos de Status -->
+        <div class="flex items-center justify-between gap-2 pb-2 mb-2 flex-wrap">
+            <div class="flex items-center gap-2">
+                <button onclick="filterMobileStatus('all')" id="chip-status-all" class="status-chip px-3 py-1.5 rounded-xl text-xs font-black bg-slate-900 text-white dark:bg-white dark:text-slate-900 transition-all">
+                    Todos (${filtered.length})
+                </button>
+                <button onclick="filterMobileStatus('pending')" id="chip-status-pending" class="status-chip px-3 py-1.5 rounded-xl text-xs font-black bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition-all">
+                    Em Aberto (${totalPending})
+                </button>
+                <button onclick="filterMobileStatus('approved')" id="chip-status-approved" class="status-chip px-3 py-1.5 rounded-xl text-xs font-black bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition-all">
+                    Concluídos (${totalApproved})
+                </button>
+            </div>
+            <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest hidden sm:inline-block">
+                ${totalApproved} de ${filtered.length} concluídos
+            </span>
+        </div>
+        <div id="training-items-container" class="space-y-4">
+    `;
+
+    html += filtered.map(t => {
+        const isApproved = (t.status === 'aprovado');
+        const isReproved = (t.status === 'reprovado');
+        const isOngoing = (t.status === 'em_andamento');
+        const isPending = (t.status === 'pendente');
+
+        const pct = t.modules_total > 0 ? Math.round((t.modules_read / t.modules_total) * 100) : 0;
+        const mandatoryBadge = t.is_mandatory ? `<span class="text-[8px] font-black text-rose-600 bg-rose-500/10 px-2.5 py-0.5 rounded-full uppercase tracking-widest">Obrigatório</span>` : '';
+        const deadlineHtml = t.deadline ? `<span class="text-[9px] font-bold text-slate-400"><i class="fa-regular fa-clock mr-1"></i>Prazo: ${t.deadline}</span>` : '';
+
+        // ==========================================
+        // 🌟 DESIGN PREMIUM PARA CURSOS CONCLUÍDOS
+        // ==========================================
+        if (isApproved) {
+            return `
+            <div class="training-item-card card-premium p-6 border-2 border-emerald-500/30 dark:border-emerald-500/20 bg-gradient-to-br from-emerald-500/[0.04] via-transparent to-teal-500/[0.03] hover:shadow-xl transition-all duration-300 relative overflow-hidden" data-status="approved">
+                <!-- Watermark Background Decor -->
+                <div class="absolute -right-8 -bottom-8 w-32 h-32 text-emerald-500/5 dark:text-emerald-500/10 pointer-events-none flex items-center justify-center">
+                    <i class="fa-solid fa-graduation-cap text-8xl"></i>
+                </div>
+
+                <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div class="flex items-start gap-4 flex-1 min-w-0">
+                        <!-- Icon Badge com Glow -->
+                        <div class="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shadow-lg shrink-0" style="background:${t.badge_color || '#0d9488'}20; color:${t.badge_color || '#0d9488'}; box-shadow: 0 4px 20px ${t.badge_color || '#0d9488'}25">
+                            <i class="fa-solid ${t.badge_icon || 'fa-award'}"></i>
+                        </div>
+
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 flex-wrap mb-1.5">
+                                <span class="text-[8px] font-black text-emerald-600 bg-emerald-500/15 px-2.5 py-0.5 rounded-full uppercase tracking-widest flex items-center gap-1">
+                                    <i class="fa-solid fa-circle-check text-[6px]"></i> Concluído com Sucesso
+                                </span>
+                                <span class="text-[8px] font-black text-slate-500 bg-slate-100 dark:bg-white/5 px-2 py-0.5 rounded-full uppercase tracking-widest">
+                                    ${t.category}
+                                </span>
+                                ${mandatoryBadge}
+                            </div>
+
+                            <h3 class="text-base md:text-lg font-black text-slate-800 dark:text-white tracking-tight mb-1 truncate">${t.title}</h3>
+                            <p class="text-[11px] text-slate-500 line-clamp-2 mb-3 leading-relaxed">${t.description || ''}</p>
+
+                            <!-- Mini Pílulas de Metadados -->
+                            <div class="flex items-center gap-3 flex-wrap text-[10px] font-black">
+                                <span class="text-emerald-600 bg-emerald-500/10 px-2.5 py-1 rounded-lg">
+                                    <i class="fa-solid fa-star mr-1"></i> Nota Final: ${t.best_score}%
+                                </span>
+                                <span class="text-teal-600 bg-teal-500/10 px-2.5 py-1 rounded-lg">
+                                    <i class="fa-regular fa-clock mr-1"></i> ${t.workload_hours || 1.0}h Carga
+                                </span>
+                                <span class="text-amber-600 bg-amber-500/10 px-2.5 py-1 rounded-lg">
+                                    <i class="fa-solid fa-bolt mr-1"></i> +${t.xp_reward || 100} XP
+                                </span>
+                                ${t.completed_at ? `<span class="text-slate-400 font-bold ml-1">Concluído em ${t.completed_at}</span>` : ''}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Botões de Ação para Concluídos -->
+                    <div class="flex md:flex-col gap-2 shrink-0 pt-2 md:pt-0 border-t md:border-t-0 border-slate-900/5 dark:border-white/5">
+                        <button onclick="openCertificateModal(${t.course_id})" class="flex-1 md:flex-none px-5 py-3 bg-teal-600 hover:bg-teal-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-teal-500/25 transition-all active:scale-95 flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-graduation-cap text-sm"></i> Ver Certificado
+                        </button>
+                        <button onclick="openCourse(${t.course_id})" class="flex-1 md:flex-none px-4 py-2.5 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 text-slate-700 dark:text-white rounded-2xl font-bold text-[10px] uppercase tracking-wider transition-all flex items-center justify-center gap-1.5">
+                            <i class="fa-solid fa-book-open"></i> Revisar Aulas
+                        </button>
+                    </div>
+                </div>
+            </div>`;
+        }
+
+        // ==========================================
+        // 🚀 DESIGN PARA CURSOS EM ANDAMENTO OU NOVOS
+        // ==========================================
         const statusMap = {
-            'pendente': { icon: 'fa-circle-exclamation', color: 'amber', label: 'NOVO' },
+            'pendente': { icon: 'fa-circle-exclamation', color: 'amber', label: 'NOVO TREINAMENTO' },
             'em_andamento': { icon: 'fa-book-open-reader', color: 'blue', label: 'EM ANDAMENTO' },
-            'aprovado': { icon: 'fa-circle-check', color: 'emerald', label: 'APROVADO' },
-            'reprovado': { icon: 'fa-circle-xmark', color: 'red', label: 'REPROVADO' }
+            'reprovado': { icon: 'fa-circle-xmark', color: 'rose', label: 'REFAZER AVALIAÇÃO' }
         };
         const s = statusMap[t.status] || statusMap.pendente;
-        const pct = t.modules_total > 0 ? Math.round((t.modules_read / t.modules_total) * 100) : 0;
-        const mandatory = t.is_mandatory ? `<span class="text-[8px] font-black text-red-500 bg-red-500/10 px-2 py-0.5 rounded-full uppercase tracking-widest">Obrigatório</span>` : '';
-        const deadlineHtml = t.deadline ? `<span class="text-[9px] font-black text-slate-400 uppercase tracking-widest"><i class="fa-solid fa-clock mr-1"></i>Até ${t.deadline}</span>` : '';
-        const scoreHtml = t.best_score !== null ? `<span class="text-[9px] font-black text-${s.color}-500 uppercase tracking-widest">Nota: ${t.best_score}%</span>` : '';
-        
-        const badgeHtml = t.status === 'aprovado' ? `
-                    <div class="flex items-center gap-2 mt-2 p-2 rounded-xl" style="background:${t.badge_color}15">
-                        <i class="fa-solid ${t.badge_icon} text-sm" style="color:${t.badge_color}"></i>
-                        <span class="text-[9px] font-black uppercase tracking-widest" style="color:${t.badge_color}">${t.badge_name}</span>
-                    </div>` : '';
-        
+
         return `
-        <div class="card-premium p-6 cursor-pointer group" onclick="openCourse(${t.course_id})">
+        <div class="training-item-card card-premium p-6 cursor-pointer group hover:border-teal-500/40 transition-all relative overflow-hidden" data-status="${isReproved ? 'pending' : (isOngoing ? 'pending' : 'pending')}" onclick="openCourse(${t.course_id})">
             <div class="flex items-start gap-4">
                 <div class="w-12 h-12 rounded-2xl bg-${s.color}-500/10 flex items-center justify-center text-${s.color}-500 shrink-0 group-hover:scale-110 transition-transform">
                     <i class="fa-solid ${s.icon} text-xl"></i>
                 </div>
                 <div class="flex-1 min-w-0">
-                    <div class="flex items-center gap-2 flex-wrap mb-1">
-                        <span class="text-[8px] font-black text-${s.color}-500 bg-${s.color}-500/10 px-2 py-0.5 rounded-full uppercase tracking-widest">${s.label}</span>
-                        <span class="text-[8px] font-black text-slate-400 bg-slate-100 dark:bg-white/5 px-2 py-0.5 rounded-full uppercase tracking-widest">${t.category}</span>
-                        ${mandatory}
+                    <div class="flex items-center justify-between gap-2 flex-wrap mb-1">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <span class="text-[8px] font-black text-${s.color}-500 bg-${s.color}-500/10 px-2.5 py-0.5 rounded-full uppercase tracking-widest">${s.label}</span>
+                            <span class="text-[8px] font-black text-slate-400 bg-slate-100 dark:bg-white/5 px-2 py-0.5 rounded-full uppercase tracking-widest">${t.category}</span>
+                            ${mandatoryBadge}
+                        </div>
+                        <span class="text-[10px] font-black text-teal-600 uppercase tracking-widest flex items-center gap-1 group-hover:translate-x-1 transition-transform">
+                            Iniciar <i class="fa-solid fa-chevron-right text-[8px]"></i>
+                        </span>
                     </div>
+
                     <h3 class="text-base font-black text-slate-800 dark:text-white tracking-tight mb-1 truncate">${t.title}</h3>
-                    <p class="text-[11px] text-slate-500 line-clamp-2 mb-3">${t.description}</p>
+                    <p class="text-[11px] text-slate-500 line-clamp-2 mb-3 leading-relaxed">${t.description || ''}</p>
                     
                     <!-- Progress Bar -->
                     <div class="flex items-center gap-3 mb-2">
-                        <div class="flex-1 h-1.5 rounded-full bg-slate-100 dark:bg-white/10 overflow-hidden">
+                        <div class="flex-1 h-2 rounded-full bg-slate-100 dark:bg-white/10 overflow-hidden">
                             <div class="h-full rounded-full bg-gradient-to-r from-teal-500 to-emerald-500 transition-all duration-500" style="width: ${pct}%"></div>
                         </div>
-                        <span class="text-[9px] font-black text-slate-400">${t.modules_read}/${t.modules_total}</span>
+                        <span class="text-[9px] font-black text-slate-400">${t.modules_read}/${t.modules_total} Módulos (${pct}%)</span>
                     </div>
                     
-                    <div class="flex items-center gap-3 flex-wrap">
-                        <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest"><i class="fa-solid fa-book mr-1"></i>${t.modules_total} Módulos</span>
-                        <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest"><i class="fa-solid fa-question mr-1"></i>${t.questions_total} Questões</span>
-                        ${scoreHtml}
+                    <div class="flex items-center gap-3 flex-wrap text-[10px] font-bold text-slate-400">
+                        <span><i class="fa-solid fa-book mr-1 text-teal-500"></i>${t.modules_total} Aulas</span>
+                        <span><i class="fa-regular fa-clock mr-1 text-blue-500"></i>${t.workload_hours || 1.0}h</span>
+                        <span><i class="fa-solid fa-bolt mr-1 text-amber-500"></i>+${t.xp_reward || 100} XP</span>
                         ${deadlineHtml}
                     </div>
-                    ${badgeHtml}
                 </div>
-                <i class="fa-solid fa-chevron-right text-slate-300 group-hover:text-teal-500 transition-colors mt-3"></i>
             </div>
         </div>`;
     }).join('');
+
+    html += '</div>';
+    list.innerHTML = html;
+}
+
+let currentStatusFilter = 'all';
+function filterMobileStatus(status) {
+    currentStatusFilter = status;
+    document.querySelectorAll('.status-chip').forEach(btn => {
+        const isTarget = (status === 'all' && btn.id === 'chip-status-all')
+                      || (status === 'pending' && btn.id === 'chip-status-pending')
+                      || (status === 'approved' && btn.id === 'chip-status-approved');
+        if (isTarget) {
+            btn.className = "status-chip px-3 py-1.5 rounded-xl text-xs font-black bg-slate-900 text-white dark:bg-white dark:text-slate-900 transition-all";
+        } else {
+            btn.className = "status-chip px-3 py-1.5 rounded-xl text-xs font-black bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 hover:bg-slate-200 transition-all";
+        }
+    });
+
+    document.querySelectorAll('.training-item-card').forEach(card => {
+        const cardStatus = card.getAttribute('data-status');
+        if (status === 'all') {
+            card.classList.remove('hidden');
+        } else if (status === 'approved' && cardStatus === 'approved') {
+            card.classList.remove('hidden');
+        } else if (status === 'pending' && cardStatus !== 'approved') {
+            card.classList.remove('hidden');
+        } else {
+            card.classList.add('hidden');
+        }
+    });
+}
+
+function updateSelosMetrics() {
+    const totalSelos = allBadges.length;
+    const totalXP = allBadges.reduce((acc, b) => acc + (b.xp_reward || 100), 0);
+    const avgScore = totalSelos > 0 ? Math.round(allBadges.reduce((acc, b) => acc + (b.score || 100), 0) / totalSelos) : 100;
+
+    const elCount = document.getElementById('selos-count-total');
+    const elXP = document.getElementById('selos-total-xp');
+    const elAvg = document.getElementById('selos-approved-rate');
+
+    if (elCount) elCount.textContent = totalSelos;
+    if (elXP) elXP.textContent = totalXP + ' XP';
+    if (elAvg) elAvg.textContent = avgScore + '%';
+}
+
+function renderSelosView() {
+    const view = document.getElementById('selos-view');
+    const grid = document.getElementById('selos-cards-grid');
+
+    if (!allBadges || allBadges.length === 0) {
+        view.classList.remove('hidden');
+        grid.innerHTML = `
+            <div class="col-span-full card-premium p-12 text-center">
+                <div class="w-20 h-20 rounded-full bg-amber-500/10 flex items-center justify-center mx-auto mb-4 text-amber-500 text-3xl">
+                    <i class="fa-solid fa-award"></i>
+                </div>
+                <h3 class="text-base font-black text-slate-800 dark:text-white mb-1">Nenhum Selo Conquistado Ainda</h3>
+                <p class="text-xs text-slate-500 max-w-sm mx-auto">Complete as aulas e alcance a nota mínima na avaliação dos cursos para desbloquear selos exclusivos e certificados oficiais!</p>
+            </div>
+        `;
+        return;
+    }
+
+    view.classList.remove('hidden');
+    grid.innerHTML = allBadges.map(b => `
+        <div class="card-premium p-6 flex flex-col justify-between hover:shadow-xl transition-all duration-300 border border-slate-900/5 dark:border-white/5">
+            <div>
+                <div class="flex items-start justify-between gap-3 mb-4">
+                    <div class="w-16 h-16 rounded-2xl flex items-center justify-center text-3xl shadow-lg shrink-0" style="background:${b.badge_color}18; color:${b.badge_color}; box-shadow: 0 8px 25px ${b.badge_color}25">
+                        <i class="fa-solid ${b.badge_icon}"></i>
+                    </div>
+                    <span class="text-[9px] font-black text-emerald-600 bg-emerald-500/10 px-2.5 py-1 rounded-full uppercase tracking-widest flex items-center gap-1">
+                        <i class="fa-solid fa-circle-check text-[6px]"></i> Nota ${b.score}%
+                    </span>
+                </div>
+
+                <div class="text-[8px] font-black uppercase tracking-widest mb-1" style="color:${b.badge_color}">${b.category}</div>
+                <h3 class="text-base font-black text-slate-800 dark:text-white tracking-tight mb-2">${b.title}</h3>
+                <div class="text-[10px] font-bold text-slate-500 mb-4 flex items-center gap-2">
+                    <span class="font-black" style="color:${b.badge_color}"><i class="fa-solid fa-certificate mr-1"></i>Selo: ${b.badge_name}</span>
+                </div>
+            </div>
+
+            <div class="pt-4 border-t border-slate-900/5 dark:border-white/5 space-y-3">
+                <div class="flex items-center justify-between text-[10px] font-bold text-slate-400">
+                    <span><i class="fa-regular fa-clock mr-1"></i>${b.workload_hours}h Carga</span>
+                    <span><i class="fa-solid fa-bolt text-amber-500 mr-1"></i>+${b.xp_reward} XP</span>
+                    <span>${b.completed_at || ''}</span>
+                </div>
+
+                <button onclick="openCertificateModal(${b.course_id})" class="w-full py-2.5 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center justify-center gap-2 shadow-md shadow-teal-500/20 transition-all active:scale-95">
+                    <i class="fa-solid fa-graduation-cap"></i> Ver Certificado Digital
+                </button>
+            </div>
+        </div>
+    `).join('');
 }
 
 function switchMobileTab(tab) {
     currentMobileTab = tab;
     document.querySelectorAll('.mobile-tab-btn').forEach(btn => {
-        const isTarget = (tab === 'lms' && btn.id === 'btn-mobile-tab-lms') || (tab === 'rpg_crisis' && btn.id === 'btn-mobile-tab-rpg');
+        const isTarget = (tab === 'lms' && btn.id === 'btn-mobile-tab-lms') 
+                      || (tab === 'rpg_crisis' && btn.id === 'btn-mobile-tab-rpg')
+                      || (tab === 'selos' && btn.id === 'btn-mobile-tab-selos');
         if (isTarget) {
             btn.classList.add('bg-white', 'dark:bg-white/10', 'text-slate-800', 'dark:text-white', 'shadow-sm');
             btn.classList.remove('text-slate-500', 'dark:text-slate-400');
@@ -431,21 +835,52 @@ function renderModule() {
     const mod = courseData.modules[currentModuleIdx];
     if (!mod) return;
     document.getElementById('reader-title').textContent = courseData.title;
-    document.getElementById('reader-progress').textContent = `Módulo ${currentModuleIdx + 1} de ${courseData.modules.length}`;
+    document.getElementById('reader-progress').textContent = `Módulo ${currentModuleIdx + 1} de ${courseData.modules.length} • ~${mod.duration_minutes || 10} min`;
     document.getElementById('reader-module-title').textContent = mod.title;
     
     let html = '';
     
-    // Opção A: Vídeo no topo, Imagem no meio, Texto no rodapé
+    // YouTube / Vimeo Embed
+    if (mod.video_url) {
+        let embedUrl = mod.video_url;
+        if (embedUrl.includes('youtube.com/watch?v=')) {
+            const videoId = embedUrl.split('v=')[1]?.split('&')[0];
+            embedUrl = `https://www.youtube.com/embed/${videoId}`;
+        } else if (embedUrl.includes('youtu.be/')) {
+            const videoId = embedUrl.split('youtu.be/')[1]?.split('?')[0];
+            embedUrl = `https://www.youtube.com/embed/${videoId}`;
+        }
+        html += `<div class="aspect-video w-full rounded-2xl overflow-hidden mb-5 shadow-lg border border-slate-900/5 dark:border-white/5 bg-black"><iframe class="w-full h-full" src="${embedUrl}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe></div>`;
+    }
+    
+    // MP4 Vídeo Local
     if (mod.video_path) {
         html += `<video controls class="w-full rounded-2xl mb-5 shadow-lg border border-slate-900/5 dark:border-white/5 object-cover max-h-[260px] bg-black" src="${mod.video_path}"></video>`;
     }
     
+    // Imagem Ilustrativa
     if (mod.image_path) {
         html += `<img class="w-full rounded-2xl mb-5 shadow-md border border-slate-900/5 dark:border-white/5 object-cover max-h-[260px]" src="${mod.image_path}">`;
     }
     
-    html += `<div class="text-slate-600 dark:text-slate-300 whitespace-pre-wrap">${escapeHTML(mod.content)}</div>`;
+    // Anexo PDF / Apostila
+    if (mod.attachment_path) {
+        html += `
+        <div class="mb-5 p-4 rounded-2xl bg-teal-500/10 border border-teal-500/20 flex items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+                <i class="fa-solid fa-file-pdf text-teal-600 text-2xl"></i>
+                <div>
+                    <div class="text-xs font-black text-slate-800 dark:text-white">Material Complementar / Apostila</div>
+                    <div class="text-[9px] text-slate-400 font-bold">Consulte o manual técnico em PDF</div>
+                </div>
+            </div>
+            <a href="${mod.attachment_path}" target="_blank" download class="px-3.5 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-1.5 shadow-md shadow-teal-500/20">
+                <i class="fa-solid fa-download"></i> Baixar
+            </a>
+        </div>`;
+    }
+    
+    html += `<div class="text-slate-600 dark:text-slate-300 whitespace-pre-wrap leading-relaxed">${escapeHTML(mod.content)}</div>`;
     
     document.getElementById('reader-module-content').innerHTML = html;
     document.getElementById('reader-content').scrollTop = 0;
@@ -592,7 +1027,7 @@ function rpgSelectChoice(qId, choice, correctOption) {
     ['a', 'b', 'c', 'd'].forEach(l => {
         const btn = document.getElementById(`btn-rpg-opt-${l}`);
         if (btn) {
-            btn.className = `w-full text-left p-4 rounded-2xl border-2 ${l === choice ? 'border-amber-500 bg-amber-500/10' : 'border-white/10 bg-slate-900'}`;
+            btn.className = `w-full text-left p-4 rounded-2xl border-2 ${l === choice ? 'border-amber-500 bg-amber-500/10' : 'border-white/10 bg-slate-900'} hover:border-amber-500/50 transition-all flex items-center gap-4`;
         }
     });
 }
@@ -620,15 +1055,15 @@ function rpgSubmitChoice() {
             icon.className = "w-10 h-10 rounded-xl bg-emerald-500 text-slate-950 flex items-center justify-center shrink-0 font-black";
             icon.innerHTML = `<i class="fa-solid fa-circle-check text-lg"></i>`;
             title.className = "text-sm font-black uppercase tracking-widest text-emerald-400";
-            title.textContent = "Excelente Decisão!";
-            text.textContent = "Sua ação foi precisa e resolveu o problema de forma segura. Você agiu em conformidade operacional.";
+            title.textContent = "Excelente Decisão Tática!";
+            text.innerHTML = `<p class="leading-relaxed">${q.explanation || 'Sua ação foi precisa e conteve o incidente com segurança operacional.'}</p>`;
         } else {
-            fb.className = "p-5 rounded-2xl border-2 border-red-500/30 bg-red-500/10 transition-all duration-300";
-            icon.className = "w-10 h-10 rounded-xl bg-red-500 text-white flex items-center justify-center shrink-0 font-black";
+            fb.className = "p-5 rounded-2xl border-2 border-rose-500/30 bg-rose-500/10 transition-all duration-300";
+            icon.className = "w-10 h-10 rounded-xl bg-rose-500 text-white flex items-center justify-center shrink-0 font-black";
             icon.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-lg"></i>`;
-            title.className = "text-sm font-black uppercase tracking-widest text-red-400";
-            title.textContent = "Resposta Incorreta";
-            text.textContent = `A alternativa correta seria a letra ${q.correct_option.toUpperCase()}. Revise os procedimentos e tente novamente na próxima fase.`;
+            title.className = "text-sm font-black uppercase tracking-widest text-rose-400";
+            title.textContent = "Conduta Não Recomendada";
+            text.innerHTML = `<div class="font-bold text-rose-300 mb-1">A conduta recomendada pelo POP é a letra ${q.correct_option.toUpperCase()}.</div><p class="leading-relaxed text-slate-300">${q.explanation || 'Revise as diretrizes do procedimento para agir com precisão na próxima fase.'}</p>`;
         }
 
         ['a', 'b', 'c', 'd'].forEach(l => {
@@ -637,7 +1072,7 @@ function rpgSubmitChoice() {
                 if (l === q.correct_option) {
                     btn.className = `w-full text-left p-4 rounded-2xl border-2 border-emerald-500 bg-emerald-500/15 flex items-center gap-4`;
                 } else if (l === choice) {
-                    btn.className = `w-full text-left p-4 rounded-2xl border-2 border-red-500 bg-red-500/15 flex items-center gap-4`;
+                    btn.className = `w-full text-left p-4 rounded-2xl border-2 border-rose-500 bg-rose-500/15 flex items-center gap-4`;
                 } else {
                     btn.className = `w-full text-left p-4 rounded-2xl border-2 border-white/5 bg-slate-950/20 opacity-40 flex items-center gap-4`;
                 }
@@ -648,7 +1083,7 @@ function rpgSubmitChoice() {
         if (currentModuleIdx >= courseData.modules.length - 1) {
             nextBtn.innerHTML = '<i class="fa-solid fa-circle-check mr-1"></i> Concluir Missão';
         } else {
-            nextBtn.innerHTML = 'Próxima Cena <i class="fa-solid fa-chevron-right ml-1"></i>';
+            nextBtn.innerHTML = 'Próxima Fase <i class="fa-solid fa-chevron-right ml-1"></i>';
         }
         return;
     }
@@ -756,78 +1191,296 @@ async function submitExam() {
 }
 
 // ============ RESULT ============
+function showSummaryView() {
+    const sumPane = document.getElementById('result-summary-pane');
+    const gabPane = document.getElementById('result-gabarito-pane');
+    if (sumPane) sumPane.classList.remove('hidden');
+    if (gabPane) gabPane.classList.add('hidden');
+    document.querySelector('#result-overlay > div')?.scrollTo({top: 0, behavior: 'smooth'});
+}
+
+function showGabaritoView() {
+    const sumPane = document.getElementById('result-summary-pane');
+    const gabPane = document.getElementById('result-gabarito-pane');
+    if (sumPane) sumPane.classList.add('hidden');
+    if (gabPane) gabPane.classList.remove('hidden');
+    document.querySelector('#result-overlay > div')?.scrollTo({top: 0, behavior: 'smooth'});
+}
+
 function showResult(result) {
     const ov = document.getElementById('result-overlay');
     ov.classList.remove('hidden');
     ov.classList.add('flex');
 
+    // Inicia sempre na tela limpa de resumo
+    showSummaryView();
+
+    const isRPG = (courseData && courseData.course_type === 'rpg_crisis');
     const passed = result.passed;
     const iconEl = document.getElementById('result-icon');
-    iconEl.className = `w-28 h-28 rounded-full flex items-center justify-center mx-auto mb-8 animate-premium ${passed ? 'bg-emerald-500/10' : 'bg-red-500/10'}`;
-    iconEl.innerHTML = `<i class="fa-solid ${passed ? 'fa-trophy text-emerald-500' : 'fa-circle-xmark text-red-500'} text-5xl"></i>`;
+    
+    if (isRPG) {
+        iconEl.className = `w-24 h-24 md:w-28 md:h-28 rounded-full flex items-center justify-center mx-auto mb-6 shadow-xl ${passed ? 'bg-amber-500/10 text-amber-500 shadow-amber-500/20 border-2 border-amber-500/30' : 'bg-rose-500/10 text-rose-500 shadow-rose-500/20 border-2 border-rose-500/30'}`;
+        iconEl.innerHTML = `<i class="fa-solid ${passed ? 'fa-shield-halved' : 'fa-triangle-exclamation'} text-4xl md:text-5xl"></i>`;
 
-    document.getElementById('result-title').className = `text-3xl font-black tracking-tight mb-2 ${passed ? 'text-emerald-600' : 'text-red-500'}`;
-    document.getElementById('result-title').textContent = passed ? 'Aprovado!' : 'Não Aprovado';
-    document.getElementById('result-subtitle').textContent = passed 
-        ? `Parabéns! Você atingiu a nota mínima de ${result.passing_grade}%.`
-        : `Nota mínima necessária: ${result.passing_grade}%. Você pode refazer a prova.`;
+        document.getElementById('result-title').className = `text-2xl md:text-3xl font-black tracking-tight mb-2 ${passed ? 'text-amber-500 dark:text-amber-400' : 'text-rose-500'}`;
+        document.getElementById('result-title').textContent = passed ? 'Missão Tática Concluída! 🎖️' : 'Simulação Não Homologada';
+        document.getElementById('result-subtitle').textContent = passed 
+            ? `Excelente resposta tática! Você atingiu índice de prontidão de ${result.score}%, superando a meta de ${result.passing_grade}%.`
+            : `Índice de prontidão obtido: ${result.score}%. A meta mínima é de ${result.passing_grade}%. Revise o debriefing e repita o simulador.`;
+    } else {
+        iconEl.className = `w-24 h-24 md:w-28 md:h-28 rounded-full flex items-center justify-center mx-auto mb-6 shadow-xl ${passed ? 'bg-emerald-500/10 text-emerald-500 shadow-emerald-500/20' : 'bg-rose-500/10 text-rose-500 shadow-rose-500/20'}`;
+        iconEl.innerHTML = `<i class="fa-solid ${passed ? 'fa-trophy' : 'fa-circle-xmark'} text-4xl md:text-5xl"></i>`;
 
-    document.getElementById('result-score').className = `text-5xl font-black ${passed ? 'text-emerald-500' : 'text-red-500'}`;
+        document.getElementById('result-title').className = `text-2xl md:text-3xl font-black tracking-tight mb-2 ${passed ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-500'}`;
+        document.getElementById('result-title').textContent = passed ? 'Parabéns, Você Foi Aprovado! 🎉' : 'Avaliação Não Concluída';
+        document.getElementById('result-subtitle').textContent = passed 
+            ? `Excelente aproveitamento! Você superou a nota mínima exigida de ${result.passing_grade}%.`
+            : `Nota mínima exigida: ${result.passing_grade}%. Você pode revisar as respostas e refazer a prova.`;
+    }
+
+    document.getElementById('result-score').className = `text-3xl md:text-4xl font-black ${passed ? (isRPG ? 'text-amber-500' : 'text-emerald-500') : 'text-rose-500'}`;
     document.getElementById('result-score').textContent = `${result.score}%`;
     document.getElementById('result-correct').textContent = `${result.correct}/${result.total}`;
 
+    // Certificate Button on Result
+    const certActionEl = document.getElementById('result-cert-action');
+    if (certActionEl) {
+        certActionEl.classList.toggle('hidden', !passed);
+        const certBtn = certActionEl.querySelector('button');
+        if (certBtn) {
+            certBtn.innerHTML = isRPG 
+                ? '<i class="fa-solid fa-shield-halved text-base"></i> Visualizar Laudo & Certificado Tático' 
+                : '<i class="fa-solid fa-graduation-cap text-base"></i> Visualizar Meu Certificado Digital';
+            if (isRPG) {
+                certBtn.className = "w-full py-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-amber-500/30 transition-all active:scale-95 flex items-center justify-center gap-2";
+            } else {
+                certBtn.className = "w-full py-4 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-teal-500/30 transition-all active:scale-95 flex items-center justify-center gap-2";
+            }
+        }
+    }
+
     // Retry button
     const canRetry = !passed && (courseData.allow_retake || result.attempts_count === 0);
-    document.getElementById('result-retry-btn').classList.toggle('hidden', !canRetry);
+    const retryBtn = document.getElementById('result-retry-btn');
+    if (retryBtn) {
+        retryBtn.classList.toggle('hidden', !canRetry);
+        retryBtn.innerHTML = isRPG ? '<i class="fa-solid fa-rotate mr-1"></i> Repetir Simulação de Crise' : '<i class="fa-solid fa-rotate mr-1"></i> Refazer Avaliação';
+    }
 
     // Show badge earned if passed
     const badgeContainer = document.getElementById('result-badge-earned');
     if (passed && courseData) {
-        // Get badge info from the current training
         const currentTraining = allTrainings.find(t => t.course_id === currentCourseId);
-        if (currentTraining) {
-            badgeContainer.classList.remove('hidden');
-            badgeContainer.innerHTML = `
-                <div class="flex flex-col items-center p-6 rounded-2xl border-2" style="border-color:${currentTraining.badge_color}30; background:${currentTraining.badge_color}08">
-                    <div class="w-20 h-20 rounded-full flex items-center justify-center mb-3 animate-bounce" style="background:${currentTraining.badge_color}15; box-shadow: 0 8px 30px ${currentTraining.badge_color}30">
-                        <i class="fa-solid ${currentTraining.badge_icon} text-4xl" style="color:${currentTraining.badge_color}"></i>
-                    </div>
-                    <span class="text-xs font-black uppercase tracking-widest mb-1" style="color:${currentTraining.badge_color}">Selo Conquistado!</span>
-                    <span class="text-sm font-black text-slate-800 dark:text-white">${currentTraining.badge_name}</span>
-                </div>`;
-        } else {
-            badgeContainer.classList.add('hidden');
-        }
+        const bColor = currentTraining?.badge_color || courseData.badge_color || (isRPG ? '#f59e0b' : '#0d9488');
+        const bIcon = currentTraining?.badge_icon || courseData.badge_icon || (isRPG ? 'fa-shield-halved' : 'fa-award');
+        const bName = currentTraining?.badge_name || courseData.badge_name || (isRPG ? 'Insígnia de Resposta a Crise' : 'Certificado');
+
+        badgeContainer.classList.remove('hidden');
+        badgeContainer.innerHTML = `
+            <div class="flex flex-col items-center p-5 rounded-2xl border-2 shadow-sm max-w-sm mx-auto" style="border-color:${bColor}30; background:${bColor}08">
+                <div class="w-16 h-16 rounded-2xl flex items-center justify-center mb-2" style="background:${bColor}18; color:${bColor}; box-shadow: 0 4px 20px ${bColor}25">
+                    <i class="fa-solid ${bIcon} text-3xl"></i>
+                </div>
+                <span class="text-[9px] font-black uppercase tracking-widest mb-0.5" style="color:${bColor}">${isRPG ? 'Insígnia Tática Homologada!' : 'Selo Conquistado!'}</span>
+                <span class="text-sm font-black text-slate-800 dark:text-white">${bName}</span>
+            </div>`;
     } else {
         badgeContainer.classList.add('hidden');
     }
 
-    // Corrections
+    // Corrections (Gabarito Detalhado / Debriefing)
     const corr = document.getElementById('result-corrections');
-    corr.innerHTML = '<h4 class="text-sm font-black text-slate-800 dark:text-white uppercase tracking-widest mb-4 text-center">Gabarito</h4>' +
-        result.corrections.map((c, i) => {
-            const userLabel = c.options[c.user_answer] || '—';
-            const correctLabel = c.options[c.correct_answer];
-            return `
-            <div class="p-4 rounded-2xl border ${c.is_correct ? 'border-emerald-500/20 bg-emerald-500/5' : 'border-red-500/20 bg-red-500/5'}">
-                <div class="flex items-start gap-3">
-                    <div class="w-8 h-8 rounded-lg ${c.is_correct ? 'bg-emerald-500 text-white' : 'bg-red-500 text-white'} flex items-center justify-center shrink-0 mt-0.5">
-                        <i class="fa-solid ${c.is_correct ? 'fa-check' : 'fa-xmark'} text-xs"></i>
-                    </div>
-                    <div class="flex-1">
-                        <p class="text-sm font-bold text-slate-800 dark:text-white mb-1">${i+1}. ${c.question}</p>
-                        ${!c.is_correct ? `<p class="text-[11px] text-red-500 font-bold">Sua resposta: ${c.user_answer.toUpperCase()}) ${userLabel}</p>` : ''}
-                        <p class="text-[11px] ${c.is_correct ? 'text-emerald-600' : 'text-emerald-600'} font-bold">Correta: ${c.correct_answer.toUpperCase()}) ${correctLabel}</p>
-                    </div>
+    corr.innerHTML = result.corrections.map((c, i) => {
+        const userLabel = c.options[c.user_answer] || '—';
+        const correctLabel = c.options[c.correct_answer];
+        const hasExplanation = Boolean(c.explanation);
+        return `
+        <div class="p-5 rounded-2xl border ${c.is_correct ? 'border-emerald-500/20 bg-emerald-500/[0.03]' : 'border-rose-500/20 bg-rose-500/[0.03]'} shadow-sm">
+            <div class="flex items-start gap-3.5">
+                <div class="w-8 h-8 rounded-xl ${c.is_correct ? 'bg-emerald-500 text-white' : 'bg-rose-500 text-white'} flex items-center justify-center shrink-0 mt-0.5 shadow-sm font-black text-xs">
+                    ${c.is_correct ? '<i class="fa-solid fa-check"></i>' : '<i class="fa-solid fa-xmark"></i>'}
                 </div>
-            </div>`;
-        }).join('');
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 mb-1">
+                        <span class="text-[9px] font-black uppercase tracking-widest ${c.is_correct ? 'text-emerald-600' : 'text-rose-600'}">${isRPG ? `Fase ${i+1} • ${c.is_correct ? 'Decisão Correta' : 'Decisão Crítica Incorreta'}` : `Questão ${i+1} • ${c.is_correct ? 'Correta' : 'Incorreta'}`}</span>
+                    </div>
+                    <p class="text-xs font-bold text-slate-800 dark:text-white mb-3 leading-relaxed">${c.question}</p>
+                    
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs mb-2">
+                        ${!c.is_correct ? `
+                        <div class="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/20">
+                            <span class="text-[8px] font-black uppercase text-rose-500 block mb-0.5">${isRPG ? 'Ação Executada:' : 'Sua Resposta:'}</span>
+                            <span class="font-bold text-rose-700 dark:text-rose-400">${c.user_answer.toUpperCase()}) ${userLabel}</span>
+                        </div>` : ''}
+                        
+                        <div class="p-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 ${c.is_correct ? 'sm:col-span-2' : ''}">
+                            <span class="text-[8px] font-black uppercase text-emerald-600 block mb-0.5">${isRPG ? 'Conduta Recomendada (POP):' : 'Resposta Correta:'}</span>
+                            <span class="font-bold text-emerald-700 dark:text-emerald-400">${c.correct_answer.toUpperCase()}) ${correctLabel}</span>
+                        </div>
+                    </div>
+
+                    ${hasExplanation ? `
+                    <div class="mt-2.5 p-3 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 text-[11px] text-slate-600 dark:text-slate-300">
+                        <div class="flex items-center gap-1.5 font-bold ${isRPG ? 'text-amber-500 dark:text-amber-400' : 'text-teal-600 dark:text-teal-400'} mb-1 text-[10px] uppercase tracking-wider">
+                            <i class="fa-solid fa-shield-halved text-xs"></i> ${isRPG ? 'Procedimento Operacional Padrão (POP):' : 'Justificativa Didática:'}
+                        </div>
+                        <p class="leading-relaxed font-medium">${c.explanation}</p>
+                    </div>` : ''}
+                </div>
+            </div>
+        </div>`;
+    }).join('');
 }
 
 function closeResult() {
     const ov = document.getElementById('result-overlay');
     ov.classList.add('hidden');
     ov.classList.remove('flex');
+}
+
+// ============ CERTIFICATE MODAL FUNCTIONS ============
+function openCertificateModal(courseId) {
+    const training = allTrainings.find(t => t.course_id === courseId) || allBadges.find(b => b.course_id === courseId);
+    
+    let certData = null;
+    if (training) {
+        certData = { ...training };
+    }
+    
+    if (courseData && (!certData || courseData.course_id === courseId)) {
+        certData = {
+            ...(certData || {}),
+            ...courseData,
+            score: (certData && (certData.best_score || certData.score)) || (courseData.last_attempt ? courseData.last_attempt.score : 100),
+            completed_at: (certData && certData.completed_at) || new Date().toLocaleDateString('pt-BR'),
+            user_name: (certData && certData.user_name) || '{{ current_user.username }}'
+        };
+    }
+
+    if (certData) {
+        fillCertificateModal(certData);
+        const modal = document.getElementById('modal-certificate');
+        if (modal) {
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+    }
+}
+
+function fillCertificateModal(data) {
+    const isRPG = (data.course_type === 'rpg_crisis');
+
+    document.getElementById('cert-student-name').textContent = data.user_name || '{{ current_user.username }}';
+    document.getElementById('cert-course-title').textContent = data.title || (isRPG ? 'Simulação de Gestão de Crise' : 'Treinamento Técnico');
+    document.getElementById('cert-workload').innerHTML = `<i class="fa-regular fa-clock mr-1 ${isRPG ? 'text-amber-500' : 'text-teal-500'}"></i> ${isRPG ? 'Tempo' : 'Carga'}: ${data.workload_hours || 1.0}h`;
+    document.getElementById('cert-score').innerHTML = `<i class="fa-solid ${isRPG ? 'fa-bullseye' : 'fa-chart-simple'} mr-1 text-emerald-500"></i> ${isRPG ? 'Prontidão' : 'Nota'}: ${data.score}%`;
+    document.getElementById('cert-xp').innerHTML = `<i class="fa-solid fa-bolt mr-1 text-amber-500"></i> +${data.xp_reward || 100} XP`;
+    document.getElementById('cert-issue-date').textContent = data.completed_at || new Date().toLocaleDateString('pt-BR');
+    
+    // Company Logo & Header Info
+    const companyNameEl = document.getElementById('cert-company-name');
+    if (companyNameEl) {
+        companyNameEl.textContent = (data.cert_company_name || 'CHECKLIST VEICULAR').toUpperCase();
+    }
+    
+    const logoImgEl = document.getElementById('cert-company-logo-img');
+    const logoFallbackEl = document.getElementById('cert-company-logo-fallback');
+    if (logoImgEl && logoFallbackEl) {
+        if (data.cert_logo_path) {
+            logoImgEl.src = data.cert_logo_path;
+            logoImgEl.classList.remove('hidden');
+            logoFallbackEl.classList.add('hidden');
+        } else {
+            logoImgEl.src = '';
+            logoImgEl.classList.add('hidden');
+            logoFallbackEl.classList.remove('hidden');
+        }
+    }
+
+    const standardEl = document.getElementById('cert-standard-badge');
+    if (standardEl) {
+        standardEl.textContent = data.cert_standard || (isRPG ? 'Procedimento de Resposta a Incidentes' : 'Norma Interna de Qualidade');
+    }
+
+    const legalTextEl = document.getElementById('cert-legal-text');
+    if (legalTextEl) {
+        legalTextEl.textContent = data.cert_legal_text || (isRPG ? 'Homologação oficial de prontidão técnica para atuação em ocorrências emergenciais e contingências.' : 'Válido exclusivamente para fins de capacitação interna e procedimentos operacionais da empresa.');
+    }
+
+    // Custom Cert Texts
+    const certTitleEl = document.getElementById('cert-main-title');
+    if (certTitleEl) {
+        certTitleEl.textContent = (data.cert_title || (isRPG ? 'CERTIFICADO DE PRONTIDÃO OPERACIONAL' : 'CERTIFICADO DE CAPACITAÇÃO TÉCNICA')).toUpperCase();
+    }
+
+    const certSubtitleEl = document.getElementById('cert-main-subtitle');
+    if (certSubtitleEl) {
+        certSubtitleEl.textContent = data.cert_subtitle || (isRPG ? 'concluiu com êxito a simulação de gestão de crises e demonstrou prontidão operacional no incidente crítico de:' : 'concluiu com aproveitamento e total conformidade técnica o treinamento operacional de:');
+    }
+
+    const certSigRoleEl = document.getElementById('cert-sig-role');
+    if (certSigRoleEl) {
+        certSigRoleEl.textContent = data.cert_signature_role || (isRPG ? 'Comando de Operações & Coordenação Técnica' : 'Coordenação Técnica & Operações');
+    }
+
+    const certIssuerNameEl = document.getElementById('cert-issuer-name');
+    if (certIssuerNameEl) {
+        const issuer = data.cert_issuer_name ? `${data.cert_issuer_name} ✓` : (isRPG ? 'Homologação Tática ✓' : 'Validação Digital ✓');
+        certIssuerNameEl.innerHTML = `<i class="fa-solid fa-circle-check text-[7px] mr-1 text-emerald-500"></i>${issuer}`;
+    }
+
+    const validityMonths = parseInt(data.cert_validity_months || 0);
+    const validityEl = document.getElementById('cert-validity-badge');
+    if (validityEl) {
+        validityEl.textContent = validityMonths === 0 ? (isRPG ? 'Prontidão Homologada' : 'Certificação Vitalícia') : `Válido por ${validityMonths} meses`;
+    }
+
+    const iconEl = document.getElementById('cert-badge-icon');
+    const wrapperEl = document.getElementById('cert-badge-wrapper');
+    const bColor = data.badge_color || (isRPG ? '#f59e0b' : '#0d9488');
+    const bIcon = data.badge_icon || (isRPG ? 'fa-shield-halved' : 'fa-award');
+
+    if (iconEl && wrapperEl) {
+        iconEl.className = `fa-solid ${bIcon}`;
+        iconEl.style.color = bColor;
+        wrapperEl.style.borderColor = `${bColor}40`;
+        wrapperEl.style.backgroundColor = `${bColor}15`;
+    }
+
+    const codeEl = document.getElementById('cert-code');
+    if (codeEl) {
+        const prefix = isRPG ? '#CV-TAC-' : '#CV-LMS-';
+        const hash = Math.abs(((data.title || '') + (data.user_name || '')).split("").reduce((a,b)=>{a=((a<<5)-a)+b.charCodeAt(0);return a&a},0)).toString(36).toUpperCase();
+        codeEl.textContent = `${prefix}${hash}`;
+    }
+
+    // Dynamic Style Morphing
+    const printArea = document.getElementById('certificate-print-area');
+    let style = data.cert_style || (isRPG ? 'security' : 'classic');
+    if (printArea) {
+        if (style === 'classic') {
+            printArea.className = "border-4 border-double border-amber-500/50 p-6 md:p-8 rounded-2xl bg-gradient-to-br from-amber-500/[0.04] via-slate-50 to-amber-500/[0.02] dark:from-slate-900 dark:to-slate-950 text-center relative overflow-hidden transition-all duration-300 shadow-xl";
+        } else if (style === 'tech') {
+            printArea.className = "border-2 border-teal-500/60 p-6 md:p-8 rounded-2xl bg-gradient-to-br from-teal-500/[0.08] via-emerald-500/[0.04] to-slate-900/10 dark:from-slate-900 dark:to-teal-950/40 text-center relative overflow-hidden transition-all duration-300 shadow-xl";
+        } else if (style === 'minimalist') {
+            printArea.className = "border border-slate-300 dark:border-white/20 p-6 md:p-8 rounded-2xl bg-white dark:bg-slate-900 text-center relative overflow-hidden transition-all duration-300 shadow-lg";
+        } else if (style === 'security') {
+            printArea.className = "border-2 border-amber-500/50 p-6 md:p-8 rounded-2xl bg-slate-950 text-white text-center relative overflow-hidden transition-all duration-300 shadow-2xl";
+        }
+    }
+}
+
+function closeCertificateModal() {
+    const modal = document.getElementById('modal-certificate');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+}
+
+function printCertificate() {
+    window.print();
 }
 
 // INIT

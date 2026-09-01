@@ -85,7 +85,11 @@ def simulador_roteadores():
 @login_required
 def api_gestao_users():
     users = User.query.order_by(User.username.asc()).all()
-    return jsonify([{"id": u.id, "username": u.username} for u in users])
+    return jsonify([{
+        "id": u.id, 
+        "username": u.username, 
+        "role": (u.role or "Colaborador").upper()
+    } for u in users])
 
 
 
@@ -5798,6 +5802,22 @@ def api_gestao_treinamentos_lms_list():
                 "badge_color": c.badge_color,
                 "allow_retake": c.allow_retake,
                 "course_type": c.course_type or 'lms',
+                "difficulty_level": getattr(c, "difficulty_level", "intermediario") or "intermediario",
+                "workload_hours": float(getattr(c, "workload_hours", 1.0) or 1.0),
+                "xp_reward": int(getattr(c, "xp_reward", 100) or 100),
+                "target_team_ids": getattr(c, "target_team_ids", "") or "",
+                "cert_title": getattr(c, "cert_title", "CERTIFICADO DE CAPACITAÇÃO TÉCNICA") or "CERTIFICADO DE CAPACITAÇÃO TÉCNICA",
+                "cert_subtitle": getattr(c, "cert_subtitle", "concluiu com aproveitamento e total conformidade técnica o treinamento operacional de:") or "concluiu com aproveitamento e total conformidade técnica o treinamento operacional de:",
+                "cert_style": getattr(c, "cert_style", "classic") or "classic",
+                "cert_signature_role": getattr(c, "cert_signature_role", "Coordenação Técnica & Operações") or "Coordenação Técnica & Operações",
+                "cert_issuer_name": getattr(c, "cert_issuer_name", "") or "",
+                "cert_validity_months": int(getattr(c, "cert_validity_months", 0) or 0),
+                "cert_logo_path": getattr(c, "cert_logo_path", "") or "",
+                "cert_company_name": getattr(c, "cert_company_name", "") or "",
+                "cert_legal_text": getattr(c, "cert_legal_text", "Válido exclusivamente para fins de capacitação interna e procedimentos operacionais da empresa.") or "Válido exclusivamente para fins de capacitação interna e procedimentos operacionais da empresa.",
+                "cert_standard": getattr(c, "cert_standard", "Norma Interna de Qualidade & Procedimento Operacional Padrão") or "Norma Interna de Qualidade & Procedimento Operacional Padrão",
+                "modules_count": len(c.modules),
+                "questions_count": len(c.questions),
                 "total_assignments": total_assigns,
                 "approved_assignments": approved_assigns
             })
@@ -5805,6 +5825,290 @@ def api_gestao_treinamentos_lms_list():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+
+@technical_bp.route("/api/gestao/treinamentos_lms/stats", methods=["GET"])
+@supervisor_allowed
+def api_gestao_treinamentos_lms_stats():
+    try:
+        courses = TrainingCourse.query.all()
+        assignments = TrainingAssignment.query.all()
+        
+        total_courses = len(courses)
+        published_courses = sum(1 for c in courses if c.is_published)
+        total_enrollments = len(assignments)
+        approved_enrollments = sum(1 for a in assignments if a.status == 'aprovado')
+        
+        scores = [a.best_score for a in assignments if a.best_score is not None]
+        avg_score = round(sum(scores) / len(scores), 1) if scores else 0.0
+        
+        # Ranking de técnicos com mais aprovações e XP acumulado
+        user_stats = {}
+        for a in assignments:
+            if not a.user:
+                continue
+            uid = a.user.id
+            if uid not in user_stats:
+                user_stats[uid] = {
+                    "id": uid,
+                    "username": a.user.username,
+                    "approved_count": 0,
+                    "total_score": 0,
+                    "total_xp": 0,
+                    "badges": []
+                }
+            if a.status == "aprovado":
+                user_stats[uid]["approved_count"] += 1
+                score = a.best_score or (a.course.passing_grade if a.course else 70)
+                xp = getattr(a.course, "xp_reward", 100) if a.course else 100
+                user_stats[uid]["total_score"] += score
+                user_stats[uid]["total_xp"] += xp
+                if a.course and a.course.badge_name:
+                    user_stats[uid]["badges"].append({
+                        "name": a.course.badge_name,
+                        "icon": a.course.badge_icon or "fa-award",
+                        "color": a.course.badge_color or "#0d9488"
+                    })
+                    
+        ranking = sorted(user_stats.values(), key=lambda x: (x["approved_count"], x["total_xp"]), reverse=True)[:10]
+
+        return jsonify({
+            "total_courses": total_courses,
+            "published_courses": published_courses,
+            "total_enrollments": total_enrollments,
+            "approved_enrollments": approved_enrollments,
+            "avg_score": avg_score,
+            "ranking": ranking
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@technical_bp.route("/api/gestao/treinamentos_lms/templates", methods=["GET"])
+@supervisor_allowed
+def api_gestao_treinamentos_lms_templates():
+    templates = [
+        {
+            "id": "tpl_nr10_35",
+            "title": "NR-10 & NR-35: Trabalho em Altura e Instalações Elétricas",
+            "description": "Treinamento obrigatório de segurança abordando uso correto de EPIs, talabarte, linha de vida e procedimentos para prevenção de choques e quedas.",
+            "category": "Segurança",
+            "difficulty_level": "intermediario",
+            "workload_hours": 2.5,
+            "xp_reward": 150,
+            "passing_grade": 75,
+            "is_mandatory": True,
+            "allow_retake": True,
+            "course_type": "lms",
+            "badge_name": "Segurança em Altura & Elétrica",
+            "badge_icon": "fa-helmet-safety",
+            "badge_color": "#0284c7",
+            "modules": [
+                {
+                    "title": "Módulo 1: Inspeção e Utilização de EPIs e EPCs",
+                    "duration_minutes": 15,
+                    "video_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+                    "content": "Antes de iniciar qualquer serviço em postes ou escadas, o técnico deve realizar a inspeção visual completa dos equipamentos de proteção individual:\n\n• Capacete com jugular ajustada;\n• Óculos de proteção contra raios UV e estilhaços;\n• Luvas de vaqueta para tração e luvas isolantes para redes elétricas;\n• Cinto tipo paraquedista com talabarte duplo em Y e trava-quedas.\n\n⚠️ Lembrete: Equipamentos com costuras rompidas, fivelas oxidadas ou sem CA válido devem ser imediatamente substituídos na base."
+                },
+                {
+                    "title": "Módulo 2: Procedimento de Ancoragem Segura e Trabalho em Altura",
+                    "duration_minutes": 20,
+                    "video_url": "",
+                    "content": "Para execução segura de passagem de cabo drop ou fixação de alças pré-formadas:\n\n1. Posicione a escada em piso nivelado mantendo a inclinação regulamentar de 1:4 (75 graus);\n2. Amarre o topo e a base da escada ao poste com corda de nylon homologada;\n3. Conecte o trava-quedas na corda guia antes de iniciar a subida;\n4. Ao atingir a altura de trabalho, posicione o talabarte de posicionamento na cinta do poste antes de soltar as mãos."
+                },
+                {
+                    "title": "Módulo 3: Distâncias de Segurança e Redes de Média Tensão",
+                    "duration_minutes": 15,
+                    "video_url": "",
+                    "content": "Regras de convivência com a concessionária de energia:\n\n• Mantenha a distância mínima de 60 cm abaixo da rede secundária de baixa tensão (BT);\n• Nunca posicione cabos de telecomunicação na zona controlada de média tensão (MT);\n• Utilize sempre detector de tensão por aproximação antes de tocar em braços metálicos ou cordoalhas."
+                }
+            ],
+            "questions": [
+                {
+                    "question_text": "Qual é a inclinação correta recomendada para posicionamento seguro de uma escada extensível?",
+                    "option_a": "Proporção de 1:2 (cerca de 60 graus)",
+                    "option_b": "Proporção de 1:4 (cerca de 75 graus)",
+                    "option_c": "Proporção de 1:1 (cerca de 45 graus)",
+                    "option_d": "Totalmente vertical rente ao poste",
+                    "correct_option": "B",
+                    "difficulty": "facil",
+                    "explanation": "A proporção de 1:4 (a base distante 1/4 da altura do topo) garante ângulo de 75 graus, prevenindo escorregamento e tombamento."
+                },
+                {
+                    "question_text": "Qual é a distância mínima regulamentar que a rede de telecomunicações deve manter abaixo da baixa tensão elétrica?",
+                    "option_a": "10 centímetros",
+                    "option_b": "60 centímetros",
+                    "option_c": "1,5 metros",
+                    "option_d": "Não há distância mínima necessária",
+                    "correct_option": "B",
+                    "difficulty": "medio",
+                    "explanation": "A norma técnica de compartilhamento de postes estabelece 60 cm entre a telecom e a rede secundária BT."
+                }
+            ]
+        },
+        {
+            "id": "tpl_fibra_ftth",
+            "title": "POP Telecom: Fusão, Sangria e Certificação Óptica FTTH",
+            "description": "Procedimento padrão de atendimento para ativação de clientes, montagem de conectores de campo, testes com Power Meter e fusão óptica.",
+            "category": "Procedimento",
+            "difficulty_level": "avancado",
+            "workload_hours": 3.0,
+            "xp_reward": 200,
+            "passing_grade": 80,
+            "is_mandatory": True,
+            "allow_retake": True,
+            "course_type": "lms",
+            "badge_name": "Especialista em Fusão & FTTH",
+            "badge_icon": "fa-tower-broadcast",
+            "badge_color": "#0d9488",
+            "modules": [
+                {
+                    "title": "Módulo 1: Decapagem, Clivagem e Limpeza da Fibra",
+                    "duration_minutes": 15,
+                    "video_url": "",
+                    "content": "Para alcançar atenuações abaixo de 0.02 dB por fusão:\n\n1. Utilize o alicate decapador no canal correto sem arranhar a casca de vidro da fibra;\n2. Limpe a fibra com álcool isopropílico 99.8% e lenço de papel sem fiapos (Kimwipes);\n3. Execute a clivagem em ângulo perfeito de 90 graus utilizando clivador de precisão calibrado;\n4. Nunca toque na ponta clivada após a limpeza."
+                },
+                {
+                    "title": "Módulo 2: Leitura de Níveis de Sinal no Power Meter e CTO",
+                    "duration_minutes": 20,
+                    "video_url": "",
+                    "content": "Padrões operacionais de potência óptica na porta do cliente:\n\n• Sinal ideal na saída da CTO (1490nm): Entre -15 dBm e -21 dBm;\n• Limite aceitável na ONU/ONT do assinante: Entre -18 dBm e -24 dBm;\n• Sinais acima de -26 dBm indicam macrocurvaturas, conector sujo ou fusão defeituosa que geram quedas de pacote e degradação do Wi-Fi."
+                }
+            ],
+            "questions": [
+                {
+                    "question_text": "Qual o produto químico e insumo correto para higienização da fibra antes da clivagem?",
+                    "option_a": "Álcool etílico 70% com algodão",
+                    "option_b": "Álcool isopropílico 99.8% com lenço sem fiapos",
+                    "option_c": "Água destilada com flanela",
+                    "option_d": "Solvente de contato elétrico",
+                    "correct_option": "B",
+                    "difficulty": "facil",
+                    "explanation": "O álcool isopropílico evapora rapidamente sem deixar resíduos de água ou minerais que provocariam atenuação óptica."
+                },
+                {
+                    "question_text": "Ao medir o sinal óptico no conector da ONU, qual faixa de potência é considerada padrão de excelência?",
+                    "option_a": "Entre -8 dBm e -12 dBm",
+                    "option_b": "Entre -18 dBm e -24 dBm",
+                    "option_c": "Entre -28 dBm e -35 dBm",
+                    "option_d": "+3 dBm",
+                    "correct_option": "B",
+                    "difficulty": "medio",
+                    "explanation": "A faixa de -18 dBm a -24 dBm garante margem operacional ideal na sensibilidade dos receptores GPON/EPON."
+                }
+            ]
+        },
+        {
+            "id": "tpl_rpg_apagao",
+            "title": "Simulador de Crise (RPG): Rompimento de Fibra Tronco",
+            "description": "Simulação interativa de tomada de decisão rápida sob pressão diante de um incidente crítico na rede que afeta múltiplos bairros.",
+            "category": "Equipamento",
+            "difficulty_level": "especialista",
+            "workload_hours": 1.5,
+            "xp_reward": 250,
+            "passing_grade": 80,
+            "is_mandatory": False,
+            "allow_retake": True,
+            "course_type": "rpg_crisis",
+            "badge_name": "Guardião de Crises de Rede",
+            "badge_icon": "fa-fire",
+            "badge_color": "#e11d48",
+            "modules": [
+                {
+                    "title": "Cenário 1: Alarme do Zabbix & Queda de OLT",
+                    "duration_minutes": 10,
+                    "video_url": "",
+                    "content": "🔴 ALERTA GERAL: Às 14:32h, o NOC detectou a queda simultânea de 8 PONs na OLT do Bairro São José, deixando 2.400 assinantes sem conexão. O supervisor acionou sua equipe de emergência."
+                },
+                {
+                    "title": "Cenário 2: Localização e Lançamento do OTDR",
+                    "duration_minutes": 10,
+                    "video_url": "",
+                    "content": "Você conecta o OTDR no DIO central da POP. O gráfico indica evento reflexivo com queda abrupta aos 3.420 metros da saída, indicando rompimento físico em poste próximo à Avenida Principal."
+                }
+            ],
+            "questions": [
+                {
+                    "question_text": "Ao chegar no local do rompimento e verificar cabos caídos próximos à rede elétrica, qual a primeira ação do técnico líder?",
+                    "option_a": "Iniciar a fusão imediatamente para restaurar o serviço rápido",
+                    "option_b": "Sinalizar e isolar a área com cones, verificar ausência de tensão e solicitar apoio para desvio de trânsito",
+                    "option_c": "Puxar os cabos com força para desvencilhar da fiação elétrica",
+                    "option_d": "Ligar para os clientes avisando que vai demorar",
+                    "correct_option": "B",
+                    "difficulty": "facil",
+                    "explanation": "A segurança da equipe e de pedestres é sempre a prioridade máxima antes de qualquer intervenção física em campo."
+                }
+            ]
+        }
+    ]
+    return jsonify(templates)
+
+
+@technical_bp.route("/api/gestao/treinamentos_lms/<int:id>/duplicar", methods=["POST"])
+@supervisor_allowed
+def api_gestao_treinamentos_lms_duplicate(id):
+    try:
+        source = TrainingCourse.query.get(id)
+        if not source:
+            return jsonify({"error": "Treinamento original não encontrado"}), 404
+            
+        new_course = TrainingCourse(
+            title=f"{source.title} (Cópia)",
+            description=source.description,
+            category=source.category,
+            passing_grade=source.passing_grade,
+            is_mandatory=source.is_mandatory,
+            is_published=False,
+            deadline=source.deadline,
+            created_by_id=current_user.id,
+            badge_name=source.badge_name,
+            badge_icon=source.badge_icon,
+            badge_color=source.badge_color,
+            allow_retake=source.allow_retake,
+            course_type=source.course_type or 'lms',
+            difficulty_level=getattr(source, "difficulty_level", "intermediario"),
+            workload_hours=getattr(source, "workload_hours", 1.0),
+            xp_reward=getattr(source, "xp_reward", 100),
+            target_team_ids=getattr(source, "target_team_ids", "")
+        )
+        db.session.add(new_course)
+        db.session.flush()
+        
+        # Clone modules
+        for m in source.modules:
+            new_mod = TrainingModule(
+                course_id=new_course.id,
+                title=m.title,
+                content=m.content,
+                image_path=m.image_path,
+                video_path=m.video_path,
+                video_url=getattr(m, "video_url", None),
+                attachment_path=getattr(m, "attachment_path", None),
+                duration_minutes=getattr(m, "duration_minutes", 10),
+                order=m.order
+            )
+            db.session.add(new_mod)
+            
+        # Clone questions
+        for q in source.questions:
+            new_quest = TrainingQuestion(
+                course_id=new_course.id,
+                question_text=q.question_text,
+                option_a=q.option_a,
+                option_b=q.option_b,
+                option_c=q.option_c,
+                option_d=q.option_d,
+                correct_option=q.correct_option,
+                explanation=getattr(q, "explanation", None),
+                difficulty=getattr(q, "difficulty", "medio"),
+                order=q.order
+            )
+            db.session.add(new_quest)
+            
+        db.session.commit()
+        return jsonify({"status": "ok", "id": new_course.id})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
 
 
 @technical_bp.route("/api/gestao/treinamentos_lms/upload_media", methods=["POST"])
@@ -5815,7 +6119,7 @@ def api_gestao_treinamentos_lms_upload_media():
             return jsonify({"error": "Nenhum arquivo enviado"}), 400
         
         f = request.files["file"]
-        media_type = request.form.get("type")  # "image" ou "video"
+        media_type = request.form.get("type")  # "image", "video" ou "attachment"
         
         if not f or f.filename == "":
             return jsonify({"error": "Arquivo vazio"}), 400
@@ -5827,7 +6131,6 @@ def api_gestao_treinamentos_lms_upload_media():
             allowed_image_exts = {".jpg", ".jpeg", ".png", ".webp"}
             if ext not in allowed_image_exts:
                 return jsonify({"error": "Formato de imagem inválido. Use JPG, JPEG, PNG ou WEBP."}), 400
-            # Check size
             f.seek(0, os.SEEK_END)
             size = f.tell()
             f.seek(0)
@@ -5837,12 +6140,20 @@ def api_gestao_treinamentos_lms_upload_media():
             allowed_video_exts = {".mp4", ".webm"}
             if ext not in allowed_video_exts:
                 return jsonify({"error": "Formato de vídeo inválido. Use MP4 ou WEBM."}), 400
-            # Check size
             f.seek(0, os.SEEK_END)
             size = f.tell()
             f.seek(0)
             if size > 25 * 1024 * 1024:
                 return jsonify({"error": "O vídeo excede o limite de 25MB."}), 400
+        elif media_type == "attachment":
+            allowed_doc_exts = {".pdf", ".doc", ".docx", ".zip"}
+            if ext not in allowed_doc_exts:
+                return jsonify({"error": "Formato de anexo inválido. Use PDF, DOCX ou ZIP."}), 400
+            f.seek(0, os.SEEK_END)
+            size = f.tell()
+            f.seek(0)
+            if size > 15 * 1024 * 1024:
+                return jsonify({"error": "O documento excede o limite de 15MB."}), 400
         else:
             return jsonify({"error": "Tipo de mídia inválido especificado."}), 400
 
@@ -5857,13 +6168,13 @@ def api_gestao_treinamentos_lms_upload_media():
         return jsonify({"error": str(e)}), 500
 
 
-
 @technical_bp.route("/api/gestao/treinamentos_lms", methods=["POST"])
 @supervisor_allowed
 def api_gestao_treinamentos_lms_save():
     try:
-        data = request.json
-        course_id = data.get("id")
+        data = request.json or {}
+        raw_id = data.get("id")
+        course_id = int(raw_id) if raw_id and str(raw_id).isdigit() else None
         
         if course_id:
             course = TrainingCourse.query.get(course_id)
@@ -5877,23 +6188,58 @@ def api_gestao_treinamentos_lms_save():
             course.created_by_id = current_user.id
             db.session.add(course)
             
-        course.title = data.get("title")
-        course.description = data.get("description")
-        course.category = data.get("category")
-        course.passing_grade = int(data.get("passing_grade") or 70)
+        course.title = str(data.get("title") or "Sem Título").strip()
+        course.description = data.get("description") or ""
+        course.category = data.get("category") or "Geral"
+        
+        try:
+            course.passing_grade = int(data.get("passing_grade") or 70)
+        except (ValueError, TypeError):
+            course.passing_grade = 70
+            
         course.is_mandatory = bool(data.get("is_mandatory"))
         
         deadline_str = data.get("deadline")
-        if deadline_str:
-            course.deadline = datetime.strptime(deadline_str, "%Y-%m-%d").date()
+        if deadline_str and isinstance(deadline_str, str) and deadline_str.strip():
+            try:
+                course.deadline = datetime.strptime(deadline_str.strip(), "%Y-%m-%d").date()
+            except Exception:
+                course.deadline = None
         else:
             course.deadline = None
             
         course.badge_name = data.get("badge_name") or 'Certificado'
         course.badge_icon = data.get("badge_icon") or 'fa-award'
         course.badge_color = data.get("badge_color") or '#0d9488'
-        course.allow_retake = bool(data.get("allow_retake"))
+        course.allow_retake = bool(data.get("allow_retake", True))
         course.course_type = data.get("course_type") or 'lms'
+        course.difficulty_level = data.get("difficulty_level") or 'intermediario'
+        
+        try:
+            course.workload_hours = float(data.get("workload_hours") or 1.0)
+        except (ValueError, TypeError):
+            course.workload_hours = 1.0
+            
+        try:
+            course.xp_reward = int(data.get("xp_reward") or 100)
+        except (ValueError, TypeError):
+            course.xp_reward = 100
+            
+        course.target_team_ids = str(data.get("target_team_ids") or "")
+        course.cert_title = str(data.get("cert_title") or "CERTIFICADO DE CAPACITAÇÃO TÉCNICA").strip()
+        course.cert_subtitle = str(data.get("cert_subtitle") or "concluiu com aproveitamento e total conformidade técnica o treinamento operacional de:").strip()
+        course.cert_style = str(data.get("cert_style") or "classic").strip()
+        course.cert_signature_role = str(data.get("cert_signature_role") or "Coordenação Técnica & Operações").strip()
+        course.cert_issuer_name = str(data.get("cert_issuer_name") or "").strip()
+        try:
+            course.cert_validity_months = int(data.get("cert_validity_months") or 0)
+        except (ValueError, TypeError):
+            course.cert_validity_months = 0
+            
+        course.cert_logo_path = str(data.get("cert_logo_path") or "").strip()
+        course.cert_company_name = str(data.get("cert_company_name") or "").strip()
+        course.cert_legal_text = str(data.get("cert_legal_text") or "Válido exclusivamente para fins de capacitação interna e procedimentos operacionais da empresa.").strip()
+        course.cert_standard = str(data.get("cert_standard") or "Norma Interna de Qualidade & Procedimento Operacional Padrão").strip()
         
         # Flush so new courses get an ID
         db.session.flush()
@@ -5907,6 +6253,9 @@ def api_gestao_treinamentos_lms_save():
                 content=m.get("content"),
                 image_path=m.get("image_path"),
                 video_path=m.get("video_path"),
+                video_url=m.get("video_url"),
+                attachment_path=m.get("attachment_path"),
+                duration_minutes=int(m.get("duration_minutes") or 10),
                 order=i
             )
             db.session.add(mod)
@@ -5921,29 +6270,44 @@ def api_gestao_treinamentos_lms_save():
                 option_b=q.get("option_b"),
                 option_c=q.get("option_c"),
                 option_d=q.get("option_d"),
-                correct_option=q.get("correct_option"),
+                correct_option=str(q.get("correct_option", "A")).upper(),
+                explanation=q.get("explanation"),
+                difficulty=q.get("difficulty") or "medio",
                 order=i
             )
             db.session.add(quest)
             
-        # Auto-assign to all technicians if it's a new course
-        if not course_id:
-            # Fetch all active users
-            users = User.query.all()
-            for u in users:
-                assign = TrainingAssignment(
-                    course_id=course.id,
-                    user_id=u.id,
-                    status="pendente"
-                )
-                db.session.add(assign)
+        # Atribuições e publicação
+        assign_all = bool(data.get("assign_all", False))
+        user_ids = data.get("user_ids") or []
+        int_user_ids = [int(x) for x in user_ids if str(x).isdigit()]
+        
+        course.is_published = True
+
+        if assign_all:
+            # Atribui a todos os colaboradores do sistema
+            for u in User.query.all():
+                if not TrainingAssignment.query.filter_by(course_id=course.id, user_id=u.id).first():
+                    db.session.add(TrainingAssignment(course_id=course.id, user_id=u.id, status="pendente"))
+        elif int_user_ids:
+            # Sincroniza os usuários específicos selecionados:
+            existing = TrainingAssignment.query.filter_by(course_id=course.id).all()
+            for ex in existing:
+                if ex.user_id not in int_user_ids:
+                    db.session.delete(ex)
+            for uid in int_user_ids:
+                if not TrainingAssignment.query.filter_by(course_id=course.id, user_id=uid).first():
+                    db.session.add(TrainingAssignment(course_id=course.id, user_id=uid, status="pendente"))
+        elif not course_id:
+            # Novo curso sem seleção específica: atribui a todos
+            for u in User.query.all():
+                db.session.add(TrainingAssignment(course_id=course.id, user_id=u.id, status="pendente"))
                 
         db.session.commit()
         return jsonify({"status": "ok", "id": course.id})
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
-
 
 
 @technical_bp.route("/api/gestao/treinamentos_lms/<int:id>", methods=["GET"])
@@ -5960,6 +6324,9 @@ def api_gestao_treinamentos_lms_get(id):
             "content": m.content,
             "image_path": m.image_path,
             "video_path": m.video_path,
+            "video_url": getattr(m, "video_url", None),
+            "attachment_path": getattr(m, "attachment_path", None),
+            "duration_minutes": getattr(m, "duration_minutes", 10),
             "order": m.order
         } for m in c.modules]
         
@@ -5971,17 +6338,22 @@ def api_gestao_treinamentos_lms_get(id):
             "option_c": q.option_c,
             "option_d": q.option_d,
             "correct_option": q.correct_option,
+            "explanation": getattr(q, "explanation", None),
+            "difficulty": getattr(q, "difficulty", "medio"),
             "order": q.order
         } for q in c.questions]
         
-        # Carrega os colaboradores atribuídos para exibir progresso/ranking nos detalhes
+        raw_assignments = TrainingAssignment.query.filter_by(course_id=c.id).all()
         assignments = [{
             "id": a.id,
+            "user_id": a.user_id,
             "status": a.status,
             "best_score": a.best_score,
             "completed_at": a.completed_at.strftime("%d/%m/%Y %H:%M") if a.completed_at else None,
             "username": a.user.username if a.user else "Removido"
-        } for a in TrainingAssignment.query.filter_by(course_id=c.id).all()]
+        } for a in raw_assignments]
+
+        assigned_user_ids = [a.user_id for a in raw_assignments if a.user_id]
 
         return jsonify({
             "id": c.id,
@@ -5997,13 +6369,27 @@ def api_gestao_treinamentos_lms_get(id):
             "badge_color": c.badge_color,
             "allow_retake": c.allow_retake,
             "course_type": c.course_type or 'lms',
+            "difficulty_level": getattr(c, "difficulty_level", "intermediario") or "intermediario",
+            "workload_hours": float(getattr(c, "workload_hours", 1.0) or 1.0),
+            "xp_reward": int(getattr(c, "xp_reward", 100) or 100),
+            "target_team_ids": getattr(c, "target_team_ids", "") or "",
+            "cert_title": getattr(c, "cert_title", "CERTIFICADO DE CAPACITAÇÃO TÉCNICA") or "CERTIFICADO DE CAPACITAÇÃO TÉCNICA",
+            "cert_subtitle": getattr(c, "cert_subtitle", "concluiu com aproveitamento e total conformidade técnica o treinamento operacional de:") or "concluiu com aproveitamento e total conformidade técnica o treinamento operacional de:",
+            "cert_style": getattr(c, "cert_style", "classic") or "classic",
+            "cert_signature_role": getattr(c, "cert_signature_role", "Coordenação Técnica & Operações") or "Coordenação Técnica & Operações",
+            "cert_issuer_name": getattr(c, "cert_issuer_name", "") or "",
+            "cert_validity_months": int(getattr(c, "cert_validity_months", 0) or 0),
+            "cert_logo_path": getattr(c, "cert_logo_path", "") or "",
+            "cert_company_name": getattr(c, "cert_company_name", "") or "",
+            "cert_legal_text": getattr(c, "cert_legal_text", "Válido exclusivamente para fins de capacitação interna e procedimentos operacionais da empresa.") or "Válido exclusivamente para fins de capacitação interna e procedimentos operacionais da empresa.",
+            "cert_standard": getattr(c, "cert_standard", "Norma Interna de Qualidade & Procedimento Operacional Padrão") or "Norma Interna de Qualidade & Procedimento Operacional Padrão",
             "modules": modules,
             "questions": questions,
-            "assignments": assignments
+            "assignments": assignments,
+            "assigned_user_ids": assigned_user_ids
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
 
 
 @technical_bp.route("/api/gestao/treinamentos_lms/<int:id>", methods=["DELETE"])
@@ -6022,56 +6408,119 @@ def api_gestao_treinamentos_lms_delete(id):
         return jsonify({"error": str(e)}), 500
 
 
-
 @technical_bp.route("/api/gestao/treinamentos_lms/<int:id>/publicar", methods=["POST"])
 @supervisor_allowed
 def api_gestao_treinamentos_lms_publish(id):
     try:
-        c = TrainingCourse.query.get(id)
+        c = db.session.get(TrainingCourse, id)
         if not c:
             return jsonify({"error": "Treinamento não encontrado"}), 404
             
         c.is_published = True
         
-        # Lê os parâmetros do corpo da requisição JSON (assign_all e user_ids)
         req_data = request.get_json(silent=True) or {}
-        assign_all = req_data.get("assign_all", False)
+        assign_all = bool(req_data.get("assign_all", False))
         user_ids = req_data.get("user_ids", [])
+        int_user_ids = [int(x) for x in user_ids if str(x).isdigit()]
         
-        if assign_all or user_ids:
-            if assign_all:
-                # Seleciona todos os colaboradores ativos com o papel de técnicos (tech)
-                target_users = User.query.filter_by(role="tech").all()
-                target_user_ids = {u.id for u in target_users}
-            else:
-                target_user_ids = {int(uid) for uid in user_ids}
-                
-            # 1. Remove atribuições existentes que não estão na nova seleção
-            TrainingAssignment.query.filter(
-                TrainingAssignment.course_id == c.id,
-                ~TrainingAssignment.user_id.in_(list(target_user_ids))
-            ).delete(synchronize_session=False)
-            
-            # 2. Cria novas atribuições para os técnicos selecionados que ainda não as possuem
-            existing_assigns = TrainingAssignment.query.filter_by(course_id=c.id).all()
-            existing_user_ids = {a.user_id for a in existing_assigns}
-            
-            for uid in target_user_ids:
-                if uid not in existing_user_ids:
-                    new_assign = TrainingAssignment(
-                        course_id=c.id,
-                        user_id=uid,
-                        status="pendente"
-                    )
-                    db.session.add(new_assign)
-                
+        assigned_count = 0
+        if assign_all:
+            for u in User.query.all():
+                exists = TrainingAssignment.query.filter_by(course_id=c.id, user_id=u.id).first()
+                if not exists:
+                    db.session.add(TrainingAssignment(course_id=c.id, user_id=u.id, status="pendente"))
+                    assigned_count += 1
+        elif int_user_ids:
+            for uid in int_user_ids:
+                exists = TrainingAssignment.query.filter_by(course_id=c.id, user_id=uid).first()
+                if not exists:
+                    db.session.add(TrainingAssignment(course_id=c.id, user_id=uid, status="pendente"))
+                    assigned_count += 1
+                    
         db.session.commit()
-        return jsonify({"status": "ok", "is_published": c.is_published})
+        return jsonify({
+            "status": "ok", 
+            "message": f"Treinamento publicado e atribuído a {assigned_count} colaboradores."
+        })
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
 
 
+@technical_bp.route("/api/gestao/treinamentos_lms/<int:id>/duplicar", methods=["POST"])
+@supervisor_allowed
+def api_gestao_treinamentos_lms_duplicar(id):
+    try:
+        orig = db.session.get(TrainingCourse, id)
+        if not orig:
+            return jsonify({"error": "Treinamento não encontrado"}), 404
+            
+        new_course = TrainingCourse(
+            title=f"{orig.title} (Cópia)",
+            description=orig.description,
+            category=orig.category,
+            passing_grade=orig.passing_grade,
+            is_mandatory=orig.is_mandatory,
+            is_published=False,
+            deadline=orig.deadline,
+            created_by_id=current_user.id,
+            badge_name=orig.badge_name,
+            badge_icon=orig.badge_icon,
+            badge_color=orig.badge_color,
+            allow_retake=orig.allow_retake,
+            course_type=orig.course_type,
+            difficulty_level=orig.difficulty_level,
+            workload_hours=orig.workload_hours,
+            xp_reward=orig.xp_reward,
+            target_team_ids=orig.target_team_ids,
+            cert_title=orig.cert_title,
+            cert_subtitle=orig.cert_subtitle,
+            cert_style=orig.cert_style,
+            cert_signature_role=orig.cert_signature_role,
+            cert_issuer_name=orig.cert_issuer_name,
+            cert_validity_months=orig.cert_validity_months,
+            cert_logo_path=orig.cert_logo_path,
+            cert_company_name=orig.cert_company_name,
+            cert_legal_text=orig.cert_legal_text,
+            cert_standard=orig.cert_standard
+        )
+        db.session.add(new_course)
+        db.session.flush()
+        
+        for m in orig.modules:
+            new_m = TrainingModule(
+                course_id=new_course.id,
+                title=m.title,
+                content=m.content,
+                image_path=m.image_path,
+                video_path=m.video_path,
+                video_url=m.video_url,
+                attachment_path=m.attachment_path,
+                duration_minutes=m.duration_minutes,
+                order=m.order
+            )
+            db.session.add(new_m)
+            
+        for q in orig.questions:
+            new_q = TrainingQuestion(
+                course_id=new_course.id,
+                question_text=q.question_text,
+                option_a=q.option_a,
+                option_b=q.option_b,
+                option_c=q.option_c,
+                option_d=q.option_d,
+                correct_option=q.correct_option,
+                explanation=q.explanation,
+                difficulty=q.difficulty,
+                order=q.order
+            )
+            db.session.add(new_q)
+            
+        db.session.commit()
+        return jsonify({"status": "ok", "new_id": new_course.id})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"error": str(e)}), 500
 
 
 # ----------------- ROTAS OPERACIONAIS DO LMS (MOBILE) -----------------
@@ -6079,30 +6528,25 @@ def api_gestao_treinamentos_lms_publish(id):
 @login_required
 def api_treinamentos_meus():
     try:
-        # Fetch only published assigned courses
-        assigns = TrainingAssignment.query.filter_by(user_id=current_user.id).join(TrainingCourse).filter(TrainingCourse.is_published == True).all()
+        assigns = TrainingAssignment.query.filter_by(user_id=current_user.id).all()
         results = []
         for a in assigns:
             c = a.course
             if not c:
                 continue
-            
-            # count modules read
-            read_count = 0
-            if a.modules_read:
-                try:
-                    read_ids = [int(x) for x in a.modules_read.split(",") if x.strip().isdigit()]
-                    read_count = len(read_ids)
-                except Exception:
-                    pass
-                    
+                
+            modules_read_ids = [m for m in (a.modules_read or "").split(",") if m.strip()]
+            read_count = len(modules_read_ids)
             results.append({
+                "assignment_id": a.id,
                 "course_id": c.id,
                 "title": c.title,
                 "description": c.description,
                 "category": c.category or "Geral",
+                "passing_grade": c.passing_grade or 70,
                 "is_mandatory": c.is_mandatory,
                 "deadline": c.deadline.strftime("%d/%m/%Y") if c.deadline else None,
+                "completed_at": a.completed_at.strftime("%d/%m/%Y") if a.completed_at else None,
                 "status": a.status or "pendente",
                 "best_score": a.best_score,
                 "modules_read": read_count,
@@ -6111,6 +6555,20 @@ def api_treinamentos_meus():
                 "badge_name": c.badge_name,
                 "badge_icon": c.badge_icon,
                 "badge_color": c.badge_color,
+                "difficulty_level": getattr(c, "difficulty_level", "intermediario") or "intermediario",
+                "workload_hours": float(getattr(c, "workload_hours", 1.0) or 1.0),
+                "xp_reward": int(getattr(c, "xp_reward", 100) or 100),
+                "cert_title": getattr(c, "cert_title", "CERTIFICADO DE CAPACITAÇÃO TÉCNICA") or "CERTIFICADO DE CAPACITAÇÃO TÉCNICA",
+                "cert_subtitle": getattr(c, "cert_subtitle", "concluiu com aproveitamento e total conformidade técnica o treinamento operacional de:") or "concluiu com aproveitamento e total conformidade técnica o treinamento operacional de:",
+                "cert_style": getattr(c, "cert_style", "classic") or "classic",
+                "cert_signature_role": getattr(c, "cert_signature_role", "Coordenação Técnica & Operações") or "Coordenação Técnica & Operações",
+                "cert_issuer_name": getattr(c, "cert_issuer_name", "") or "",
+                "cert_validity_months": int(getattr(c, "cert_validity_months", 0) or 0),
+                "cert_logo_path": getattr(c, "cert_logo_path", "") or "",
+                "cert_company_name": getattr(c, "cert_company_name", "") or "",
+                "cert_legal_text": getattr(c, "cert_legal_text", "Válido exclusivamente para fins de capacitação interna e procedimentos operacionais da empresa.") or "Válido exclusivamente para fins de capacitação interna e procedimentos operacionais da empresa.",
+                "cert_standard": getattr(c, "cert_standard", "Norma Interna de Qualidade & Procedimento Operacional Padrão") or "Norma Interna de Qualidade & Procedimento Operacional Padrão",
+                "user_name": current_user.username,
                 "course_type": c.course_type or 'lms'
             })
         return jsonify(results)
@@ -6129,12 +6587,29 @@ def api_treinamentos_meus_selos():
             c = a.course
             if not c:
                 continue
+            completed_str = a.completed_at.strftime("%d/%m/%Y") if a.completed_at else "Concluído"
             results.append({
+                "course_id": c.id,
                 "title": c.title,
-                "badge_name": c.badge_name,
-                "badge_icon": c.badge_icon,
-                "badge_color": c.badge_color,
-                "score": a.best_score or 100
+                "category": c.category or "Geral",
+                "badge_name": c.badge_name or "Certificado",
+                "badge_icon": c.badge_icon or "fa-award",
+                "badge_color": c.badge_color or "#0d9488",
+                "score": a.best_score or 100,
+                "workload_hours": getattr(c, "workload_hours", 1.0) or 1.0,
+                "xp_reward": getattr(c, "xp_reward", 100) or 100,
+                "cert_title": getattr(c, "cert_title", "CERTIFICADO DE CAPACITAÇÃO TÉCNICA") or "CERTIFICADO DE CAPACITAÇÃO TÉCNICA",
+                "cert_subtitle": getattr(c, "cert_subtitle", "concluiu com aproveitamento e total conformidade técnica o treinamento operacional de:") or "concluiu com aproveitamento e total conformidade técnica o treinamento operacional de:",
+                "cert_style": getattr(c, "cert_style", "classic") or "classic",
+                "cert_signature_role": getattr(c, "cert_signature_role", "Coordenação Técnica & Operações") or "Coordenação Técnica & Operações",
+                "cert_issuer_name": getattr(c, "cert_issuer_name", "") or "",
+                "cert_validity_months": int(getattr(c, "cert_validity_months", 0) or 0),
+                "cert_logo_path": getattr(c, "cert_logo_path", "") or "",
+                "cert_company_name": getattr(c, "cert_company_name", "") or "",
+                "cert_legal_text": getattr(c, "cert_legal_text", "Válido exclusivamente para fins de capacitação interna e procedimentos operacionais da empresa.") or "Válido exclusivamente para fins de capacitação interna e procedimentos operacionais da empresa.",
+                "cert_standard": getattr(c, "cert_standard", "Norma Interna de Qualidade & Procedimento Operacional Padrão") or "Norma Interna de Qualidade & Procedimento Operacional Padrão",
+                "completed_at": completed_str,
+                "user_name": current_user.username
             })
         return jsonify(results)
     except Exception as e:
@@ -6163,6 +6638,9 @@ def api_treinamentos_conteudo(course_id):
             "content": m.content,
             "image_path": m.image_path,
             "video_path": m.video_path,
+            "video_url": getattr(m, 'video_url', None),
+            "attachment_path": getattr(m, 'attachment_path', None),
+            "duration_minutes": getattr(m, 'duration_minutes', 10),
             "order": m.order
         } for m in c.modules]
         
@@ -6173,6 +6651,8 @@ def api_treinamentos_conteudo(course_id):
             "option_b": q.option_b,
             "option_c": q.option_c,
             "option_d": q.option_d,
+            "explanation": getattr(q, 'explanation', None),
+            "difficulty": getattr(q, 'difficulty', 'medio'),
             "order": q.order
         } for q in c.questions]
         
@@ -6196,6 +6676,7 @@ def api_treinamentos_conteudo(course_id):
                     "user_answer": user_ans,
                     "correct_answer": correct_ans,
                     "is_correct": is_correct,
+                    "explanation": getattr(q, 'explanation', None),
                     "options": {
                         "a": q.option_a,
                         "b": q.option_b,
@@ -6220,6 +6701,22 @@ def api_treinamentos_conteudo(course_id):
             "allow_retake": c.allow_retake,
             "attempts_count": attempts_count,
             "course_type": c.course_type or 'lms',
+            "difficulty_level": getattr(c, 'difficulty_level', 'intermediario'),
+            "workload_hours": getattr(c, 'workload_hours', 1.0),
+            "xp_reward": getattr(c, 'xp_reward', 100),
+            "badge_name": c.badge_name,
+            "badge_icon": c.badge_icon,
+            "badge_color": c.badge_color,
+            "cert_title": getattr(c, "cert_title", "CERTIFICADO DE CAPACITAÇÃO TÉCNICA") or "CERTIFICADO DE CAPACITAÇÃO TÉCNICA",
+            "cert_subtitle": getattr(c, "cert_subtitle", "concluiu com aproveitamento e total conformidade técnica o treinamento operacional de:") or "concluiu com aproveitamento e total conformidade técnica o treinamento operacional de:",
+            "cert_style": getattr(c, "cert_style", "classic") or "classic",
+            "cert_signature_role": getattr(c, "cert_signature_role", "Coordenação Técnica & Operações") or "Coordenação Técnica & Operações",
+            "cert_issuer_name": getattr(c, "cert_issuer_name", "") or "",
+            "cert_validity_months": int(getattr(c, "cert_validity_months", 0) or 0),
+            "cert_logo_path": getattr(c, "cert_logo_path", "") or "",
+            "cert_company_name": getattr(c, "cert_company_name", "") or "",
+            "cert_legal_text": getattr(c, "cert_legal_text", "Válido exclusivamente para fins de capacitação interna e procedimentos operacionais da empresa.") or "Válido exclusivamente para fins de capacitação interna e procedimentos operacionais da empresa.",
+            "cert_standard": getattr(c, "cert_standard", "Norma Interna de Qualidade & Procedimento Operacional Padrão") or "Norma Interna de Qualidade & Procedimento Operacional Padrão",
             "last_attempt": last_attempt,
             "modules": modules,
             "questions": questions

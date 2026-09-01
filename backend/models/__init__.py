@@ -54,6 +54,8 @@ class User(UserMixin, db.Model):
         raw_perm = perm[5:] if perm.startswith("perm_") else perm
 
         # Role-based defaults (garante que as abas básicas apareçam por perfil mesmo se permissions estiver vazio)
+        if raw_perm in ("treinamentos_mobile", "perm_treinamentos_mobile"):
+            return True
         if self.role == "manutencao" and raw_perm == "manutencao_os":
             return True
         if self.role == "tech" and raw_perm in ("checklist_mobile", "treinamentos_mobile"):
@@ -321,6 +323,20 @@ class TrainingCourse(db.Model):
     badge_color = db.Column(db.String(20), default='#0d9488')
     allow_retake = db.Column(db.Boolean, default=False)
     course_type = db.Column(db.String(50), default="lms")
+    difficulty_level = db.Column(db.String(50), default="intermediario")
+    workload_hours = db.Column(db.Float, default=1.0)
+    xp_reward = db.Column(db.Integer, default=100)
+    target_team_ids = db.Column(db.String(255), default="")
+    cert_title = db.Column(db.String(500), default='CERTIFICADO DE CAPACITAÇÃO TÉCNICA')
+    cert_subtitle = db.Column(db.Text, default='concluiu com aproveitamento e total conformidade técnica o treinamento operacional de:')
+    cert_style = db.Column(db.String(100), default='classic')
+    cert_signature_role = db.Column(db.String(255), default='Coordenação Técnica & Operações')
+    cert_issuer_name = db.Column(db.String(255), default='')
+    cert_validity_months = db.Column(db.Integer, default=0)
+    cert_logo_path = db.Column(db.Text, default='')
+    cert_company_name = db.Column(db.String(255), default='')
+    cert_legal_text = db.Column(db.Text, default='Válido exclusivamente para fins de capacitação interna e procedimentos operacionais da empresa.')
+    cert_standard = db.Column(db.String(500), default='Norma Interna de Qualidade & Procedimento Operacional Padrão')
 
     modules = db.relationship("TrainingModule", backref="course", cascade="all, delete-orphan", lazy=True, order_by="TrainingModule.order")
     questions = db.relationship("TrainingQuestion", backref="course", cascade="all, delete-orphan", lazy=True, order_by="TrainingQuestion.order")
@@ -336,6 +352,9 @@ class TrainingModule(db.Model):
     order = db.Column(db.Integer, default=0)
     image_path = db.Column(db.String(255), nullable=True)
     video_path = db.Column(db.String(255), nullable=True)
+    video_url = db.Column(db.String(500), nullable=True)
+    attachment_path = db.Column(db.String(255), nullable=True)
+    duration_minutes = db.Column(db.Integer, default=10)
 
 
 class TrainingQuestion(db.Model):
@@ -348,6 +367,8 @@ class TrainingQuestion(db.Model):
     option_c = db.Column(db.String(255), nullable=False)
     option_d = db.Column(db.String(255), nullable=False)
     correct_option = db.Column(db.String(1), nullable=False)
+    explanation = db.Column(db.Text, nullable=True)
+    difficulty = db.Column(db.String(50), default="medio")
     order = db.Column(db.Integer, default=0)
 
 
