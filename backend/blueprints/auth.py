@@ -969,6 +969,7 @@ def sanitize_and_validate_phone(phone: str):
 @admin_required
 def users_new():
     username = request.form.get("username", "").strip()
+    full_name = request.form.get("full_name", "").strip()
     password = request.form.get("password", "").strip()
     role = request.form.get("role", "tech").strip().lower()
     email = request.form.get("email", "").strip()
@@ -992,12 +993,20 @@ def users_new():
 
     perms = get_default_perms(role)
 
-    u = User(username=username, role=role, email=email, phone=phone, telegram_chat_id=telegram_chat_id, permissions=json.dumps(perms))
+    u = User(
+        username=username,
+        full_name=full_name,
+        role=role,
+        email=email,
+        phone=phone,
+        telegram_chat_id=telegram_chat_id,
+        permissions=json.dumps(perms)
+    )
     u.set_password(password)
     db.session.add(u)
     db.session.commit()
 
-    registrar_log(f"Usuário criado: {username} ({role})")
+    registrar_log(f"Usuário criado: {username} ({role}) - Nome: {full_name or 'N/A'}")
     flash("Usuário cadastrado com permissões padrão.", "success")
     return redirect(url_for("users"))
 
@@ -1008,11 +1017,16 @@ def users_new():
 @admin_required
 def users_role(uid):
     u = User.query.get_or_404(uid)
+    full_name = request.form.get("full_name", "").strip()
     role = request.form.get("role", u.role).strip().lower()
     email = request.form.get("email", "").strip()
     phone = request.form.get("phone", "").strip()
     telegram_chat_id = request.form.get("telegram_chat_id", "").strip()
     pwd = request.form.get("password", "").strip()
+
+    # Atualiza o nome completo do colaborador se informado no formulário
+    if "full_name" in request.form:
+        u.full_name = full_name
 
     # --- Atualização de senha (se fornecida) ---
     if pwd:
@@ -1060,7 +1074,7 @@ def users_role(uid):
     else:
         flash(f"Dados atualizados para {role}.", "success")
 
-    registrar_log(f"Perfil atualizado: {u.username} -> {role}")
+    registrar_log(f"Perfil atualizado: {u.username} -> {role} (Nome: {u.full_name or 'N/A'})")
     return redirect(url_for("users"))
 
 

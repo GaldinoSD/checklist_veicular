@@ -15,6 +15,7 @@ class User(UserMixin, db.Model):
     __tablename__ = "user"
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
+    full_name = db.Column(db.String(150), nullable=True)
     password_hash = db.Column(db.String(255), nullable=False)
     is_admin_legacy = db.Column("is_admin", db.Boolean, default=False)
     role = db.Column(db.String(20), default=None)
@@ -31,6 +32,10 @@ class User(UserMixin, db.Model):
 
     def check_password(self, pwd: str) -> bool:
         return check_password_hash(self.password_hash, pwd)
+
+    @property
+    def display_name(self):
+        return self.full_name if self.full_name else self.username
 
     @property
     def is_online(self):
@@ -208,14 +213,17 @@ class Announcement(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(200), nullable=False)
     content = db.Column(db.Text, nullable=False)
-    target_type = db.Column(db.String(50))  # internal, external, company, all
+    target_type = db.Column(db.String(50))  # internal, external, company, all, user
     target_id = db.Column(db.Integer)        # ID da empresa se target_type == company
     target_role = db.Column(db.String(50), nullable=True) # admin, supervisor, tech, manutencao
     user_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="CASCADE"), nullable=True)
     user = db.relationship("User", foreign_keys=[user_id], backref="targeted_announcements")
+    category = db.Column(db.String(50), default="geral")  # geral, treinamento, escala, sistema
+    whatsapp_status = db.Column(db.String(100), default="desativado")  # enviado, sem_telefone, desativado, falha
     expires_at = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=agora)
     created_by = db.Column(db.Integer, db.ForeignKey("user.id"))
+    reads = db.relationship("AnnouncementRead", backref="announcement", cascade="all, delete-orphan", lazy="dynamic")
 
     @property
     def message(self):

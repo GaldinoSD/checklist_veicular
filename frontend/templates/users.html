@@ -158,15 +158,17 @@
                                 {% elif u.role == 'supervisor' %}bg-gradient-to-br from-sky-500 to-blue-600
                                 {% elif u.role == 'manutencao' %}bg-gradient-to-br from-indigo-500 to-indigo-600
                                 {% else %}bg-gradient-to-br from-emerald-500 to-teal-600{% endif %}">
-                                {{ u.username[0] | upper }}
+                                {{ (u.full_name[0] if u.full_name else u.username[0]) | upper }}
                             </div>
                             <div>
                                 <div class="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2">
-                                    {{ u.username }}
+                                    {% if u.full_name %}{{ u.full_name }}{% else %}{{ u.username }}{% endif %}
                                     <span class="text-[9px] font-mono text-slate-400 font-bold">#{{ u.id }}</span>
                                 </div>
-                                <div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">
-                                    {% if u.username == 'admin' %}Administrador Raiz{% elif u.role == 'supervisor' %}Gestão de Equipes{% elif u.role == 'manutencao' %}Oficina / Mecânica{% else %}Operação Técnica{% endif %}
+                                <div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-0.5 flex items-center gap-1.5">
+                                    <span class="text-slate-500 dark:text-slate-400 lowercase font-mono">@{{ u.username }}</span>
+                                    <span>•</span>
+                                    <span>{% if u.username == 'admin' %}Administrador Raiz{% elif u.role == 'supervisor' %}Gestão de Equipes{% elif u.role == 'manutencao' %}Oficina / Mecânica{% else %}Operação Técnica{% endif %}</span>
                                 </div>
                             </div>
                         </div>
@@ -275,6 +277,18 @@
         <div class="p-6">
             <form method="post" action="{{ url_for('users_role', uid=u.id) }}" class="space-y-4">
                 
+                <!-- Nome Completo do Colaborador -->
+                <div>
+                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">
+                        Nome Completo do Colaborador <span class="text-emerald-600 dark:text-emerald-400 normal-case tracking-normal font-normal">(Nome oficial para Certificados)</span>
+                    </label>
+                    <div class="relative">
+                        <i class="fa-solid fa-id-card absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                        <input id="full_name_{{ u.id }}" name="full_name" type="text" value="{{ u.full_name or '' }}" placeholder="Ex: João da Silva Santos"
+                            class="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 transition-all">
+                    </div>
+                </div>
+
                 <!-- Nova Senha -->
                 <div>
                     <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">
@@ -668,10 +682,22 @@
         <div class="p-6">
             <form method="post" action="{{ url_for('users_new') }}" class="space-y-4">
                 
+                <!-- Nome Completo do Colaborador (Registro & Certificados) -->
+                <div>
+                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">
+                        Nome Completo do Colaborador <span class="text-emerald-600 dark:text-emerald-400 normal-case tracking-normal font-normal">(Nome oficial que sairá no Certificado)</span>
+                    </label>
+                    <div class="relative">
+                        <i class="fa-solid fa-id-card absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                        <input id="new_full_name" name="full_name" type="text" placeholder="Ex: João da Silva Santos"
+                            class="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 transition-all">
+                    </div>
+                </div>
+
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <!-- Nome de Usuário -->
+                    <!-- Login de Usuário -->
                     <div>
-                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">Nome de Usuário *</label>
+                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">Login de Acesso *</label>
                         <div class="relative">
                             <i class="fa-solid fa-user absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
                             <input id="new_username" name="username" required placeholder="Ex: joao.silva"

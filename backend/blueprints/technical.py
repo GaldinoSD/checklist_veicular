@@ -4298,7 +4298,7 @@ def gestao_relatorios_preview():
 def cleanup_old_announcements():
     """
     Remove comunicados (avisos) com mais de 3 dias de criação para otimização de espaço.
-    Remove também os registros de leitura correspondentes.
+    Remove também comunicados órfãos de treinamentos que já foram excluídos.
     """
     try:
         three_days_ago = agora() - timedelta(days=3)
@@ -4308,6 +4308,28 @@ def cleanup_old_announcements():
             AnnouncementRead.query.filter(AnnouncementRead.announcement_id.in_(old_ids)).delete(synchronize_session=False)
             Announcement.query.filter(Announcement.id.in_(old_ids)).delete(synchronize_session=False)
             db.session.commit()
+            
+        # Limpa comunicados de treinamentos que já não existem mais no sistema
+        existing_courses = {c.title.lower().strip() for c in TrainingCourse.query.all()}
+        training_anns = Announcement.query.filter(
+            db.or_(
+                Announcement.category == "treinamento",
+                Announcement.title.ilike("%Treinamento Atribuído:%"),
+                Announcement.title.ilike("%Treinamento:%")
+            )
+        ).all()
+        
+        for ann in training_anns:
+            matched = False
+            for title in existing_courses:
+                if title and title in ann.title.lower():
+                    matched = True
+                    break
+            if not matched:
+                AnnouncementRead.query.filter_by(announcement_id=ann.id).delete()
+                db.session.delete(ann)
+                
+        db.session.commit()
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Erro ao limpar comunicados antigos: {e}")
@@ -4609,19 +4631,34 @@ def api_avisos_fila_programada():
 def api_avisos_historico():
     """Paginated announcements history for 'load more' functionality."""
     page = request.args.get("page", 1, type=int)
+    category_filter = request.args.get("category", "").strip()
     per_page = 20
     
-    pagination = Announcement.query.order_by(
+    query = Announcement.query
+    if category_filter and category_filter != "todos":
+        query = query.filter_by(category=category_filter)
+        
+    pagination = query.order_by(
         Announcement.created_at.desc()
     ).paginate(page=page, per_page=per_page, error_out=False)
     
     items = []
     for n in pagination.items:
         target_label = "Todos"
+        target_full_name = ""
         target_type = "all"
+        is_read = False
+        read_at_str = ""
+
         if n.user:
             target_label = n.user.username
+            target_full_name = n.user.full_name or n.user.username
             target_type = "user"
+            # Verifica se foi lido pelo colaborador
+            read_rec = AnnouncementRead.query.filter_by(announcement_id=n.id, user_id=n.user.id).first()
+            if read_rec:
+                is_read = True
+                read_at_str = read_rec.read_at.strftime("%d/%m/%Y %H:%M")
         elif n.target_role and n.target_role != "all":
             target_label = n.target_role.capitalize()
             target_type = "role"
@@ -4650,9 +4687,14 @@ def api_avisos_historico():
             "id": n.id,
             "title": n.title,
             "message": n.content or "",
+            "category": getattr(n, "category", "geral") or "geral",
+            "whatsapp_status": getattr(n, "whatsapp_status", "desativado") or "desativado",
             "created_at": n.created_at.strftime("%d/%m/%Y %H:%M:%S"),
             "target_label": target_label,
+            "target_full_name": target_full_name,
             "target_type": target_type,
+            "is_read": is_read,
+            "read_at": read_at_str,
             "expires_text": expires_text
         })
     
@@ -6168,6 +6210,61 @@ def api_gestao_treinamentos_lms_upload_media():
         return jsonify({"error": str(e)}), 500
 
 
+def dispatch_individual_training_notification(course, user, created_by_id=None):
+    """
+    Gera um comunicado individual para o colaborador vinculado ao treinamento,
+    dispara WhatsApp se ativo e registra no histórico de envios e logs do sistema.
+    """
+    try:
+        if not user or user.username == "admin":
+            return "ignorado"
+
+        # Verifica se já foi gerado um comunicado para este curso e usuário nas últimas 12 horas para evitar spam
+        recent_ann = Announcement.query.filter_by(
+            user_id=user.id,
+            category="treinamento",
+            title=f"📚 Treinamento Atribuído: {course.title}"
+        ).order_by(Announcement.created_at.desc()).first()
+
+        if recent_ann and (agora() - recent_ann.created_at).total_seconds() < 43200:
+            return recent_ann.whatsapp_status or "enviado"
+
+        # 1. Disparo individual via WhatsApp
+        w_status = "desativado"
+        w_config = WhatsAppConfig.query.first()
+        user_name = user.display_name
+        course_name = course.title
+
+        if w_config and w_config.is_enabled:
+            if user.phone:
+                try:
+                    w_msg = f"📚 *Novo Treinamento Atribuído*\n\nOlá *{user_name}*, você foi vinculado ao treinamento *{course_name}*.\n\nAcesse o portal na aba *Meus Treinamentos* para realizar suas aulas e avaliação."
+                    send_whatsapp_message(user.phone, w_msg)
+                    w_status = "enviado"
+                except Exception:
+                    w_status = "falha"
+            else:
+                w_status = "sem_telefone"
+
+        # 2. Comunicado Individual no Portal
+        ann = Announcement(
+            title=f"📚 Treinamento Atribuído: {course.title}",
+            content=f"Olá {user_name}, você foi vinculado ao treinamento \"{course_name}\". Acesse a aba Meus Treinamentos no portal para assistir aos módulos e realizar a avaliação técnica.",
+            target_type="user",
+            target_role=user.role or "tech",
+            user_id=user.id,
+            category="treinamento",
+            whatsapp_status=w_status,
+            created_by=created_by_id or (current_user.id if current_user.is_authenticated else None)
+        )
+        db.session.add(ann)
+        registrar_log(f"Comunicado de treinamento enviado para {user.username}: {course.title} (WhatsApp: {w_status})")
+        return w_status
+    except Exception as e:
+        current_app.logger.error(f"Erro ao notificar atribuição de treinamento: {e}")
+        return "erro"
+
+
 @technical_bp.route("/api/gestao/treinamentos_lms", methods=["POST"])
 @supervisor_allowed
 def api_gestao_treinamentos_lms_save():
@@ -6281,27 +6378,51 @@ def api_gestao_treinamentos_lms_save():
         assign_all = bool(data.get("assign_all", False))
         user_ids = data.get("user_ids") or []
         int_user_ids = [int(x) for x in user_ids if str(x).isdigit()]
+        target_team_ids = str(data.get("target_team_ids") or "")
+
+        # Se equipes foram informadas, adiciona os membros de cada equipe
+        if target_team_ids:
+            team_ids = [int(tid.strip()) for tid in target_team_ids.split(",") if tid.strip().isdigit()]
+            if team_ids:
+                teams = Team.query.filter(Team.id.in_(team_ids)).all()
+                for tm in teams:
+                    for mem in tm.members:
+                        if mem.id not in int_user_ids and mem.username != "admin":
+                            int_user_ids.append(mem.id)
         
         course.is_published = True
 
         if assign_all:
-            # Atribui a todos os colaboradores do sistema
-            for u in User.query.all():
+            # Atribui individualmente a todos os colaboradores do sistema
+            for u in User.query.filter(User.username != "admin").all():
                 if not TrainingAssignment.query.filter_by(course_id=course.id, user_id=u.id).first():
                     db.session.add(TrainingAssignment(course_id=course.id, user_id=u.id, status="pendente"))
+                    dispatch_individual_training_notification(course, u, current_user.id if current_user.is_authenticated else None)
         elif int_user_ids:
             # Sincroniza os usuários específicos selecionados:
             existing = TrainingAssignment.query.filter_by(course_id=course.id).all()
             for ex in existing:
                 if ex.user_id not in int_user_ids:
+                    # Remove comunicados deste usuário vinculados a este treinamento
+                    old_announcements = Announcement.query.filter(
+                        Announcement.user_id == ex.user_id,
+                        Announcement.category == "treinamento",
+                        Announcement.title.ilike(f"%{course.title}%")
+                    ).all()
+                    for old_ann in old_announcements:
+                        db.session.delete(old_ann)
                     db.session.delete(ex)
             for uid in int_user_ids:
                 if not TrainingAssignment.query.filter_by(course_id=course.id, user_id=uid).first():
                     db.session.add(TrainingAssignment(course_id=course.id, user_id=uid, status="pendente"))
+                    target_u = User.query.get(uid)
+                    if target_u:
+                        dispatch_individual_training_notification(course, target_u, current_user.id if current_user.is_authenticated else None)
         elif not course_id:
-            # Novo curso sem seleção específica: atribui a todos
-            for u in User.query.all():
+            # Novo curso sem seleção específica: atribui individualmente a todos
+            for u in User.query.filter(User.username != "admin").all():
                 db.session.add(TrainingAssignment(course_id=course.id, user_id=u.id, status="pendente"))
+                dispatch_individual_training_notification(course, u, current_user.id if current_user.is_authenticated else None)
                 
         db.session.commit()
         return jsonify({"status": "ok", "id": course.id})
@@ -6400,8 +6521,27 @@ def api_gestao_treinamentos_lms_delete(id):
         if not c:
             return jsonify({"error": "Treinamento não encontrado"}), 404
             
+        course_title = (c.title or "").strip()
+
+        # Exclui todos os comunicados vinculados a este treinamento para que sumam da central do colaborador e dos logs
+        announcements = Announcement.query.filter(
+            db.or_(
+                Announcement.title == f"📚 Treinamento Atribuído: {course_title}",
+                Announcement.title.ilike(f"%{course_title}%"),
+                Announcement.content.ilike(f"%{course_title}%")
+            )
+        ).all()
+        for ann in announcements:
+            AnnouncementRead.query.filter_by(announcement_id=ann.id).delete()
+            db.session.delete(ann)
+
+        # Exclui tentativas e atribuições vinculadas
+        TrainingAttempt.query.filter_by(course_id=c.id).delete()
+        TrainingAssignment.query.filter_by(course_id=c.id).delete()
+
         db.session.delete(c)
         db.session.commit()
+        registrar_log(f"Treinamento '{course_title}' e seus comunicados vinculados foram excluídos com sucesso.")
         return jsonify({"status": "ok"})
     except Exception as e:
         db.session.rollback()
@@ -6425,22 +6565,26 @@ def api_gestao_treinamentos_lms_publish(id):
         
         assigned_count = 0
         if assign_all:
-            for u in User.query.all():
+            for u in User.query.filter(User.username != "admin").all():
                 exists = TrainingAssignment.query.filter_by(course_id=c.id, user_id=u.id).first()
                 if not exists:
                     db.session.add(TrainingAssignment(course_id=c.id, user_id=u.id, status="pendente"))
+                    dispatch_individual_training_notification(c, u, current_user.id if current_user.is_authenticated else None)
                     assigned_count += 1
         elif int_user_ids:
             for uid in int_user_ids:
                 exists = TrainingAssignment.query.filter_by(course_id=c.id, user_id=uid).first()
                 if not exists:
                     db.session.add(TrainingAssignment(course_id=c.id, user_id=uid, status="pendente"))
+                    target_u = User.query.get(uid)
+                    if target_u:
+                        dispatch_individual_training_notification(c, target_u, current_user.id if current_user.is_authenticated else None)
                     assigned_count += 1
                     
         db.session.commit()
         return jsonify({
             "status": "ok", 
-            "message": f"Treinamento publicado e atribuído a {assigned_count} colaboradores."
+            "message": f"Treinamento publicado e atribuído a {assigned_count} colaboradores com comunicados enviados."
         })
     except Exception as e:
         db.session.rollback()
@@ -6568,7 +6712,7 @@ def api_treinamentos_meus():
                 "cert_company_name": getattr(c, "cert_company_name", "") or "",
                 "cert_legal_text": getattr(c, "cert_legal_text", "Válido exclusivamente para fins de capacitação interna e procedimentos operacionais da empresa.") or "Válido exclusivamente para fins de capacitação interna e procedimentos operacionais da empresa.",
                 "cert_standard": getattr(c, "cert_standard", "Norma Interna de Qualidade & Procedimento Operacional Padrão") or "Norma Interna de Qualidade & Procedimento Operacional Padrão",
-                "user_name": current_user.username,
+                "user_name": getattr(current_user, 'full_name', None) or current_user.username,
                 "course_type": c.course_type or 'lms'
             })
         return jsonify(results)
@@ -6609,7 +6753,7 @@ def api_treinamentos_meus_selos():
                 "cert_legal_text": getattr(c, "cert_legal_text", "Válido exclusivamente para fins de capacitação interna e procedimentos operacionais da empresa.") or "Válido exclusivamente para fins de capacitação interna e procedimentos operacionais da empresa.",
                 "cert_standard": getattr(c, "cert_standard", "Norma Interna de Qualidade & Procedimento Operacional Padrão") or "Norma Interna de Qualidade & Procedimento Operacional Padrão",
                 "completed_at": completed_str,
-                "user_name": current_user.username
+                "user_name": getattr(current_user, 'full_name', None) or current_user.username
             })
         return jsonify(results)
     except Exception as e:

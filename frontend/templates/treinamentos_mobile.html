@@ -216,27 +216,27 @@
                 <div id="result-badge-earned" class="hidden mb-6"></div>
 
                 <!-- Painel de Ações e Decisão do Usuário -->
-                <div class="space-y-3 pt-2">
+                <div class="space-y-2.5 pt-3 max-w-sm mx-auto">
                     <!-- Botão de Certificado (se aprovado) -->
                     <div id="result-cert-action" class="hidden">
-                        <button onclick="openCertificateModal(currentCourseId)" class="w-full py-4 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-teal-500/30 transition-all active:scale-95 flex items-center justify-center gap-2">
-                            <i class="fa-solid fa-graduation-cap text-base"></i> Visualizar Meu Certificado Digital
+                        <button onclick="openCertificateModal(currentCourseId)" class="w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white rounded-xl font-bold text-xs uppercase tracking-wider shadow-sm hover:shadow transition-all active:scale-[0.99] flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-graduation-cap text-sm"></i> Visualizar Certificado
                         </button>
                     </div>
 
                     <!-- Botão Seguir para o Gabarito -->
-                    <button onclick="showGabaritoView()" class="w-full py-3.5 bg-teal-500/10 hover:bg-teal-500/20 text-teal-600 dark:text-teal-400 border border-teal-500/20 rounded-2xl font-black text-xs uppercase tracking-widest transition-all active:scale-95 flex items-center justify-center gap-2">
-                        <i class="fa-solid fa-clipboard-check text-sm"></i> Seguir para o Gabarito
+                    <button onclick="showGabaritoView()" class="w-full py-2.5 px-4 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-white/10 rounded-xl font-bold text-xs uppercase tracking-wider transition-all active:scale-[0.99] flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-clipboard-check text-xs"></i> Seguir para o Gabarito
                     </button>
 
                     <!-- Botão Refazer se Reprovado -->
-                    <button id="result-retry-btn" onclick="closeResult(); startExam(currentCourseId)" class="hidden w-full py-3.5 bg-amber-500 hover:bg-amber-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-lg shadow-amber-500/25 transition-all active:scale-95 flex items-center justify-center gap-2">
-                        <i class="fa-solid fa-rotate mr-1"></i> Refazer Avaliação
+                    <button id="result-retry-btn" onclick="closeResult(); startExam(currentCourseId)" class="hidden w-full py-2.5 px-4 bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white rounded-xl font-bold text-xs uppercase tracking-wider shadow-sm transition-all active:scale-[0.99] flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-rotate text-xs mr-1"></i> Refazer Avaliação
                     </button>
 
                     <!-- Botão Voltar ao Início -->
-                    <button onclick="closeResult(); loadTrainings()" class="w-full py-3.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl transition-all active:scale-95 flex items-center justify-center gap-2">
-                        <i class="fa-solid fa-house text-xs"></i> Voltar para o Início
+                    <button onclick="closeResult(); loadTrainings()" class="w-full py-2 px-4 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 rounded-xl font-medium text-xs transition-all flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-arrow-left text-xs"></i> Voltar ao Início
                     </button>
                 </div>
             </div>
@@ -379,7 +379,7 @@
 
                 <p class="text-[10px] text-slate-400 mb-1 uppercase font-semibold">Certificamos com louvor e conformidade operacional que o colaborador</p>
                 <div id="cert-student-name" class="text-xl md:text-2xl font-black text-teal-600 dark:text-teal-400 mb-2 tracking-wide underline underline-offset-8 decoration-teal-500/30">
-                    {{ current_user.username }}
+                    {{ current_user.full_name or current_user.username }}
                 </div>
                 <p id="cert-main-subtitle" class="text-xs text-slate-500 mb-3 max-w-xl mx-auto leading-relaxed">concluiu com aproveitamento e total conformidade técnica o treinamento operacional de:</p>
 
@@ -1250,12 +1250,12 @@ function showResult(result) {
         const certBtn = certActionEl.querySelector('button');
         if (certBtn) {
             certBtn.innerHTML = isRPG 
-                ? '<i class="fa-solid fa-shield-halved text-base"></i> Visualizar Laudo & Certificado Tático' 
-                : '<i class="fa-solid fa-graduation-cap text-base"></i> Visualizar Meu Certificado Digital';
+                ? '<i class="fa-solid fa-shield-halved text-sm"></i> Visualizar Certificado Tático' 
+                : '<i class="fa-solid fa-graduation-cap text-sm"></i> Visualizar Certificado';
             if (isRPG) {
-                certBtn.className = "w-full py-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-amber-500/30 transition-all active:scale-95 flex items-center justify-center gap-2";
+                certBtn.className = "w-full py-3 px-4 bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white rounded-xl font-bold text-xs uppercase tracking-wider shadow-sm hover:shadow transition-all active:scale-[0.99] flex items-center justify-center gap-2";
             } else {
-                certBtn.className = "w-full py-4 bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-teal-500/30 transition-all active:scale-95 flex items-center justify-center gap-2";
+                certBtn.className = "w-full py-3 px-4 bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white rounded-xl font-bold text-xs uppercase tracking-wider shadow-sm hover:shadow transition-all active:scale-[0.99] flex items-center justify-center gap-2";
             }
         }
     }
@@ -1354,7 +1354,7 @@ function openCertificateModal(courseId) {
             ...courseData,
             score: (certData && (certData.best_score || certData.score)) || (courseData.last_attempt ? courseData.last_attempt.score : 100),
             completed_at: (certData && certData.completed_at) || new Date().toLocaleDateString('pt-BR'),
-            user_name: (certData && certData.user_name) || '{{ current_user.username }}'
+            user_name: (certData && certData.user_name) || '{{ (current_user.full_name or current_user.username)|replace("\'", "\\\'") }}'
         };
     }
 
@@ -1371,7 +1371,7 @@ function openCertificateModal(courseId) {
 function fillCertificateModal(data) {
     const isRPG = (data.course_type === 'rpg_crisis');
 
-    document.getElementById('cert-student-name').textContent = data.user_name || '{{ current_user.username }}';
+    document.getElementById('cert-student-name').textContent = data.user_name || '{{ (current_user.full_name or current_user.username)|replace("\'", "\\\'") }}';
     document.getElementById('cert-course-title').textContent = data.title || (isRPG ? 'Simulação de Gestão de Crise' : 'Treinamento Técnico');
     document.getElementById('cert-workload').innerHTML = `<i class="fa-regular fa-clock mr-1 ${isRPG ? 'text-amber-500' : 'text-teal-500'}"></i> ${isRPG ? 'Tempo' : 'Carga'}: ${data.workload_hours || 1.0}h`;
     document.getElementById('cert-score').innerHTML = `<i class="fa-solid ${isRPG ? 'fa-bullseye' : 'fa-chart-simple'} mr-1 text-emerald-500"></i> ${isRPG ? 'Prontidão' : 'Nota'}: ${data.score}%`;

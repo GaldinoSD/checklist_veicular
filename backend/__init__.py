@@ -197,6 +197,7 @@ def create_app():
     def ensure_min_schema():
         """Garante as migrações leves no PostgreSQL."""
         stmts = [
+            text('ALTER TABLE "user" ADD COLUMN IF NOT EXISTS full_name VARCHAR(150)'),
             text('ALTER TABLE "user" ADD COLUMN IF NOT EXISTS role VARCHAR(20)'),
             text('ALTER TABLE "user" ADD COLUMN IF NOT EXISTS last_login TIMESTAMP'),
             text('ALTER TABLE "user" ADD COLUMN IF NOT EXISTS last_seen TIMESTAMP'),
@@ -232,6 +233,8 @@ def create_app():
             text('ALTER TABLE announcement ADD COLUMN IF NOT EXISTS target_role VARCHAR(50)'),
             text('ALTER TABLE announcement ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES "user"(id) ON DELETE CASCADE'),
             text('ALTER TABLE announcement ADD COLUMN IF NOT EXISTS expires_at TIMESTAMP'),
+            text('ALTER TABLE announcement ADD COLUMN IF NOT EXISTS category VARCHAR(50) DEFAULT \'geral\''),
+            text('ALTER TABLE announcement ADD COLUMN IF NOT EXISTS whatsapp_status VARCHAR(100) DEFAULT \'desativado\''),
             text('''
                 CREATE TABLE IF NOT EXISTS gps_geofence (
                     id SERIAL PRIMARY KEY,
