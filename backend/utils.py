@@ -81,7 +81,7 @@ def parse_periodo(periodo: str):
 
 def registrar_log(acao):
     try:
-        user = current_user.username if current_user.is_authenticated else "Sistema"
+        user = current_user.username if (current_user and getattr(current_user, 'is_authenticated', False)) else "Sistema"
         db.session.add(Log(usuario=user, acao=acao, data_hora=agora()))
         db.session.commit()
     except Exception as e:
@@ -433,6 +433,7 @@ def supervisor_allowed(view):
         "api_atividades_realizadas": "gestao_atividades",
         "atividade_realizada_pdf": "gestao_atividades",
         "api_escalas": "gestao_escalas",
+        "api_cronogramas": "gestao_escalas",
         "api_reunioes": "gestao_reunioes",
         "api_atividades": "gestao_atividades",
         "api_rota_exata": "gestao_rota_exata",

@@ -532,23 +532,33 @@ def avarias_registro():
             db.session.add(nova)
             db.session.commit()
             
-            # WhatsApp Nova OS
+            # Disparo da automação de Nova OS (os_created_alert)
             try:
-                w_config = WhatsAppConfig.query.first()
-                if w_config and w_config.is_enabled:
-                    v = Vehicle.query.get(nova.vehicle_id)
-                    veiculo_txt = f"{v.brand} {v.model}" if v else f"ID {nova.vehicle_id}"
-                    placa_txt = v.plate if v else ""
-                    tpl = w_config.msg_os_opened
-                    msg = tpl.format(
-                        veiculo=veiculo_txt,
-                        placa=placa_txt,
-                        gravidade=nova.gravidade or "Média",
-                        descricao=nova.descricao
-                    )
-                    send_whatsapp_message(msg)
-            except Exception as whatsapp_err:
-                print("⚠️ Erro ao disparar whatsapp para nova OS:", whatsapp_err)
+                from backend.blueprints.technical import dispatch_system_rule_alert
+                v = Vehicle.query.get(nova.vehicle_id)
+                veiculo_txt = f"{v.brand} {v.model}" if v else f"ID {nova.vehicle_id}"
+                placa_txt = v.plate if v else ""
+                title = f"🛠️ Nova O.S. Aberta: #{nova.id} ({placa_txt})"
+                content = f"Nova Ordem de Serviço #{nova.id} aberta para o veículo {veiculo_txt} ({placa_txt}). Gravidade: {nova.gravidade or 'Média'}. Descrição: {nova.descricao}."
+                placeholders = {
+                    "usuario": current_user.display_name,
+                    "id": str(nova.id),
+                    "veiculo": veiculo_txt,
+                    "placa": placa_txt,
+                    "gravidade": nova.gravidade or "Média",
+                    "descricao": nova.descricao or ""
+                }
+                dispatch_system_rule_alert(
+                    "os_created_alert",
+                    user_target=None,
+                    title_default=title,
+                    content_default=content,
+                    placeholders=placeholders,
+                    target_role="supervisor",
+                    bypass_silence=True
+                )
+            except Exception as os_err:
+                print("⚠️ Erro ao disparar alerta para nova OS:", os_err)
 
             registrar_log(f"Avaria criada para veículo ID={nova.vehicle_id} (por {current_user.username})")
             return redirect(url_for("avarias_registro"))
@@ -3043,21 +3053,29 @@ def checklist_mobile():
         
         if has_fail:
             try:
-                w_config = WhatsAppConfig.query.first()
-                if w_config and w_config.is_enabled:
-                    tpl = w_config.msg_checklist_fail
-                    veiculo_txt = f"{v.brand} {v.model}" if v else f"ID {vehicle_id}"
-                    placa_txt = v.plate if v else ""
-                    
-                    msg = tpl.format(
-                        tecnico=tech,
-                        veiculo=veiculo_txt,
-                        placa=placa_txt
-                    )
-                    msg += f"\n*Itens com inconformidade:* {', '.join(fail_items)}"
-                    send_whatsapp_message(msg)
-            except Exception as whatsapp_err:
-                print("⚠️ Erro ao disparar whatsapp para checklist:", whatsapp_err)
+                from backend.blueprints.technical import dispatch_system_rule_alert
+                veiculo_txt = f"{v.brand} {v.model}" if v else f"ID {vehicle_id}"
+                placa_txt = v.plate if v else ""
+                fail_summary = ", ".join(fail_items)
+                title = f"🚨 Checklist Não Conforme: {placa_txt}"
+                content = f"O técnico {tech} enviou checklist para o veículo {veiculo_txt} ({placa_txt}) com itens reprovados: {fail_summary}."
+                placeholders = {
+                    "usuario": tech,
+                    "veiculo": veiculo_txt,
+                    "placa": placa_txt,
+                    "descricao": f"Itens não conformes: {fail_summary}"
+                }
+                dispatch_system_rule_alert(
+                    "checklist_issue_alert",
+                    user_target=None,
+                    title_default=title,
+                    content_default=content,
+                    placeholders=placeholders,
+                    target_role="supervisor",
+                    bypass_silence=True
+                )
+            except Exception as alert_err:
+                print("⚠️ Erro ao disparar alerta de checklist com avaria:", alert_err)
 
         try:
             generate_checklist_pdf(checklist, raw)

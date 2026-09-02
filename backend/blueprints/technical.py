@@ -35,7 +35,7 @@ from backend.models import (
     UserToolStatus, ToolSuggestion, Training, TrainingCourse, TrainingModule,
     TrainingQuestion, TrainingAssignment, TrainingAttempt, Badge, Generator,
     RFO, Solicitacao, SupervisaoTecnica, RotaExata, Team, Task, CompletedActivity, Patio, Encerramento,
-    Scale, Meeting, Note, Activity, SystemRule, Company, Contract, ExternalCollaborator, SystemRuleLog,
+    Scale, Schedule, Meeting, Note, Activity, SystemRule, Company, Contract, ExternalCollaborator, SystemRuleLog,
     AvariaOS, Log, Vistoria, VistoriaFoto, SystemConfig, WhatsAppConfig, TelegramConfig, EmailConfig,
     CloudflareConfig, TraccarConfig, MetabaseConfig,
     NetworkNode, NetworkSplitter, NetworkEdge, GPSDevice, GPSLog, GPSGeofence, GPSAlert,
@@ -476,6 +476,20 @@ def api_rfo(id=None):
             r.photos_json = json.dumps(filenames)
             
         db.session.commit()
+
+        # Disparo da automação de RFO (rfo_alert)
+        try:
+            r_title = f"⚡ RFO {r.number or r.id}: {r.problem_type or 'Incidente'}"
+            r_content = f"Registro de Falha Operacional '{r.title}'. Status: {r.status}. Responsável: {r.tech_responsible or 'N/A'}. Ação: {r.action or 'Em análise'}."
+            r_placeholders = {
+                "usuario": current_user.display_name,
+                "rfo_titulo": r.title or f"RFO #{r.id}",
+                "descricao": r.description or r.problem_type or "Incidente de rede"
+            }
+            dispatch_system_rule_alert("rfo_alert", None, r_title, r_content, r_placeholders, target_role="supervisor", bypass_silence=True)
+        except Exception as rfo_err:
+            print("⚠️ Erro ao disparar alerta de RFO:", rfo_err)
+
         return jsonify({"status": "ok", "id": r.id})
 
     rfos = RFO.query.order_by(RFO.date.desc().nullslast()).all()
@@ -649,6 +663,22 @@ def api_supervisao(id=None):
             s.photos_json = None
 
         db.session.commit()
+
+        # Disparo da automação de Supervisão Técnica Reprovada / Irregularidades (supervisao_alert)
+        if s.irregularities or (s.action and s.action.strip()):
+            try:
+                sup_name = current_user.display_name
+                title = f"📋 Supervisão Técnica com Irregularidade: ID #{s.id}"
+                content = f"A supervisão técnica #{s.id} realizada por {sup_name} registrou irregularidades. Ação tomada: {s.action or 'Nenhuma ação informada'}. Obs: {s.obs or 'Sem obs'}."
+                placeholders = {
+                    "usuario": sup_name,
+                    "id": str(s.id),
+                    "descricao": s.irregularities or s.action or "Irregularidades apontadas em campo"
+                }
+                dispatch_system_rule_alert("supervisao_alert", None, title, content, placeholders, target_role="supervisor", bypass_silence=True)
+            except Exception as sup_err:
+                print("⚠️ Erro ao disparar alerta de supervisao:", sup_err)
+
         return jsonify({"status": "ok", "success": True, "id": s.id})
 
     items = SupervisaoTecnica.query.order_by(SupervisaoTecnica.date.desc()).all()
@@ -704,6 +734,21 @@ def api_solicitacoes(id=None):
             s.management_response = f"Sem justificativa adicional (Por: {current_user.username} em {now_str})"
             
         db.session.commit()
+
+        # Disparo da automação de Solicitações (solicitacao_alert) - Notifica o solicitante
+        if s.user:
+            try:
+                s_title = f"🔔 Solicitação Atualizada: {s.status}"
+                s_content = f"Olá {s.user.display_name}, sua solicitação do tipo '{s.type}' foi atualizada para '{s.status}'. Resposta: {s.management_response}."
+                s_placeholders = {
+                    "usuario": s.user.display_name,
+                    "solicitacao": s.type,
+                    "descricao": s.management_response or s.status
+                }
+                dispatch_system_rule_alert("solicitacao_alert", s.user, s_title, s_content, s_placeholders, bypass_silence=True)
+            except Exception as sol_err:
+                print("⚠️ Erro ao notificar resposta de solicitacao:", sol_err)
+
         return jsonify({"status": "ok", "success": True})
 
     if request.method == "POST":
@@ -715,6 +760,20 @@ def api_solicitacoes(id=None):
         s.obs = data.get("obs")
         s.status = "PENDENTE"
         db.session.commit()
+
+        # Disparo da automação de Solicitações (solicitacao_alert) - Notifica a gestão
+        try:
+            s_title = f"📩 Nova Solicitação: {s.type}"
+            s_content = f"O colaborador {current_user.display_name} registrou uma nova solicitação do tipo '{s.type}'. Descrição: {s.description or 'Sem descrição'}."
+            s_placeholders = {
+                "usuario": current_user.display_name,
+                "solicitacao": s.type,
+                "descricao": s.description or ""
+            }
+            dispatch_system_rule_alert("solicitacao_alert", None, s_title, s_content, s_placeholders, target_role="supervisor", bypass_silence=True)
+        except Exception as sol_err:
+            print("⚠️ Erro ao disparar alerta de nova solicitacao:", sol_err)
+
         return jsonify({"status": "ok", "success": True, "id": s.id})
 
     items = Solicitacao.query.order_by(Solicitacao.date.desc()).all()
@@ -982,6 +1041,23 @@ def api_tarefas(id=None):
             t.show_on_calendar = data.get("show_on_calendar") in [True, "true", "True", 1, "1"]
             
         db.session.commit()
+
+        # Disparo da automação de Atribuição de Tarefa (task_assigned_alert)
+        if t.responsible:
+            try:
+                t_title = f"📌 Nova Tarefa Atribuída: {t.title}"
+                prazo_str = t.deadline.strftime('%d/%m/%Y') if t.deadline else "A definir"
+                t_content = f"Olá {t.responsible.display_name}, você recebeu a atribuição da tarefa '{t.title}' (Prioridade: {t.priority or 'Média'}, Prazo: {prazo_str}). Descrição: {t.description or 'Sem descrição adicional'}."
+                t_placeholders = {
+                    "usuario": t.responsible.display_name,
+                    "tarefa": t.title,
+                    "descricao": t.description or "Nova atividade operacional",
+                    "data": prazo_str
+                }
+                dispatch_system_rule_alert("task_assigned_alert", t.responsible, t_title, t_content, t_placeholders, bypass_silence=True)
+            except Exception as task_err:
+                print("⚠️ Erro ao disparar alerta de tarefa:", task_err)
+
         return jsonify({"status": "ok", "id": t.id})
 
     items = Task.query.order_by(Task.deadline.asc().nullslast()).all()
@@ -1409,9 +1485,309 @@ def api_escalas(id=None):
                     "description": t.description
                 }
             })
+
+    # 7. Carrega Cronogramas no Calendário (Schedule model)
+    schedules = Schedule.query.filter(Schedule.show_on_calendar == True).all()
+    for sch in schedules:
+        sch_title = sch.title or 'Sem Título'
+        type_labels = {
+            'treinamento': '🎓 TREINAMENTO',
+            'evento': '🎯 EVENTO',
+            'reuniao_externa': '🤝 REUNIÃO EXTERNA',
+            'auditoria': '🔍 AUDITORIA',
+            'outro': '📌 CRONOGRAMA'
+        }
+        type_colors = {
+            'treinamento': '#8B5CF6',
+            'evento': '#EC4899',
+            'reuniao_externa': '#F59E0B',
+            'auditoria': '#EF4444',
+            'outro': '#6366F1'
+        }
+        prefix = type_labels.get(sch.event_type, '📌 CRONOGRAMA')
+        color = type_colors.get(sch.event_type, '#EC4899')
+
+        if sch.status == 'CANCELADO':
+            color = '#94A3B8'
+            prefix = f'✖ {prefix}'
+        elif sch.status == 'CONCLUIDO':
+            color = '#64748B'
+            prefix = f'✔ {prefix}'
+
+        event_data = {
+            "id": f"sch_{sch.id}",
+            "title": f"{prefix}: {sch_title}",
+            "start": sch.date_start.isoformat(),
+            "allDay": True,
+            "color": color,
+            "extendedProps": {
+                "type": "cronograma",
+                "event_type": sch.event_type,
+                "title": sch_title,
+                "description": sch.description,
+                "location": sch.location,
+                "time_start": sch.time_start,
+                "time_end": sch.time_end,
+                "status": sch.status
+            }
+        }
+        if sch.date_end and sch.date_end != sch.date_start:
+            event_data["end"] = (sch.date_end + timedelta(days=1)).isoformat()
+        events.append(event_data)
             
     return jsonify(events)
 
+
+# =========================================================================
+# 📅 CRONOGRAMAS — CRUD API
+# =========================================================================
+@technical_bp.route("/api/gestao/cronogramas", methods=["GET", "POST"])
+@technical_bp.route("/api/gestao/cronogramas/<int:id>", methods=["PUT", "DELETE"])
+@supervisor_allowed
+def api_cronogramas(id=None):
+    """CRUD completo para Cronogramas (treinamentos, eventos, auditorias, etc.)"""
+
+    if request.method == "DELETE":
+        sch = Schedule.query.get_or_404(id)
+        # Remove comunicados vinculados
+        linked = Announcement.query.filter_by(category="cronograma").filter(
+            Announcement.title.contains(sch.title)
+        ).all()
+        for ann in linked:
+            AnnouncementRead.query.filter_by(announcement_id=ann.id).delete()
+            db.session.delete(ann)
+        db.session.delete(sch)
+        db.session.commit()
+        registrar_log(f"Cronograma excluído: {sch.title}")
+        return jsonify({"status": "ok"})
+
+    if request.method in ["POST", "PUT"]:
+        data = request.json or {}
+        sid = id or data.get("id")
+
+        if sid:
+            sch = Schedule.query.get(sid)
+            if not sch:
+                return jsonify({"error": "Cronograma não encontrado"}), 404
+            is_new = False
+        else:
+            sch = Schedule()
+            db.session.add(sch)
+            is_new = True
+
+        sch.title = data.get("title", sch.title or "")
+        sch.description = data.get("description", sch.description)
+        sch.event_type = data.get("event_type", sch.event_type or "evento")
+        sch.location = data.get("location", sch.location)
+        sch.time_start = data.get("time_start", sch.time_start)
+        sch.time_end = data.get("time_end", sch.time_end)
+        sch.status = data.get("status", sch.status or "AGENDADO")
+        sch.obs = data.get("obs", sch.obs)
+        sch.show_on_calendar = data.get("show_on_calendar", True) in [True, "true", "True", 1, "1"]
+        sch.notify_whatsapp = data.get("notify_whatsapp", True) in [True, "true", "True", 1, "1"]
+
+        date_start = data.get("date_start")
+        if date_start:
+            sch.date_start = datetime.strptime(date_start, "%Y-%m-%d").date()
+        date_end = data.get("date_end")
+        if date_end:
+            sch.date_end = datetime.strptime(date_end, "%Y-%m-%d").date()
+        else:
+            sch.date_end = None
+
+        p_ids = data.get("participants_ids")
+        if isinstance(p_ids, list):
+            sch.participants_ids = ",".join(map(str, p_ids))
+        else:
+            sch.participants_ids = p_ids
+
+        t_ids = data.get("team_ids")
+        if isinstance(t_ids, list):
+            sch.team_ids = ",".join(map(str, t_ids))
+        else:
+            sch.team_ids = t_ids
+
+        if is_new:
+            sch.created_by = current_user.id if current_user.is_authenticated else None
+
+        db.session.commit()
+
+        # Se o cronograma for para hoje ou amanhã (criado em cima da hora), dispara imediatamente para os participantes
+        today_dt = agora().date()
+        if sch.date_start and sch.date_start <= today_dt + timedelta(days=1) and sch.status not in ["CANCELADO", "CONCLUIDO"]:
+            if sch.participants_ids:
+                dispatch_cronograma_notifications(sch)
+
+        registrar_log(f"Cronograma {'criado' if is_new else 'atualizado'}: {sch.title}")
+        return jsonify({"status": "ok", "id": sch.id})
+
+    # GET — lista de cronogramas
+    show_all = request.args.get("all") == "true"
+    query = Schedule.query
+    if not show_all:
+        today_date = datetime.now().date()
+        query = query.filter(Schedule.date_start >= today_date)
+    items = query.order_by(Schedule.date_start.asc()).all()
+
+    res = []
+    for sch in items:
+        p_names = ""
+        if sch.participants_ids:
+            try:
+                ids = [int(x) for x in sch.participants_ids.split(",") if x.strip().isdigit()]
+                p_names = ", ".join([u.username for u in User.query.filter(User.id.in_(ids))])
+            except Exception:
+                p_names = sch.participants_ids
+        res.append({
+            "id": sch.id,
+            "title": sch.title,
+            "description": sch.description,
+            "event_type": sch.event_type,
+            "date_start": str(sch.date_start) if sch.date_start else None,
+            "date_end": str(sch.date_end) if sch.date_end else None,
+            "time_start": sch.time_start,
+            "time_end": sch.time_end,
+            "location": sch.location,
+            "participants_ids": sch.participants_ids,
+            "participants_names": p_names,
+            "team_ids": sch.team_ids,
+            "status": sch.status,
+            "notify_whatsapp": sch.notify_whatsapp,
+            "show_on_calendar": sch.show_on_calendar,
+            "obs": sch.obs,
+            "created_at": sch.created_at.isoformat() if sch.created_at else None
+        })
+    return jsonify(res)
+
+
+def dispatch_cronograma_notifications(schedule):
+    """
+    Gera comunicados individuais para cada participante do cronograma
+    e dispara via WhatsApp se ativado.
+    Suporta eventos criados em cima da hora (HOJE/Amanhã) e eventos programados para a véspera.
+    """
+    if not schedule.participants_ids:
+        return 0
+
+    type_labels = {
+        'treinamento': 'Treinamento',
+        'evento': 'Evento',
+        'reuniao_externa': 'Reunião Externa',
+        'auditoria': 'Auditoria',
+        'outro': 'Compromisso'
+    }
+    type_label = type_labels.get(schedule.event_type, 'Compromisso')
+    date_str = schedule.date_start.strftime("%d/%m/%Y") if schedule.date_start else "A definir"
+    time_str = f" às {schedule.time_start}" if schedule.time_start else ""
+    location_str = f"\nLocal: {schedule.location}" if schedule.location else ""
+
+    try:
+        ids = [int(x) for x in str(schedule.participants_ids).split(",") if x.strip().isdigit()]
+    except Exception:
+        return 0
+
+    users = User.query.filter(User.id.in_(ids)).all()
+    w_config = WhatsAppConfig.query.first()
+    today_dt = agora().date()
+    sent_count = 0
+
+    for user in users:
+        user_name = getattr(user, 'display_name', user.username)
+
+        if schedule.date_start == today_dt:
+            ann_title = f"📅 {type_label} HOJE: {schedule.title}"
+            ann_content = (
+                f"Olá {user_name}, você está incluído no cronograma \"{schedule.title}\" "
+                f"({type_label}) agendado para HOJE ({date_str}){time_str}."
+                f"{location_str}"
+                f"\n\nAcesse o portal para mais detalhes."
+            )
+            w_msg = (
+                f"📅 *{type_label} HOJE*\n\n"
+                f"Olá *{user_name}*, você tem o cronograma *{schedule.title}* agendado para *HOJE* ({date_str}{time_str})."
+                f"{location_str}\n\nAcesse o portal para mais detalhes."
+            )
+        elif schedule.date_start == today_dt + timedelta(days=1):
+            ann_title = f"📅 Lembrete de {type_label} Amanhã: {schedule.title}"
+            ann_content = (
+                f"Olá {user_name}, você está incluído no cronograma \"{schedule.title}\" "
+                f"({type_label}) agendado para amanhã, {date_str}{time_str}."
+                f"{location_str}"
+                f"\n\nAcesse o portal para mais detalhes."
+            )
+            w_msg = (
+                f"📅 *Lembrete de {type_label} Amanhã*\n\n"
+                f"Olá *{user_name}*, você tem o cronograma *{schedule.title}* agendado para amanhã ({date_str}{time_str})."
+                f"{location_str}\n\nAcesse o portal para mais detalhes."
+            )
+        else:
+            ann_title = f"📅 {type_label} Agendado: {schedule.title}"
+            ann_content = (
+                f"Olá {user_name}, você foi incluído no cronograma \"{schedule.title}\" "
+                f"({type_label}) agendado para {date_str}{time_str}."
+                f"{location_str}"
+                f"\n\nAcesse o portal para mais detalhes."
+            )
+            w_msg = (
+                f"📅 *{type_label} Agendado*\n\n"
+                f"Olá *{user_name}*, você foi incluído no cronograma *{schedule.title}* agendado para *{date_str}{time_str}*.{location_str}\n\nAcesse o portal para mais detalhes."
+            )
+
+        # Evita duplicidade no mesmo dia
+        exists = Announcement.query.filter_by(
+            title=ann_title,
+            user_id=user.id,
+            category="cronograma"
+        ).first()
+
+        if not exists:
+            # WhatsApp
+            w_status = "desativado"
+            if schedule.notify_whatsapp and w_config and w_config.is_enabled:
+                if user.phone:
+                    try:
+                        send_whatsapp_message(user.phone, w_msg, rule_slug="cronograma_alert", user_id=user.id)
+                        w_status = "enviado"
+                    except Exception as w_err:
+                        print(f"⚠️ Erro ao enviar WhatsApp do cronograma para {user.username}: {w_err}")
+                        w_status = "falha"
+                else:
+                    w_status = "sem_telefone"
+
+            # Comunicado no Portal
+            ann = Announcement(
+                title=ann_title,
+                content=ann_content,
+                target_type="user",
+                target_role=user.role or "tech",
+                user_id=user.id,
+                category="cronograma",
+                whatsapp_status=w_status,
+                created_by=current_user.id if (current_user and current_user.is_authenticated) else None
+            )
+            if schedule.date_start:
+                ann.expires_at = datetime.combine(schedule.date_start + timedelta(days=2), datetime.max.time())
+            db.session.add(ann)
+
+            try:
+                sch_log = SystemRuleLog(
+                    rule_slug="cronograma_alert",
+                    user_id=user.id,
+                    channel="whatsapp" if w_status == "enviado" else "system",
+                    recipient=user.username,
+                    message=ann_content,
+                    status="SENT" if w_status in ["enviado", "desativado", "sem_telefone"] else "FAILED"
+                )
+                db.session.add(sch_log)
+            except Exception:
+                pass
+
+            sent_count += 1
+
+    if sent_count > 0:
+        db.session.commit()
+        registrar_log(f"Comunicados de cronograma enviados para {sent_count} participante(s): {schedule.title}")
+    return sent_count
 
 
 @technical_bp.route("/api/gestao/proximos_feriados", methods=["GET"])
@@ -4597,14 +4973,211 @@ def avisos():
     # Busca todos os manuais
     manuais_records = Manual.query.all()
     manuais = {m.role_group: m.content for m in manuais_records}
-    # Garante chaves para evitar UndefinedError
     for k in {"admin_supervisor", "manutencao", "tech"}:
         if k not in manuais:
             manuais[k] = ""
             
+    # 🤖 CATÁLOGO MASTER DE 18 REGRAS DE AUTOMAÇÃO DO SISTEMA
+    default_rules = [
+        # --- 1. OPERAÇÃO, ESCALAS & EVENTOS ---
+        {
+            "slug": "scale_alert",
+            "name": "Alerta de Plantão / Escala (Véspera)",
+            "description": "Notifica os colaboradores escalados para o plantão 1 dia antes da data (na véspera às 08:00h).",
+            "trigger_days": 1,
+            "silence_days": 1,
+            "channels": "system,whatsapp"
+        },
+        {
+            "slug": "cronograma_alert",
+            "name": "Cronogramas & Eventos Operacionais",
+            "description": "Notifica participantes de treinamentos, reuniões, auditorias e eventos (na véspera às 08:00h e imediato em cadastros para hoje ou amanhã).",
+            "trigger_days": 1,
+            "silence_days": 1,
+            "channels": "system,whatsapp"
+        },
+        {
+            "slug": "meeting_alert",
+            "name": "Lembrete de Reunião Agendada",
+            "description": "Envia lembrete aos participantes no dia da reunião técnica ou operacional agendada às 08:00h.",
+            "trigger_days": 0,
+            "silence_days": 1,
+            "channels": "system,whatsapp"
+        },
+        {
+            "slug": "task_assigned_alert",
+            "name": "Atribuição de Tarefa / Atividade",
+            "description": "Notifica o técnico responsável imediatamente ao receber a designação de uma nova tarefa ou atividade operacional.",
+            "trigger_days": 0,
+            "silence_days": 0,
+            "channels": "system,whatsapp"
+        },
+        {
+            "slug": "solicitacao_alert",
+            "name": "Solicitações Técnicas & Materiais",
+            "description": "Notifica gestores na criação de solicitações de materiais/pátio e alerta o solicitante quando houver alteração de status.",
+            "trigger_days": 0,
+            "silence_days": 0,
+            "channels": "system,whatsapp"
+        },
+
+        # --- 2. FROTA, VEÍCULOS & MOTORISTAS ---
+        {
+            "slug": "late_checklist",
+            "name": "Checklist Diário Pendente",
+            "description": "Alerta técnicos de plantão que ainda não preencheram o checklist do veículo no dia às 08:00h.",
+            "trigger_days": 1,
+            "silence_days": 1,
+            "channels": "system,whatsapp"
+        },
+        {
+            "slug": "checklist_issue_alert",
+            "name": "Checklist com Avaria / Não Conforme",
+            "description": "Alerta supervisores e gestores da frota imediatamente quando um checklist veicular é enviado apontando avarias ou itens reprovados.",
+            "trigger_days": 0,
+            "silence_days": 0,
+            "channels": "system,whatsapp"
+        },
+        {
+            "slug": "cnh_expiry_alert",
+            "name": "Vencimento de CNH de Motoristas",
+            "description": "Alerta motoristas e gestão quando a Carteira Nacional de Habilitação (CNH) estiver a vencer em menos de X dias.",
+            "trigger_days": 30,
+            "silence_days": 7,
+            "channels": "system,whatsapp,email"
+        },
+        {
+            "slug": "vehicle_doc_alert",
+            "name": "Documentos do Veículo (IPVA / Seguro)",
+            "description": "Alerta gestores sobre o vencimento de IPVA, seguro ou licenciamento dos veículos da frota em menos de X dias.",
+            "trigger_days": 30,
+            "silence_days": 7,
+            "channels": "system,email"
+        },
+        {
+            "slug": "vehicle_maintenance_km_alert",
+            "name": "Revisão Preventiva por KM da Frota",
+            "description": "Alerta quando um veículo atinge ou ultrapassa a quilometragem recomendada para troca de óleo ou revisão preventiva.",
+            "trigger_days": 500,
+            "silence_days": 3,
+            "channels": "system,whatsapp"
+        },
+        {
+            "slug": "os_alert",
+            "name": "Ordem de Serviço (O.S) Atrasada",
+            "description": "Notifica os responsáveis por ordens de serviço de manutenção pendentes há mais de X dias.",
+            "trigger_days": 7,
+            "silence_days": 2,
+            "channels": "system,whatsapp"
+        },
+        {
+            "slug": "os_created_alert",
+            "name": "Nova O.S / Avaria Aberta",
+            "description": "Notifica os responsáveis e a equipe de manutenção imediatamente ao registrar uma nova ordem de serviço de avaria.",
+            "trigger_days": 0,
+            "silence_days": 0,
+            "channels": "system,whatsapp"
+        },
+        {
+            "slug": "inactive_tech_alert",
+            "name": "Lembrete de Inatividade (+X dias)",
+            "description": "Identifica automaticamente técnicos sem envio de checklists ou vistorias há mais de X dias e envia lembrete.",
+            "trigger_days": 7,
+            "silence_days": 3,
+            "channels": "system,whatsapp"
+        },
+
+        # --- 3. GESTÃO TÉCNICA, CAMPO & FERRAMENTAL ---
+        {
+            "slug": "supervisao_alert",
+            "name": "Supervisão Técnica Reprovada",
+            "description": "Alerta técnicos e supervisores imediatamente quando uma supervisão técnica em campo registrar irregularidades ou reprovação.",
+            "trigger_days": 0,
+            "silence_days": 0,
+            "channels": "system,whatsapp"
+        },
+        {
+            "slug": "rfo_alert",
+            "name": "Relatório de Falha Operacional (RFO)",
+            "description": "Notifica a equipe técnica e gestores no momento em que um RFO de incidente na rede for aberto ou concluído.",
+            "trigger_days": 0,
+            "silence_days": 0,
+            "channels": "system,whatsapp"
+        },
+        {
+            "slug": "tool_inspection_alert",
+            "name": "Inspeção de Ferramental Atrasada",
+            "description": "Identifica técnicos com kit de ferramentas que não realizam inspeção e assinatura de conferência há mais de X dias.",
+            "trigger_days": 30,
+            "silence_days": 7,
+            "channels": "system,whatsapp"
+        },
+
+        # --- 4. CAPACITAÇÃO & LMS ---
+        {
+            "slug": "training_alert",
+            "name": "Treinamentos LMS a Vencer / Pendentes",
+            "description": "Gera alertas individuais de treinamentos LMS pendentes ou vencendo em menos de X dias apenas para os colaboradores destinados.",
+            "trigger_days": 7,
+            "silence_days": 3,
+            "channels": "system,whatsapp"
+        },
+        {
+            "slug": "training_assigned_alert",
+            "name": "Novo Treinamento Atribuído no LMS",
+            "description": "Notifica o colaborador imediatamente ao ser matriculado em um novo curso ou treinamento na plataforma LMS.",
+            "trigger_days": 0,
+            "silence_days": 0,
+            "channels": "system,whatsapp"
+        }
+    ]
+    for dr in default_rules:
+        rule = SystemRule.query.filter_by(slug=dr["slug"]).first()
+        if not rule:
+            try:
+                rule = SystemRule(
+                    slug=dr["slug"],
+                    name=dr["name"],
+                    description=dr["description"],
+                    trigger_days=dr["trigger_days"],
+                    silence_days=dr.get("silence_days", 1),
+                    channels=dr["channels"],
+                    is_enabled=True
+                )
+                db.session.add(rule)
+                db.session.commit()
+            except Exception:
+                db.session.rollback()
+
     usuarios = User.query.filter(User.username != "admin").order_by(User.username.asc()).all()
     regras = SystemRule.query.order_by(SystemRule.id.asc()).all()
     
+    # Telemetria e Estatísticas de Automações
+    now_ref = agora()
+    today_start = datetime.combine(now_ref.date(), datetime.min.time())
+    seven_days_ago = today_start - timedelta(days=7)
+    
+    active_rules_count = sum(1 for r in regras if r.is_enabled)
+    total_rules_count = len(regras)
+    logs_today_count = SystemRuleLog.query.filter(SystemRuleLog.created_at >= today_start).count()
+    logs_today_failed = SystemRuleLog.query.filter(
+        SystemRuleLog.created_at >= today_start, 
+        SystemRuleLog.status.in_(["FAILED", "FAILED_RETRY"])
+    ).count()
+    
+    rule_stats = {}
+    for r in regras:
+        last_log = SystemRuleLog.query.filter_by(rule_slug=r.slug).order_by(SystemRuleLog.created_at.desc()).first()
+        count_7d = SystemRuleLog.query.filter(
+            SystemRuleLog.rule_slug == r.slug, 
+            SystemRuleLog.created_at >= seven_days_ago
+        ).count()
+        rule_stats[r.slug] = {
+            "last_sent": last_log.created_at.strftime("%d/%m/%Y às %H:%M") if last_log else "Nenhum ainda",
+            "last_status": last_log.status if last_log else None,
+            "count_7d": count_7d
+        }
+
     # Configurações das integrações
     whatsapp_config = WhatsAppConfig.query.first()
     if not whatsapp_config:
@@ -4629,6 +5202,11 @@ def avisos():
     metabase_config = MetabaseConfig.query.first() or MetabaseConfig()
     active_tab = request.args.get("tab", "comunicados")
     
+    whatsapp_ready = bool(whatsapp_config and whatsapp_config.is_enabled and whatsapp_config.apikey and whatsapp_config.api_url)
+    telegram_ready = bool(telegram_config and telegram_config.is_enabled and telegram_config.bot_token)
+    email_ready = bool(email_config and email_config.is_enabled and email_config.smtp_server)
+    system_ready = True
+    
     fila_programada = get_scheduled_alerts_queue(days_ahead=365)
     fila_programada_json = []
     for item in fila_programada:
@@ -4648,6 +5226,15 @@ def avisos():
         manuais=manuais, 
         usuarios=usuarios, 
         regras=regras,
+        rule_stats=rule_stats,
+        active_rules_count=active_rules_count,
+        total_rules_count=total_rules_count,
+        logs_today_count=logs_today_count,
+        logs_today_failed=logs_today_failed,
+        whatsapp_ready=whatsapp_ready,
+        telegram_ready=telegram_ready,
+        email_ready=email_ready,
+        system_ready=system_ready,
         whatsapp_config=whatsapp_config,
         telegram_config=telegram_config,
         email_config=email_config,
@@ -4656,6 +5243,307 @@ def avisos():
         metabase_config=metabase_config,
         active_tab=active_tab
     )
+
+
+def dispatch_system_rule_alert(rule_slug, user_target=None, title_default="", content_default="", placeholders=None, target_role=None, unique_check_title=None, phone_override=None, email_override=None, bypass_silence=False):
+    """
+    Despacha alertas para qualquer regra de automação respeitando canais habilitados,
+    templates personalizados, anti-spam e registrando log em SystemRuleLog.
+    """
+    rule = SystemRule.query.filter_by(slug=rule_slug).first()
+    if not rule or not rule.is_enabled:
+        return 0
+        
+    now_dt = agora()
+    today_dt = now_dt.date()
+    channels = [c.strip() for c in (rule.channels or "system,whatsapp").split(",") if c.strip()]
+    uid = getattr(user_target, "id", None)
+    placeholders = placeholders or {}
+    
+    # Anti-Spam / Período de silêncio
+    if not bypass_silence and rule.silence_days and rule.silence_days > 0:
+        silence_limit = now_dt - timedelta(days=rule.silence_days)
+        if uid:
+            exists_recent = SystemRuleLog.query.filter(
+                SystemRuleLog.rule_slug == rule.slug,
+                SystemRuleLog.user_id == uid,
+                SystemRuleLog.created_at >= silence_limit
+            ).first()
+        else:
+            exists_recent = SystemRuleLog.query.filter(
+                SystemRuleLog.rule_slug == rule.slug,
+                SystemRuleLog.recipient == (target_role or "all"),
+                SystemRuleLog.created_at >= silence_limit
+            ).first()
+        if exists_recent:
+            return 0
+            
+    sys_title = title_default
+    sys_content = content_default
+    if rule.msg_system and placeholders:
+        try:
+            sys_content = rule.msg_system.format(**placeholders)
+        except Exception:
+            pass
+            
+    title_to_check = unique_check_title or sys_title
+    system_sent = False
+    
+    # 1. Sistema
+    if "system" in channels:
+        if uid:
+            exists = Announcement.query.filter_by(title=title_to_check, user_id=uid).first()
+        else:
+            exists = Announcement.query.filter_by(title=title_to_check, target_role=target_role).first()
+            
+        if not exists:
+            ann = Announcement(
+                title=sys_title,
+                content=sys_content,
+                user_id=uid,
+                target_role=target_role,
+                created_by=None
+            )
+            ann.expires_at = datetime.combine(today_dt + timedelta(days=7), datetime.max.time())
+            db.session.add(ann)
+            system_sent = True
+            
+            try:
+                sys_log = SystemRuleLog(
+                    rule_slug=rule.slug,
+                    user_id=uid,
+                    channel="system",
+                    recipient=user_target.username if user_target else (target_role or "Todos"),
+                    message=sys_content,
+                    status="SENT"
+                )
+                db.session.add(sys_log)
+            except Exception as sys_err:
+                print("⚠️ Erro ao salvar log do painel:", sys_err)
+                
+    # 2. WhatsApp
+    if "whatsapp" in channels:
+        target_phone = phone_override or getattr(user_target, "phone", None)
+        w_config = WhatsAppConfig.query.first()
+        if w_config and w_config.is_enabled:
+            w_msg = None
+            if rule.msg_whatsapp:
+                try:
+                    w_msg = rule.msg_whatsapp.format(**placeholders)
+                except Exception:
+                    pass
+            if not w_msg:
+                w_msg = f"*{sys_title}*\n\n{sys_content}"
+            if target_phone:
+                send_whatsapp_message(target_phone, w_msg, rule_slug=rule.slug, user_id=uid)
+            elif not uid and not target_phone:
+                send_whatsapp_message(w_msg) # broadcast
+                
+    # 3. Telegram
+    if "telegram" in channels:
+        target_chat = getattr(user_target, "telegram_chat_id", None)
+        telegram_config = TelegramConfig.query.first()
+        if telegram_config and telegram_config.is_enabled:
+            t_msg = None
+            if rule.msg_telegram:
+                try:
+                    t_msg = rule.msg_telegram.format(**placeholders)
+                except Exception:
+                    pass
+            if not t_msg:
+                t_msg = f"<b>{sys_title}</b>\n\n{sys_content}"
+            chat_to_use = target_chat or telegram_config.chat_id
+            if chat_to_use:
+                send_telegram_message(chat_to_use, t_msg, rule_slug=rule.slug, user_id=uid)
+                
+    # 4. E-mail (SMTP)
+    if "email" in channels:
+        target_email = email_override or getattr(user_target, "email", None)
+        email_config = EmailConfig.query.first()
+        if email_config and email_config.is_enabled and target_email:
+            e_body = None
+            if rule.msg_email:
+                try:
+                    e_body = rule.msg_email.format(**placeholders)
+                except Exception:
+                    pass
+            if not e_body:
+                e_body = f"{sys_title}\n\n{sys_content}"
+            send_email_notification(target_email, sys_title, e_body, rule_slug=rule.slug, user_id=uid)
+            
+    return 1 if system_sent else 0
+
+
+@technical_bp.route("/api/system/rules/<slug>/update", methods=["POST"])
+@supervisor_allowed
+def api_system_rule_update(slug):
+    """Atualização assíncrona dos parâmetros da regra via AJAX."""
+    rule = SystemRule.query.filter_by(slug=slug).first()
+    if not rule:
+        return jsonify({"success": False, "error": "Regra de automação não encontrada."}), 404
+        
+    data = request.json if request.is_json else request.form
+    
+    if "is_enabled" in data:
+        val = data.get("is_enabled")
+        rule.is_enabled = val in [True, "true", "1", "on", 1]
+        
+    if "trigger_days" in data:
+        try:
+            rule.trigger_days = int(data.get("trigger_days"))
+        except (ValueError, TypeError):
+            pass
+            
+    if "silence_days" in data:
+        try:
+            rule.silence_days = int(data.get("silence_days"))
+        except (ValueError, TypeError):
+            pass
+            
+    if "channels" in data:
+        channels_val = data.get("channels")
+        if isinstance(channels_val, list):
+            rule.channels = ",".join(channels_val)
+        elif isinstance(channels_val, str):
+            rule.channels = channels_val
+            
+    if "msg_system" in data:
+        rule.msg_system = data.get("msg_system", "").strip()
+    if "msg_whatsapp" in data:
+        rule.msg_whatsapp = data.get("msg_whatsapp", "").strip()
+    if "msg_telegram" in data:
+        rule.msg_telegram = data.get("msg_telegram", "").strip()
+    if "msg_email" in data:
+        rule.msg_email = data.get("msg_email", "").strip()
+        
+    db.session.commit()
+    registrar_log(f"Regra de automação '{rule.name}' atualizada via painel")
+    
+    return jsonify({
+        "success": True,
+        "message": f"Automação '{rule.name}' atualizada com sucesso!",
+        "rule": {
+            "slug": rule.slug,
+            "name": rule.name,
+            "is_enabled": rule.is_enabled,
+            "trigger_days": rule.trigger_days,
+            "silence_days": rule.silence_days,
+            "channels": rule.channels.split(",") if rule.channels else []
+        }
+    })
+
+
+@technical_bp.route("/api/system/rules/<slug>/test", methods=["POST"])
+@supervisor_allowed
+def api_system_rule_test(slug):
+    """Gera preview das mensagens com tags resolvidas e opcionalmente dispara teste real para o usuário."""
+    rule = SystemRule.query.filter_by(slug=slug).first()
+    if not rule:
+        return jsonify({"success": False, "error": "Regra não encontrada."}), 404
+        
+    data = request.json if request.is_json else request.form
+    target_channel = data.get("channel", "system")
+    user_target = current_user
+    
+    placeholders = {
+        "usuario": getattr(user_target, 'display_name', user_target.username).capitalize(),
+        "data": agora().strftime("%d/%m/%Y"),
+        "escala": "Plantão Técnico de Sábado",
+        "curso": "NR-35 Trabalho em Altura",
+        "id": "1042",
+        "tipo": "Treinamento Operacional",
+        "local": "Auditório Central / Base",
+        "placa": "ABC-1234",
+        "veiculo": "Fiat Strada 2023",
+        "gravidade": "Média",
+        "descricao": "Item de inspeção não conforme",
+        "tarefa": "Manutenção Preventiva de Rota",
+        "solicitacao": "Reposição de Conectores e Cabos Drop",
+        "rfo_titulo": "Ruptura de Fibra Óptica - POP Central",
+        "km_atual": "45.000 km",
+        "dias": str(rule.trigger_days or 7)
+    }
+    
+    preview_msgs = {}
+    
+    # 1. Sistema
+    sys_tpl = rule.msg_system if rule.msg_system else f"⚠️ [TESTE] {rule.name}: Lembrete de teste para {{usuario}} em {{data}}."
+    try:
+        preview_msgs["system"] = sys_tpl.format(**placeholders)
+    except Exception:
+        preview_msgs["system"] = sys_tpl
+        
+    # 2. WhatsApp
+    w_tpl = rule.msg_whatsapp if rule.msg_whatsapp else f"🔔 *[TESTE] {rule.name}*\n\nOlá *{{usuario}}*, este é um disparo de teste da regra *{rule.name}* ({{data}})."
+    try:
+        preview_msgs["whatsapp"] = w_tpl.format(**placeholders)
+    except Exception:
+        preview_msgs["whatsapp"] = w_tpl
+        
+    # 3. Telegram
+    t_tpl = rule.msg_telegram if rule.msg_telegram else f"🔔 <b>[TESTE] {rule.name}</b>\n\nOlá <b>{{usuario}}</b>, disparo de teste gerado em {{data}}."
+    try:
+        preview_msgs["telegram"] = t_tpl.format(**placeholders)
+    except Exception:
+        preview_msgs["telegram"] = t_tpl
+        
+    # 4. E-mail
+    e_tpl = rule.msg_email if rule.msg_email else f"Olá {{usuario}},\n\nEste é um e-mail de teste da automação {rule.name} gerado em {{data}}."
+    try:
+        preview_msgs["email"] = e_tpl.format(**placeholders)
+    except Exception:
+        preview_msgs["email"] = e_tpl
+
+    send_now = data.get("send", False) in [True, "true", "1", 1]
+    dispatch_result = None
+
+    if send_now:
+        if target_channel == "whatsapp":
+            phone = user_target.phone or data.get("phone")
+            if not phone:
+                return jsonify({"success": False, "error": "Seu usuário não possui número de telefone cadastrado para teste de WhatsApp."}), 400
+            w_config = WhatsAppConfig.query.first()
+            if not w_config or not w_config.is_enabled:
+                return jsonify({"success": False, "error": "A integração do WhatsApp está desativada nas configurações."}), 400
+            send_whatsapp_message(phone, preview_msgs["whatsapp"], rule_slug=rule.slug, user_id=user_target.id)
+            dispatch_result = f"Mensagem de teste enviada com sucesso para o WhatsApp ({phone})!"
+        elif target_channel == "telegram":
+            t_config = TelegramConfig.query.first()
+            if not t_config or not t_config.is_enabled:
+                return jsonify({"success": False, "error": "A integração do Telegram está desativada nas configurações."}), 400
+            chat_id = user_target.telegram_chat_id or t_config.chat_id
+            if not chat_id:
+                return jsonify({"success": False, "error": "Nenhum chat_id configurado para teste de Telegram."}), 400
+            send_telegram_message(chat_id, preview_msgs["telegram"], rule_slug=rule.slug, user_id=user_target.id)
+            dispatch_result = f"Mensagem de teste enviada com sucesso para o Telegram!"
+        elif target_channel == "email":
+            email_config = EmailConfig.query.first()
+            if not email_config or not email_config.is_enabled:
+                return jsonify({"success": False, "error": "A integração de E-mail SMTP está desativada nas configurações."}), 400
+            email_addr = user_target.email or data.get("email")
+            if not email_addr:
+                return jsonify({"success": False, "error": "Seu usuário não possui e-mail cadastrado."}), 400
+            send_email_notification(email_addr, f"[TESTE] {rule.name}", preview_msgs["email"], rule_slug=rule.slug, user_id=user_target.id)
+            dispatch_result = f"E-mail de teste enviado com sucesso para {email_addr}!"
+        else:
+            # Sistema
+            ann = Announcement(
+                title=f"🔔 [TESTE] {rule.name}",
+                content=preview_msgs["system"],
+                target_type="user",
+                user_id=user_target.id,
+                category="sistema",
+                created_by=user_target.id
+            )
+            db.session.add(ann)
+            db.session.commit()
+            dispatch_result = "Notificação de teste criada com sucesso na Central de Notificações!"
+
+    return jsonify({
+        "success": True,
+        "previews": preview_msgs,
+        "dispatch_result": dispatch_result
+    })
 
 
 
@@ -4868,7 +5756,6 @@ def get_technicians_for_scale(esc):
         if techs:
             return techs
 
-    # 2. Se NÃO houver técnicos individuais selecionados na escala, usa os membros das equipes vinculadas
     team_ids = []
     if getattr(esc, "team_ids", None):
         team_ids.extend([int(x.strip()) for x in str(esc.team_ids).split(",") if x.strip().isdigit()])
@@ -4888,7 +5775,7 @@ def get_technicians_for_scale(esc):
 
 def get_scheduled_alerts_queue(days_ahead=365):
     """
-    Computes all future scheduled notifications (Escalas/Plantões and Holidays)
+    Computes all future scheduled notifications (Escalas/Plantões, Cronogramas and Holidays)
     that have deterministic future dates and queued alerts.
     """
     today_dt = agora().date()
@@ -4896,7 +5783,7 @@ def get_scheduled_alerts_queue(days_ahead=365):
     
     rule_scale = SystemRule.query.filter_by(slug="scale_alert").first()
     rule_scale_enabled = rule_scale.is_enabled if rule_scale else True
-    scale_trigger_days = rule_scale.trigger_days if (rule_scale and rule_scale.trigger_days is not None) else 4
+    scale_trigger_days = rule_scale.trigger_days if (rule_scale and rule_scale.trigger_days is not None) else 1
     scale_channels = [c.strip() for c in (rule_scale.channels.split(",") if rule_scale and rule_scale.channels else ["system", "whatsapp"])]
     
     rule_late = SystemRule.query.filter_by(slug="late_checklist").first()
@@ -5091,6 +5978,64 @@ def get_scheduled_alerts_queue(days_ahead=365):
                 "obs": "Aviso geral de feriado para organização de toda a equipe",
                 "sample_message": f"Prezados, informamos que no dia {h_date.strftime('%d/%m/%Y')} será feriado: {h_name}. Programe-se!"
             })
+
+    # 5. Cronogramas operacionais (Lembrete na véspera - D-1 às 08:00h)
+    cronogramas_list = Schedule.query.filter(
+        Schedule.date_start >= today_dt,
+        Schedule.date_start <= end_dt,
+        Schedule.status.notin_(["CANCELADO", "CONCLUIDO"])
+    ).order_by(Schedule.date_start.asc()).all()
+
+    type_labels_map = {
+        'treinamento': 'Treinamento',
+        'evento': 'Evento',
+        'reuniao_externa': 'Reunião Externa',
+        'auditoria': 'Auditoria',
+        'outro': 'Compromisso'
+    }
+
+    for sch in cronogramas_list:
+        trigger_date = sch.date_start - timedelta(days=1)
+        status = "AGUARDANDO"
+        if trigger_date < today_dt:
+            status = "PROCESSADO"
+        elif trigger_date == today_dt:
+            status = "HOJE"
+
+        p_users = []
+        if sch.participants_ids:
+            try:
+                p_ids = [int(x) for x in sch.participants_ids.split(",") if x.strip().isdigit()]
+                p_users = User.query.filter(User.id.in_(p_ids)).all()
+            except Exception:
+                pass
+
+        t_lbl = type_labels_map.get(sch.event_type, 'Compromisso')
+        time_str = f" às {sch.time_start}" if sch.time_start else ""
+        sample_msg = f"Olá {{usuario}}, você tem o cronograma '{sch.title}' ({t_lbl}) agendado para amanhã, {sch.date_start.strftime('%d/%m/%Y')}{time_str}."
+
+        queue_items.append({
+            "id": f"cronograma_{sch.id}",
+            "type": "cronograma",
+            "is_holiday_event": False,
+            "category": f"Cronograma: {t_lbl}",
+            "title": f"📅 {t_lbl}: {sch.title}",
+            "scale_type": t_lbl.upper(),
+            "target_date": sch.date_start,
+            "target_date_str": sch.date_start.strftime("%d/%m/%Y"),
+            "target_weekday": sch.date_start.strftime("%A"),
+            "trigger_date": trigger_date,
+            "trigger_date_str": trigger_date.strftime("%d/%m/%Y"),
+            "days_until_event": (sch.date_start - today_dt).days,
+            "days_until_trigger": (trigger_date - today_dt).days,
+            "status": status,
+            "is_enabled": True,
+            "teams": [sch.location] if sch.location else ["Local não informado"],
+            "technicians": [{"id": u.id, "username": u.username.upper(), "phone": u.phone or ""} for u in p_users],
+            "channels": ["system", "whatsapp"] if sch.notify_whatsapp else ["system"],
+            "obs": sch.obs or sch.description or "Compromisso operacional agendado",
+            "sample_message": sample_msg
+        })
         
     # Ordena toda a fila por data do evento
     queue_items.sort(key=lambda x: x["target_date"])
@@ -5100,41 +6045,157 @@ def get_scheduled_alerts_queue(days_ahead=365):
 def execute_system_audit():
     cleanup_old_announcements()
     
-    # Garantir que as regras padrão existam no banco de dados
+    # 🤖 CATÁLOGO MASTER DE 18 REGRAS DE AUTOMAÇÃO DO SISTEMA
     default_rules = [
+        # --- 1. OPERAÇÃO, ESCALAS & EVENTOS ---
         {
             "slug": "scale_alert",
-            "name": "Alerta de Plantão / Escala",
-            "description": "Envia notificações aos técnicos escalados para o plantão dias antes da data.",
-            "trigger_days": 4,
+            "name": "Alerta de Plantão / Escala (Véspera)",
+            "description": "Notifica os colaboradores escalados para o plantão 1 dia antes da data (na véspera às 08:00h).",
+            "trigger_days": 1,
+            "silence_days": 1,
             "channels": "system,whatsapp"
         },
+        {
+            "slug": "cronograma_alert",
+            "name": "Cronogramas & Eventos Operacionais",
+            "description": "Notifica participantes de treinamentos, reuniões, auditorias e eventos (na véspera às 08:00h e imediato em cadastros para hoje ou amanhã).",
+            "trigger_days": 1,
+            "silence_days": 1,
+            "channels": "system,whatsapp"
+        },
+        {
+            "slug": "meeting_alert",
+            "name": "Lembrete de Reunião Agendada",
+            "description": "Envia lembrete aos participantes no dia da reunião técnica ou operacional agendada às 08:00h.",
+            "trigger_days": 0,
+            "silence_days": 1,
+            "channels": "system,whatsapp"
+        },
+        {
+            "slug": "task_assigned_alert",
+            "name": "Atribuição de Tarefa / Atividade",
+            "description": "Notifica o técnico responsável imediatamente ao receber a designação de uma nova tarefa ou atividade operacional.",
+            "trigger_days": 0,
+            "silence_days": 0,
+            "channels": "system,whatsapp"
+        },
+        {
+            "slug": "solicitacao_alert",
+            "name": "Solicitações Técnicas & Materiais",
+            "description": "Notifica gestores na criação de solicitações de materiais/pátio e alerta o solicitante quando houver alteração de status.",
+            "trigger_days": 0,
+            "silence_days": 0,
+            "channels": "system,whatsapp"
+        },
+
+        # --- 2. FROTA, VEÍCULOS & MOTORISTAS ---
         {
             "slug": "late_checklist",
             "name": "Checklist Diário Pendente",
-            "description": "Alerta técnicos de plantão que ainda não preencheram o checklist do veículo no dia.",
+            "description": "Alerta técnicos de plantão que ainda não preencheram o checklist do veículo no dia às 08:00h.",
             "trigger_days": 1,
+            "silence_days": 1,
             "channels": "system,whatsapp"
         },
         {
-            "slug": "training_alert",
-            "name": "Aviso de Treinamento LMS",
-            "description": "Gera alertas individuais de treinamentos LMS pendentes ou vencendo apenas para os técnicos destinados.",
-            "trigger_days": 7,
+            "slug": "checklist_issue_alert",
+            "name": "Checklist com Avaria / Não Conforme",
+            "description": "Alerta supervisores e gestores da frota imediatamente quando um checklist veicular é enviado apontando avarias ou itens reprovados.",
+            "trigger_days": 0,
+            "silence_days": 0,
+            "channels": "system,whatsapp"
+        },
+        {
+            "slug": "cnh_expiry_alert",
+            "name": "Vencimento de CNH de Motoristas",
+            "description": "Alerta motoristas e gestão quando a Carteira Nacional de Habilitação (CNH) estiver a vencer em menos de X dias.",
+            "trigger_days": 30,
+            "silence_days": 7,
+            "channels": "system,whatsapp,email"
+        },
+        {
+            "slug": "vehicle_doc_alert",
+            "name": "Documentos do Veículo (IPVA / Seguro)",
+            "description": "Alerta gestores sobre o vencimento de IPVA, seguro ou licenciamento dos veículos da frota em menos de X dias.",
+            "trigger_days": 30,
+            "silence_days": 7,
+            "channels": "system,email"
+        },
+        {
+            "slug": "vehicle_maintenance_km_alert",
+            "name": "Revisão Preventiva por KM da Frota",
+            "description": "Alerta quando um veículo atinge ou ultrapassa a quilometragem recomendada para troca de óleo ou revisão preventiva.",
+            "trigger_days": 500,
+            "silence_days": 3,
             "channels": "system,whatsapp"
         },
         {
             "slug": "os_alert",
-            "name": "Alerta de O.S. Atrasada",
-            "description": "Notifica os responsáveis por ordens de serviço pendentes há mais de X dias.",
+            "name": "Ordem de Serviço (O.S) Atrasada",
+            "description": "Notifica os responsáveis por ordens de serviço de manutenção pendentes há mais de X dias.",
             "trigger_days": 7,
+            "silence_days": 2,
+            "channels": "system,whatsapp"
+        },
+        {
+            "slug": "os_created_alert",
+            "name": "Nova O.S / Avaria Aberta",
+            "description": "Notifica os responsáveis e a equipe de manutenção imediatamente ao registrar uma nova ordem de serviço de avaria.",
+            "trigger_days": 0,
+            "silence_days": 0,
             "channels": "system,whatsapp"
         },
         {
             "slug": "inactive_tech_alert",
-            "name": "Lembrete de Inatividade (+7 dias)",
-            "description": "Identifica automaticamente técnicos que não realizam checklists há mais de 7 dias e envia comunicado de lembrete a eles.",
+            "name": "Lembrete de Inatividade (+X dias)",
+            "description": "Identifica automaticamente técnicos sem envio de checklists ou vistorias há mais de X dias e envia lembrete.",
             "trigger_days": 7,
+            "silence_days": 3,
+            "channels": "system,whatsapp"
+        },
+
+        # --- 3. GESTÃO TÉCNICA, CAMPO & FERRAMENTAL ---
+        {
+            "slug": "supervisao_alert",
+            "name": "Supervisão Técnica Reprovada",
+            "description": "Alerta técnicos e supervisores imediatamente quando uma supervisão técnica em campo registrar irregularidades ou reprovação.",
+            "trigger_days": 0,
+            "silence_days": 0,
+            "channels": "system,whatsapp"
+        },
+        {
+            "slug": "rfo_alert",
+            "name": "Relatório de Falha Operacional (RFO)",
+            "description": "Notifica a equipe técnica e gestores no momento em que um RFO de incidente na rede for aberto ou concluído.",
+            "trigger_days": 0,
+            "silence_days": 0,
+            "channels": "system,whatsapp"
+        },
+        {
+            "slug": "tool_inspection_alert",
+            "name": "Inspeção de Ferramental Atrasada",
+            "description": "Identifica técnicos com kit de ferramentas que não realizam inspeção e assinatura de conferência há mais de X dias.",
+            "trigger_days": 30,
+            "silence_days": 7,
+            "channels": "system,whatsapp"
+        },
+
+        # --- 4. CAPACITAÇÃO & LMS ---
+        {
+            "slug": "training_alert",
+            "name": "Treinamentos LMS a Vencer / Pendentes",
+            "description": "Gera alertas individuais de treinamentos LMS pendentes ou vencendo em menos de X dias apenas para os colaboradores destinados.",
+            "trigger_days": 7,
+            "silence_days": 3,
+            "channels": "system,whatsapp"
+        },
+        {
+            "slug": "training_assigned_alert",
+            "name": "Novo Treinamento Atribuído no LMS",
+            "description": "Notifica o colaborador imediatamente ao ser matriculado em um novo curso ou treinamento na plataforma LMS.",
+            "trigger_days": 0,
+            "silence_days": 0,
             "channels": "system,whatsapp"
         }
     ]
@@ -5148,6 +6209,7 @@ def execute_system_audit():
                     name=dr["name"],
                     description=dr["description"],
                     trigger_days=dr["trigger_days"],
+                    silence_days=dr.get("silence_days", 1),
                     channels=dr["channels"],
                     is_enabled=True
                 )
@@ -5161,7 +6223,6 @@ def execute_system_audit():
     regras_dict = {r.slug: r for r in regras}
     enabled_rules = {r.slug for r in regras if r.is_enabled}
 
-    from datetime import date, datetime, timedelta
     now_dt = agora()
     today_dt = now_dt.date()
 
@@ -5170,140 +6231,18 @@ def execute_system_audit():
     scales_notified = 0
     trainings_notified = 0
     inactive_techs_notified = 0
+    cronogramas_notified = 0
+    cnh_notified = 0
+    vdocs_notified = 0
+    vkm_notified = 0
+    meetings_notified = 0
+    tools_notified = 0
 
-    # Função auxiliar para despacho de múltiplos canais
-    def dispatch_alert(rule, user_target, title_default, content_default, placeholders, unique_check_title=None, target_role=None):
-        if not rule:
-            return 0
-            
-        channels = [c.strip() for c in (rule.channels or "system,whatsapp").split(",") if c.strip()]
-        uid = user_target.id if user_target else None
-
-        # Verificação de Período de Silêncio (silence_days) para evitar spam repetido
-        if rule.silence_days and rule.silence_days > 0:
-            silence_limit = now_dt - timedelta(days=rule.silence_days)
-            if uid:
-                exists_recent = SystemRuleLog.query.filter(
-                    SystemRuleLog.rule_slug == rule.slug,
-                    SystemRuleLog.user_id == uid,
-                    SystemRuleLog.created_at >= silence_limit
-                ).first()
-            else:
-                exists_recent = SystemRuleLog.query.filter(
-                    SystemRuleLog.rule_slug == rule.slug,
-                    SystemRuleLog.recipient == (target_role or "all"),
-                    SystemRuleLog.created_at >= silence_limit
-                ).first()
-                
-            if exists_recent:
-                # Alerta recente enviado dentro do período de silêncio
-                print(f"Skipping alert for rule {rule.slug} due to silence period")
-                return 0
-        
-        sys_title = title_default
-        sys_content = rule.msg_system.format(**placeholders) if (rule.msg_system and placeholders) else content_default
-        
-        title_to_check = unique_check_title or sys_title
-        system_sent = False
-        
-        # 1. Sistema
-        if "system" in channels:
-            if uid:
-                exists = Announcement.query.filter_by(title=title_to_check, user_id=uid).first()
-            else:
-                exists = Announcement.query.filter_by(title=title_to_check, target_role=target_role).first()
-                
-            if not exists:
-                ann = Announcement(
-                    title=sys_title,
-                    content=sys_content,
-                    user_id=uid,
-                    target_role=target_role,
-                    created_by=None
-                )
-                ann.expires_at = datetime.combine(today_dt + timedelta(days=7), datetime.max.time())
-                db.session.add(ann)
-                system_sent = True
-                
-                # Log no banco de dados para o canal do sistema
-                try:
-                    sys_log = SystemRuleLog(
-                        rule_slug=rule.slug,
-                        user_id=uid,
-                        channel="system",
-                        recipient=user_target.username if user_target else (target_role or "Todos"),
-                        message=sys_content,
-                        status="SENT"
-                    )
-                    db.session.add(sys_log)
-                except Exception as sys_err:
-                    print("⚠️ Erro ao salvar log do painel:", sys_err)
-
-        # 2. WhatsApp
-        if "whatsapp" in channels and user_target and user_target.phone:
-            w_config = WhatsAppConfig.query.first()
-            if w_config and w_config.is_enabled:
-                w_msg = None
-                if rule.msg_whatsapp:
-                    try:
-                        w_msg = rule.msg_whatsapp.format(**placeholders)
-                    except Exception:
-                        pass
-                
-                if not w_msg:
-                    legacy_attr = f"msg_{rule.slug}"
-                    if rule.slug == "os_alert":
-                        legacy_attr = "msg_os_overdue"
-                    legacy_template = getattr(w_config, legacy_attr, None)
-                    if legacy_template:
-                        try:
-                            w_msg = legacy_template.format(**placeholders)
-                        except Exception:
-                            pass
-                
-                if not w_msg:
-                    w_msg = f"*{sys_title}*\n\n{sys_content}"
-                    
-                send_whatsapp_message(user_target.phone, w_msg, rule_slug=rule.slug, user_id=uid)
-
-        # 3. Telegram
-        if "telegram" in channels and user_target and user_target.telegram_chat_id:
-            telegram_config = TelegramConfig.query.first()
-            if telegram_config and telegram_config.is_enabled:
-                t_msg = None
-                if rule.msg_telegram:
-                    try:
-                        t_msg = rule.msg_telegram.format(**placeholders)
-                    except Exception:
-                        pass
-                if not t_msg:
-                    t_msg = f"<b>{sys_title}</b>\n\n{sys_content}"
-                send_telegram_message(user_target.telegram_chat_id, t_msg, rule_slug=rule.slug, user_id=uid)
-
-        # 4. E-mail (SMTP)
-        if "email" in channels and user_target and user_target.email:
-            email_config = EmailConfig.query.first()
-            if email_config and email_config.is_enabled:
-                e_body = None
-                if rule.msg_email:
-                    try:
-                        e_body = rule.msg_email.format(**placeholders)
-                    except Exception:
-                        pass
-                if not e_body:
-                    e_body = f"{sys_title}\n\n{sys_content}"
-                send_email_notification(user_target.email, sys_title, e_body, rule_slug=rule.slug, user_id=uid)
-
-        return 1 if system_sent else 0
-
-    # 1. Automação de Escala & Plantão (scale_alert)
+    # 1. Automação de Escala & Plantão (scale_alert) — Disparo na véspera (1 dia de antecedência às 08:00h)
     rule_scale = regras_dict.get("scale_alert")
     if "scale_alert" in enabled_rules and rule_scale:
-        trigger_days = rule_scale.trigger_days if rule_scale.trigger_days is not None else 4
-        max_horizon_days = max(trigger_days, 7)
-        
         import holidays
-        years = list({today_dt.year, (today_dt + timedelta(days=max_horizon_days)).year})
+        years = list({today_dt.year, (today_dt + timedelta(days=7)).year})
         h_dict_audit = holidays.Brazil(subdiv="RJ", years=years)
         for y in years:
             h_dict_audit[date(y, 6, 13)] = "Santo Antônio (Padroeiro)"
@@ -5327,106 +6266,60 @@ def execute_system_audit():
             h_dict_audit.pop(date(y, 10, 12), None)
             h_dict_audit[date(y, 10, 12)] = "N. Sra Aparecida / Emancipação"
 
-        for offset in range(0, max_horizon_days + 1):
-            check_date = today_dt + timedelta(days=offset)
-            days_until = offset
-            
-            # Só envia notificações se estiver dentro do intervalo de trigger_days configurado
-            # (Se for feriado ou escala, permite até max_horizon_days caso configurado)
-            if days_until > trigger_days and days_until > 6:
-                continue
-
-            scales = Scale.query.filter(Scale.date == check_date, Scale.status == "ATIVO").all()
-            
-            if check_date.weekday() == 5:
-                config = SystemConfig.query.first()
-                if config and config.scale_start_date and config.scale_rotation_order and not scales:
-                    if check_date >= config.scale_start_date:
-                        rotation_order = [int(x) for x in config.scale_rotation_order.split(",") if x.strip().isdigit()]
-                        if rotation_order:
-                            weeks = (check_date - config.scale_start_date).days // 7
-                            team_idx = weeks % len(rotation_order)
-                            team_id = rotation_order[team_idx]
-                            
-                            team = Team.query.get(team_id)
-                            if team:
-                                class TempScale:
-                                    def __init__(self, team_id, date, type_name):
-                                        self.team_id = team_id
-                                        self.team_ids = None
-                                        self.technician_ids = None
-                                        self.user_id = None
-                                        self.date = date
-                                        self.type = type_name
-                                        self.obs = "Escala automática por rodízio de equipes"
-                                scales.append(TempScale(team.id, check_date, f"Plantão: {team.name}"))
-
-            for esc in scales:
-                is_holiday = (check_date in h_dict_audit) or (esc.type and "feriado" in str(esc.type).lower())
-                h_name = h_dict_audit.get(check_date, "Feriado")
-
-                if is_holiday:
-                    title = f"📅 Plantão de Feriado ({h_name}): {esc.type}"
-                    if days_until == 0:
-                        content = f"Atenção: você está escalado para o plantão do feriado '{h_name}' de HOJE ({check_date.strftime('%d/%m/%Y')}). obs: {esc.obs or 'Sem observações'}"
-                    else:
-                        content = f"Olá, você está escalado para o plantão do feriado '{h_name}' no dia {check_date.strftime('%d/%m/%Y')} (daqui a {days_until} dia{'s' if days_until != 1 else ''}). obs: {esc.obs or 'Sem observações'}"
-                    escala_label = f"Feriado ({h_name})"
-                else:
-                    title = f"📅 Plantão Confirmado: {esc.type}"
-                    if days_until == 0:
-                        content = f"Atenção: você está escalado para o plantão de '{esc.type}' de HOJE ({check_date.strftime('%d/%m/%Y')}). obs: {esc.obs or 'Sem observações'}"
-                    else:
-                        content = f"Olá, você está escalado para o plantão de '{esc.type}' no dia {check_date.strftime('%d/%m/%Y')} (daqui a {days_until} dia{'s' if days_until != 1 else ''}). obs: {esc.obs or 'Sem observações'}"
-                    escala_label = esc.type
-                
-                tech_users = get_technicians_for_scale(esc)
-
-                for tech_user in tech_users:
-                    placeholders = {
-                        "usuario": tech_user.username.capitalize(),
-                        "escala": escala_label,
-                        "data": check_date.strftime('%d/%m/%Y')
-                    }
-                    sent = dispatch_alert(rule_scale, tech_user, title, content, placeholders)
-                    scales_notified += sent
-
-    # 2. Automação de Feriados Oficiais (Aviso Geral para Todos)
-    rule_late = regras_dict.get("late_checklist")
-    if "late_checklist" in enabled_rules and rule_late:
-        trigger_days = rule_late.trigger_days if rule_late.trigger_days is not None else 4
-        max_horizon_days = max(trigger_days, 7)
+        check_date = today_dt + timedelta(days=1)
+        scales = Scale.query.filter(Scale.date == check_date, Scale.status == "ATIVO").all()
         
-        import holidays
-        years = list({today_dt.year, (today_dt + timedelta(days=max_horizon_days)).year})
-        h_dict = holidays.Brazil(subdiv="RJ", years=years)
-        
-        for y in years:
-            h_dict[date(y, 6, 13)] = "Santo Antônio (Padroeiro)"
-            a = y % 19
-            b = y // 100
-            c = y % 100
-            d = b // 4
-            e = b % 4
-            f = (b + 8) // 25
-            g = (b - f + 1) // 3
-            h = (19 * a + b - d - g + 15) % 30
-            i = c // 4
-            k = c % 4
-            l = (32 + 2 * e + 2 * i - h - k) % 7
-            m = (a + 11 * h + 22 * l) // 451
-            month = (h + l - 7 * m + 114) // 31
-            day = ((h + l - 7 * m + 114) % 31) + 1
-            easter_date = date(y, month, day)
-            corpus_christi = easter_date + timedelta(days=60)
-            h_dict[corpus_christi] = "Corpus Christi"
-            h_dict.pop(date(y, 10, 12), None)
-            h_dict[date(y, 10, 12)] = "N. Sra Aparecida / Emancipação"
+        if check_date.weekday() == 5:
+            config = SystemConfig.query.first()
+            if config and config.scale_start_date and config.scale_rotation_order and not scales:
+                if check_date >= config.scale_start_date:
+                    rotation_order = [int(x) for x in config.scale_rotation_order.split(",") if x.strip().isdigit()]
+                    if rotation_order:
+                        weeks = (check_date - config.scale_start_date).days // 7
+                        team_idx = weeks % len(rotation_order)
+                        team_id = rotation_order[team_idx]
+                        
+                        team = Team.query.get(team_id)
+                        if team:
+                            class TempScale:
+                                def __init__(self, team_id, date, type_name):
+                                    self.team_id = team_id
+                                    self.team_ids = None
+                                    self.technician_ids = None
+                                    self.user_id = None
+                                    self.date = date
+                                    self.type = type_name
+                                    self.obs = "Escala automática por rodízio de equipes"
+                            scales.append(TempScale(team.id, check_date, f"Plantão: {team.name}"))
 
-        for offset in range(0, max_horizon_days + 1):
+        for esc in scales:
+            is_holiday = (check_date in h_dict_audit) or (esc.type and "feriado" in str(esc.type).lower())
+            h_name = h_dict_audit.get(check_date, "Feriado")
+
+            if is_holiday:
+                title = f"📅 Plantão de Feriado Amanhã ({h_name}): {esc.type}"
+                content = f"Olá, você está escalado para o plantão do feriado '{h_name}' amanhã, dia {check_date.strftime('%d/%m/%Y')}. obs: {esc.obs or 'Sem observações'}"
+                escala_label = f"Feriado ({h_name})"
+            else:
+                title = f"📅 Plantão Amanhã: {esc.type}"
+                content = f"Olá, você está escalado para o plantão de '{esc.type}' amanhã, dia {check_date.strftime('%d/%m/%Y')}. obs: {esc.obs or 'Sem observações'}"
+                escala_label = esc.type
+            
+            tech_users = get_technicians_for_scale(esc)
+            for tech_user in tech_users:
+                placeholders = {
+                    "usuario": tech_user.display_name,
+                    "escala": escala_label,
+                    "data": check_date.strftime('%d/%m/%Y')
+                }
+                unique_key = f"{title}_{check_date.strftime('%Y-%m-%d')}"
+                scales_notified += dispatch_system_rule_alert("scale_alert", tech_user, title, content, placeholders, unique_check_title=unique_key)
+
+        # Avisos gerais de feriados próximos
+        for offset in range(0, 8):
             check_holiday_date = today_dt + timedelta(days=offset)
-            if check_holiday_date in h_dict:
-                h_name = h_dict[check_holiday_date]
+            if check_holiday_date in h_dict_audit:
+                h_name = h_dict_audit[check_holiday_date]
                 title = f"🎉 Feriado Próximo: {h_name}"
                 if offset == 0:
                     content = f"Prezados, informamos que HOJE ({check_holiday_date.strftime('%d/%m/%Y')}) é feriado: {h_name}. Bom descanso / bom trabalho a todos!"
@@ -5443,9 +6336,10 @@ def execute_system_audit():
                         created_by=None
                     )
                     db.session.add(ann)
-                    checklists_reminded += 1
 
-        # Lembrete de Checklist diário não preenchido hoje
+    # 2. Checklist Diário Pendente (late_checklist)
+    rule_late = regras_dict.get("late_checklist")
+    if "late_checklist" in enabled_rules and rule_late:
         today_scales = Scale.query.filter(Scale.date == today_dt, Scale.status == "ATIVO").all()
         if today_dt.weekday() == 5:
             config = SystemConfig.query.first()
@@ -5456,7 +6350,6 @@ def execute_system_audit():
                         weeks = (today_dt - config.scale_start_date).days // 7
                         team_idx = weeks % len(rotation_order)
                         team_id = rotation_order[team_idx]
-                        
                         team = Team.query.get(team_id)
                         if team:
                             class TempScale:
@@ -5488,22 +6381,11 @@ def execute_system_audit():
                     ).first()
                     if not checklist_done:
                         title = f"🔔 Lembrete: Checklist Diário Pendente"
-                        content = f"Olá {u.username.capitalize()}, você está de plantão hoje e ainda não enviou o Checklist Veicular regulamentar. Por favor, realize a inspeção do seu veículo antes de iniciar a rota."
-                        
-                        placeholders = {
-                            "usuario": u.username.capitalize()
-                        }
-                        sent = dispatch_alert(
-                            rule_late, 
-                            u, 
-                            title, 
-                            content, 
-                            placeholders, 
-                            unique_check_title=title + f"_{today_dt}"
-                        )
-                        checklists_reminded += sent
+                        content = f"Olá {u.display_name}, você está de plantão hoje e ainda não enviou o Checklist Veicular regulamentar. Por favor, realize a inspeção do seu veículo antes de iniciar a rota."
+                        placeholders = {"usuario": u.display_name}
+                        checklists_reminded += dispatch_system_rule_alert("late_checklist", u, title, content, placeholders, unique_check_title=title + f"_{today_dt}")
 
-    # 3. Automação de Treinamento LMS (training_alert)
+    # 3. Treinamentos LMS (training_alert)
     rule_train = regras_dict.get("training_alert")
     if "training_alert" in enabled_rules and rule_train:
         assignments = TrainingAssignment.query.filter(
@@ -5514,18 +6396,16 @@ def execute_system_audit():
             user = assign.user
             if course and user:
                 title = f"🎓 Treinamento Pendente: {course.title}"
-                content = f"Olá {user.username.capitalize()}, lembramos que o treinamento '{course.title}' está associado ao seu perfil com status '{assign.status}'. Por favor, realize sua capacitação no portal LMS."
-                
+                content = f"Olá {user.display_name}, lembramos que o treinamento '{course.title}' está associado ao seu perfil com status '{assign.status}'. Por favor, realize sua capacitação no portal LMS."
                 placeholders = {
-                    "usuario": user.username.capitalize(),
+                    "usuario": user.display_name,
                     "curso": course.title
                 }
-                sent = dispatch_alert(rule_train, user, title, content, placeholders)
-                trainings_notified += sent
+                trainings_notified += dispatch_system_rule_alert("training_alert", user, title, content, placeholders, unique_check_title=f"{title}_{user.id}")
 
-    # 4. Monitor de SLA & Alertas de OS (os_sla ou os_alert)
-    rule_os = regras_dict.get("os_alert") or regras_dict.get("os_sla")
-    if ("os_sla" in enabled_rules or "os_alert" in enabled_rules) and rule_os:
+    # 4. Ordens de Serviço Atrasadas (os_alert)
+    rule_os = regras_dict.get("os_alert")
+    if "os_alert" in enabled_rules and rule_os:
         trigger_days = rule_os.trigger_days if rule_os.trigger_days is not None else 7
         overdue_os_list = AvariaOS.query.filter(
             AvariaOS.status == "aberta",
@@ -5537,27 +6417,15 @@ def execute_system_audit():
             veh = os_obj.vehicle
             if resp and veh:
                 title = f"⚠️ O.S. Atrasada: #{os_obj.id}"
-                content = f"Olá {resp.username.capitalize()}, a Ordem de Serviço #{os_obj.id} para o veículo {veh.plate} está pendente há mais de {trigger_days} dias (desde {os_obj.data_abertura.strftime('%d/%m/%Y')}). Por favor, forneça uma atualização de status."
-                
+                content = f"Olá {resp.display_name}, a Ordem de Serviço #{os_obj.id} para o veículo {veh.plate} está pendente há mais de {trigger_days} dias (desde {os_obj.data_abertura.strftime('%d/%m/%Y')}). Por favor, forneça uma atualização de status."
                 placeholders = {
-                    "usuario": resp.username.capitalize(),
-                    "id": os_obj.id
+                    "usuario": resp.display_name,
+                    "id": str(os_obj.id),
+                    "placa": veh.plate
                 }
-                sent = dispatch_alert(rule_os, resp, title, content, placeholders)
-                os_overdue += sent
+                os_overdue += dispatch_system_rule_alert("os_alert", resp, title, content, placeholders, unique_check_title=f"{title}_{os_obj.id}")
 
-        all_os_alerts = Announcement.query.filter(Announcement.title.like("⚠️ O.S. Atrasada: #%")).all()
-        overdue_ids = {os_obj.id for os_obj in overdue_os_list}
-        for alert in all_os_alerts:
-            try:
-                alert_os_id = int(alert.title.split("#")[1])
-                if alert_os_id not in overdue_ids:
-                    AnnouncementRead.query.filter_by(announcement_id=alert.id).delete()
-                    db.session.delete(alert)
-            except Exception:
-                pass
-
-    # 5. Técnicos Inativos (+7 dias sem realizar checklist) (inactive_tech_alert)
+    # 5. Inatividade de Técnicos (+X dias sem checklist) (inactive_tech_alert)
     rule_inactive = regras_dict.get("inactive_tech_alert")
     if "inactive_tech_alert" in enabled_rules and rule_inactive:
         trigger_days = rule_inactive.trigger_days if rule_inactive.trigger_days is not None else 7
@@ -5581,23 +6449,129 @@ def execute_system_audit():
                 
             if is_inactive:
                 title = f"⚠️ Lembrete: Checklist não realizado há +{trigger_days} dias"
-                content = f"Olá {tech.username.capitalize()}, identificamos que você não realiza nenhuma vistoria ou checklist veicular há mais de {trigger_days} dias (último envio: {last_date_str}). Lembramos que a realização do checklist de vistoria é obrigatória para manter a conformidade operacional de sua rota."
-                
-                placeholders = {
-                    "usuario": tech.username.capitalize()
-                }
-                
-                # Evita spam enviando no máximo uma vez a cada X dias
-                exists = Announcement.query.filter_by(title=title, user_id=tech.id).filter(
-                    Announcement.created_at >= inactive_limit
-                ).first()
-                
-                if not exists:
-                    sent = dispatch_alert(rule_inactive, tech, title, content, placeholders, unique_check_title=title)
-                    inactive_techs_notified += sent
+                content = f"Olá {tech.display_name}, identificamos que você não realiza nenhuma vistoria ou checklist veicular há mais de {trigger_days} dias (último envio: {last_date_str}). Lembramos que o checklist é obrigatório."
+                placeholders = {"usuario": tech.display_name, "dias": str(trigger_days)}
+                inactive_techs_notified += dispatch_system_rule_alert("inactive_tech_alert", tech, title, content, placeholders, unique_check_title=f"{title}_{tech.id}")
 
-    # 6. Processamento da Fila de Reenvio (Retry Queue)
-    # Busca envios falhos com menos de 3 tentativas
+    # 6. Cronogramas na Véspera (cronograma_alert)
+    tomorrow_dt = today_dt + timedelta(days=1)
+    upcoming_schedules = Schedule.query.filter(
+        Schedule.date_start == tomorrow_dt,
+        Schedule.status.notin_(["CANCELADO", "CONCLUIDO"])
+    ).all()
+    for sch in upcoming_schedules:
+        cronogramas_notified += dispatch_cronograma_notifications(sch)
+
+    # 7. Vencimento de CNH de Motoristas (cnh_expiry_alert)
+    rule_cnh = regras_dict.get("cnh_expiry_alert")
+    if "cnh_expiry_alert" in enabled_rules and rule_cnh:
+        trigger_days = rule_cnh.trigger_days if rule_cnh.trigger_days is not None else 30
+        cnh_limit_date = today_dt + timedelta(days=trigger_days)
+        expiring_cnhs = TechnicalDocument.query.filter(
+            TechnicalDocument.is_active == True,
+            TechnicalDocument.date_expired != None,
+            TechnicalDocument.date_expired <= cnh_limit_date,
+            TechnicalDocument.date_expired >= today_dt,
+            TechnicalDocument.doc_type.ilike("%CNH%")
+        ).all()
+        for doc in expiring_cnhs:
+            u = doc.user
+            if u:
+                dias_restantes = (doc.date_expired - today_dt).days
+                title = f"🚗 Alerta: CNH a vencer em {dias_restantes} dias"
+                content = f"Olá {u.display_name}, sua CNH vence em {doc.date_expired.strftime('%d/%m/%Y')} (faltam {dias_restantes} dias). Providencie a renovação junto ao Detran."
+                placeholders = {
+                    "usuario": u.display_name,
+                    "data": doc.date_expired.strftime('%d/%m/%Y'),
+                    "dias": str(dias_restantes)
+                }
+                cnh_notified += dispatch_system_rule_alert("cnh_expiry_alert", u, title, content, placeholders, unique_check_title=f"{title}_{doc.id}")
+
+    # 8. Documentos e Contratos a Vencer (vehicle_doc_alert)
+    rule_vdoc = regras_dict.get("vehicle_doc_alert")
+    if "vehicle_doc_alert" in enabled_rules and rule_vdoc:
+        trigger_days = rule_vdoc.trigger_days if rule_vdoc.trigger_days is not None else 30
+        doc_limit_date = today_dt + timedelta(days=trigger_days)
+        expiring_docs = TechnicalDocument.query.filter(
+            TechnicalDocument.is_active == True,
+            TechnicalDocument.date_expired != None,
+            TechnicalDocument.date_expired <= doc_limit_date,
+            TechnicalDocument.date_expired >= today_dt,
+            ~TechnicalDocument.doc_type.ilike("%CNH%")
+        ).all()
+        for vdoc in expiring_docs:
+            dias_restantes = (vdoc.date_expired - today_dt).days
+            title = f"📄 Alerta: Documento {vdoc.name} vencendo em {dias_restantes} dias"
+            content = f"O documento/contrato '{vdoc.name}' (Tipo: {vdoc.doc_type or 'Geral'}) vence em {vdoc.date_expired.strftime('%d/%m/%Y')} (faltam {dias_restantes} dias)."
+            placeholders = {
+                "usuario": vdoc.user.display_name if vdoc.user else "Gestor",
+                "data": vdoc.date_expired.strftime('%d/%m/%Y'),
+                "dias": str(dias_restantes)
+            }
+            vdocs_notified += dispatch_system_rule_alert("vehicle_doc_alert", vdoc.user, title, content, placeholders, target_role="supervisor", unique_check_title=f"{title}_{vdoc.id}")
+
+    # 9. Revisão Preventiva por KM (vehicle_maintenance_km_alert)
+    rule_vkm = regras_dict.get("vehicle_maintenance_km_alert")
+    if "vehicle_maintenance_km_alert" in enabled_rules and rule_vkm:
+        tolerance_km = rule_vkm.trigger_days if rule_vkm.trigger_days is not None else 500
+        active_vehicles = Vehicle.query.filter(Vehicle.status == "ATIVO", Vehicle.km > 0).all()
+        for veh in active_vehicles:
+            km = veh.km or 0
+            km_mod = km % 10000
+            if km >= 10000 and (km_mod <= tolerance_km or km_mod >= (10000 - tolerance_km)):
+                driver = veh.driver
+                title = f"🔧 Revisão Preventiva: Veículo {veh.plate}"
+                content = f"O veículo {veh.brand} {veh.model} (Placa: {veh.plate}) atingiu {km:,} km e necessita de troca de óleo / revisão preventiva."
+                placeholders = {
+                    "usuario": driver.display_name if driver else "Responsável",
+                    "placa": veh.plate,
+                    "veiculo": f"{veh.brand} {veh.model}",
+                    "km_atual": f"{km:,} km"
+                }
+                vkm_notified += dispatch_system_rule_alert("vehicle_maintenance_km_alert", driver, title, content, placeholders, target_role="supervisor", unique_check_title=f"{title}_{km // 10000}")
+
+    # 10. Reuniões Agendadas Hoje (meeting_alert)
+    rule_meet = regras_dict.get("meeting_alert")
+    if "meeting_alert" in enabled_rules and rule_meet:
+        today_meetings = Meeting.query.filter(
+            Meeting.date == today_dt,
+            Meeting.status.notin_(["CANCELADA", "CONCLUIDA"])
+        ).all()
+        for meet in today_meetings:
+            p_ids = []
+            if meet.participants:
+                p_ids = [int(x.strip()) for x in meet.participants.split(",") if x.strip().isdigit()]
+            for pid in p_ids:
+                u = User.query.get(pid)
+                if u:
+                    title = f"🗓️ Reunião Hoje: {meet.title}"
+                    content = f"Olá {u.display_name}, lembrete de reunião agendada para hoje às {meet.time or '09:00'}. Assunto: '{meet.subject or meet.title}'. Local: {meet.location or 'Base/Online'}."
+                    placeholders = {
+                        "usuario": u.display_name,
+                        "data": today_dt.strftime('%d/%m/%Y'),
+                        "tipo": "Reunião",
+                        "local": meet.location or "Base"
+                    }
+                    meetings_notified += dispatch_system_rule_alert("meeting_alert", u, title, content, placeholders, unique_check_title=f"{title}_{meet.id}_{today_dt}")
+
+    # 11. Inspeção de Ferramental Atrasada (tool_inspection_alert)
+    rule_tool = regras_dict.get("tool_inspection_alert")
+    if "tool_inspection_alert" in enabled_rules and rule_tool:
+        trigger_days = rule_tool.trigger_days if rule_tool.trigger_days is not None else 30
+        tool_limit = now_dt - timedelta(days=trigger_days)
+        tech_users = User.query.filter_by(role="tech").all()
+        for tu in tech_users:
+            t_insp = UserToolInspection.query.filter_by(user_id=tu.id).first()
+            is_overdue = False
+            if not t_insp or (t_insp.updated_at and t_insp.updated_at < tool_limit):
+                is_overdue = True
+            if is_overdue:
+                title = f"🛠️ Inspeção de Ferramental Atrasada (+{trigger_days} dias)"
+                content = f"Olá {tu.display_name}, sua conferência e assinatura de kit de ferramentas está pendente há mais de {trigger_days} dias. Realize a inspeção no módulo de Ferramentas."
+                placeholders = {"usuario": tu.display_name, "dias": str(trigger_days)}
+                tools_notified += dispatch_system_rule_alert("tool_inspection_alert", tu, title, content, placeholders, unique_check_title=f"{title}_{tu.id}")
+
+    # 12. Processamento da Fila de Reenvio (Retry Queue)
     failed_logs = SystemRuleLog.query.filter(
         SystemRuleLog.status == "FAILED",
         SystemRuleLog.retry_count < 3
@@ -5645,7 +6619,13 @@ def execute_system_audit():
         "os_overdue": os_overdue,
         "scales_notified": scales_notified,
         "trainings_notified": trainings_notified,
-        "inactive_techs_notified": inactive_techs_notified
+        "inactive_techs_notified": inactive_techs_notified,
+        "cronogramas_notified": cronogramas_notified,
+        "cnh_notified": cnh_notified,
+        "vdocs_notified": vdocs_notified,
+        "vkm_notified": vkm_notified,
+        "meetings_notified": meetings_notified,
+        "tools_notified": tools_notified
     }
 
 
@@ -6272,53 +7252,31 @@ def api_gestao_treinamentos_lms_upload_media():
 def dispatch_individual_training_notification(course, user, created_by_id=None):
     """
     Gera um comunicado individual para o colaborador vinculado ao treinamento,
-    dispara WhatsApp se ativo e registra no histórico de envios e logs do sistema.
+    dispara canais configurados e registra no histórico de envios e logs do sistema.
     """
     try:
         if not user or user.username == "admin":
             return "ignorado"
 
-        # Verifica se já foi gerado um comunicado para este curso e usuário nas últimas 12 horas para evitar spam
-        recent_ann = Announcement.query.filter_by(
-            user_id=user.id,
-            category="treinamento",
-            title=f"📚 Treinamento Atribuído: {course.title}"
-        ).order_by(Announcement.created_at.desc()).first()
-
-        if recent_ann and (agora() - recent_ann.created_at).total_seconds() < 43200:
-            return recent_ann.whatsapp_status or "enviado"
-
-        # 1. Disparo individual via WhatsApp
-        w_status = "desativado"
-        w_config = WhatsAppConfig.query.first()
         user_name = user.display_name
         course_name = course.title
+        title = f"📚 Treinamento Atribuído: {course_name}"
+        content = f"Olá {user_name}, você foi vinculado ao treinamento \"{course_name}\". Acesse a aba Meus Treinamentos no portal para assistir aos módulos e realizar a avaliação técnica."
+        placeholders = {
+            "usuario": user_name,
+            "curso": course_name,
+            "tipo": "LMS Capacitação"
+        }
 
-        if w_config and w_config.is_enabled:
-            if user.phone:
-                try:
-                    w_msg = f"📚 *Novo Treinamento Atribuído*\n\nOlá *{user_name}*, você foi vinculado ao treinamento *{course_name}*.\n\nAcesse o portal na aba *Meus Treinamentos* para realizar suas aulas e avaliação."
-                    send_whatsapp_message(user.phone, w_msg)
-                    w_status = "enviado"
-                except Exception:
-                    w_status = "falha"
-            else:
-                w_status = "sem_telefone"
-
-        # 2. Comunicado Individual no Portal
-        ann = Announcement(
-            title=f"📚 Treinamento Atribuído: {course.title}",
-            content=f"Olá {user_name}, você foi vinculado ao treinamento \"{course_name}\". Acesse a aba Meus Treinamentos no portal para assistir aos módulos e realizar a avaliação técnica.",
-            target_type="user",
-            target_role=user.role or "tech",
-            user_id=user.id,
-            category="treinamento",
-            whatsapp_status=w_status,
-            created_by=created_by_id or (current_user.id if current_user.is_authenticated else None)
+        sent = dispatch_system_rule_alert(
+            "training_assigned_alert",
+            user_target=user,
+            title_default=title,
+            content_default=content,
+            placeholders=placeholders,
+            unique_check_title=f"{title}_{user.id}"
         )
-        db.session.add(ann)
-        registrar_log(f"Comunicado de treinamento enviado para {user.username}: {course.title} (WhatsApp: {w_status})")
-        return w_status
+        return "enviado" if sent else "sucesso"
     except Exception as e:
         current_app.logger.error(f"Erro ao notificar atribuição de treinamento: {e}")
         return "erro"
@@ -6629,7 +7587,7 @@ def api_gestao_treinamentos_lms_publish(id):
         int_user_ids = [int(x) for x in user_ids if str(x).isdigit()]
         
         assigned_count = 0
-        if assign_all:
+        if assign_all or (not int_user_ids and not TrainingAssignment.query.filter_by(course_id=c.id).first()):
             for u in User.query.filter(User.username != "admin").all():
                 exists = TrainingAssignment.query.filter_by(course_id=c.id, user_id=u.id).first()
                 if not exists:
@@ -6648,7 +7606,8 @@ def api_gestao_treinamentos_lms_publish(id):
                     
         db.session.commit()
         return jsonify({
-            "status": "ok", 
+            "status": "ok",
+            "is_published": True,
             "message": f"Treinamento publicado e atribuído a {assigned_count} colaboradores com comunicados enviados."
         })
     except Exception as e:

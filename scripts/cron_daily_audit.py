@@ -3,7 +3,7 @@
 """
 Script de execução automática do diagnóstico do sistema (audit).
 Pode ser agendado diretamente no Crontab do Linux:
-0 7 * * * /var/www/checklist_veicular/venv/bin/python /var/www/checklist_veicular/scripts/cron_daily_audit.py
+0 8 * * * /var/www/checklist_veicular/venv/bin/python /var/www/checklist_veicular/scripts/cron_daily_audit.py
 """
 import os
 import sys
@@ -22,12 +22,12 @@ def run_cron_audit():
     with app.app_context():
         now_dt = agora()
         now_str = now_dt.strftime("%Y-%m-%d %H:%M:%S")
-        print(f"[{now_str}] 🚀 Executando Diagnóstico/Auditoria Automática das 07:00h...")
+        print(f"[{now_str}] 🚀 Executando Diagnóstico/Auditoria Automática das 08:00h...")
         try:
             result = execute_system_audit()
             log_entry = Log(
-                usuario="CRON (Automação 07:00h)",
-                acao=f"Diagnóstico Automático das 07:00h concluído: {result}"
+                usuario="CRON (Automação 08:00h)",
+                acao=f"Diagnóstico Automático das 08:00h concluído: {result}"
             )
             db.session.add(log_entry)
             db.session.commit()

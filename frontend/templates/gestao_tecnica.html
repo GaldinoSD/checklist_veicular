@@ -372,7 +372,8 @@
         .tab-pane .lms-subtab-btn,
         .tab-pane .doc-subtab-btn,
         #btnSubTabEquipes,
-        #btnSubTabEscalasManuais {
+        #btnSubTabEscalasManuais,
+        #btnSubTabCronogramas {
             padding: 0.25rem 0.625rem !important;
             font-size: 9px !important;
             border-radius: 0.5rem !important;
@@ -521,7 +522,8 @@
             .tab-pane .lms-subtab-btn,
             .tab-pane .doc-subtab-btn,
             #btnSubTabEquipes,
-            #btnSubTabEscalasManuais {
+            #btnSubTabEscalasManuais,
+            #btnSubTabCronogramas {
                 padding: 0.1875rem 0.375rem !important;
                 font-size: 8px !important;
             }
@@ -712,6 +714,10 @@
                         <button id="btn-nova-escala-escala" onclick="openModalEscala()" class="px-5 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-purple-500/20 transition-all active:scale-95 flex items-center gap-2 hidden">
                             <i class="fa-solid fa-plus text-xs"></i> Nova Escala Manual
                         </button>
+                        <!-- Botão Novo Cronograma -->
+                        <button id="btn-novo-cronograma-escala" onclick="openModalCronograma()" class="px-5 py-2.5 bg-pink-600 hover:bg-pink-700 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-pink-500/20 transition-all active:scale-95 flex items-center gap-2 hidden">
+                            <i class="fa-solid fa-calendar-plus text-xs"></i> Novo Cronograma
+                        </button>
                     </div>
                 </div>
 
@@ -760,7 +766,7 @@
 
                 <!-- Sub-abas de Alternância -->
                 <div class="flex justify-between items-center gap-4">
-                    <div class="flex items-center bg-slate-900/5 dark:bg-white/5 p-1 rounded-2xl border border-slate-900/5 dark:border-white/5 h-[44px] w-full max-w-[360px]">
+                    <div class="flex items-center bg-slate-900/5 dark:bg-white/5 p-1 rounded-2xl border border-slate-900/5 dark:border-white/5 h-[44px] w-full max-w-[520px]">
                         <!-- Botão Sub-aba: Equipes -->
                         <button type="button" id="btnSubTabEquipes" onclick="switchEscalaSubTab('equipes')"
                                 class="flex-1 py-1.5 px-3 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-2 h-full active:scale-95 bg-purple-600 text-white shadow-md shadow-purple-500/25">
@@ -773,8 +779,16 @@
                         <button type="button" id="btnSubTabEscalasManuais" onclick="switchEscalaSubTab('escalas-manuais')"
                                 class="flex-1 py-1.5 px-3 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-2 h-full active:scale-95 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200">
                             <i class="fa-solid fa-clock-rotate-left text-xs"></i>
-                            <span>Escalas Manuais</span>
+                            <span>Escalas</span>
                             <span id="badge-count-escalas" class="px-1.5 py-0.5 rounded-full bg-slate-200 dark:bg-white/10 text-[8px] font-extrabold ml-0.5">0</span>
+                        </button>
+
+                        <!-- Botão Sub-aba: Cronogramas -->
+                        <button type="button" id="btnSubTabCronogramas" onclick="switchEscalaSubTab('cronogramas')"
+                                class="flex-1 py-1.5 px-3 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-2 h-full active:scale-95 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200">
+                            <i class="fa-solid fa-calendar-plus text-xs"></i>
+                            <span>Cronogramas</span>
+                            <span id="badge-count-cronogramas" class="px-1.5 py-0.5 rounded-full bg-slate-200 dark:bg-white/10 text-[8px] font-extrabold ml-0.5">0</span>
                         </button>
                     </div>
                 </div>
@@ -791,6 +805,13 @@
             <div id="subpane-escalas-manuais" class="sub-pane hidden">
                 <div id="list-escalas" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 min-h-[100px] animate-premium">
                     <p class="text-center text-slate-400 text-xs py-10">Carregando escalas...</p>
+                </div>
+            </div>
+
+            <!-- Sub-painel 3: Cronogramas -->
+            <div id="subpane-cronogramas" class="sub-pane hidden">
+                <div id="list-cronogramas" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 min-h-[100px] animate-premium">
+                    <p class="text-center text-slate-400 text-xs py-10">Carregando cronogramas...</p>
                 </div>
             </div>
         </div>
@@ -2896,6 +2917,181 @@
     </div>
 </div>
 
+<!-- ============================================== -->
+<!-- Modal: Novo/Editar Cronograma                  -->
+<!-- ============================================== -->
+<div id="modal-cronograma" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden items-center justify-center z-[60] p-4">
+    <div class="bg-white dark:bg-gray-900 w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden border border-slate-900/10 dark:border-white/10 flex flex-col max-h-[90vh]">
+        <div class="px-6 py-4 border-b border-slate-900/10 dark:border-white/10 flex justify-between items-center bg-gradient-to-r from-pink-50 to-purple-50 dark:from-pink-900/20 dark:to-purple-900/20">
+            <h3 class="text-md font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                <i class="fa-solid fa-calendar-plus text-pink-500"></i>
+                <span id="modal-cronograma-title">Novo Cronograma</span>
+            </h3>
+            <button onclick="closeModal('modal-cronograma')" class="text-slate-400 hover:text-slate-600 transition-colors"><i class="fa-solid fa-xmark"></i></button>
+        </div>
+        <form id="form-cronograma" onsubmit="saveCronograma(event)" class="overflow-y-auto flex-1 px-6 py-5 space-y-5">
+            <input type="hidden" name="id" value="">
+
+            <!-- Título -->
+            <div>
+                <label class="block text-[10px] font-black text-slate-500 dark:text-gray-400 uppercase tracking-widest mb-1.5">Título do Evento *</label>
+                <input name="title" type="text" required placeholder="Ex: Treinamento NR-10, Auditoria ISO 9001..."
+                       class="w-full bg-slate-900/5 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 dark:text-white placeholder:text-slate-400 outline-none focus:border-pink-500/50 transition-all">
+            </div>
+
+            <!-- Tipo + Status -->
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-[10px] font-black text-slate-500 dark:text-gray-400 uppercase tracking-widest mb-1.5">Tipo de Evento</label>
+                    <select name="event_type" class="w-full bg-slate-900/5 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 dark:text-white outline-none focus:border-pink-500/50 transition-all">
+                        <option value="treinamento">🎓 Treinamento</option>
+                        <option value="evento" selected>🎯 Evento</option>
+                        <option value="reuniao_externa">🤝 Reunião Externa</option>
+                        <option value="auditoria">🔍 Auditoria</option>
+                        <option value="outro">📌 Outro</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black text-slate-500 dark:text-gray-400 uppercase tracking-widest mb-1.5">Status</label>
+                    <select name="status" class="w-full bg-slate-900/5 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 dark:text-white outline-none focus:border-pink-500/50 transition-all">
+                        <option value="AGENDADO" selected>📋 Agendado</option>
+                        <option value="EM_ANDAMENTO">⏳ Em Andamento</option>
+                        <option value="CONCLUIDO">✅ Concluído</option>
+                        <option value="CANCELADO">❌ Cancelado</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Datas -->
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-[10px] font-black text-slate-500 dark:text-gray-400 uppercase tracking-widest mb-1.5">Data de Início *</label>
+                    <input name="date_start" type="date" required
+                           class="w-full bg-slate-900/5 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 dark:text-white outline-none focus:border-pink-500/50 transition-all">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black text-slate-500 dark:text-gray-400 uppercase tracking-widest mb-1.5">Data de Término <span class="text-slate-400 font-normal">(opcional)</span></label>
+                    <input name="date_end" type="date"
+                           class="w-full bg-slate-900/5 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 dark:text-white outline-none focus:border-pink-500/50 transition-all">
+                </div>
+            </div>
+
+            <!-- Horários -->
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-[10px] font-black text-slate-500 dark:text-gray-400 uppercase tracking-widest mb-1.5">Horário Início</label>
+                    <input name="time_start" type="time"
+                           class="w-full bg-slate-900/5 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 dark:text-white outline-none focus:border-pink-500/50 transition-all">
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black text-slate-500 dark:text-gray-400 uppercase tracking-widest mb-1.5">Horário Término</label>
+                    <input name="time_end" type="time"
+                           class="w-full bg-slate-900/5 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 dark:text-white outline-none focus:border-pink-500/50 transition-all">
+                </div>
+            </div>
+
+            <!-- Local -->
+            <div>
+                <label class="block text-[10px] font-black text-slate-500 dark:text-gray-400 uppercase tracking-widest mb-1.5">Local</label>
+                <input name="location" type="text" placeholder="Ex: Sala de Reuniões, Sede, Online..."
+                       class="w-full bg-slate-900/5 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 dark:text-white placeholder:text-slate-400 outline-none focus:border-pink-500/50 transition-all">
+            </div>
+
+            <!-- Participantes -->
+            <div>
+                <label class="block text-[10px] font-black text-slate-500 dark:text-gray-400 uppercase tracking-widest mb-1.5">Participantes</label>
+                <div class="bg-slate-900/5 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 rounded-xl p-3 max-h-40 overflow-y-auto">
+                    <div id="cronograma-participants-list" class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        {% for t in tecnicos_js_data %}
+                        <label class="flex items-center gap-2 p-1.5 rounded-lg hover:bg-white/50 dark:hover:bg-white/5 cursor-pointer transition-colors">
+                            <input type="checkbox" name="participants" value="{{ t.id }}" class="w-3.5 h-3.5 rounded text-pink-600 focus:ring-pink-500 cursor-pointer">
+                            <span class="text-[11px] font-bold text-slate-700 dark:text-slate-300 truncate">{{ t.username }}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Descrição -->
+            <div>
+                <label class="block text-[10px] font-black text-slate-500 dark:text-gray-400 uppercase tracking-widest mb-1.5">Descrição / Detalhes</label>
+                <textarea name="description" rows="3" placeholder="Descreva os detalhes do evento..."
+                          class="w-full bg-slate-900/5 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 dark:text-white placeholder:text-slate-400 outline-none focus:border-pink-500/50 transition-all resize-none"></textarea>
+            </div>
+
+            <!-- Observações -->
+            <div>
+                <label class="block text-[10px] font-black text-slate-500 dark:text-gray-400 uppercase tracking-widest mb-1.5">Observações</label>
+                <textarea name="obs" rows="2" placeholder="Observações adicionais..."
+                          class="w-full bg-slate-900/5 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 rounded-xl px-4 py-3 text-sm font-bold text-slate-800 dark:text-white placeholder:text-slate-400 outline-none focus:border-pink-500/50 transition-all resize-none"></textarea>
+            </div>
+
+            <!-- Configurações automáticas: Agendamento no calendário e notificações na véspera -->
+            <input type="hidden" name="show_on_calendar" value="true">
+            <input type="hidden" name="notify_whatsapp" value="true">
+
+            <!-- Botão Salvar -->
+            <div class="pt-2">
+                <button type="submit" class="w-full px-6 py-3.5 bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-700 hover:to-purple-700 text-white rounded-xl font-black text-[11px] uppercase tracking-widest shadow-lg shadow-pink-500/20 transition-all active:scale-[0.98] flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-floppy-disk text-sm"></i>
+                    Salvar Cronograma
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Modal: Detalhes do Cronograma (Visualização) -->
+<div id="modal-cronograma-detalhes" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden items-center justify-center z-[60] p-4">
+    <div class="bg-white dark:bg-gray-900 w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden border border-slate-900/10 dark:border-white/10 flex flex-col max-h-[90vh]">
+        <div class="px-6 py-4 border-b border-slate-900/10 dark:border-white/10 flex justify-between items-center bg-gradient-to-r from-pink-50 to-purple-50 dark:from-pink-900/20 dark:to-purple-900/20">
+            <h3 class="text-md font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                <i class="fa-solid fa-calendar-check text-pink-500"></i>
+                Detalhes do Cronograma
+            </h3>
+            <button onclick="closeModal('modal-cronograma-detalhes')" class="text-slate-400 hover:text-slate-600 transition-colors">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+        <div class="overflow-y-auto flex-1 px-6 py-5 space-y-4">
+            <div class="flex items-center gap-3 mb-2">
+                <span id="detalhe-crono-type-badge" class="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider text-white bg-pink-500"></span>
+                <span id="detalhe-crono-status-badge" class="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider"></span>
+            </div>
+            <h4 id="detalhe-crono-title" class="text-lg font-extrabold text-slate-800 dark:text-white"></h4>
+            <div class="grid grid-cols-2 gap-3">
+                <div class="bg-slate-50 dark:bg-gray-800/40 p-3 rounded-xl border border-slate-900/5 dark:border-white/5">
+                    <span class="text-[9px] font-black text-slate-400 uppercase block">Data</span>
+                    <p id="detalhe-crono-date" class="text-sm font-bold text-slate-800 dark:text-white mt-0.5"></p>
+                </div>
+                <div class="bg-slate-50 dark:bg-gray-800/40 p-3 rounded-xl border border-slate-900/5 dark:border-white/5">
+                    <span class="text-[9px] font-black text-slate-400 uppercase block">Horário</span>
+                    <p id="detalhe-crono-time" class="text-sm font-bold text-slate-800 dark:text-white mt-0.5"></p>
+                </div>
+            </div>
+            <div class="bg-slate-50 dark:bg-gray-800/40 p-3 rounded-xl border border-slate-900/5 dark:border-white/5">
+                <span class="text-[9px] font-black text-slate-400 uppercase block">Local</span>
+                <p id="detalhe-crono-location" class="text-sm font-bold text-slate-800 dark:text-white mt-0.5"></p>
+            </div>
+            <div class="space-y-1">
+                <span class="text-xs font-bold text-slate-400 uppercase block">Participantes</span>
+                <div id="detalhe-crono-participants" class="flex flex-wrap gap-1.5 pt-0.5"></div>
+            </div>
+            <div class="bg-slate-50 dark:bg-gray-800/40 p-3 rounded-xl border border-slate-900/5 dark:border-white/5">
+                <span class="text-[9px] font-black text-slate-400 uppercase block">Descrição</span>
+                <p id="detalhe-crono-description" class="text-slate-600 dark:text-gray-300 text-xs leading-relaxed mt-0.5"></p>
+            </div>
+            <div class="bg-slate-50 dark:bg-gray-800/40 p-3 rounded-xl border border-slate-900/5 dark:border-white/5">
+                <span class="text-[9px] font-black text-slate-400 uppercase block">Observações</span>
+                <p id="detalhe-crono-obs" class="text-slate-600 dark:text-gray-300 italic text-xs leading-relaxed mt-0.5"></p>
+            </div>
+        </div>
+        <div class="px-6 py-3 bg-slate-50 dark:bg-gray-800/30 border-t border-slate-900/10 dark:border-white/10 flex justify-end">
+            <button onclick="closeModal('modal-cronograma-detalhes')" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 dark:bg-gray-800 dark:hover:bg-gray-700 text-slate-700 dark:text-gray-300 rounded-xl text-xs font-bold transition-all active:scale-95">Fechar</button>
+        </div>
+    </div>
+</div>
+
 <!-- Modal: Detalhes da Reunião (Visualização) -->
 <div id="modal-reuniao-detalhes" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden items-center justify-center z-[60] p-4">
     <div class="bg-white dark:bg-gray-900 w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden border border-slate-900/10 dark:border-white/10 flex flex-col max-h-[90vh]">
@@ -4637,6 +4833,7 @@ function loadTabData(tabId) {
         loadEquipes(); 
         loadScaleConfig(); 
         loadItems('escalas'); 
+        loadCronogramas();
         switchEscalaSubTab('equipes');
     }
     if(tabId === 'calendario') initCalendar();
@@ -7971,6 +8168,18 @@ function filterEscalasEquipesContent() {
             return matchesName || matchesLeader || matchesMember;
         });
         renderEquipesList(filteredEquipes);
+    } else if (currentEscalaSubTab === 'cronogramas') {
+        const filteredCronogramas = globalCronogramas.filter(c => {
+            const matchesTitle = (c.title || '').toLowerCase().includes(term);
+            const matchesDesc = (c.description || '').toLowerCase().includes(term);
+            const matchesLoc = (c.location || '').toLowerCase().includes(term);
+            const matchesType = (c.event_type || '').toLowerCase().includes(term);
+            const matchesStatus = (c.status || '').toLowerCase().includes(term);
+            const matchesParts = (c.participants_names || '').toLowerCase().includes(term);
+            const matchesDate = (c.date_start || '').toLowerCase().includes(term);
+            return matchesTitle || matchesDesc || matchesLoc || matchesType || matchesStatus || matchesParts || matchesDate;
+        });
+        renderCronogramasList(filteredCronogramas);
     } else {
         const filteredScales = globalScales.filter(s => {
             const matchesType = selectedType === 'todos' || s.type === selectedType;
@@ -12089,15 +12298,295 @@ document.addEventListener('fullscreenchange', () => {
 });
 
 
+// =========================================================================
+// 📅 CONTROLLER: CRONOGRAMAS
+// =========================================================================
+let globalCronogramas = [];
+
+async function loadCronogramas() {
+    try {
+        const res = await fetch(`/api/gestao/cronogramas?t=${Date.now()}`);
+        if (!res.ok) throw new Error('Erro ao carregar cronogramas');
+        globalCronogramas = await res.json();
+        renderCronogramasList(globalCronogramas);
+        updateCronogramasKPIs();
+    } catch (e) {
+        console.error('Erro ao carregar cronogramas:', e);
+        const container = document.getElementById('list-cronogramas');
+        if (container) container.innerHTML = '<p class="text-center text-red-400 text-xs py-10">Erro ao carregar cronogramas.</p>';
+    }
+}
+
+function updateCronogramasKPIs() {
+    const badge = document.getElementById('badge-count-cronogramas');
+    if (badge) badge.innerText = globalCronogramas.length;
+}
+
+function renderCronogramasList(items) {
+    const container = document.getElementById('list-cronogramas');
+    if (!container) return;
+
+    if (!items || items.length === 0) {
+        container.innerHTML = `
+            <div class="col-span-full flex flex-col items-center justify-center py-16 text-center">
+                <div class="w-16 h-16 rounded-2xl bg-pink-500/10 flex items-center justify-center mb-4">
+                    <i class="fa-solid fa-calendar-plus text-2xl text-pink-400"></i>
+                </div>
+                <p class="text-sm font-bold text-slate-500 dark:text-slate-400">Nenhum cronograma cadastrado</p>
+                <p class="text-xs text-slate-400 dark:text-slate-500 mt-1">Clique em "Novo Cronograma" para adicionar.</p>
+            </div>`;
+        return;
+    }
+
+    const typeConfig = {
+        'treinamento': { emoji: '🎓', label: 'Treinamento', color: 'bg-violet-500', border: 'border-violet-500/20', bg: 'from-violet-500/5 to-purple-500/5' },
+        'evento':      { emoji: '🎯', label: 'Evento', color: 'bg-pink-500', border: 'border-pink-500/20', bg: 'from-pink-500/5 to-rose-500/5' },
+        'reuniao_externa': { emoji: '🤝', label: 'Reunião Ext.', color: 'bg-amber-500', border: 'border-amber-500/20', bg: 'from-amber-500/5 to-yellow-500/5' },
+        'auditoria':   { emoji: '🔍', label: 'Auditoria', color: 'bg-red-500', border: 'border-red-500/20', bg: 'from-red-500/5 to-orange-500/5' },
+        'outro':       { emoji: '📌', label: 'Outro', color: 'bg-indigo-500', border: 'border-indigo-500/20', bg: 'from-indigo-500/5 to-blue-500/5' }
+    };
+
+    const statusConfig = {
+        'AGENDADO': { label: 'Agendado', class: 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300' },
+        'EM_ANDAMENTO': { label: 'Em Andamento', class: 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300' },
+        'CONCLUIDO': { label: 'Concluído', class: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300' },
+        'CANCELADO': { label: 'Cancelado', class: 'bg-slate-100 text-slate-500 dark:bg-slate-500/20 dark:text-slate-400 line-through' }
+    };
+
+    container.innerHTML = items.map(item => {
+        const tc = typeConfig[item.event_type] || typeConfig['outro'];
+        const sc = statusConfig[item.status] || statusConfig['AGENDADO'];
+
+        const dateStart = item.date_start ? new Date(item.date_start + 'T12:00:00') : null;
+        const dateFormatted = dateStart ? dateStart.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' }) : 'A definir';
+        const dateEnd = item.date_end ? new Date(item.date_end + 'T12:00:00') : null;
+        const dateRange = dateEnd && dateEnd.getTime() !== dateStart?.getTime()
+            ? `${dateFormatted} — ${dateEnd.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })}`
+            : dateFormatted;
+
+        const timeStr = item.time_start ? `${item.time_start}${item.time_end ? ' – ' + item.time_end : ''}` : '';
+
+        const participantsHtml = item.participants_names
+            ? item.participants_names.split(', ').slice(0, 4).map(n =>
+                `<span class="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-white/10 text-[9px] font-bold text-slate-600 dark:text-slate-300">${n.toUpperCase()}</span>`
+              ).join('') + (item.participants_names.split(', ').length > 4 ? `<span class="px-2 py-0.5 rounded-full bg-slate-200 dark:bg-white/15 text-[9px] font-bold text-slate-500">+${item.participants_names.split(', ').length - 4}</span>` : '')
+            : '<span class="text-[10px] text-slate-400 italic">Sem participantes</span>';
+
+        return `
+        <div class="group bg-gradient-to-br ${tc.bg} bg-white/70 dark:bg-slate-900/50 border ${tc.border} dark:border-white/5 rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:shadow-pink-500/5 transition-all duration-300 hover:-translate-y-0.5 cursor-pointer"
+             onclick="showCronogramaDetalhes(${item.id})">
+            <div class="p-5">
+                <!-- Header -->
+                <div class="flex items-start justify-between gap-3 mb-3">
+                    <div class="flex items-center gap-2 min-w-0">
+                        <span class="${tc.color} text-white text-[9px] font-black px-2.5 py-1 rounded-lg uppercase tracking-wider flex-shrink-0">${tc.emoji} ${tc.label}</span>
+                        <span class="${sc.class} text-[8px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider flex-shrink-0">${sc.label}</span>
+                    </div>
+                    <div class="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0" onclick="event.stopPropagation()">
+                        <button onclick="editCronograma(${item.id})" class="w-7 h-7 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 flex items-center justify-center transition-colors" title="Editar">
+                            <i class="fa-solid fa-pen text-[10px]"></i>
+                        </button>
+                        <button onclick="deleteCronograma(${item.id})" class="w-7 h-7 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-500 flex items-center justify-center transition-colors" title="Excluir">
+                            <i class="fa-solid fa-trash text-[10px]"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Title -->
+                <h4 class="text-sm font-extrabold text-slate-800 dark:text-white leading-snug mb-3 line-clamp-2">${item.title || 'Sem título'}</h4>
+
+                <!-- Date & Time -->
+                <div class="flex flex-wrap items-center gap-3 mb-3">
+                    <div class="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300">
+                        <i class="fa-regular fa-calendar text-[10px] text-pink-500"></i>
+                        <span class="font-bold">${dateRange}</span>
+                    </div>
+                    ${timeStr ? `<div class="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300"><i class="fa-regular fa-clock text-[10px] text-pink-500"></i><span class="font-bold">${timeStr}</span></div>` : ''}
+                </div>
+
+                <!-- Location -->
+                ${item.location ? `<div class="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400 mb-3"><i class="fa-solid fa-location-dot text-[10px] text-pink-400"></i><span class="font-semibold">${item.location}</span></div>` : ''}
+
+                <!-- Participants -->
+                <div class="flex flex-wrap gap-1 mt-1">${participantsHtml}</div>
+            </div>
+        </div>`;
+    }).join('');
+}
+
+function openModalCronograma() {
+    const form = document.getElementById('form-cronograma');
+    form.reset();
+    form.querySelector('[name="id"]').value = '';
+    document.getElementById('modal-cronograma-title').innerText = 'Novo Cronograma';
+    // Reset checkboxes
+    form.querySelectorAll('#cronograma-participants-list input[type="checkbox"]').forEach(cb => cb.checked = false);
+    if (form.querySelector('[name="show_on_calendar"]')) form.querySelector('[name="show_on_calendar"]').value = 'true';
+    if (form.querySelector('[name="notify_whatsapp"]')) form.querySelector('[name="notify_whatsapp"]').value = 'true';
+    openModal('modal-cronograma');
+}
+
+async function editCronograma(id) {
+    const item = globalCronogramas.find(x => parseInt(x.id) === parseInt(id));
+    if (!item) return alert("Cronograma não encontrado.");
+
+    const form = document.getElementById('form-cronograma');
+    form.reset();
+
+    form.querySelector('[name="id"]').value = item.id;
+    form.querySelector('[name="title"]').value = item.title || '';
+    form.querySelector('[name="event_type"]').value = item.event_type || 'evento';
+    form.querySelector('[name="status"]').value = item.status || 'AGENDADO';
+    form.querySelector('[name="date_start"]').value = item.date_start || '';
+    form.querySelector('[name="date_end"]').value = item.date_end || '';
+    form.querySelector('[name="time_start"]').value = item.time_start || '';
+    form.querySelector('[name="time_end"]').value = item.time_end || '';
+    form.querySelector('[name="location"]').value = item.location || '';
+    form.querySelector('[name="description"]').value = item.description || '';
+    form.querySelector('[name="obs"]').value = item.obs || '';
+    if (form.querySelector('[name="show_on_calendar"]')) form.querySelector('[name="show_on_calendar"]').value = 'true';
+    if (form.querySelector('[name="notify_whatsapp"]')) form.querySelector('[name="notify_whatsapp"]').value = 'true';
+
+    // Check participants
+    const pIds = item.participants_ids ? item.participants_ids.split(',').map(x => x.trim()) : [];
+    form.querySelectorAll('#cronograma-participants-list input[type="checkbox"]').forEach(cb => {
+        cb.checked = pIds.includes(cb.value.toString());
+    });
+
+    document.getElementById('modal-cronograma-title').innerText = 'Editar Cronograma';
+    openModal('modal-cronograma');
+}
+
+async function saveCronograma(e) {
+    e.preventDefault();
+    const form = document.getElementById('form-cronograma');
+    const id = form.querySelector('[name="id"]').value;
+
+    const participants = [];
+    form.querySelectorAll('#cronograma-participants-list input[type="checkbox"]:checked').forEach(cb => {
+        participants.push(parseInt(cb.value));
+    });
+
+    const payload = {
+        title: form.querySelector('[name="title"]').value.trim(),
+        event_type: form.querySelector('[name="event_type"]').value,
+        status: form.querySelector('[name="status"]').value,
+        date_start: form.querySelector('[name="date_start"]').value,
+        date_end: form.querySelector('[name="date_end"]').value || null,
+        time_start: form.querySelector('[name="time_start"]').value || null,
+        time_end: form.querySelector('[name="time_end"]').value || null,
+        location: form.querySelector('[name="location"]').value.trim() || null,
+        description: form.querySelector('[name="description"]').value.trim() || null,
+        obs: form.querySelector('[name="obs"]').value.trim() || null,
+        participants_ids: participants,
+        show_on_calendar: true,
+        notify_whatsapp: true
+    };
+
+    if (!payload.title || !payload.date_start) {
+        alert('Preencha o título e a data de início.');
+        return;
+    }
+
+    const url = id ? `/api/gestao/cronogramas/${id}` : '/api/gestao/cronogramas';
+    const method = id ? 'PUT' : 'POST';
+
+    try {
+        const res = await fetch(url, {
+            method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        if (!res.ok) throw new Error('Erro ao salvar');
+        closeModal('modal-cronograma');
+        loadCronogramas();
+    } catch (e) {
+        alert('Erro ao salvar cronograma: ' + e.message);
+    }
+}
+
+async function deleteCronograma(id) {
+    if (!confirm("Deseja excluir este cronograma? Os comunicados vinculados também serão removidos.")) return;
+    try {
+        const res = await fetch(`/api/gestao/cronogramas/${id}`, { method: 'DELETE' });
+        if (res.ok) loadCronogramas();
+        else alert('Erro ao excluir cronograma.');
+    } catch (e) {
+        alert('Erro ao excluir: ' + e.message);
+    }
+}
+
+function showCronogramaDetalhes(id) {
+    const item = globalCronogramas.find(x => parseInt(x.id) === parseInt(id));
+    if (!item) return;
+
+    const typeLabels = {
+        'treinamento': '🎓 Treinamento',
+        'evento': '🎯 Evento',
+        'reuniao_externa': '🤝 Reunião Externa',
+        'auditoria': '🔍 Auditoria',
+        'outro': '📌 Outro'
+    };
+    const typeColors = {
+        'treinamento': 'bg-violet-500',
+        'evento': 'bg-pink-500',
+        'reuniao_externa': 'bg-amber-500',
+        'auditoria': 'bg-red-500',
+        'outro': 'bg-indigo-500'
+    };
+    const statusConfig = {
+        'AGENDADO': { label: 'Agendado', class: 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300' },
+        'EM_ANDAMENTO': { label: 'Em Andamento', class: 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300' },
+        'CONCLUIDO': { label: 'Concluído', class: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300' },
+        'CANCELADO': { label: 'Cancelado', class: 'bg-slate-100 text-slate-500 dark:bg-slate-500/20 dark:text-slate-400' }
+    };
+
+    const typeBadge = document.getElementById('detalhe-crono-type-badge');
+    typeBadge.innerText = typeLabels[item.event_type] || '📌 Outro';
+    typeBadge.className = `px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider text-white ${typeColors[item.event_type] || 'bg-indigo-500'}`;
+
+    const sc = statusConfig[item.status] || statusConfig['AGENDADO'];
+    const statusBadge = document.getElementById('detalhe-crono-status-badge');
+    statusBadge.innerText = sc.label;
+    statusBadge.className = `px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${sc.class}`;
+
+    document.getElementById('detalhe-crono-title').innerText = item.title || 'Sem título';
+
+    const ds = item.date_start ? new Date(item.date_start + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }) : '—';
+    const de = item.date_end ? new Date(item.date_end + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }) : '';
+    document.getElementById('detalhe-crono-date').innerText = de && de !== ds ? `${ds} — ${de}` : ds;
+
+    const timeStr = item.time_start ? `${item.time_start}${item.time_end ? ' – ' + item.time_end : ''}` : '—';
+    document.getElementById('detalhe-crono-time').innerText = timeStr;
+
+    document.getElementById('detalhe-crono-location').innerText = item.location || '—';
+    document.getElementById('detalhe-crono-description').innerText = item.description || 'Sem descrição.';
+    document.getElementById('detalhe-crono-obs').innerText = item.obs || 'Nenhuma observação.';
+
+    const partContainer = document.getElementById('detalhe-crono-participants');
+    if (item.participants_names) {
+        partContainer.innerHTML = item.participants_names.split(', ').map(n =>
+            `<span class="px-2.5 py-1 rounded-full bg-pink-100 dark:bg-pink-500/20 text-[10px] font-bold text-pink-700 dark:text-pink-300">${n.toUpperCase()}</span>`
+        ).join('');
+    } else {
+        partContainer.innerHTML = '<span class="text-[10px] text-slate-400 italic">Sem participantes definidos</span>';
+    }
+
+    openModal('modal-cronograma-detalhes');
+}
+
+
 function switchEscalaSubTab(subTabId) {
     currentEscalaSubTab = subTabId;
     
     // Hide all sub-panes
     const paneEquipes = document.getElementById('subpane-equipes');
     const paneEscalas = document.getElementById('subpane-escalas-manuais');
+    const paneCronogramas = document.getElementById('subpane-cronogramas');
     
     if (paneEquipes) paneEquipes.classList.add('hidden');
     if (paneEscalas) paneEscalas.classList.add('hidden');
+    if (paneCronogramas) paneCronogramas.classList.add('hidden');
     
     // Show active sub-pane
     const activePane = document.getElementById(`subpane-${subTabId}`);
@@ -12107,38 +12596,39 @@ function switchEscalaSubTab(subTabId) {
     const btnEquipe = document.getElementById('btn-nova-equipe-escala');
     const btnEscala = document.getElementById('btn-nova-escala-escala');
     const btnRodizio = document.getElementById('btn-configurar-rodizio');
+    const btnCronograma = document.getElementById('btn-novo-cronograma-escala');
     const filterTypeSelect = document.getElementById('filter-escala-type');
     
-    if (btnEquipe && btnEscala) {
-        if (subTabId === 'equipes') {
-            btnEquipe.classList.remove('hidden');
-            btnEscala.classList.add('hidden');
-            if (btnRodizio) btnRodizio.classList.add('hidden');
-            if (filterTypeSelect) filterTypeSelect.classList.add('hidden');
-        } else if (subTabId === 'escalas-manuais') {
-            btnEquipe.classList.add('hidden');
-            btnEscala.classList.remove('hidden');
-            if (btnRodizio) btnRodizio.classList.remove('hidden');
-            if (filterTypeSelect) filterTypeSelect.classList.remove('hidden');
-        } else {
-            btnEquipe.classList.add('hidden');
-            btnEscala.classList.add('hidden');
-            if (btnRodizio) btnRodizio.classList.add('hidden');
-            if (filterTypeSelect) filterTypeSelect.classList.add('hidden');
-        }
+    // Hide all action buttons first
+    if (btnEquipe) btnEquipe.classList.add('hidden');
+    if (btnEscala) btnEscala.classList.add('hidden');
+    if (btnRodizio) btnRodizio.classList.add('hidden');
+    if (btnCronograma) btnCronograma.classList.add('hidden');
+    if (filterTypeSelect) filterTypeSelect.classList.add('hidden');
+    
+    if (subTabId === 'equipes') {
+        if (btnEquipe) btnEquipe.classList.remove('hidden');
+    } else if (subTabId === 'escalas-manuais') {
+        if (btnEscala) btnEscala.classList.remove('hidden');
+        if (btnRodizio) btnRodizio.classList.remove('hidden');
+        if (filterTypeSelect) filterTypeSelect.classList.remove('hidden');
+    } else if (subTabId === 'cronogramas') {
+        if (btnCronograma) btnCronograma.classList.remove('hidden');
     }
     
     // Update button states
     const btnTabEquipes = document.getElementById('btnSubTabEquipes');
     const btnTabEscalas = document.getElementById('btnSubTabEscalasManuais');
+    const btnTabCronogramas = document.getElementById('btnSubTabCronogramas');
     
-    [btnTabEquipes, btnTabEscalas].forEach(btn => {
+    [btnTabEquipes, btnTabEscalas, btnTabCronogramas].forEach(btn => {
         if (btn) {
             btn.className = "flex-1 py-1.5 px-3 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-2 h-full active:scale-95 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 border border-transparent";
         }
     });
     
-    const activeBtn = document.getElementById(`btnSubTab${subTabId === 'equipes' ? 'Equipes' : 'EscalasManuais'}`);
+    const btnIdMap = { 'equipes': 'btnSubTabEquipes', 'escalas-manuais': 'btnSubTabEscalasManuais', 'cronogramas': 'btnSubTabCronogramas' };
+    const activeBtn = document.getElementById(btnIdMap[subTabId]);
     if (activeBtn) {
         activeBtn.className = "flex-1 py-1.5 px-3 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-2 h-full active:scale-95 bg-purple-600 text-white shadow-md shadow-purple-500/25";
     }

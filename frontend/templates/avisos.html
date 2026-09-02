@@ -281,138 +281,542 @@
     </div>
 
     <!-- 🤖 TAB: AUTOMAÇÕES -->
-    <div id="content-automacoes" class="avisos-tab-content hidden">
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    <div id="content-automacoes" class="avisos-tab-content hidden space-y-8">
+        
+        <!-- 📊 PAINEL DE MONITORAMENTO & TELEMETRIA EM TEMPO REAL -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+            <!-- 1. Status Geral de Automações -->
+            <div class="card-premium p-5 flex flex-col justify-between border border-slate-900/5 dark:border-white/5 relative overflow-hidden group">
+                <div class="flex items-center justify-between">
+                    <span class="text-[10px] font-black uppercase tracking-wider text-slate-400">Automações Ativas</span>
+                    <div class="w-9 h-9 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-bolt-lightning text-sm"></i>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <div class="flex items-baseline gap-2">
+                        <span id="kpi-active-rules" class="text-3xl font-black text-slate-800 dark:text-white tracking-tight">{{ active_rules_count }}</span>
+                        <span class="text-xs font-bold text-slate-400">/ {{ total_rules_count }} regras</span>
+                    </div>
+                    <div class="mt-2 flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full {% if active_rules_count > 0 %}bg-emerald-500 animate-pulse{% else %}bg-slate-400{% endif %}"></span>
+                        <span class="text-[10px] font-bold text-slate-500">{% if active_rules_count > 0 %}Execução Contínua Ativa{% else %}Todas Pausadas{% endif %}</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 2. Ciclo Diário & Agendamento -->
+            <div class="card-premium p-5 flex flex-col justify-between border border-slate-900/5 dark:border-white/5 relative overflow-hidden group">
+                <div class="flex items-center justify-between">
+                    <span class="text-[10px] font-black uppercase tracking-wider text-slate-400">Ciclo de Varredura</span>
+                    <div class="w-9 h-9 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform">
+                        <i class="fa-regular fa-clock text-sm"></i>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <div class="text-2xl font-black text-slate-800 dark:text-white tracking-tight">08:00h</div>
+                    <div class="mt-2 flex items-center gap-1.5">
+                        <span class="px-2 py-0.5 rounded-full text-[9px] font-black bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                            Diário + Imediato em D-0/D-1
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 3. Disparos Hoje -->
+            <div class="card-premium p-5 flex flex-col justify-between border border-slate-900/5 dark:border-white/5 relative overflow-hidden group">
+                <div class="flex items-center justify-between">
+                    <span class="text-[10px] font-black uppercase tracking-wider text-slate-400">Disparos Hoje</span>
+                    <div class="w-9 h-9 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-paper-plane text-sm"></i>
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <div class="flex items-baseline gap-2">
+                        <span class="text-3xl font-black text-slate-800 dark:text-white tracking-tight">{{ logs_today_count }}</span>
+                        <span class="text-xs font-bold text-slate-400">alertas</span>
+                    </div>
+                    <div class="mt-2 flex items-center gap-1.5 text-[10px]">
+                        {% if logs_today_failed > 0 %}
+                        <span class="text-rose-500 font-bold flex items-center gap-1"><i class="fa-solid fa-triangle-exclamation"></i> {{ logs_today_failed }} falha(s)</span>
+                        {% else %}
+                        <span class="text-emerald-500 font-bold flex items-center gap-1"><i class="fa-solid fa-check"></i> 100% entregues</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- 4. Saúde dos Canais Conectados -->
+            <div class="card-premium p-5 flex flex-col justify-between border border-slate-900/5 dark:border-white/5 relative overflow-hidden">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="text-[10px] font-black uppercase tracking-wider text-slate-400">Canais Conectados</span>
+                    <a href="javascript:void(0)" onclick="switchAvisosTab('integracoes')" class="text-[10px] font-bold text-blue-500 hover:underline">Configurar</a>
+                </div>
+                <div class="grid grid-cols-2 gap-2 mt-2">
+                    <div class="flex items-center gap-2 p-2 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-900/5 dark:border-white/5">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                        <span class="text-[11px] font-bold text-slate-700 dark:text-slate-300">Sistema</span>
+                    </div>
+                    <div class="flex items-center gap-2 p-2 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-900/5 dark:border-white/5">
+                        <span class="w-2 h-2 rounded-full {% if whatsapp_ready %}bg-emerald-500{% else %}bg-amber-500{% endif %}"></span>
+                        <span class="text-[11px] font-bold text-slate-700 dark:text-slate-300">WhatsApp</span>
+                    </div>
+                    <div class="flex items-center gap-2 p-2 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-900/5 dark:border-white/5">
+                        <span class="w-2 h-2 rounded-full {% if telegram_ready %}bg-emerald-500{% else %}bg-slate-400{% endif %}"></span>
+                        <span class="text-[11px] font-bold text-slate-700 dark:text-slate-300">Telegram</span>
+                    </div>
+                    <div class="flex items-center gap-2 p-2 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-900/5 dark:border-white/5">
+                        <span class="w-2 h-2 rounded-full {% if email_ready %}bg-emerald-500{% else %}bg-slate-400{% endif %}"></span>
+                        <span class="text-[11px] font-bold text-slate-700 dark:text-slate-300">E-mail</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 🎛️ BARRA DE FILTROS & AÇÕES RÁPIDAS -->
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-900/5 dark:bg-white/5 p-4 rounded-2xl border border-slate-900/5 dark:border-white/5">
+            <!-- Filtros por Categoria -->
+            <div class="flex items-center gap-2 flex-wrap">
+                <button type="button" onclick="filterAutomacoesCategory('todos')" id="btn-auto-cat-todos" class="btn-auto-cat px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all bg-blue-600 text-white shadow-sm">
+                    Todas ({{ total_rules_count }})
+                </button>
+                <button type="button" onclick="filterAutomacoesCategory('operacao')" id="btn-auto-cat-operacao" class="btn-auto-cat px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-white/10">
+                    Operação & Escalas
+                </button>
+                <button type="button" onclick="filterAutomacoesCategory('frota')" id="btn-auto-cat-frota" class="btn-auto-cat px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-white/10">
+                    Frota & Veículos
+                </button>
+                <button type="button" onclick="filterAutomacoesCategory('tecnica')" id="btn-auto-cat-tecnica" class="btn-auto-cat px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-white/10">
+                    Técnica & Campo
+                </button>
+                <button type="button" onclick="filterAutomacoesCategory('lms')" id="btn-auto-cat-lms" class="btn-auto-cat px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-white/10">
+                    Capacitação LMS
+                </button>
+            </div>
+
+            <!-- Busca & Ações -->
+            <div class="flex items-center gap-2 flex-wrap shrink-0">
+                <div class="relative">
+                    <i class="fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                    <input type="text" id="search-automacoes" oninput="searchAutomacoes(this.value)" placeholder="Buscar automação..." class="pl-8 pr-3 py-2 bg-white dark:bg-slate-900 border border-slate-900/10 dark:border-white/10 rounded-xl text-xs dark:text-white outline-none focus:ring-2 focus:ring-blue-500 w-44 md:w-56 transition-all">
+                </div>
+                {% if current_user.is_admin or current_user.has_permission('avisos_historico') %}
+                <button type="button" onclick="openModal('modalLogsAuditoria'); loadRuleLogs(1);" class="px-4 py-2 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 rounded-xl font-black text-xs uppercase tracking-wider transition-all active:scale-95 flex items-center gap-1.5">
+                    <i class="fa-solid fa-clock-rotate-left text-xs"></i> Logs
+                </button>
+                {% endif %}
+                <button type="button" onclick="runAudit()" id="audit-btn" class="px-5 py-2 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl font-black text-xs uppercase tracking-wider shadow-lg transition-all active:scale-95 flex items-center gap-2">
+                    <i class="fa-solid fa-play text-xs"></i> Executar Diagnóstico
+                </button>
+            </div>
+        </div>
+
+        <!-- 📦 GRADE PRINCIPAL DE CARDS DE AUTOMAÇÃO -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="automacoes-grid">
             {% for r in regras %}
-            <div class="card-premium p-6 flex flex-col justify-between border-2 {% if r.is_enabled %}border-blue-500/20{% else %}border-transparent{% endif %}">
-                <form method="post" class="space-y-4">
-                    <input type="hidden" name="acao" value="atualizar_regra">
+            {% set cat_map = {
+                'scale_alert': 'operacao',
+                'cronograma_alert': 'operacao',
+                'meeting_alert': 'operacao',
+                'task_assigned_alert': 'operacao',
+                'solicitacao_alert': 'operacao',
+                'late_checklist': 'frota',
+                'checklist_issue_alert': 'frota',
+                'cnh_expiry_alert': 'frota',
+                'vehicle_doc_alert': 'frota',
+                'vehicle_maintenance_km_alert': 'frota',
+                'os_alert': 'frota',
+                'os_sla': 'frota',
+                'os_created_alert': 'frota',
+                'inactive_tech_alert': 'frota',
+                'supervisao_alert': 'tecnica',
+                'rfo_alert': 'tecnica',
+                'tool_inspection_alert': 'tecnica',
+                'training_alert': 'lms',
+                'training_assigned_alert': 'lms'
+            } %}
+            {% set icon_map = {
+                'scale_alert': 'fa-calendar-check',
+                'cronograma_alert': 'fa-calendar-days',
+                'meeting_alert': 'fa-handshake',
+                'task_assigned_alert': 'fa-list-check',
+                'solicitacao_alert': 'fa-envelope-open-text',
+                'late_checklist': 'fa-clipboard-check',
+                'checklist_issue_alert': 'fa-triangle-exclamation',
+                'cnh_expiry_alert': 'fa-id-card',
+                'vehicle_doc_alert': 'fa-file-invoice-dollar',
+                'vehicle_maintenance_km_alert': 'fa-gauge-high',
+                'os_alert': 'fa-wrench',
+                'os_sla': 'fa-wrench',
+                'os_created_alert': 'fa-circle-exclamation',
+                'inactive_tech_alert': 'fa-user-clock',
+                'supervisao_alert': 'fa-shield-halved',
+                'rfo_alert': 'fa-bolt',
+                'tool_inspection_alert': 'fa-toolbox',
+                'training_alert': 'fa-graduation-cap',
+                'training_assigned_alert': 'fa-award'
+            } %}
+            {% set grad_map = {
+                'scale_alert': 'from-emerald-500 to-teal-600',
+                'cronograma_alert': 'from-blue-600 to-indigo-600',
+                'meeting_alert': 'from-indigo-500 to-cyan-600',
+                'task_assigned_alert': 'from-amber-500 to-orange-600',
+                'solicitacao_alert': 'from-sky-500 to-blue-600',
+                'late_checklist': 'from-amber-500 to-yellow-600',
+                'checklist_issue_alert': 'from-rose-600 to-red-700',
+                'cnh_expiry_alert': 'from-cyan-600 to-teal-700',
+                'vehicle_doc_alert': 'from-blue-500 to-teal-600',
+                'vehicle_maintenance_km_alert': 'from-orange-500 to-amber-600',
+                'os_alert': 'from-rose-500 to-red-600',
+                'os_sla': 'from-rose-500 to-red-600',
+                'os_created_alert': 'from-red-500 to-pink-600',
+                'inactive_tech_alert': 'from-slate-600 to-slate-800',
+                'supervisao_alert': 'from-violet-600 to-indigo-700',
+                'rfo_alert': 'from-amber-600 to-red-600',
+                'tool_inspection_alert': 'from-emerald-600 to-green-700',
+                'training_alert': 'from-purple-600 to-pink-600',
+                'training_assigned_alert': 'from-fuchsia-600 to-purple-700'
+            } %}
+            {% set label_map = {
+                'scale_alert': 'Escalas & Plantão',
+                'cronograma_alert': 'Cronogramas & Eventos',
+                'meeting_alert': 'Reuniões & Alinhamentos',
+                'task_assigned_alert': 'Tarefas & Demandas',
+                'solicitacao_alert': 'Solicitações Técnicas',
+                'late_checklist': 'Checklist Matinal',
+                'checklist_issue_alert': 'Avarias de Frota',
+                'cnh_expiry_alert': 'Habilitação (CNH)',
+                'vehicle_doc_alert': 'Documentos da Frota',
+                'vehicle_maintenance_km_alert': 'Revisão Preventiva',
+                'os_alert': 'Manutenção & O.S',
+                'os_sla': 'Manutenção & O.S',
+                'os_created_alert': 'Abertura de O.S',
+                'inactive_tech_alert': 'Inatividade Operacional',
+                'supervisao_alert': 'Supervisão de Campo',
+                'rfo_alert': 'Incidentes & RFO',
+                'tool_inspection_alert': 'Ferramental & Cautela',
+                'training_alert': 'Capacitação LMS',
+                'training_assigned_alert': 'Novas Matrículas LMS'
+            } %}
+            {% set rule_cat = cat_map.get(r.slug, 'operacao') %}
+            {% set icon_class = icon_map.get(r.slug, 'fa-bell') %}
+            {% set gradient_class = grad_map.get(r.slug, 'from-blue-600 to-indigo-600') %}
+            {% set cat_label = label_map.get(r.slug, 'Automação') %}
+            {% set trigger_desc = r.description %}
+            {% set trigger_label = 'Tolerância KM' if r.slug == 'vehicle_maintenance_km_alert' else ('Antecedência (dias)' if (r.trigger_days and r.trigger_days > 0) else 'Disparo Imediato (dias)') %}
+
+            <div class="auto-card card-premium p-6 flex flex-col justify-between border-2 transition-all duration-300 {% if r.is_enabled %}border-blue-500/20 bg-gradient-to-b from-blue-50/20 to-transparent dark:from-blue-950/10{% else %}border-transparent opacity-80{% endif %}" 
+                 id="card-rule-{{ r.slug }}"
+                 data-category="{{ rule_cat }}"
+                 data-name="{{ r.name | lower }} {{ r.description | lower }}">
+                
+                <!-- Form de controle do card -->
+                <form id="form-rule-{{ r.slug }}" onsubmit="event.preventDefault(); saveRuleCard('{{ r.slug }}');" class="space-y-4">
                     <input type="hidden" name="slug" value="{{ r.slug }}">
                     
-                    <div class="flex items-center justify-between mb-2">
-                        <div class="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-600">
-                            <i class="fa-solid {% if r.slug == 'os_alert' or r.slug == 'os_sla' %}fa-tools{% elif r.slug == 'scale_alert' %}fa-calendar-check{% elif r.slug == 'late_checklist' %}fa-user-clock{% elif r.slug == 'inactive_tech_alert' %}fa-user-slash{% else %}fa-triangle-exclamation{% endif %}"></i>
+                    <!-- Topo do Card: Ícone, Categoria e Toggle Switch -->
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="flex items-center gap-3">
+                            <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr {{ gradient_class }} flex items-center justify-center text-white shadow-md shrink-0">
+                                <i class="fa-solid {{ icon_class }} text-base"></i>
+                            </div>
+                            <div>
+                                <span class="px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-slate-400">
+                                    {{ cat_label }}
+                                </span>
+                                <h4 class="text-sm font-black text-slate-900 dark:text-white tracking-tight mt-0.5 leading-snug">{{ r.name }}</h4>
+                            </div>
                         </div>
-                        <div class="flex items-center gap-2">
-                            <span class="text-[9px] font-black uppercase tracking-widest text-slate-400">Ativa</span>
-                            <label class="relative inline-flex items-center cursor-pointer">
-                                <input type="checkbox" name="is_enabled" value="on" {% if r.is_enabled %}checked{% endif %} class="sr-only peer">
-                                <div class="w-11 h-6 bg-slate-200 dark:bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+
+                        <!-- Toggle Switch -->
+                        <div class="flex items-center gap-2 shrink-0 pt-1">
+                            <label class="relative inline-flex items-center cursor-pointer" title="Ativar ou pausar esta automação">
+                                <input type="checkbox" id="toggle-rule-{{ r.slug }}" name="is_enabled" value="on" {% if r.is_enabled %}checked{% endif %} onchange="toggleRuleQuick('{{ r.slug }}', this.checked)" class="sr-only peer">
+                                <div class="w-10 h-5 bg-slate-200 dark:bg-white/10 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
                             </label>
                         </div>
                     </div>
-                    
+
+                    <!-- Explicação & Momento do Disparo -->
+                    <div class="p-3 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
+                        <div class="flex items-center gap-1.5 font-bold text-blue-600 dark:text-blue-400 text-[10px] uppercase tracking-wider mb-1">
+                            <i class="fa-solid fa-circle-info text-[9px]"></i> Como Funciona
+                        </div>
+                        <p class="text-slate-500 dark:text-slate-400">{{ trigger_desc }}</p>
+                    </div>
+
+                    <!-- Configurações de Gatilho & Anti-Spam -->
+                    <div class="grid grid-cols-2 gap-3 pt-1">
+                        <div>
+                            <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1.5" title="{{ trigger_label }}">{{ trigger_label }}</label>
+                            <div class="relative">
+                                <input type="number" min="0" max="365" name="trigger_days" id="input-trigger-{{ r.slug }}" value="{{ r.trigger_days if r.trigger_days is not none else 7 }}" class="w-full bg-white dark:bg-slate-900 border border-slate-900/10 dark:border-white/10 rounded-xl px-3 py-2 text-xs font-black dark:text-white outline-none focus:ring-2 focus:ring-blue-500 transition-all text-center">
+                                <span class="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-bold">dias</span>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1.5" title="Evita múltiplos envios repetidos para o mesmo colaborador no período">Silêncio Anti-Spam</label>
+                            <div class="relative">
+                                <input type="number" min="0" max="90" name="silence_days" id="input-silence-{{ r.slug }}" value="{{ r.silence_days if r.silence_days is not none else 1 }}" class="w-full bg-white dark:bg-slate-900 border border-slate-900/10 dark:border-white/10 rounded-xl px-3 py-2 text-xs font-black dark:text-white outline-none focus:ring-2 focus:ring-blue-500 transition-all text-center">
+                                <span class="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-bold">dias</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Canais Habilitados com Chips Interativos -->
                     <div>
-                        <h4 class="text-base font-black text-slate-800 dark:text-white mb-1">{{ r.name }}</h4>
-                        <p class="text-[11px] text-slate-500 leading-relaxed">{{ r.description }}</p>
-                    </div>
-
-                    {% if r.slug != 'training_alert' %}
-                    <div class="pt-2">
-                        <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Limite de Dias / Antecedência</label>
-                        <input type="number" name="trigger_days" value="{{ r.trigger_days or 7 }}" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2 text-xs dark:text-white outline-none focus:ring-4 focus:ring-blue-500/10 transition-all">
-                    </div>
-                    {% else %}
-                    <input type="hidden" name="trigger_days" value="7">
-                    {% endif %}
-
-                    <div class="pt-2">
-                        <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Período de Silêncio (Dias)</label>
-                        <input type="number" name="silence_days" value="{{ r.silence_days or 1 }}" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2 text-xs dark:text-white outline-none focus:ring-4 focus:ring-blue-500/10 transition-all">
-                    </div>
-
-                    <div class="pt-2">
-                        <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-2">Canais Habilitados</label>
+                        <div class="flex items-center justify-between mb-1.5">
+                            <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Canais de Envio</label>
+                            <span class="text-[9px] text-slate-400 font-bold">Clique para alternar</span>
+                        </div>
                         <div class="grid grid-cols-2 gap-2">
-                            <label class="flex items-center gap-2 text-[10px] font-bold text-slate-600 dark:text-slate-300 cursor-pointer">
-                                <input type="checkbox" name="channel_system" value="on" {% if 'system' in r.channels %}checked{% endif %} class="rounded text-blue-600 focus:ring-blue-500"> Sistema
+                            <!-- Sistema -->
+                            <label class="flex items-center justify-between p-2 rounded-xl border border-slate-900/10 dark:border-white/10 cursor-pointer bg-white dark:bg-slate-900 hover:border-blue-500/50 transition-all select-none">
+                                <div class="flex items-center gap-2">
+                                    <input type="checkbox" name="channel_system" value="on" {% if 'system' in r.channels %}checked{% endif %} class="rounded text-blue-600 focus:ring-blue-500 w-3.5 h-3.5">
+                                    <span class="text-[10px] font-bold text-slate-700 dark:text-slate-300">Sistema</span>
+                                </div>
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500" title="Canal Sistema sempre disponível"></span>
                             </label>
-                            <label class="flex items-center gap-2 text-[10px] font-bold text-slate-600 dark:text-slate-300 cursor-pointer">
-                                <input type="checkbox" name="channel_whatsapp" value="on" {% if 'whatsapp' in r.channels %}checked{% endif %} class="rounded text-blue-600 focus:ring-blue-500"> WhatsApp
+
+                            <!-- WhatsApp -->
+                            <label class="flex items-center justify-between p-2 rounded-xl border border-slate-900/10 dark:border-white/10 cursor-pointer bg-white dark:bg-slate-900 hover:border-blue-500/50 transition-all select-none">
+                                <div class="flex items-center gap-2">
+                                    <input type="checkbox" name="channel_whatsapp" value="on" {% if 'whatsapp' in r.channels %}checked{% endif %} class="rounded text-emerald-600 focus:ring-emerald-500 w-3.5 h-3.5">
+                                    <span class="text-[10px] font-bold text-slate-700 dark:text-slate-300">WhatsApp</span>
+                                </div>
+                                <span class="w-1.5 h-1.5 rounded-full {% if whatsapp_ready %}bg-emerald-500{% else %}bg-amber-500{% endif %}" title="{% if whatsapp_ready %}WhatsApp Configurado e Operacional{% else %}WhatsApp requer configuração nas integrações{% endif %}"></span>
                             </label>
-                            <label class="flex items-center gap-2 text-[10px] font-bold text-slate-600 dark:text-slate-300 cursor-pointer">
-                                <input type="checkbox" name="channel_telegram" value="on" {% if 'telegram' in r.channels %}checked{% endif %} class="rounded text-blue-600 focus:ring-blue-500"> Telegram
+
+                            <!-- Telegram -->
+                            <label class="flex items-center justify-between p-2 rounded-xl border border-slate-900/10 dark:border-white/10 cursor-pointer bg-white dark:bg-slate-900 hover:border-blue-500/50 transition-all select-none">
+                                <div class="flex items-center gap-2">
+                                    <input type="checkbox" name="channel_telegram" value="on" {% if 'telegram' in r.channels %}checked{% endif %} class="rounded text-blue-600 focus:ring-blue-500 w-3.5 h-3.5">
+                                    <span class="text-[10px] font-bold text-slate-700 dark:text-slate-300">Telegram</span>
+                                </div>
+                                <span class="w-1.5 h-1.5 rounded-full {% if telegram_ready %}bg-emerald-500{% else %}bg-slate-400{% endif %}" title="{% if telegram_ready %}Telegram Conectado{% else %}Telegram Inativo{% endif %}"></span>
                             </label>
-                            <label class="flex items-center gap-2 text-[10px] font-bold text-slate-600 dark:text-slate-300 cursor-pointer">
-                                <input type="checkbox" name="channel_email" value="on" {% if 'email' in r.channels %}checked{% endif %} class="rounded text-blue-600 focus:ring-blue-500"> E-mail
+
+                            <!-- E-mail -->
+                            <label class="flex items-center justify-between p-2 rounded-xl border border-slate-900/10 dark:border-white/10 cursor-pointer bg-white dark:bg-slate-900 hover:border-blue-500/50 transition-all select-none">
+                                <div class="flex items-center gap-2">
+                                    <input type="checkbox" name="channel_email" value="on" {% if 'email' in r.channels %}checked{% endif %} class="rounded text-indigo-600 focus:ring-indigo-500 w-3.5 h-3.5">
+                                    <span class="text-[10px] font-bold text-slate-700 dark:text-slate-300">E-mail</span>
+                                </div>
+                                <span class="w-1.5 h-1.5 rounded-full {% if email_ready %}bg-emerald-500{% else %}bg-slate-400{% endif %}" title="{% if email_ready %}SMTP Configurado{% else %}SMTP Inativo{% endif %}"></span>
                             </label>
                         </div>
                     </div>
 
-                    <div class="flex gap-2 pt-4 border-t border-slate-900/5 dark:border-white/5">
-                        <button type="button" onclick="openModal('modalTemplates{{ r.slug }}')" class="flex-1 py-2 px-3 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 font-black text-[10px] uppercase tracking-widest rounded-xl transition-all">
-                            Templates
+                    <!-- Ações Rápidas do Card -->
+                    <div class="flex items-center gap-2 pt-2 border-t border-slate-900/5 dark:border-white/5">
+                        <button type="button" onclick="openRuleTemplatesModal('{{ r.slug }}')" class="flex-1 py-2 px-3 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 font-black text-[10px] uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-1.5 active:scale-95" title="Editar mensagens personalizadas">
+                            <i class="fa-solid fa-code text-[10px]"></i> Templates
                         </button>
-                        <button type="submit" class="flex-1 py-2 px-3 bg-blue-600 hover:bg-blue-700 text-white font-black text-[10px] uppercase tracking-widest rounded-xl shadow-md shadow-blue-500/20 transition-all">
-                            Salvar
+                        <button type="button" onclick="openTestRuleModal('{{ r.slug }}', '{{ r.name }}')" class="py-2 px-3 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-blue-600 dark:text-blue-400 font-black text-[10px] uppercase tracking-wider rounded-xl transition-all flex items-center justify-center gap-1.5 active:scale-95" title="Simular ou disparar teste">
+                            <i class="fa-solid fa-vial text-[10px]"></i> Testar
                         </button>
+                        <button type="submit" id="btn-save-rule-{{ r.slug }}" class="py-2 px-4 bg-blue-600 hover:bg-blue-700 text-white font-black text-[10px] uppercase tracking-wider rounded-xl shadow-md shadow-blue-500/20 transition-all flex items-center justify-center gap-1.5 active:scale-95">
+                            <i class="fa-solid fa-check text-[10px]"></i> Salvar
+                        </button>
+                    </div>
+
+                    <!-- Mini-Telemetria no Rodapé do Card -->
+                    {% set stat = rule_stats.get(r.slug, {}) %}
+                    <div class="pt-2 flex items-center justify-between text-[10px] text-slate-400 font-medium">
+                        <span class="truncate" title="Último envio: {{ stat.get('last_sent', 'Nenhum') }}">
+                            <i class="fa-regular fa-clock text-[9px] mr-1"></i> {{ stat.get('last_sent', 'Nenhum') }}
+                        </span>
+                        <span class="shrink-0 px-2 py-0.5 rounded bg-slate-100 dark:bg-white/5 text-[9px] font-bold text-slate-500">
+                            {{ stat.get('count_7d', 0) }} envios (7d)
+                        </span>
                     </div>
                 </form>
             </div>
 
-            <!-- MODAL TEMPLATES DA REGRA -->
+            <!-- 📝 MODAL TEMPLATES DA REGRA -->
             <div id="modalTemplates{{ r.slug }}" class="fixed inset-0 hidden items-center justify-center z-[100] p-4">
                 <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="closeModal('modalTemplates{{ r.slug }}')"></div>
-                <div class="relative w-full max-w-2xl rounded-[2rem] bg-white dark:bg-slate-900 border border-slate-900/10 dark:border-white/10 shadow-2xl overflow-hidden animate-premium">
-                    <div class="p-6 border-b border-slate-900/5 dark:border-white/5 bg-blue-50/50 dark:bg-slate-800/50">
-                        <h3 class="text-xl font-black text-slate-900 dark:text-white tracking-tight">Editar Templates: {{ r.name }}</h3>
-                        <p class="text-[9px] font-black text-blue-600 uppercase tracking-widest mt-1">Placeholders: {usuario}, {data}, {escala}, {curso}, {id}</p>
+                <div class="relative w-full max-w-3xl rounded-[2rem] bg-white dark:bg-slate-900 border border-slate-900/10 dark:border-white/10 shadow-2xl overflow-hidden animate-premium flex flex-col max-h-[90vh]">
+                    
+                    <!-- Header do Modal -->
+                    <div class="p-6 border-b border-slate-900/5 dark:border-white/5 bg-gradient-to-r from-blue-500/5 via-transparent to-transparent flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-600">
+                                <i class="fa-solid {{ icon_class }}"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-black text-slate-900 dark:text-white tracking-tight">Editar Templates: {{ r.name }}</h3>
+                                <p class="text-xs text-slate-400">Personalize o texto transmitido por cada canal de envio.</p>
+                            </div>
+                        </div>
+                        <button type="button" onclick="closeModal('modalTemplates{{ r.slug }}')" class="w-8 h-8 rounded-full bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-colors">
+                            <i class="fa-solid fa-xmark text-sm"></i>
+                        </button>
                     </div>
-                    <form method="post" action="{{ url_for('avisos') }}">
-                        <input type="hidden" name="acao" value="atualizar_regra">
-                        <input type="hidden" name="slug" value="{{ r.slug }}">
-                        <input type="hidden" name="is_enabled" value="{% if r.is_enabled %}on{% endif %}">
-                        <input type="hidden" name="trigger_days" value="{{ r.trigger_days or 7 }}">
-                        <input type="hidden" name="silence_days" value="{{ r.silence_days or 1 }}">
-                        <input type="hidden" name="channel_system" value="{% if 'system' in r.channels %}on{% endif %}">
-                        <input type="hidden" name="channel_whatsapp" value="{% if 'whatsapp' in r.channels %}on{% endif %}">
-                        <input type="hidden" name="channel_telegram" value="{% if 'telegram' in r.channels %}on{% endif %}">
-                        <input type="hidden" name="channel_email" value="{% if 'email' in r.channels %}on{% endif %}">
-                        
-                        <div class="p-6 space-y-4 max-h-[400px] overflow-y-auto custom-scrollbar">
-                            <div>
-                                <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">Notificação do Sistema (Painel)</label>
-                                <textarea name="msg_system" rows="2" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2 text-xs dark:text-white outline-none focus:ring-4 focus:ring-blue-500/10 transition-all resize-none" placeholder="Texto padrão do sistema">{{ r.msg_system or '' }}</textarea>
+
+                    <!-- Subheader: Barra de Tags Clicáveis -->
+                    <div class="px-6 py-3 bg-slate-50 dark:bg-white/5 border-b border-slate-900/5 dark:border-white/5 flex items-center gap-2 flex-wrap text-xs">
+                        <span class="text-[10px] font-black uppercase tracking-wider text-slate-400 mr-1 flex items-center gap-1">
+                            <i class="fa-solid fa-tags text-[9px]"></i> Inserir Variável:
+                        </span>
+                        <button type="button" onclick="insertTemplateTag('{{ r.slug }}', '{usuario}')" class="px-2 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 font-mono text-[10px] font-bold hover:bg-blue-500/20 transition-all" title="Nome do colaborador destinatário">{usuario}</button>
+                        <button type="button" onclick="insertTemplateTag('{{ r.slug }}', '{data}')" class="px-2 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 font-mono text-[10px] font-bold hover:bg-blue-500/20 transition-all" title="Data do evento">{data}</button>
+                        <button type="button" onclick="insertTemplateTag('{{ r.slug }}', '{escala}')" class="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-mono text-[10px] font-bold hover:bg-emerald-500/20 transition-all" title="Nome da escala">{escala}</button>
+                        <button type="button" onclick="insertTemplateTag('{{ r.slug }}', '{placa}')" class="px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 font-mono text-[10px] font-bold hover:bg-cyan-500/20 transition-all" title="Placa do veículo">{placa}</button>
+                        <button type="button" onclick="insertTemplateTag('{{ r.slug }}', '{veiculo}')" class="px-2 py-0.5 rounded bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 font-mono text-[10px] font-bold hover:bg-cyan-500/20 transition-all" title="Modelo do veículo">{veiculo}</button>
+                        <button type="button" onclick="insertTemplateTag('{{ r.slug }}', '{curso}')" class="px-2 py-0.5 rounded bg-purple-500/10 text-purple-600 dark:text-purple-400 font-mono text-[10px] font-bold hover:bg-purple-500/20 transition-all" title="Nome do curso LMS">{curso}</button>
+                        <button type="button" onclick="insertTemplateTag('{{ r.slug }}', '{tarefa}')" class="px-2 py-0.5 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400 font-mono text-[10px] font-bold hover:bg-amber-500/20 transition-all" title="Título da tarefa">{tarefa}</button>
+                        <button type="button" onclick="insertTemplateTag('{{ r.slug }}', '{solicitacao}')" class="px-2 py-0.5 rounded bg-sky-500/10 text-sky-600 dark:text-sky-400 font-mono text-[10px] font-bold hover:bg-sky-500/20 transition-all" title="Tipo da solicitação">{solicitacao}</button>
+                        <button type="button" onclick="insertTemplateTag('{{ r.slug }}', '{rfo_titulo}')" class="px-2 py-0.5 rounded bg-red-500/10 text-red-600 dark:text-red-400 font-mono text-[10px] font-bold hover:bg-red-500/20 transition-all" title="Título do RFO">{rfo_titulo}</button>
+                        <button type="button" onclick="insertTemplateTag('{{ r.slug }}', '{dias}')" class="px-2 py-0.5 rounded bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-300 font-mono text-[10px] font-bold hover:bg-slate-300 transition-all" title="Dias">{dias}</button>
+                        <button type="button" onclick="insertTemplateTag('{{ r.slug }}', '{km_atual}')" class="px-2 py-0.5 rounded bg-orange-500/10 text-orange-600 dark:text-orange-400 font-mono text-[10px] font-bold hover:bg-orange-500/20 transition-all" title="KM atual">{km_atual}</button>
+                        <button type="button" onclick="insertTemplateTag('{{ r.slug }}', '{id}')" class="px-2 py-0.5 rounded bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-300 font-mono text-[10px] font-bold hover:bg-slate-300 transition-all" title="ID do registro">{id}</button>
+                    </div>
+
+                    <!-- Seletor de Abas de Canais -->
+                    <div class="px-6 pt-4 border-b border-slate-900/5 dark:border-white/5 flex gap-2">
+                        <button type="button" onclick="switchTemplateTab('{{ r.slug }}', 'whatsapp')" id="tab-tpl-{{ r.slug }}-whatsapp" class="tab-tpl-btn px-4 py-2 text-xs font-black uppercase tracking-wider border-b-2 border-emerald-500 text-emerald-600 flex items-center gap-1.5">
+                            <i class="fa-brands fa-whatsapp text-sm"></i> WhatsApp
+                        </button>
+                        <button type="button" onclick="switchTemplateTab('{{ r.slug }}', 'system')" id="tab-tpl-{{ r.slug }}-system" class="tab-tpl-btn px-4 py-2 text-xs font-black uppercase tracking-wider border-b-2 border-transparent text-slate-400 hover:text-slate-600 flex items-center gap-1.5">
+                            <i class="fa-solid fa-bell text-sm"></i> Sistema
+                        </button>
+                        <button type="button" onclick="switchTemplateTab('{{ r.slug }}', 'telegram')" id="tab-tpl-{{ r.slug }}-telegram" class="tab-tpl-btn px-4 py-2 text-xs font-black uppercase tracking-wider border-b-2 border-transparent text-slate-400 hover:text-slate-600 flex items-center gap-1.5">
+                            <i class="fa-brands fa-telegram text-sm"></i> Telegram
+                        </button>
+                        <button type="button" onclick="switchTemplateTab('{{ r.slug }}', 'email')" id="tab-tpl-{{ r.slug }}-email" class="tab-tpl-btn px-4 py-2 text-xs font-black uppercase tracking-wider border-b-2 border-transparent text-slate-400 hover:text-slate-600 flex items-center gap-1.5">
+                            <i class="fa-solid fa-envelope text-sm"></i> E-mail
+                        </button>
+                    </div>
+
+                    <!-- Corpo com Editores e Live Preview -->
+                    <div class="p-6 space-y-4 overflow-y-auto flex-1 custom-scrollbar">
+                        <form id="form-modal-tpl-{{ r.slug }}">
+                            <!-- 1. WhatsApp Tab Content -->
+                            <div id="tpl-pane-{{ r.slug }}-whatsapp" class="tpl-pane block space-y-3">
+                                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Mensagem WhatsApp (Suporta *negrito*, _itálico_)</label>
+                                <textarea name="msg_whatsapp" id="txt-tpl-{{ r.slug }}-whatsapp" rows="4" oninput="updateLiveTemplatePreview('{{ r.slug }}', 'whatsapp')" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl p-4 text-xs font-mono dark:text-white outline-none focus:ring-2 focus:ring-emerald-500 transition-all resize-none" placeholder="Ex: 📅 *Alerta de Escala*\n\nOlá *{usuario}*, lembramos que você está escalado para o plantão de amanhã ({data}).">{{ r.msg_whatsapp or '' }}</textarea>
                             </div>
-                            <div>
-                                <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">WhatsApp</label>
-                                <textarea name="msg_whatsapp" rows="2" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2 text-xs dark:text-white outline-none focus:ring-4 focus:ring-blue-500/10 transition-all resize-none" placeholder="Deixe em branco para usar o template legado de WhatsApp">{{ r.msg_whatsapp or '' }}</textarea>
+
+                            <!-- 2. System Tab Content -->
+                            <div id="tpl-pane-{{ r.slug }}-system" class="tpl-pane hidden space-y-3">
+                                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Mensagem no Portal do Sistema (Central de Notificações)</label>
+                                <textarea name="msg_system" id="txt-tpl-{{ r.slug }}-system" rows="4" oninput="updateLiveTemplatePreview('{{ r.slug }}', 'system')" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl p-4 text-xs font-mono dark:text-white outline-none focus:ring-2 focus:ring-blue-500 transition-all resize-none" placeholder="Texto padrão do sistema">{{ r.msg_system or '' }}</textarea>
                             </div>
-                            <div>
-                                <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">Telegram</label>
-                                <textarea name="msg_telegram" rows="2" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2 text-xs dark:text-white outline-none focus:ring-4 focus:ring-blue-500/10 transition-all resize-none" placeholder="Suporta tags HTML (ex: <b>texto</b>)">{{ r.msg_telegram or '' }}</textarea>
+
+                            <!-- 3. Telegram Tab Content -->
+                            <div id="tpl-pane-{{ r.slug }}-telegram" class="tpl-pane hidden space-y-3">
+                                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Mensagem Telegram (Suporta tags HTML: &lt;b&gt;, &lt;i&gt;)</label>
+                                <textarea name="msg_telegram" id="txt-tpl-{{ r.slug }}-telegram" rows="4" oninput="updateLiveTemplatePreview('{{ r.slug }}', 'telegram')" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl p-4 text-xs font-mono dark:text-white outline-none focus:ring-2 focus:ring-blue-500 transition-all resize-none" placeholder="Suporta tags HTML (ex: <b>texto</b>)">{{ r.msg_telegram or '' }}</textarea>
                             </div>
-                            <div>
-                                <label class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5 block">E-mail</label>
-                                <textarea name="msg_email" rows="3" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2 text-xs dark:text-white outline-none focus:ring-4 focus:ring-blue-500/10 transition-all resize-none" placeholder="Corpo do E-mail">{{ r.msg_email or '' }}</textarea>
+
+                            <!-- 4. Email Tab Content -->
+                            <div id="tpl-pane-{{ r.slug }}-email" class="tpl-pane hidden space-y-3">
+                                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Corpo do E-mail</label>
+                                <textarea name="msg_email" id="txt-tpl-{{ r.slug }}-email" rows="4" oninput="updateLiveTemplatePreview('{{ r.slug }}', 'email')" class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl p-4 text-xs font-mono dark:text-white outline-none focus:ring-2 focus:ring-indigo-500 transition-all resize-none" placeholder="Corpo do E-mail">{{ r.msg_email or '' }}</textarea>
+                            </div>
+                        </form>
+
+                        <!-- Balão de Pré-visualização Renderizado ao Vivo -->
+                        <div class="pt-2">
+                            <span class="text-[9px] font-black uppercase tracking-wider text-slate-400 block mb-2 flex items-center gap-1.5">
+                                <i class="fa-solid fa-eye text-[9px] text-blue-500"></i> Pré-visualização Renderizada (Simulação com Dados de Exemplo):
+                            </span>
+                            <div id="preview-bubble-{{ r.slug }}" class="p-4 rounded-2xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-500/20 text-xs text-slate-800 dark:text-slate-200 whitespace-pre-line font-sans leading-relaxed shadow-inner min-h-[70px]">
+                                Carregando prévia...
                             </div>
                         </div>
-                        
-                        <div class="p-6 border-t border-slate-900/5 dark:border-white/5 flex gap-3 bg-slate-50 dark:bg-white/5">
-                            <button type="button" onclick="closeModal('modalTemplates{{ r.slug }}')" class="flex-1 py-3 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 font-black text-xs uppercase tracking-widest rounded-xl transition-all">Cancelar</button>
-                            <button type="submit" class="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white font-black text-xs uppercase tracking-widest rounded-xl shadow-xl shadow-blue-500/20 transition-all">Salvar Templates</button>
-                        </div>
-                    </form>
+                    </div>
+                    
+                    <!-- Rodapé do Modal -->
+                    <div class="p-6 border-t border-slate-900/5 dark:border-white/5 flex gap-3 bg-slate-50 dark:bg-white/5 shrink-0">
+                        <button type="button" onclick="closeModal('modalTemplates{{ r.slug }}')" class="flex-1 py-3 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 font-black text-xs uppercase tracking-widest rounded-xl transition-all">Cancelar</button>
+                        <button type="button" onclick="saveRuleTemplatesAjax('{{ r.slug }}')" id="btn-save-tpl-{{ r.slug }}" class="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white font-black text-xs uppercase tracking-widest rounded-xl shadow-xl shadow-blue-500/20 transition-all flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-floppy-disk"></i> Salvar Templates
+                        </button>
+                    </div>
                 </div>
             </div>
             {% endfor %}
         </div>
 
-        <!-- MANUAL & AUTOMATIC AUDIT TRIGGER -->
-        <div class="mt-12 glass-premium p-8 rounded-[2rem] border border-blue-500/20 flex flex-col md:flex-row items-center justify-between gap-6">
+        <!-- 🧪 MODAL GLOBAL DE TESTE / SIMULAÇÃO DE DISPARO -->
+        <div id="modalTestRuleGlobal" class="fixed inset-0 hidden items-center justify-center z-[110] p-4">
+            <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="closeModal('modalTestRuleGlobal')"></div>
+            <div class="relative w-full max-w-xl rounded-[2rem] bg-white dark:bg-slate-900 border border-slate-900/10 dark:border-white/10 shadow-2xl overflow-hidden animate-premium flex flex-col">
+                <div class="p-6 border-b border-slate-900/5 dark:border-white/5 bg-blue-50/50 dark:bg-slate-800/50 flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-600">
+                            <i class="fa-solid fa-vial text-base"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-base font-black text-slate-900 dark:text-white tracking-tight" id="modal-test-title">Testar Automação</h3>
+                            <p class="text-xs text-slate-400">Envie um disparo de teste real para validar formato e entrega.</p>
+                        </div>
+                    </div>
+                    <button type="button" onclick="closeModal('modalTestRuleGlobal')" class="w-8 h-8 rounded-full bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-colors">
+                        <i class="fa-solid fa-xmark text-sm"></i>
+                    </button>
+                </div>
+
+                <div class="p-6 space-y-4">
+                    <input type="hidden" id="modal-test-slug" value="">
+                    
+                    <div>
+                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Canal de Destino para o Teste</label>
+                        <div class="grid grid-cols-4 gap-2" id="test-channel-selector">
+                            <button type="button" onclick="selectTestChannel('system')" id="btn-test-ch-system" class="btn-test-ch p-3 rounded-xl border-2 border-blue-600 bg-blue-50/50 dark:bg-blue-900/20 text-xs font-bold text-slate-800 dark:text-white flex flex-col items-center gap-1.5 transition-all">
+                                <i class="fa-solid fa-bell text-blue-500 text-sm"></i> Sistema
+                            </button>
+                            <button type="button" onclick="selectTestChannel('whatsapp')" id="btn-test-ch-whatsapp" class="btn-test-ch p-3 rounded-xl border border-slate-900/10 dark:border-white/10 text-xs font-bold text-slate-600 dark:text-slate-300 flex flex-col items-center gap-1.5 transition-all">
+                                <i class="fa-brands fa-whatsapp text-emerald-500 text-sm"></i> WhatsApp
+                            </button>
+                            <button type="button" onclick="selectTestChannel('telegram')" id="btn-test-ch-telegram" class="btn-test-ch p-3 rounded-xl border border-slate-900/10 dark:border-white/10 text-xs font-bold text-slate-600 dark:text-slate-300 flex flex-col items-center gap-1.5 transition-all">
+                                <i class="fa-brands fa-telegram text-blue-500 text-sm"></i> Telegram
+                            </button>
+                            <button type="button" onclick="selectTestChannel('email')" id="btn-test-ch-email" class="btn-test-ch p-3 rounded-xl border border-slate-900/10 dark:border-white/10 text-xs font-bold text-slate-600 dark:text-slate-300 flex flex-col items-center gap-1.5 transition-all">
+                                <i class="fa-solid fa-envelope text-indigo-500 text-sm"></i> E-mail
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Pré-visualização da Mensagem de Teste -->
+                    <div>
+                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-2">Mensagem Formatada</label>
+                        <div id="modal-test-preview-box" class="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 text-xs text-slate-800 dark:text-slate-200 whitespace-pre-line font-mono min-h-[90px] max-h-[180px] overflow-y-auto">
+                            Carregando preview...
+                        </div>
+                    </div>
+
+                    <div id="modal-test-feedback" class="hidden p-3 rounded-xl text-xs font-bold"></div>
+                </div>
+
+                <div class="p-6 border-t border-slate-900/5 dark:border-white/5 flex gap-3 bg-slate-50 dark:bg-white/5">
+                    <button type="button" onclick="closeModal('modalTestRuleGlobal')" class="flex-1 py-3 bg-slate-100 dark:bg-white/5 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 font-black text-xs uppercase tracking-widest rounded-xl transition-all">Fechar</button>
+                    <button type="button" onclick="dispatchRuleTestReal()" id="btn-dispatch-test-now" class="flex-1 py-3 bg-blue-600 hover:bg-blue-700 text-white font-black text-xs uppercase tracking-widest rounded-xl shadow-xl shadow-blue-500/20 transition-all flex items-center justify-center gap-2 active:scale-95">
+                        <i class="fa-solid fa-paper-plane text-xs"></i> Disparar Teste Real
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 🚀 MANUAL & AUTOMATIC AUDIT TRIGGER -->
+        <div class="glass-premium p-8 rounded-[2rem] border border-blue-500/20 flex flex-col md:flex-row items-center justify-between gap-6">
             <div class="flex items-center gap-6">
                 <div class="w-16 h-16 rounded-full bg-gradient-to-br from-blue-600 to-indigo-600 flex items-center justify-center text-white shadow-2xl shadow-blue-500/40 animate-pulse shrink-0">
                     <i class="fa-solid fa-robot text-2xl"></i>
                 </div>
                 <div>
                     <div class="flex flex-wrap items-center gap-3 mb-1">
-                        <h3 class="text-xl font-black text-slate-800 dark:text-white tracking-tight">Diagnóstico & Auditoria de Sistema</h3>
+                        <h3 class="text-xl font-black text-slate-800 dark:text-white tracking-tight">Diagnóstico & Auditoria Diária</h3>
                         <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                             <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
-                            <i class="fa-regular fa-clock text-[10px]"></i> Agendado: Todos os dias às 07:00h
+                            <i class="fa-regular fa-clock text-[10px]"></i> Agendado: Todos os dias às 08:00h
                         </span>
                     </div>
-                    <p class="text-sm text-slate-500 mt-1">Varre o banco de dados automaticamente todo dia às 07:00h (ou sob demanda abaixo) em busca de checklists pendentes, alertas de plantão, treinamentos e O.S fora do prazo.</p>
+                    <p class="text-sm text-slate-500 mt-1">Varre o banco de dados diariamente às 08:00h em busca de checklists pendentes, alertas de plantão (véspera), cronogramas operacionais, treinamentos e O.S fora do prazo.</p>
                 </div>
             </div>
             <div class="flex flex-wrap gap-2 shrink-0">
@@ -1821,6 +2225,345 @@
             if (btn) {
                 btn.disabled = false;
                 btn.innerHTML = origHtml;
+            }
+        }
+    }
+
+    // ==========================================
+    // 🤖 AUTOMAÇÕES: CONTROLADORES & INTERAÇÃO
+    // ==========================================
+
+    // Alterna o status da regra (Ativar/Pausar) rapidamente com feedback visual
+    async function toggleRuleQuick(slug, isEnabled) {
+        const card = document.getElementById(`card-rule-${slug}`);
+        try {
+            const res = await fetch(`/api/system/rules/${slug}/update`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ is_enabled: isEnabled })
+            });
+            const data = await res.json();
+            if (data.success) {
+                showToast(isEnabled ? `🟢 Automação ativada com sucesso!` : `⏸️ Automação pausada.`, "success");
+                if (card) {
+                    if (isEnabled) {
+                        card.classList.remove('border-transparent', 'opacity-80');
+                        card.classList.add('border-blue-500/20', 'bg-gradient-to-b', 'from-blue-50/20', 'to-transparent', 'dark:from-blue-950/10');
+                    } else {
+                        card.classList.remove('border-blue-500/20', 'bg-gradient-to-b', 'from-blue-50/20', 'to-transparent', 'dark:from-blue-950/10');
+                        card.classList.add('border-transparent', 'opacity-80');
+                    }
+                }
+                updateActiveRulesKpiCount();
+            } else {
+                showToast(`❌ Erro: ${data.error || 'Falha ao atualizar regra'}`, "error");
+            }
+        } catch (e) {
+            console.error(e);
+            showToast("Erro de conexão ao alternar status da regra.", "error");
+        }
+    }
+
+    function updateActiveRulesKpiCount() {
+        const count = document.querySelectorAll('.auto-card input[name="is_enabled"]:checked').length;
+        const kpi = document.getElementById('kpi-active-rules');
+        if (kpi) kpi.textContent = count;
+    }
+
+    // Salva os ajustes do Card de Regra (dias, silêncio, canais) via AJAX
+    async function saveRuleCard(slug) {
+        const form = document.getElementById(`form-rule-${slug}`);
+        if (!form) return;
+        
+        const btn = document.getElementById(`btn-save-rule-${slug}`);
+        const origContent = btn ? btn.innerHTML : '';
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-xs"></i>';
+        }
+
+        const formData = new FormData(form);
+        const payload = {
+            trigger_days: formData.get('trigger_days'),
+            silence_days: formData.get('silence_days'),
+            channels: []
+        };
+        if (formData.get('channel_system') === 'on') payload.channels.push('system');
+        if (formData.get('channel_whatsapp') === 'on') payload.channels.push('whatsapp');
+        if (formData.get('channel_telegram') === 'on') payload.channels.push('telegram');
+        if (formData.get('channel_email') === 'on') payload.channels.push('email');
+
+        try {
+            const res = await fetch(`/api/system/rules/${slug}/update`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            if (data.success) {
+                showToast(`✅ ${data.message || 'Regra atualizada com sucesso!'}`, "success");
+            } else {
+                showToast(`❌ ${data.error || 'Falha ao salvar ajustes.'}`, "error");
+            }
+        } catch (e) {
+            console.error(e);
+            showToast("Erro ao conectar com o servidor.", "error");
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = origContent;
+            }
+        }
+    }
+
+    // Filtros por Categoria de Automação
+    function filterAutomacoesCategory(cat) {
+        document.querySelectorAll('.btn-auto-cat').forEach(b => {
+            b.classList.remove('bg-blue-600', 'text-white', 'shadow-sm');
+            b.classList.add('bg-slate-100', 'dark:bg-white/5', 'text-slate-600', 'dark:text-slate-300');
+        });
+        const activeBtn = document.getElementById(`btn-auto-cat-${cat}`);
+        if (activeBtn) {
+            activeBtn.classList.remove('bg-slate-100', 'dark:bg-white/5', 'text-slate-600', 'dark:text-slate-300');
+            activeBtn.classList.add('bg-blue-600', 'text-white', 'shadow-sm');
+        }
+
+        document.querySelectorAll('#automacoes-grid .auto-card').forEach(card => {
+            const cardCat = card.getAttribute('data-category') || '';
+            if (cat === 'todos' || cardCat === cat) {
+                card.style.display = 'flex';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+    }
+
+    // Busca rápida de automações
+    function searchAutomacoes(query) {
+        const q = (query || '').toLowerCase().trim();
+        document.querySelectorAll('#automacoes-grid .auto-card').forEach(card => {
+            const name = card.getAttribute('data-name') || '';
+            if (!q || name.includes(q)) {
+                card.style.display = 'flex';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+    }
+
+    // Modal de Templates: Controle de Abas
+    let currentTplChannel = {};
+    function openRuleTemplatesModal(slug) {
+        openModal(`modalTemplates${slug}`);
+        switchTemplateTab(slug, 'whatsapp');
+    }
+
+    function switchTemplateTab(slug, channel) {
+        currentTplChannel[slug] = channel;
+        const modal = document.getElementById(`modalTemplates${slug}`);
+        if (!modal) return;
+
+        modal.querySelectorAll('.tab-tpl-btn').forEach(btn => {
+            btn.classList.remove('border-emerald-500', 'border-blue-500', 'border-indigo-500', 'text-emerald-600', 'text-blue-600', 'text-indigo-600');
+            btn.classList.add('border-transparent', 'text-slate-400');
+        });
+
+        const activeBtn = document.getElementById(`tab-tpl-${slug}-${channel}`);
+        if (activeBtn) {
+            activeBtn.classList.remove('border-transparent', 'text-slate-400');
+            if (channel === 'whatsapp') {
+                activeBtn.classList.add('border-emerald-500', 'text-emerald-600');
+            } else if (channel === 'email') {
+                activeBtn.classList.add('border-indigo-500', 'text-indigo-600');
+            } else {
+                activeBtn.classList.add('border-blue-500', 'text-blue-600');
+            }
+        }
+
+        modal.querySelectorAll('.tpl-pane').forEach(p => p.classList.add('hidden'));
+        const activePane = document.getElementById(`tpl-pane-${slug}-${channel}`);
+        if (activePane) activePane.classList.remove('hidden');
+
+        updateLiveTemplatePreview(slug, channel);
+    }
+
+    function insertTemplateTag(slug, tag) {
+        const channel = currentTplChannel[slug] || 'whatsapp';
+        const txt = document.getElementById(`txt-tpl-${slug}-${channel}`);
+        if (!txt) return;
+
+        const start = txt.selectionStart || 0;
+        const end = txt.selectionEnd || 0;
+        const text = txt.value || '';
+        txt.value = text.substring(0, start) + tag + text.substring(end);
+        txt.focus();
+        txt.selectionStart = txt.selectionEnd = start + tag.length;
+
+        updateLiveTemplatePreview(slug, channel);
+    }
+
+    function updateLiveTemplatePreview(slug, channel) {
+        if (!channel) channel = currentTplChannel[slug] || 'whatsapp';
+        const txt = document.getElementById(`txt-tpl-${slug}-${channel}`);
+        const bubble = document.getElementById(`preview-bubble-${slug}`);
+        if (!txt || !bubble) return;
+
+        let raw = txt.value || txt.placeholder || '';
+        
+        const sampleData = {
+            "{usuario}": "Carlos Silva",
+            "{data}": "03/09/2026",
+            "{escala}": "Plantão Técnico de Sábado",
+            "{curso}": "NR-35 Trabalho em Altura",
+            "{tipo}": "Treinamento Operacional",
+            "{local}": "Auditório Central",
+            "{id}": "1042"
+        };
+
+        for (const [k, v] of Object.entries(sampleData)) {
+            raw = raw.split(k).join(v);
+        }
+
+        if (channel === 'whatsapp') {
+            bubble.className = "p-4 rounded-2xl bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-500/20 text-xs text-slate-800 dark:text-slate-200 whitespace-pre-line font-sans leading-relaxed shadow-inner";
+        } else if (channel === 'email') {
+            bubble.className = "p-4 rounded-2xl bg-indigo-50/60 dark:bg-indigo-950/20 border border-indigo-500/20 text-xs text-slate-800 dark:text-slate-200 whitespace-pre-line font-sans leading-relaxed shadow-inner";
+        } else {
+            bubble.className = "p-4 rounded-2xl bg-blue-50/60 dark:bg-blue-950/20 border border-blue-500/20 text-xs text-slate-800 dark:text-slate-200 whitespace-pre-line font-sans leading-relaxed shadow-inner";
+        }
+
+        bubble.textContent = raw;
+    }
+
+    async function saveRuleTemplatesAjax(slug) {
+        const btn = document.getElementById(`btn-save-tpl-${slug}`);
+        const origContent = btn ? btn.innerHTML : '';
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-xs"></i> Salvando...';
+        }
+
+        const payload = {
+            msg_whatsapp: document.getElementById(`txt-tpl-${slug}-whatsapp`)?.value || '',
+            msg_system: document.getElementById(`txt-tpl-${slug}-system`)?.value || '',
+            msg_telegram: document.getElementById(`txt-tpl-${slug}-telegram`)?.value || '',
+            msg_email: document.getElementById(`txt-tpl-${slug}-email`)?.value || ''
+        };
+
+        try {
+            const res = await fetch(`/api/system/rules/${slug}/update`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            if (data.success) {
+                showToast("✅ Templates salvos com sucesso!", "success");
+                closeModal(`modalTemplates${slug}`);
+            } else {
+                showToast(`❌ ${data.error || 'Erro ao salvar templates.'}`, "error");
+            }
+        } catch (e) {
+            console.error(e);
+            showToast("Erro ao conectar com o servidor.", "error");
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = origContent;
+            }
+        }
+    }
+
+    // Modal de Teste de Disparo
+    let activeTestChannel = 'system';
+    let activeTestSlug = '';
+    let currentTestPreviews = {};
+
+    async function openTestRuleModal(slug, ruleName) {
+        activeTestSlug = slug;
+        activeTestChannel = 'system';
+        document.getElementById('modal-test-slug').value = slug;
+        document.getElementById('modal-test-title').textContent = `Testar: ${ruleName}`;
+        document.getElementById('modal-test-feedback').classList.add('hidden');
+        
+        selectTestChannel('system');
+        openModal('modalTestRuleGlobal');
+
+        const previewBox = document.getElementById('modal-test-preview-box');
+        previewBox.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Carregando prévia...';
+
+        try {
+            const res = await fetch(`/api/system/rules/${slug}/test`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ channel: 'system', send: false })
+            });
+            const data = await res.json();
+            if (data.success && data.previews) {
+                currentTestPreviews = data.previews;
+                renderTestPreview();
+            }
+        } catch (e) {
+            console.error(e);
+            previewBox.textContent = "Erro ao carregar prévia.";
+        }
+    }
+
+    function selectTestChannel(channel) {
+        activeTestChannel = channel;
+        document.querySelectorAll('.btn-test-ch').forEach(btn => {
+            btn.classList.remove('border-2', 'border-blue-600', 'bg-blue-50/50', 'dark:bg-blue-900/20', 'text-slate-800', 'dark:text-white');
+            btn.classList.add('border', 'border-slate-900/10', 'dark:border-white/10', 'text-slate-600', 'dark:text-slate-300');
+        });
+        const activeBtn = document.getElementById(`btn-test-ch-${channel}`);
+        if (activeBtn) {
+            activeBtn.classList.remove('border', 'border-slate-900/10', 'dark:border-white/10', 'text-slate-600', 'dark:text-slate-300');
+            activeBtn.classList.add('border-2', 'border-blue-600', 'bg-blue-50/50', 'dark:bg-blue-900/20', 'text-slate-800', 'dark:text-white');
+        }
+        renderTestPreview();
+    }
+
+    function renderTestPreview() {
+        const previewBox = document.getElementById('modal-test-preview-box');
+        if (!previewBox) return;
+        const msg = currentTestPreviews[activeTestChannel] || 'Nenhuma mensagem configurada para este canal.';
+        previewBox.textContent = msg;
+    }
+
+    async function dispatchRuleTestReal() {
+        const btn = document.getElementById('btn-dispatch-test-now');
+        const feedback = document.getElementById('modal-test-feedback');
+        const origContent = btn ? btn.innerHTML : '';
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-xs"></i> Disparando teste...';
+        }
+        feedback.className = "hidden p-3 rounded-xl text-xs font-bold";
+
+        try {
+            const res = await fetch(`/api/system/rules/${activeTestSlug}/test`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ channel: activeTestChannel, send: true })
+            });
+            const data = await res.json();
+            if (data.success) {
+                feedback.className = "p-3 rounded-xl text-xs font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-2 block";
+                feedback.innerHTML = `<i class="fa-solid fa-circle-check text-sm"></i> ${data.dispatch_result || 'Teste enviado com sucesso!'}`;
+                showToast("✅ Disparo de teste concluído com sucesso!", "success");
+            } else {
+                feedback.className = "p-3 rounded-xl text-xs font-bold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 flex items-center gap-2 block";
+                feedback.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-sm"></i> ${data.error || 'Falha ao disparar teste.'}`;
+                showToast(`❌ ${data.error || 'Falha no teste.'}`, "error");
+            }
+        } catch (e) {
+            console.error(e);
+            feedback.className = "p-3 rounded-xl text-xs font-bold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 flex items-center gap-2 block";
+            feedback.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-sm"></i> Erro de rede ou servidor ao disparar teste.`;
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = origContent;
             }
         }
     }

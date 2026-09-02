@@ -581,6 +581,28 @@ class Scale(db.Model):
     team_ids = db.Column(db.Text) # IDs de equipes separadas por vírgula
 
 
+class Schedule(db.Model):
+    """Cronogramas — treinamentos, eventos, auditorias e outros compromissos operacionais."""
+    __tablename__ = "schedule"
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(200), nullable=False)
+    description = db.Column(db.Text)
+    event_type = db.Column(db.String(50), default="evento")  # treinamento, evento, reuniao_externa, auditoria, outro
+    date_start = db.Column(db.Date, nullable=False)
+    date_end = db.Column(db.Date, nullable=True)
+    time_start = db.Column(db.String(10))
+    time_end = db.Column(db.String(10))
+    location = db.Column(db.String(200))
+    participants_ids = db.Column(db.Text)  # IDs separados por vírgula
+    team_ids = db.Column(db.Text)  # IDs de equipes separadas por vírgula
+    status = db.Column(db.String(20), default="AGENDADO")  # AGENDADO, EM_ANDAMENTO, CONCLUIDO, CANCELADO
+    notify_whatsapp = db.Column(db.Boolean, default=False)
+    show_on_calendar = db.Column(db.Boolean, default=True)
+    created_by = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="SET NULL"), nullable=True)
+    created_at = db.Column(db.DateTime, default=agora)
+    obs = db.Column(db.Text)
+
+
 class Meeting(db.Model):
     __tablename__ = "meeting"
     id = db.Column(db.Integer, primary_key=True)
