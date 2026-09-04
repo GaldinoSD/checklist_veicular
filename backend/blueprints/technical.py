@@ -7,7 +7,7 @@ from datetime import datetime, timedelta, date
 from pathlib import Path
 from collections import defaultdict
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, send_from_directory, abort, jsonify, session, current_app
+from flask import Blueprint, render_template, request, redirect, url_for, flash, send_from_directory, abort, jsonify, session, current_app, send_file
 from flask_login import login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
@@ -35,10 +35,10 @@ from backend.models import (
     UserToolStatus, ToolSuggestion, Training, TrainingCourse, TrainingModule,
     TrainingQuestion, TrainingAssignment, TrainingAttempt, Badge, Generator,
     RFO, Solicitacao, SupervisaoTecnica, RotaExata, Team, Task, CompletedActivity, Patio, Encerramento,
-    Scale, Schedule, Meeting, Note, Activity, SystemRule, Company, Contract, ExternalCollaborator, SystemRuleLog,
+    Scale, AnnualScaleSchedule, Schedule, Meeting, Note, Activity, SystemRule, Company, Contract, ExternalCollaborator, SystemRuleLog,
     AvariaOS, Log, Vistoria, VistoriaFoto, SystemConfig, WhatsAppConfig, TelegramConfig, EmailConfig,
     CloudflareConfig, TraccarConfig, MetabaseConfig,
-    NetworkNode, NetworkSplitter, NetworkEdge, GPSDevice, GPSLog, GPSGeofence, GPSAlert,
+    GPSDevice, GPSLog, GPSGeofence, GPSAlert,
     DocCategory, TechnicalDocument, DocumentFile, DocumentHistory
 )
 from backend.utils import (
@@ -72,10 +72,7 @@ def gestao_tecnica():
     return render_template("gestao_tecnica.html", tecnicos=tecnicos, tecnicos_js_data=tecnicos_js_data, powerbi_url=powerbi_url)
 
 
-@technical_bp.route("/simulador-roteadores")
-@login_required
-def simulador_roteadores():
-    return render_template("simulador_roteadores.html")
+
 
 
 
@@ -10295,6 +10292,822 @@ def api_gestao_documentos_categories_crud(cid):
         db.session.delete(cat)
         db.session.commit()
         return jsonify({"success": True})
+
+
+# ==============================================================================
+# 📅 MÓDULO: CRONOGRAMA ANUAL DE ESCALAS & FERIADOS
+# ==============================================================================
+
+def get_easter_date(year):
+    """Calcula a data da Páscoa pelo algoritmo de Meeus/Jones/Butcher."""
+    a = year % 19
+    b = year // 100
+    c = year % 100
+    d = b // 4
+    e = b % 4
+    f = (b + 8) // 25
+    g = (b - f + 1) // 3
+    h = (19 * a + b - d - g + 15) % 30
+    i = c // 4
+    k = c % 4
+    l = (32 + 2 * e + 2 * i - h - k) % 7
+    m = (a + 11 * h + 22 * l) // 451
+    month = (h + l - 7 * m + 114) // 31
+    day = ((h + l - 7 * m + 114) % 31) + 1
+    return datetime(year, month, day).date()
+
+
+def format_date_pt(dt, include_year=True):
+    PT_WEEKDAYS = ["segunda-feira", "terça-feira", "quarta-feira", "quinta-feira", "sexta-feira", "sábado", "domingo"]
+    PT_MONTHS = ["janeiro", "fevereiro", "março", "abril", "maio", "junho", "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"]
+    w = PT_WEEKDAYS[dt.weekday()]
+    m = PT_MONTHS[dt.month - 1]
+    if include_year:
+        return f"{w}, {dt.day} de {m} de {dt.year}"
+    return f"{w}, {dt.day} de {m}"
+
+
+def generate_default_annual_data(year):
+    """Gera a estrutura base de escalas de sábado, plantões de domingo e feriados para um ano."""
+    # 1. Sábados
+    saturdays = []
+    teams_cycle = ["EQUIPE ROSA", "EQUIPE AZUL", "EQUIPE AMARELA"]
+    curr = datetime(year, 1, 1).date()
+    team_idx = 0
+    while curr.year == year:
+        if curr.weekday() == 5: # Sábado
+            saturdays.append({
+                "date": curr.strftime("%Y-%m-%d"),
+                "date_extenso": format_date_pt(curr),
+                "team": teams_cycle[team_idx % len(teams_cycle)]
+            })
+            team_idx += 1
+        curr += timedelta(days=1)
+
+    # 2. Domingos
+    sundays = []
+    curr = datetime(year, 1, 1).date()
+    while curr.year == year:
+        if curr.weekday() == 6: # Domingo
+            sundays.append({
+                "date": curr.strftime("%Y-%m-%d"),
+                "date_extenso": format_date_pt(curr),
+                "interno": "",
+                "externo_1": "",
+                "externo_2": ""
+            })
+        curr += timedelta(days=1)
+
+    # 3. Feriados
+    easter = get_easter_date(year)
+    carnaval = easter - timedelta(days=47)
+    adoracao = easter - timedelta(days=3)
+    paixao = easter - timedelta(days=2)
+    corpus = easter + timedelta(days=60)
+
+    holidays_raw = [
+        ("Carnaval", carnaval),
+        ("Emancipação Municipal", datetime(year, 3, 13).date()),
+        ("Adoração a Cristo", adoracao),
+        ("Paixão de Cristo", paixao),
+        ("Tiradentes", datetime(year, 4, 21).date()),
+        ("São Jorge", datetime(year, 4, 23).date()),
+        ("Dia do Trabalhador", datetime(year, 5, 1).date()),
+        ("Corpus Christi", corpus),
+        ("Independência do Brasil", datetime(year, 9, 7).date()),
+        ("Padroeira da Cidade", datetime(year, 10, 1).date()),
+        ("NSRª Aparecida", datetime(year, 10, 12).date()),
+        ("Finados", datetime(year, 11, 2).date()),
+        ("Proclamação da República", datetime(year, 11, 15).date()),
+        ("Consciência Negra", datetime(year, 11, 20).date()),
+        ("Natal", datetime(year, 12, 25).date()),
+        ("Ano-Novo", datetime(year + 1, 1, 1).date()),
+    ]
+
+    holidays = []
+    for name, dt in holidays_raw:
+        is_sun = (dt.weekday() == 6)
+        holidays.append({
+            "name": name,
+            "date": dt.strftime("%Y-%m-%d"),
+            "date_extenso": f"{name}, {format_date_pt(dt)}",
+            "interno": "",
+            "externo_1": "",
+            "externo_2": "",
+            "prevalecer_domingo": is_sun
+        })
+
+    # Se for o ano de 2026, aplicar o benchmark exato enviado no PDF de referência
+    if year == 2026:
+        seed_2026_sundays = [
+            ("Roberth", "Adriano Mendonça", "Sidney Rodrigues"),
+            ("João", "Victor Leandro", "Lucas Jr"),
+            ("Gabriel", "Henrique", "Leo Claudino"),
+            ("Thiago", "Samuel Celestrino", "Marcos Antonio"),
+            ("João", "Wellinton Oliviere", "Reginaldo Borges"),
+            ("Gabriel", "Davidson Lucas", "Lucas Braga"),
+            ("Roberth", "Adriano Mendonça", "Sidney Rodrigues"),
+            ("João", "Victor Leandro", "Reginaldo Borges"),
+            ("Gabriel", "Davidson Lucas", "Lucas Braga"),
+            ("Thiago", "Samuel Celestrino", "Marcos Antonio"),
+            ("João", "Victor Leandro", "Lucas Jr"),
+            ("Gabriel", "Henrique", "Leo Claudino"),
+            ("Roberth", "Samuel Celestrino", "Marcos Antonio"),
+            ("João", "Wellinton Oliviere", "Reginaldo Borges"),
+            ("Gabriel", "Davidson Lucas", "Lucas Braga"),
+            ("Thiago", "Adriano Mendonça", "Sidney Rodrigues"),
+            ("João", "Wellinton Oliviere", "Reginaldo Borges"),
+            ("Gabriel", "Henrique", "Leo Claudino"),
+            ("Roberth", "Adriano Mendonça", "Sidney Rodrigues"),
+            ("João", "Victor Leandro", "Lucas Jr"),
+            ("Gabriel", "Davidson Lucas", "Lucas Braga"),
+            ("Thiago", "Adriano Mendonça", "Sidney Rodrigues"),
+            ("João", "Victor Leandro", "Lucas Jr"),
+            ("Gabriel", "Henrique", "Leo Claudino"),
+            ("Roberth", "Samuel Celestrino", "Marcos Antonio"),
+            ("João", "Victor Leandro", "Lucas Jr"),
+            ("Gabriel", "Davidson Lucas", "Lucas Braga"),
+            ("Thiago", "Samuel Celestrino", "Marcos Antonio"),
+            ("João", "Victor Leandro", "Lucas Jr"),
+            ("Gabriel", "Henrique", "Leo Claudino"),
+            ("Roberth", "Samuel Celestrino", "Pablo Rafael"),
+            ("João", "Wellinton Oliviere", "Reginaldo Borges"),
+            ("Gabriel", "Arthur", "Carlos Eduardo"),
+            ("Thiago", "Samuel Celestrino", "Marcos Antonio"),
+            ("João", "Wellinton Oliviere", "Victor Leandro"),
+            ("Gabriel", "Arthur", "Leo Claudino"),
+            ("Roberth", "Samuel Celestrino", "Pablo Rafael"),
+            ("João", "Victor Leandro", "Lucas Jr"),
+            ("Gabriel", "Arthur", "Leo Claudino"),
+            ("Thiago", "Samuel Celestrino", "Marcos Antonio"),
+            ("João", "Wellinton Oliviere", ""),
+            ("Gabriel", "Henrique", "Carlos Eduardo"),
+            ("Roberth", "Marcos Antonio", "Pablo Rafael"),
+            ("João", "Victor Leandro", "Lucas Jr"),
+            ("Gabriel", "Henrique", "Carlos Eduardo"),
+            ("Thiago", "Samuel Celestrino", "Pablo Rafael"),
+            ("João", "Wellinton Oliviere", ""),
+            ("Gabriel", "Henrique", "Leo Claudino"),
+            ("Roberth", "Pablo Rafael", ""),
+            ("João", "", ""),
+            ("Gabriel", "Arthur", "Carlos Eduardo"),
+            ("Thiago", "Marcos Antonio", "Pablo Rafael"),
+        ]
+        for idx, s in enumerate(sundays):
+            if idx < len(seed_2026_sundays):
+                s["interno"] = seed_2026_sundays[idx][0]
+                s["externo_1"] = seed_2026_sundays[idx][1]
+                s["externo_2"] = seed_2026_sundays[idx][2]
+
+        seed_2026_holidays = {
+            "Carnaval": ("Roberth", "Adriano Mendonça", "Samuel Celestrino"),
+            "Emancipação Municipal": ("Gabriel", "Lucas Braga", "Henrique Martins"),
+            "Adoração a Cristo": ("Roberth", "Victor Leandro", "Samuel Celestrino"),
+            "Paixão de Cristo": ("Gabriel", "Leonardo Claudino", "Davidson Lucas"),
+            "Tiradentes": ("João", "Wellinton Oliviere", "Reginaldo Borges"),
+            "São Jorge": ("Roberth", "Reginaldo Borges", "Samuel Celestrino"),
+            "Dia do Trabalhador": ("Roberth", "Sidney Rodrigues", "Adriano Mendonça"),
+            "Corpus Christi": ("Gabriel", "Lucas Braga", "Henrique Martins"),
+            "Independência do Brasil": ("Gabriel", "Leonardo Claudino", "Carlos Eduardo"),
+            "Padroeira da Cidade": ("Roberth", "Marcos", "Victor Leandro"),
+            "NSRª Aparecida": ("João", "Victor Leandro", "Lucas Junior"),
+            "Finados": ("João", "Wellinton Oliviere", "Gabriel"),
+            "Consciência Negra": ("Gabriel", "Leonardo Claudino", "Carlos Eduardo"),
+            "Natal": ("Roberth", "Arthur", "Pablo Rafael"),
+            "Ano-Novo": ("João", "Carlos Eduardo", "Lucas Junior"),
+        }
+        for h in holidays:
+            if h["name"] in seed_2026_holidays:
+                h["interno"] = seed_2026_holidays[h["name"]][0]
+                h["externo_1"] = seed_2026_holidays[h["name"]][1]
+                h["externo_2"] = seed_2026_holidays[h["name"]][2]
+
+    return {
+        "year": year,
+        "saturdays": saturdays,
+        "sundays": sundays,
+        "holidays": holidays
+    }
+
+
+def generate_annual_schedule_pdf_buffer(year, data, logo_path=None):
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib import colors
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak, Image as RLImage
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    from reportlab.lib.units import mm
+    import io
+
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        leftMargin=6*mm,
+        rightMargin=6*mm,
+        topMargin=6*mm,
+        bottomMargin=6*mm
+    )
+
+    styles = getSampleStyleSheet()
+
+    style_year = ParagraphStyle(
+        name=f"AnnualYearTitle_{year}",
+        fontName="Helvetica-Bold",
+        fontSize=18,
+        leading=22,
+        alignment=1,
+        textColor=colors.HexColor("#0284C7")
+    )
+
+    style_sat_date = ParagraphStyle(
+        name=f"SatDate_{year}",
+        fontName="Helvetica-Oblique",
+        fontSize=6.5,
+        leading=8,
+        alignment=0,
+        textColor=colors.HexColor("#0f172a")
+    )
+
+    style_sat_team = ParagraphStyle(
+        name=f"SatTeam_{year}",
+        fontName="Helvetica-Bold",
+        fontSize=6.5,
+        leading=8,
+        alignment=1,
+        textColor=colors.HexColor("#0f172a")
+    )
+
+    style_sun_date = ParagraphStyle(
+        name=f"SunDate_{year}",
+        fontName="Helvetica-Oblique",
+        fontSize=6.5,
+        leading=8,
+        alignment=0,
+        textColor=colors.HexColor("#0f172a")
+    )
+
+    style_sun_tech = ParagraphStyle(
+        name=f"SunTech_{year}",
+        fontName="Helvetica",
+        fontSize=6.5,
+        leading=8,
+        alignment=1,
+        textColor=colors.HexColor("#0f172a")
+    )
+
+    style_header_main = ParagraphStyle(
+        name=f"HeaderMain_{year}",
+        fontName="Helvetica-Bold",
+        fontSize=8.5,
+        leading=10,
+        alignment=1,
+        textColor=colors.black
+    )
+
+    style_header_sub = ParagraphStyle(
+        name=f"HeaderSub_{year}",
+        fontName="Helvetica-Bold",
+        fontSize=7.5,
+        leading=9,
+        alignment=1,
+        textColor=colors.black
+    )
+
+    style_holiday_name = ParagraphStyle(
+        name=f"HolidayName_{year}",
+        fontName="Helvetica",
+        fontSize=7.5,
+        leading=9.5,
+        alignment=0,
+        textColor=colors.black
+    )
+
+    style_holiday_tech = ParagraphStyle(
+        name=f"HolidayTech_{year}",
+        fontName="Helvetica",
+        fontSize=7.5,
+        leading=9.5,
+        alignment=1,
+        textColor=colors.black
+    )
+
+    style_prevalecer = ParagraphStyle(
+        name=f"Prevalecer_{year}",
+        fontName="Helvetica-Bold",
+        fontSize=7.5,
+        leading=9.5,
+        alignment=1,
+        textColor=colors.white
+    )
+
+    # Header with Year and Adaptlink Logo
+    logo_element = ""
+    if logo_path and os.path.exists(logo_path):
+        try:
+            logo_element = RLImage(logo_path, width=32*mm, height=12*mm)
+        except Exception:
+            logo_element = ""
+
+    header_data = [
+        [
+            "",
+            Paragraph(f"<b>{year}</b>", style_year),
+            logo_element
+        ]
+    ]
+    header_table = Table(header_data, colWidths=[160, 240, 160], rowHeights=[14*mm])
+    header_table.setStyle(TableStyle([
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ('ALIGN', (1,0), (1,0), 'CENTER'),
+        ('ALIGN', (2,0), (2,0), 'RIGHT'),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 0),
+        ('TOPPADDING', (0,0), (-1,-1), 0),
+    ]))
+
+    # PAGE 1: SÁBADOS & DOMINGOS
+    saturdays = data.get("saturdays", [])
+    sundays = data.get("sundays", [])
+
+    sat_data = [
+        [Paragraph("ESCALA DE SÁBADO", style_header_main), ""],
+        [Paragraph("SÁBADO", style_header_sub), Paragraph("EQUIPE", style_header_sub)]
+    ]
+    sat_styles = [
+        ('SPAN', (0,0), (1,0)),
+        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ('GRID', (0,0), (-1,-1), 0.7, colors.black),
+        ('TOPPADDING', (0,0), (-1,-1), 1.2),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 1.2),
+        ('LEFTPADDING', (0,0), (-1,-1), 2.5),
+        ('RIGHTPADDING', (0,0), (-1,-1), 2.5),
+        ('BACKGROUND', (0,0), (-1,0), colors.HexColor("#F8FAFC")),
+        ('BACKGROUND', (0,1), (-1,1), colors.HexColor("#F1F5F9")),
+    ]
+
+    for s in saturdays:
+        row_idx = len(sat_data)
+        team_str = s.get("team", "")
+        team_color_hex = "#0f172a"
+        if "ROSA" in team_str.upper():
+            team_color_hex = "#db2777"
+        elif "AZUL" in team_str.upper():
+            team_color_hex = "#0284c7"
+        elif "AMAREL" in team_str.upper():
+            team_color_hex = "#ca8a04"
+        elif "VERD" in team_str.upper():
+            team_color_hex = "#16a34a"
+
+        t_style = ParagraphStyle(
+            f"SatT_{row_idx}_{year}",
+            parent=style_sat_team,
+            textColor=colors.HexColor(team_color_hex)
+        )
+        sat_data.append([
+            Paragraph(s.get("date_extenso", s.get("date", "")), style_sat_date),
+            Paragraph(team_str.upper(), t_style)
+        ])
+
+    sat_table = Table(sat_data, colWidths=[105, 95])
+    sat_table.setStyle(TableStyle(sat_styles))
+
+    sun_data = [
+        [Paragraph("PLANTÃO DE DOMINGO", style_header_main), "", "", ""],
+        [Paragraph("DOMINGO", style_header_sub), Paragraph("INTERNO", style_header_sub), Paragraph("EXTERNO", style_header_sub), Paragraph("EXTERNO", style_header_sub)]
+    ]
+    sun_styles = [
+        ('SPAN', (0,0), (3,0)),
+        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ('GRID', (0,0), (-1,-1), 0.7, colors.black),
+        ('TOPPADDING', (0,0), (-1,-1), 1.2),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 1.2),
+        ('LEFTPADDING', (0,0), (-1,-1), 2),
+        ('RIGHTPADDING', (0,0), (-1,-1), 2),
+        ('BACKGROUND', (0,0), (-1,0), colors.HexColor("#F8FAFC")),
+        ('BACKGROUND', (0,1), (-1,1), colors.HexColor("#F1F5F9")),
+    ]
+
+    def parse_tech_list(raw_val):
+        if not raw_val:
+            return []
+        if isinstance(raw_val, list):
+            res = []
+            for x in raw_val:
+                if x:
+                    for sub in str(x).replace(";", ",").replace("\n", ",").split(","):
+                        s_clean = sub.strip()
+                        if s_clean:
+                            res.append(s_clean)
+            return res
+        parts = [p.strip() for p in str(raw_val).replace(";", ",").replace("\n", ",").split(",") if p.strip()]
+        return parts
+
+    for s in sundays:
+        internos = parse_tech_list(s.get("internos")) or parse_tech_list(s.get("interno"))
+        externos = parse_tech_list(s.get("externos")) or (parse_tech_list(s.get("externo_1")) + parse_tech_list(s.get("externo_2")))
+        
+        interno_html = "<br/>".join(internos)
+        if len(externos) <= 1:
+            ext_1_html = externos[0] if len(externos) == 1 else ""
+            ext_2_html = ""
+        elif len(externos) == 2:
+            ext_1_html = externos[0]
+            ext_2_html = externos[1]
+        else:
+            mid = (len(externos) + 1) // 2
+            ext_1_html = "<br/>".join(externos[:mid])
+            ext_2_html = "<br/>".join(externos[mid:])
+
+        sun_data.append([
+            Paragraph(s.get("date_extenso", s.get("date", "")), style_sun_date),
+            Paragraph(interno_html, style_sun_tech),
+            Paragraph(ext_1_html, style_sun_tech),
+            Paragraph(ext_2_html, style_sun_tech)
+        ])
+
+    sun_table = Table(sun_data, colWidths=[105, 78, 85, 92])
+    sun_table.setStyle(TableStyle(sun_styles))
+
+    page1_container = Table(
+        [[sat_table, "", sun_table]],
+        colWidths=[200, 5, 360]
+    )
+    page1_container.setStyle(TableStyle([
+        ('VALIGN', (0,0), (-1,-1), 'TOP'),
+        ('LEFTPADDING', (0,0), (-1,-1), 0),
+        ('RIGHTPADDING', (0,0), (-1,-1), 0),
+        ('TOPPADDING', (0,0), (-1,-1), 0),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 0),
+    ]))
+
+    # PAGE 2: FERIADOS
+    holidays = data.get("holidays", [])
+    hol_data = [
+        [Paragraph("TABELA DE FERIADOS", style_header_main), "", "", ""],
+        [Paragraph("FERIADO", style_header_sub), Paragraph("INTERNO", style_header_sub), Paragraph("EXTERNO", style_header_sub), Paragraph("EXTERNO", style_header_sub)]
+    ]
+    hol_styles = [
+        ('SPAN', (0,0), (3,0)),
+        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ('GRID', (0,0), (-1,-1), 0.7, colors.black),
+        ('TOPPADDING', (0,0), (-1,-1), 3.5),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 3.5),
+        ('LEFTPADDING', (0,0), (-1,-1), 4),
+        ('RIGHTPADDING', (0,0), (-1,-1), 4),
+        ('BACKGROUND', (0,0), (-1,0), colors.HexColor("#F8FAFC")),
+        ('BACKGROUND', (0,1), (-1,1), colors.HexColor("#F1F5F9")),
+    ]
+
+    for h in holidays:
+        row_idx = len(hol_data)
+        if h.get("prevalecer_domingo"):
+            hol_data.append([
+                Paragraph(h.get("date_extenso", h.get("name", "")), style_holiday_name),
+                Paragraph("PREVALECERÁ O PLANTÃO DE DOMINGO", style_prevalecer),
+                "",
+                ""
+            ])
+            hol_styles.append(('SPAN', (1, row_idx), (3, row_idx)))
+            hol_styles.append(('BACKGROUND', (1, row_idx), (3, row_idx), colors.HexColor("#475569")))
+        else:
+            h_internos = parse_tech_list(h.get("internos")) or parse_tech_list(h.get("interno"))
+            h_externos = parse_tech_list(h.get("externos")) or (parse_tech_list(h.get("externo_1")) + parse_tech_list(h.get("externo_2")))
+            
+            h_interno_html = "<br/>".join(h_internos)
+            if len(h_externos) <= 1:
+                h_ext_1_html = h_externos[0] if len(h_externos) == 1 else ""
+                h_ext_2_html = ""
+            elif len(h_externos) == 2:
+                h_ext_1_html = h_externos[0]
+                h_ext_2_html = h_externos[1]
+            else:
+                mid = (len(h_externos) + 1) // 2
+                h_ext_1_html = "<br/>".join(h_externos[:mid])
+                h_ext_2_html = "<br/>".join(h_externos[mid:])
+
+            hol_data.append([
+                Paragraph(h.get("date_extenso", h.get("name", "")), style_holiday_name),
+                Paragraph(h_interno_html, style_holiday_tech),
+                Paragraph(h_ext_1_html, style_holiday_tech),
+                Paragraph(h_ext_2_html, style_holiday_tech)
+            ])
+
+    hol_table = Table(hol_data, colWidths=[205, 120, 120, 120])
+    hol_table.setStyle(TableStyle(hol_styles))
+
+    elements = [
+        header_table,
+        Spacer(1, 2*mm),
+        page1_container,
+        PageBreak(),
+        header_table,
+        Spacer(1, 4*mm),
+        hol_table
+    ]
+
+    doc.build(elements)
+    buffer.seek(0)
+    return buffer
+
+
+@technical_bp.route("/gestao-tecnica/cronograma-anual")
+@supervisor_allowed
+def gestao_tecnica_cronograma_anual():
+    current_year = datetime.now().year
+    users = User.query.filter(User.username != "admin").order_by(User.username.asc()).all()
+    teams = Team.query.order_by(Team.name.asc()).all()
+    return render_template(
+        "cronograma_anual.html",
+        current_year=current_year,
+        users=users,
+        teams=teams
+    )
+
+
+def find_user_by_text(name_text, all_users):
+    """Localiza o colaborador cadastrado pelo nome digitado no cronograma (username, full_name, etc)."""
+    if not name_text:
+        return None
+    raw = str(name_text).strip().lower()
+    
+    # 1. Match exato em username ou full_name
+    for u in all_users:
+        u_name = (u.username or "").lower()
+        f_name = (u.full_name or "").lower()
+        if raw == u_name or raw == f_name:
+            return u
+            
+    # 2. Match parcial / substrings significativas
+    words = [w for w in raw.split() if len(w) > 2]
+    best_match = None
+    max_matches = 0
+    for u in all_users:
+        target_text = f"{(u.username or '')} {(u.full_name or '')}".lower()
+        matches = sum(1 for w in words if w in target_text)
+        if matches > max_matches:
+            max_matches = matches
+            best_match = u
+            
+    if max_matches > 0:
+        return best_match
+        
+    return None
+
+
+def find_team_by_text(team_text, all_teams):
+    """Localiza a equipe cadastrada pelo nome (ex: 'EQUIPE ROSA' -> 'Equipe rosa')."""
+    if not team_text:
+        return None
+    raw = str(team_text).strip().lower()
+    for t in all_teams:
+        t_name = (t.name or "").lower()
+        if raw == t_name or raw.replace("equipe", "").strip() == t_name.replace("equipe", "").strip():
+            return t
+    return None
+
+
+def sync_annual_schedule_to_db_scales(year, schedule_data):
+    """Sincroniza as escalas do cronograma anual na tabela 'Scale' para impactar as Escalas e o Calendário em tempo real."""
+    all_users = User.query.filter(User.username != "admin").all()
+    all_teams = Team.query.all()
+    
+    def parse_t_list(raw_val):
+        if not raw_val:
+            return []
+        if isinstance(raw_val, list):
+            res = []
+            for x in raw_val:
+                if x:
+                    for sub in str(x).replace(";", ",").replace("\n", ",").split(","):
+                        s_clean = sub.strip()
+                        if s_clean:
+                            res.append(s_clean)
+            return res
+        return [p.strip() for p in str(raw_val).replace(";", ",").replace("\n", ",").split(",") if p.strip()]
+
+    saturdays = schedule_data.get("saturdays", [])
+    sundays = schedule_data.get("sundays", [])
+    holidays = schedule_data.get("holidays", [])
+    
+    # 1. Sincroniza Sábados
+    for sat in saturdays:
+        date_str = sat.get("date")
+        if not date_str:
+            continue
+        try:
+            sat_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+        except Exception:
+            continue
+            
+        team_name = sat.get("team", "")
+        team_obj = find_team_by_text(team_name, all_teams)
+        
+        scale_rec = Scale.query.filter_by(date=sat_date, type="sabado").first()
+        if not scale_rec:
+            scale_rec = Scale.query.filter_by(date=sat_date).first()
+            if not scale_rec:
+                scale_rec = Scale(date=sat_date, type="sabado")
+                db.session.add(scale_rec)
+            else:
+                scale_rec.type = "sabado"
+                
+        if team_obj:
+            scale_rec.team_id = team_obj.id
+            scale_rec.team_ids = str(team_obj.id)
+            if team_obj.members:
+                scale_rec.technician_ids = ",".join(str(m.id) for m in team_obj.members)
+        scale_rec.obs = f"Escala de Sábado: {team_name}"
+        scale_rec.status = "ATIVO"
+
+    # 2. Sincroniza Domingos
+    for sun in sundays:
+        date_str = sun.get("date")
+        if not date_str:
+            continue
+        try:
+            sun_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+        except Exception:
+            continue
+            
+        internos = parse_t_list(sun.get("internos")) or parse_t_list(sun.get("interno"))
+        externos = parse_t_list(sun.get("externos")) or (parse_t_list(sun.get("externo_1")) + parse_t_list(sun.get("externo_2")))
+        
+        matched_user_ids = []
+        for name in (internos + externos):
+            u_obj = find_user_by_text(name, all_users)
+            if u_obj and u_obj.id not in matched_user_ids:
+                matched_user_ids.append(u_obj.id)
+                
+        scale_rec = Scale.query.filter_by(date=sun_date, type="domingo").first()
+        if not scale_rec:
+            scale_rec = Scale.query.filter_by(date=sun_date).first()
+            if not scale_rec:
+                scale_rec = Scale(date=sun_date, type="domingo")
+                db.session.add(scale_rec)
+            else:
+                scale_rec.type = "domingo"
+                
+        scale_rec.technician_ids = ",".join(map(str, matched_user_ids)) if matched_user_ids else None
+        scale_rec.obs = f"Plantão Domingo | Internos: {', '.join(internos)} | Externos: {', '.join(externos)}"
+        scale_rec.status = "ATIVO"
+
+    # 3. Sincroniza Feriados
+    for hol in holidays:
+        date_str = hol.get("date")
+        if not date_str:
+            continue
+        try:
+            hol_date = datetime.strptime(date_str, "%Y-%m-%d").date()
+        except Exception:
+            continue
+            
+        if hol.get("prevalecer_domingo"):
+            continue
+            
+        h_internos = parse_t_list(hol.get("internos")) or parse_t_list(hol.get("interno"))
+        h_externos = parse_t_list(hol.get("externos")) or (parse_t_list(hol.get("externo_1")) + parse_t_list(hol.get("externo_2")))
+        
+        matched_user_ids = []
+        for name in (h_internos + h_externos):
+            u_obj = find_user_by_text(name, all_users)
+            if u_obj and u_obj.id not in matched_user_ids:
+                matched_user_ids.append(u_obj.id)
+                
+        scale_rec = Scale.query.filter_by(date=hol_date, type="feriado").first()
+        if not scale_rec:
+            scale_rec = Scale.query.filter_by(date=hol_date).first()
+            if not scale_rec:
+                scale_rec = Scale(date=hol_date, type="feriado")
+                db.session.add(scale_rec)
+            else:
+                scale_rec.type = "feriado"
+                
+        scale_rec.technician_ids = ",".join(map(str, matched_user_ids)) if matched_user_ids else None
+        scale_rec.obs = f"Feriado: {hol.get('name', 'Feriado')} | Internos: {', '.join(h_internos)} | Externos: {', '.join(h_externos)}"
+        scale_rec.status = "ATIVO"
+
+    db.session.commit()
+
+
+@technical_bp.route("/api/gestao/cronograma-anual/<int:year>", methods=["GET", "POST"])
+@supervisor_allowed
+def api_gestao_cronograma_anual(year):
+    import json
+    schedule_record = AnnualScaleSchedule.query.filter_by(year=year).first()
+    
+    if request.method == "GET":
+        if schedule_record and schedule_record.data_json:
+            try:
+                data = json.loads(schedule_record.data_json)
+                return jsonify({
+                    "success": True,
+                    "is_saved": True,
+                    "updated_at": schedule_record.updated_at.strftime("%d/%m/%Y %H:%M") if schedule_record.updated_at else "",
+                    "data": data
+                })
+            except Exception as e:
+                print("⚠️ Erro ao decodificar JSON do cronograma:", e)
+        
+        default_data = generate_default_annual_data(year)
+        return jsonify({
+            "success": True,
+            "is_saved": False,
+            "updated_at": None,
+            "data": default_data
+        })
+
+    elif request.method == "POST":
+        req_data = request.get_json() or {}
+        schedule_data = req_data.get("data") or req_data
+        
+        if not schedule_data or not isinstance(schedule_data, dict):
+            return jsonify({"success": False, "message": "Dados inválidos."}), 400
+            
+        data_str = json.dumps(schedule_data, ensure_ascii=False)
+        
+        if not schedule_record:
+            schedule_record = AnnualScaleSchedule(
+                year=year,
+                data_json=data_str,
+                created_by=current_user.id if current_user.is_authenticated else None
+            )
+            db.session.add(schedule_record)
+        else:
+            schedule_record.data_json = data_str
+            schedule_record.updated_at = agora()
+            if current_user.is_authenticated:
+                schedule_record.created_by = current_user.id
+                
+        db.session.commit()
+        
+        # Sincroniza diretamente na tabela 'scale' para atualizar Escalas e Calendário
+        try:
+            sync_annual_schedule_to_db_scales(year, schedule_data)
+        except Exception as ex:
+            print(f"⚠️ Erro ao sincronizar escalas no banco para {year}:", ex)
+            
+        registrar_log(f"Atualizou o Cronograma Anual de Escalas de {year}")
+        return jsonify({
+            "success": True,
+            "message": f"Cronograma Anual de {year} salvo e sincronizado nas Escalas e Calendário com sucesso!",
+            "updated_at": schedule_record.updated_at.strftime("%d/%m/%Y %H:%M")
+        })
+
+
+@technical_bp.route("/api/gestao/cronograma-anual/<int:year>/pdf", methods=["GET"])
+@supervisor_allowed
+def api_gestao_cronograma_anual_pdf(year):
+    import json
+    schedule_record = AnnualScaleSchedule.query.filter_by(year=year).first()
+    if schedule_record and schedule_record.data_json:
+        try:
+            data = json.loads(schedule_record.data_json)
+        except Exception:
+            data = generate_default_annual_data(year)
+    else:
+        data = generate_default_annual_data(year)
+
+    config = SystemConfig.query.first()
+    logo_path = None
+    if config and config.pdf_logo:
+        custom_p = LAYOUT_UPLOAD_DIR / config.pdf_logo
+        if custom_p.exists():
+            logo_path = str(custom_p)
+    if not logo_path and os.path.exists("logo.png"):
+        logo_path = "logo.png"
+    if not logo_path and os.path.exists("/var/www/checklist_veicular/frontend/static/uploads/layout/layout_pdf_logo_6cece00e.png"):
+        logo_path = "/var/www/checklist_veicular/frontend/static/uploads/layout/layout_pdf_logo_6cece00e.png"
+
+    pdf_buffer = generate_annual_schedule_pdf_buffer(year, data, logo_path=logo_path)
+    
+    download = request.args.get("download", "0") == "1"
+    return send_file(
+        pdf_buffer,
+        mimetype="application/pdf",
+        as_attachment=download,
+        download_name=f"cronograma_escalas_{year}.pdf"
+    )
+
+
+@technical_bp.route("/api/gestao/cronograma-anual/<int:year>/auto-fill", methods=["POST"])
+@supervisor_allowed
+def api_gestao_cronograma_anual_auto_fill(year):
+    req_data = request.get_json() or {}
+    teams = req_data.get("teams") or ["EQUIPE ROSA", "EQUIPE AZUL", "EQUIPE AMARELA"]
+    generated_data = generate_default_annual_data(year)
+    
+    if teams and isinstance(teams, list) and len(teams) > 0:
+        for idx, sat in enumerate(generated_data["saturdays"]):
+            sat["team"] = teams[idx % len(teams)].upper()
+            
+    return jsonify({
+        "success": True,
+        "message": f"Escalas geradas automaticamente para {year}.",
+        "data": generated_data
+    })
+
 
 
 

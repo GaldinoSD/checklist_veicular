@@ -481,7 +481,7 @@ def supervisor_allowed(view):
         "gestao_anotacoes", "gestao_atividades", "gestao_encerramento", "gestao_rfo",
         "gestao_tarefas", "gestao_geradores", "gestao_rota_exata", "gestao_supervisao",
         "gestao_treinamentos", "gestao_solicitacoes", "gestao_relatorios",
-        "gestao_mapas", "gestao_powerbi", "gestao_documentos",
+        "gestao_powerbi", "gestao_documentos",
     ]
 
     @wraps(view)

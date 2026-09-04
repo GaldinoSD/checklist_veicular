@@ -39,7 +39,7 @@ from backend.models import (
     Scale, Meeting, Note, Activity, SystemRule, Company, Contract, ExternalCollaborator,
     AvariaOS, Log, Vistoria, VistoriaFoto, SystemConfig, WhatsAppConfig, WhatsAppLog,
     TelegramConfig, EmailConfig, CloudflareConfig, TraccarConfig, MetabaseConfig,
-    NetworkNode, NetworkSplitter, NetworkEdge, GPSDevice, GPSLog,
+    GPSDevice, GPSLog,
     MessageTemplate
 )
 from backend.utils import (

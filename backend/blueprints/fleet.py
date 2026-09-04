@@ -38,7 +38,7 @@ from backend.models import (
     RFO, Solicitacao, SupervisaoTecnica, RotaExata, Team, Task, Patio, Encerramento,
     Scale, Meeting, Note, Activity, SystemRule, Company, Contract, ExternalCollaborator,
     AvariaOS, Log, Vistoria, VistoriaFoto, SystemConfig, WhatsAppConfig,
-    NetworkNode, NetworkSplitter, NetworkEdge, GPSDevice, GPSLog
+    GPSDevice, GPSLog
 )
 from backend.utils import (
     agora, registrar_log, send_whatsapp_message, admin_required,

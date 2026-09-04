@@ -65,7 +65,7 @@ class User(UserMixin, db.Model):
             return True
         if self.role == "tech" and raw_perm in ("checklist_mobile", "treinamentos_mobile"):
             return True
-        if self.role == "supervisor" and raw_perm in ("frota", "gestao_mapas"):
+        if self.role == "supervisor" and raw_perm == "frota":
             return True
 
         if not self.permissions:
@@ -84,7 +84,7 @@ class User(UserMixin, db.Model):
                 if p.get(raw_perm, False):
                     return True
             return False
-        except:
+        except Exception:
             return False
 
     @property
@@ -580,6 +580,16 @@ class Scale(db.Model):
     technician_ids = db.Column(db.Text) # IDs de técnicos separados por vírgula
     team_ids = db.Column(db.Text) # IDs de equipes separadas por vírgula
 
+class AnnualScaleSchedule(db.Model):
+    """Cronograma Anual de Escalas de Sábado, Plantões de Domingo e Feriados."""
+    __tablename__ = "annual_scale_schedule"
+    id = db.Column(db.Integer, primary_key=True)
+    year = db.Column(db.Integer, unique=True, nullable=False, index=True)
+    data_json = db.Column(db.Text, nullable=False) # JSON com saturdays, sundays, holidays, teams_config, etc.
+    created_at = db.Column(db.DateTime, default=agora)
+    updated_at = db.Column(db.DateTime, default=agora, onupdate=agora)
+    created_by = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="SET NULL"), nullable=True)
+
 
 class Schedule(db.Model):
     """Cronogramas — treinamentos, eventos, auditorias e outros compromissos operacionais."""
@@ -958,186 +968,7 @@ class WhatsAppLog(db.Model):
     sent_at = db.Column(db.DateTime, default=agora)
 
 
-# ==============================================================================
-# 🌐 MODELOS FTTH/FTTX — PLATAFORMA DE ENGENHARIA DE REDE ÓPTICA
-# ==============================================================================
 
-class NetworkNode(db.Model):
-    """Elementos de infraestrutura georreferenciados no mapa FTTH."""
-    __tablename__ = "network_node"
-
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(150), nullable=False)
-    code = db.Column(db.String(50))  # Código interno (ex: POP-001, CTO-042)
-    type = db.Column(db.String(50), nullable=False)
-    # Types: post, ceo, cto, dio, rack, mini_rack, armario_outdoor,
-    #        shelter, pop, torre, olt, onu, ont, switch, router,
-    #        server, firewall, nobreak, battery_bank, converter
-    lat = db.Column(db.Float, nullable=False)
-    lng = db.Column(db.Float, nullable=False)
-    status = db.Column(db.String(30), default="active")
-    # Status: planned, deploying, active, maintenance, disabled
-    manufacturer = db.Column(db.String(100))
-    model = db.Column(db.String(100))
-    capacity = db.Column(db.String(100))
-    observations = db.Column(db.Text)
-    layer = db.Column(db.String(50), default="infrastructure")
-    details = db.Column(db.Text)  # JSON flexível para dados extras
-    photos = db.Column(db.Text)  # JSON array de paths de fotos
-    created_by = db.Column(db.Integer, db.ForeignKey("user.id"))
-    created_at = db.Column(db.DateTime, default=agora)
-    updated_at = db.Column(db.DateTime, default=agora, onupdate=agora)
-
-    splitters = db.relationship("NetworkSplitter", backref="node", cascade="all, delete-orphan")
-    equipment = db.relationship("NetworkEquipment", backref="node", cascade="all, delete-orphan")
-    racks = db.relationship("NetworkRack", backref="node", cascade="all, delete-orphan")
-
-
-class NetworkEquipment(db.Model):
-    """Equipamentos ativos de rede (OLT, Switch, etc) instalados em nós."""
-    __tablename__ = "network_equipment"
-
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(150), nullable=False)
-    code = db.Column(db.String(50))
-    type = db.Column(db.String(50), nullable=False)
-    # Types: olt, onu, ont, switch, router, server, firewall,
-    #        nobreak, battery_bank, converter, patch_panel, pdu, organizer
-    node_id = db.Column(db.Integer, db.ForeignKey("network_node.id", ondelete="CASCADE"))
-    manufacturer = db.Column(db.String(100))
-    model = db.Column(db.String(100))
-    serial_number = db.Column(db.String(100))
-    ports_total = db.Column(db.Integer, default=0)
-    ports_used = db.Column(db.Integer, default=0)
-    power_watts = db.Column(db.Float, default=0)
-    status = db.Column(db.String(30), default="active")
-    observations = db.Column(db.Text)
-    details = db.Column(db.Text)  # JSON
-    created_at = db.Column(db.DateTime, default=agora)
-    updated_at = db.Column(db.DateTime, default=agora, onupdate=agora)
-
-
-class NetworkSplitter(db.Model):
-    """Splitters PLC com gestão de portas individuais."""
-    __tablename__ = "network_splitter"
-
-    id = db.Column(db.Integer, primary_key=True)
-    node_id = db.Column(db.Integer, db.ForeignKey("network_node.id", ondelete="CASCADE"), nullable=False)
-    name = db.Column(db.String(100), nullable=False)
-    ratio = db.Column(db.String(20), nullable=False)
-    # Ratios: 1x2, 1x4, 1x8, 1x16, 1x32, 1x64
-    ports = db.Column(db.Text)  # JSON: [{port: 1, client: "...", signal_dbm: -19.5, status: "active"}, ...]
-    details = db.Column(db.Text)
-    created_at = db.Column(db.DateTime, default=agora)
-    updated_at = db.Column(db.DateTime, default=agora, onupdate=agora)
-
-
-class NetworkEdge(db.Model):
-    """Cabos e rotas ópticas entre nós da rede FTTH."""
-    __tablename__ = "network_edge"
-
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(150), nullable=False)
-    type = db.Column(db.String(50), default="backbone")
-    # Types: backbone, distribution, drop, underground, aerial
-    source_node_id = db.Column(db.Integer, db.ForeignKey("network_node.id", ondelete="CASCADE"), nullable=False)
-    target_node_id = db.Column(db.Integer, db.ForeignKey("network_node.id", ondelete="CASCADE"), nullable=False)
-    path_coordinates = db.Column(db.Text)  # JSON: [[lat, lng], ...]
-    fiber_count = db.Column(db.Integer, default=12)
-    tube_count = db.Column(db.Integer, default=1)
-    cable_model = db.Column(db.String(100))
-    manufacturer = db.Column(db.String(100))
-    distance_m = db.Column(db.Float, default=0)
-    technical_reserve_m = db.Column(db.Float, default=0)
-    color = db.Column(db.String(20), default="#6366f1")
-    thickness = db.Column(db.Integer, default=3)
-    status = db.Column(db.String(30), default="active")
-    # Status: planned, deploying, active, maintenance, disabled
-    layer = db.Column(db.String(50), default="cables")
-    details = db.Column(db.Text)  # JSON
-    created_at = db.Column(db.DateTime, default=agora)
-    updated_at = db.Column(db.DateTime, default=agora, onupdate=agora)
-
-    source = db.relationship("NetworkNode", foreign_keys=[source_node_id])
-    target = db.relationship("NetworkNode", foreign_keys=[target_node_id])
-
-
-class NetworkRack(db.Model):
-    """Racks físicos para montagem visual de equipamentos."""
-    __tablename__ = "network_rack"
-
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(150), nullable=False)
-    node_id = db.Column(db.Integer, db.ForeignKey("network_node.id", ondelete="CASCADE"))
-    total_units = db.Column(db.Integer, default=44)  # Total U's
-    depth_mm = db.Column(db.Integer, default=600)
-    width_mm = db.Column(db.Integer, default=600)
-    location = db.Column(db.String(200))
-    observations = db.Column(db.Text)
-    created_at = db.Column(db.DateTime, default=agora)
-    updated_at = db.Column(db.DateTime, default=agora, onupdate=agora)
-
-    slots = db.relationship("NetworkRackSlot", backref="rack", cascade="all, delete-orphan")
-
-
-class NetworkRackSlot(db.Model):
-    """Slots ocupados no rack (posição U + equipamento)."""
-    __tablename__ = "network_rack_slot"
-
-    id = db.Column(db.Integer, primary_key=True)
-    rack_id = db.Column(db.Integer, db.ForeignKey("network_rack.id", ondelete="CASCADE"), nullable=False)
-    position_u = db.Column(db.Integer, nullable=False)  # Posição no rack (1-based)
-    height_u = db.Column(db.Integer, default=1)  # Altura do equipamento em U's
-    equipment_id = db.Column(db.Integer, db.ForeignKey("network_equipment.id", ondelete="SET NULL"))
-    side = db.Column(db.String(10), default="front")  # front, back
-    label = db.Column(db.String(100))
-    created_at = db.Column(db.DateTime, default=agora)
-
-    equipment = db.relationship("NetworkEquipment")
-
-
-class NetworkLayer(db.Model):
-    """Camadas personalizáveis do mapa para controle de visibilidade."""
-    __tablename__ = "network_layer"
-
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(100), nullable=False, unique=True)
-    display_name = db.Column(db.String(100))
-    color = db.Column(db.String(20), default="#6366f1")
-    icon = db.Column(db.String(50), default="fa-layer-group")
-    visible = db.Column(db.Boolean, default=True)
-    sort_order = db.Column(db.Integer, default=0)
-    created_at = db.Column(db.DateTime, default=agora)
-
-
-class NetworkProject(db.Model):
-    """Projetos de expansão e planejamento de rede."""
-    __tablename__ = "network_project"
-
-    id = db.Column(db.Integer, primary_key=True)
-    name = db.Column(db.String(200), nullable=False)
-    description = db.Column(db.Text)
-    status = db.Column(db.String(30), default="planning")
-    # Status: planning, approved, in_progress, completed, cancelled
-    created_by = db.Column(db.Integer, db.ForeignKey("user.id"))
-    created_at = db.Column(db.DateTime, default=agora)
-    updated_at = db.Column(db.DateTime, default=agora, onupdate=agora)
-
-
-class NetworkChangeLog(db.Model):
-    """Histórico de alterações na rede para auditoria."""
-    __tablename__ = "network_changelog"
-
-    id = db.Column(db.Integer, primary_key=True)
-    entity_type = db.Column(db.String(50), nullable=False)  # node, edge, splitter, equipment
-    entity_id = db.Column(db.Integer, nullable=False)
-    action = db.Column(db.String(20), nullable=False)  # created, updated, deleted
-    entity_name = db.Column(db.String(150))
-    old_data = db.Column(db.Text)  # JSON
-    new_data = db.Column(db.Text)  # JSON
-    user_id = db.Column(db.Integer, db.ForeignKey("user.id"))
-    user_name = db.Column(db.String(80))
-    created_at = db.Column(db.DateTime, default=agora)
 
 
 # Modelo GPSDevices e Logs (usados no gps_listener e monitoramento)

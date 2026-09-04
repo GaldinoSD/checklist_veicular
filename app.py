@@ -11,10 +11,10 @@ from backend.models import (
     UserToolStatus, ToolSuggestion, Training, TrainingCourse, TrainingModule,
     TrainingQuestion, TrainingAssignment, TrainingAttempt, Badge, Generator,
     RFO, Solicitacao, SupervisaoTecnica, RotaExata, Team, Task, Patio, Encerramento,
-    Scale, Meeting, Note, Activity, SystemRule, Company, Contract, ExternalCollaborator,
+    Scale, AnnualScaleSchedule, Meeting, Note, Activity, SystemRule, Company, Contract, ExternalCollaborator,
     AvariaOS, Log, Vistoria, VistoriaFoto, SystemConfig, WhatsAppConfig, TelegramConfig, EmailConfig, SystemRuleLog,
     CloudflareConfig, TraccarConfig, MetabaseConfig,
-    NetworkNode, NetworkSplitter, NetworkEdge, GPSDevice, GPSLog,
+    GPSDevice, GPSLog,
     DocCategory, TechnicalDocument, DocumentFile, DocumentHistory,
     MessageTemplate
 )

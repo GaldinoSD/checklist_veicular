@@ -1,0 +1,896 @@
+{% extends 'layout.html' %}
+{% set page_title = "Cronograma de Escalas Anual" %}
+
+{% block content %}
+<div class="flex flex-col min-h-0 space-y-6 animate-premium">
+
+    <!-- ✅ HEADER PRINCIPAL -->
+    <div class="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-slate-200/80 dark:border-white/10 rounded-2xl p-5 shadow-xl shadow-slate-900/5">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-5">
+            <!-- Título e Breadcrumb -->
+            <div class="flex items-center gap-4">
+                <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center text-white shadow-lg shadow-cyan-500/25 flex-shrink-0">
+                    <i class="fa-solid fa-calendar-days text-xl"></i>
+                </div>
+                <div>
+                    <nav class="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">
+                        <a href="/gestao-tecnica?tab=escalas" class="hover:text-cyan-500 transition-colors">Gestão Técnica</a>
+                        <i class="fa-solid fa-chevron-right text-[8px] opacity-40"></i>
+                        <span class="text-cyan-500">Escalas Anuais</span>
+                    </nav>
+                    <div class="flex items-center gap-3">
+                        <h1 class="text-2xl font-black text-slate-800 dark:text-white tracking-tight">Cronograma de Escalas</h1>
+                        <span id="badge-status-salvo" class="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300 border border-emerald-500/20 flex items-center gap-1.5">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Salvo
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Seletor de Ano & Ações Rápidas -->
+            <div class="flex flex-wrap items-center gap-3">
+                <!-- Seletor de Ano com Navegação -->
+                <div class="flex items-center bg-slate-100 dark:bg-slate-800/80 p-1 rounded-xl border border-slate-200 dark:border-white/10 shadow-inner">
+                    <button type="button" onclick="changeYear(-1)" class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-800 dark:hover:text-white hover:bg-white dark:hover:bg-slate-700 transition-all active:scale-95" title="Ano anterior">
+                        <i class="fa-solid fa-chevron-left text-xs"></i>
+                    </button>
+                    <div class="px-3">
+                        <select id="select-year" onchange="onYearSelected()" class="bg-transparent text-sm font-black text-slate-800 dark:text-white outline-none cursor-pointer text-center">
+                            {% for y in range(current_year - 2, current_year + 5) %}
+                            <option value="{{ y }}" {% if y == current_year %}selected{% endif %}>{{ y }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button type="button" onclick="changeYear(1)" class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 hover:text-slate-800 dark:hover:text-white hover:bg-white dark:hover:bg-slate-700 transition-all active:scale-95" title="Próximo ano">
+                        <i class="fa-solid fa-chevron-right text-xs"></i>
+                    </button>
+                </div>
+
+                <!-- Botão Gerador Automático / Rodízio -->
+                <button type="button" onclick="openAutoFillModal()" class="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200 rounded-xl font-black text-xs uppercase tracking-wider transition-all active:scale-95 flex items-center gap-2 border border-slate-200 dark:border-white/5">
+                    <i class="fa-solid fa-wand-magic-sparkles text-cyan-500"></i>
+                    <span class="hidden sm:inline">Gerar</span> Rodízio
+                </button>
+
+                <!-- Botão Salvar -->
+                <button type="button" id="btn-save-schedule" onclick="saveSchedule()" class="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-black text-xs uppercase tracking-wider shadow-lg shadow-emerald-500/20 transition-all active:scale-95 flex items-center gap-2">
+                    <i class="fa-solid fa-floppy-disk text-xs"></i>
+                    <span>Salvar</span>
+                </button>
+
+                <!-- Botão PDF -->
+                <div class="flex items-center gap-1 bg-gradient-to-r from-cyan-600 to-blue-600 p-0.5 rounded-xl shadow-lg shadow-cyan-500/25">
+                    <button type="button" onclick="previewPDF()" class="px-3.5 py-2 text-white font-black text-xs uppercase tracking-wider hover:bg-white/10 rounded-lg transition-all flex items-center gap-1.5" title="Visualizar e Imprimir PDF">
+                        <i class="fa-solid fa-file-pdf text-sm"></i>
+                        <span>PDF</span>
+                    </button>
+                    <button type="button" onclick="downloadPDF()" class="p-2 text-white/80 hover:text-white hover:bg-white/10 rounded-lg transition-all" title="Baixar PDF direto">
+                        <i class="fa-solid fa-download text-xs"></i>
+                    </button>
+                </div>
+
+                <!-- Voltar -->
+                <a href="/gestao-tecnica?tab=escalas" class="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-600 dark:text-slate-300 flex items-center justify-center transition-all border border-slate-200 dark:border-white/5" title="Voltar para Gestão Técnica">
+                    <i class="fa-solid fa-xmark text-sm"></i>
+                </a>
+            </div>
+        </div>
+
+        <!-- Barra de Informações & Filtros -->
+        <div class="mt-4 pt-4 border-t border-slate-200/80 dark:border-white/5 flex flex-wrap items-center justify-between gap-4 text-xs text-slate-500 dark:text-slate-400">
+            <div class="flex items-center gap-6">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-calendar-check text-cyan-500"></i>
+                    <span>Sábados: <strong id="count-saturdays" class="text-slate-800 dark:text-white font-bold">0</strong></span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-user-shield text-blue-500"></i>
+                    <span>Domingos: <strong id="count-sundays" class="text-slate-800 dark:text-white font-bold">0</strong></span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-flag text-rose-500"></i>
+                    <span>Feriados: <strong id="count-holidays" class="text-slate-800 dark:text-white font-bold">0</strong></span>
+                </div>
+                <div id="last-update-text" class="hidden md:inline text-[11px] opacity-75">
+                    Última alteração: <span id="label-updated-at">--</span>
+                </div>
+            </div>
+
+            <!-- Filtro de busca rápida -->
+            <div class="relative w-full sm:w-64">
+                <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+                <input type="text" id="input-search-table" oninput="filterScheduleTable()" placeholder="Filtrar por data, equipe, técnico..." class="w-full bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-white/5 rounded-xl pl-9 pr-3 py-1.5 text-xs text-slate-700 dark:text-slate-200 outline-none focus:border-cyan-500 transition-all">
+            </div>
+        </div>
+    </div>
+
+    <!-- 📑 ABAS DE NAVEGAÇÃO DE CONTEÚDO -->
+    <div class="flex items-center gap-2 border-b border-slate-200 dark:border-white/10 pb-2">
+        <button type="button" onclick="switchViewMode('side-by-side')" id="tab-btn-side" class="px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 bg-cyan-600 text-white shadow-md shadow-cyan-500/20">
+            <i class="fa-solid fa-table-columns"></i> Visão Geral (Sábado & Domingo)
+        </button>
+        <button type="button" onclick="switchViewMode('holidays')" id="tab-btn-holidays" class="px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5">
+            <i class="fa-solid fa-flag"></i> Tabela de Feriados (<span id="tab-count-holidays">0</span>)
+        </button>
+    </div>
+
+    <!-- 📊 VISÃO 1: SÁBADOS & DOMINGOS LADO A LADO -->
+    <div id="view-side-by-side" class="space-y-6">
+        <div class="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
+            
+            <!-- TABELA 1: ESCALA DE SÁBADO (Col 1-5) -->
+            <div class="xl:col-span-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-2xl shadow-xl shadow-slate-900/5 overflow-hidden">
+                <div class="p-4 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-white/10 flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <span class="w-3 h-3 rounded-full bg-cyan-500"></span>
+                        <h2 class="text-sm font-black text-slate-800 dark:text-white uppercase tracking-wider">Escala de Sábado</h2>
+                    </div>
+                    <span class="text-[10px] font-bold text-slate-400 uppercase">Equipe Escalada</span>
+                </div>
+                
+                <div class="max-h-[75vh] overflow-y-auto divide-y divide-slate-100 dark:divide-white/5">
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-slate-100/80 dark:bg-slate-800/80 text-[10px] uppercase font-black text-slate-500 dark:text-slate-400 sticky top-0 z-10 backdrop-blur">
+                            <tr>
+                                <th class="py-2.5 px-3">Sábado</th>
+                                <th class="py-2.5 px-3 text-center">Equipe</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody-saturdays" class="divide-y divide-slate-100 dark:divide-white/5 font-medium">
+                            <!-- Inserido dinamicamente via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- TABELA 2: PLANTÃO DE DOMINGO (Col 6-12) -->
+            <div class="xl:col-span-7 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-2xl shadow-xl shadow-slate-900/5 overflow-hidden">
+                <div class="p-4 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-white/10 flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <span class="w-3 h-3 rounded-full bg-blue-500"></span>
+                        <h2 class="text-sm font-black text-slate-800 dark:text-white uppercase tracking-wider">Plantão de Domingo</h2>
+                    </div>
+                    <span class="text-[10px] font-bold text-slate-400 uppercase">Múltiplos Técnicos (Internos / Externos)</span>
+                </div>
+
+                <div class="max-h-[75vh] overflow-y-auto divide-y divide-slate-100 dark:divide-white/5">
+                    <table class="w-full text-left text-xs">
+                        <thead class="bg-slate-100/80 dark:bg-slate-800/80 text-[10px] uppercase font-black text-slate-500 dark:text-slate-400 sticky top-0 z-10 backdrop-blur">
+                            <tr>
+                                <th class="py-2.5 px-3">Domingo</th>
+                                <th class="py-2.5 px-2 text-center w-36">Interno(s)</th>
+                                <th class="py-2.5 px-2 text-center">Externo(s)</th>
+                                <th class="py-2.5 px-2 text-center w-14">Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody-sundays" class="divide-y divide-slate-100 dark:divide-white/5 font-medium">
+                            <!-- Inserido dinamicamente via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- 📊 VISÃO 2: TABELA DE FERIADOS -->
+    <div id="view-holidays" class="hidden space-y-4">
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-2xl shadow-xl shadow-slate-900/5 overflow-hidden">
+            <div class="p-4 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-white/10 flex flex-wrap items-center justify-between gap-4">
+                <div class="flex items-center gap-2">
+                    <span class="w-3 h-3 rounded-full bg-rose-500"></span>
+                    <h2 class="text-sm font-black text-slate-800 dark:text-white uppercase tracking-wider">Tabela de Feriados</h2>
+                </div>
+                <button type="button" onclick="addNewHoliday()" class="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-xl font-black text-xs uppercase tracking-wider shadow-md shadow-rose-500/20 transition-all active:scale-95 flex items-center gap-1.5">
+                    <i class="fa-solid fa-plus text-xs"></i> Adicionar Feriado
+                </button>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs">
+                    <thead class="bg-slate-100/80 dark:bg-slate-800/80 text-[10px] uppercase font-black text-slate-500 dark:text-slate-400">
+                        <tr>
+                            <th class="py-3 px-4">Feriado / Data</th>
+                            <th class="py-3 px-3 text-center w-40">Interno(s)</th>
+                            <th class="py-3 px-3 text-center">Externo(s)</th>
+                            <th class="py-3 px-3 text-center w-40">Regra de Domingo</th>
+                            <th class="py-3 px-3 text-center w-24">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tbody-holidays" class="divide-y divide-slate-100 dark:divide-white/5 font-medium">
+                        <!-- Inserido dinamicamente via JS -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- 👥 MODAL: GERENCIAR PLANTONISTAS (MÚLTIPLOS INTERNOS & EXTERNOS) -->
+<div id="modal-manage-shift" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-2xl w-full max-w-xl shadow-2xl p-6 space-y-5 animate-premium">
+        <div class="flex items-center justify-between border-b border-slate-200 dark:border-white/10 pb-3">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold">
+                    <i class="fa-solid fa-users text-base"></i>
+                </div>
+                <div>
+                    <h3 id="modal-shift-title" class="text-base font-black text-slate-800 dark:text-white">Escalar Plantonistas</h3>
+                    <p id="modal-shift-subtitle" class="text-[11px] text-slate-400">Adicione quantos técnicos internos e externos forem necessários</p>
+                </div>
+            </div>
+            <button type="button" onclick="closeShiftModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-white">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+        </div>
+
+        <div class="space-y-5 text-xs max-h-[60vh] overflow-y-auto pr-1">
+            <!-- Bloco 1: Técnicos Internos -->
+            <div class="bg-slate-50 dark:bg-slate-800/40 p-4 rounded-xl border border-slate-200/80 dark:border-white/5 space-y-3">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-cyan-500"></span>
+                        <h4 class="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-200">Técnicos Internos</h4>
+                    </div>
+                    <button type="button" onclick="addModalTechInput('internos')" class="px-2.5 py-1 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-black text-[10px] uppercase tracking-wider transition-all flex items-center gap-1">
+                        <i class="fa-solid fa-plus text-[9px]"></i> + Interno
+                    </button>
+                </div>
+                <div id="modal-list-internos" class="space-y-2">
+                    <!-- Inputs inseridos via JS -->
+                </div>
+            </div>
+
+            <!-- Bloco 2: Técnicos Externos -->
+            <div class="bg-slate-50 dark:bg-slate-800/40 p-4 rounded-xl border border-slate-200/80 dark:border-white/5 space-y-3">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
+                        <h4 class="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-200">Técnicos Externos</h4>
+                    </div>
+                    <button type="button" onclick="addModalTechInput('externos')" class="px-2.5 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-black text-[10px] uppercase tracking-wider transition-all flex items-center gap-1">
+                        <i class="fa-solid fa-plus text-[9px]"></i> + Externo
+                    </button>
+                </div>
+                <div id="modal-list-externos" class="space-y-2">
+                    <!-- Inputs inseridos via JS -->
+                </div>
+            </div>
+        </div>
+
+        <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-200 dark:border-white/10">
+            <button type="button" onclick="closeShiftModal()" class="px-4 py-2 text-slate-500 hover:text-slate-800 dark:hover:text-white font-bold text-xs">
+                Cancelar
+            </button>
+            <button type="button" onclick="saveShiftModal()" class="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-black text-xs uppercase tracking-wider shadow-lg shadow-blue-500/20 active:scale-95 transition-all">
+                Salvar Plantonistas
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ⚙️ MODAL: GERADOR AUTOMÁTICO DE RODÍZIO -->
+<div id="modal-autofill" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-2xl w-full max-w-lg shadow-2xl p-6 space-y-5 animate-premium">
+        <div class="flex items-center justify-between border-b border-slate-200 dark:border-white/10 pb-3">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 flex items-center justify-center font-bold">
+                    <i class="fa-solid fa-wand-magic-sparkles text-base"></i>
+                </div>
+                <div>
+                    <h3 class="text-base font-black text-slate-800 dark:text-white">Assistente de Geração</h3>
+                    <p class="text-[11px] text-slate-400">Configurar rotação automática das equipes de sábado</p>
+                </div>
+            </div>
+            <button type="button" onclick="closeAutoFillModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-white">
+                <i class="fa-solid fa-xmark text-lg"></i>
+            </button>
+        </div>
+
+        <div class="space-y-4 text-xs">
+            <div>
+                <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
+                    Ordem de Rodízio entre as Equipes Cadastradas (Sábados)
+                </label>
+                <div id="autofill-teams-list" class="space-y-2">
+                    <!-- Gerado dinamicamente com as equipes cadastradas -->
+                </div>
+                <button type="button" onclick="addCycleTeamSelect()" class="mt-2 text-cyan-600 dark:text-cyan-400 font-bold hover:underline flex items-center gap-1">
+                    <i class="fa-solid fa-plus text-xs"></i> Adicionar Equipe à Sequência
+                </button>
+            </div>
+            
+            <p class="text-[11px] text-slate-400 bg-slate-50 dark:bg-slate-800/40 p-3 rounded-xl border border-slate-200/60 dark:border-white/5">
+                <i class="fa-solid fa-circle-info text-cyan-500 mr-1"></i>
+                Você pode reordenar a sequência de rodízio clicando nas setas 🔼 / 🔽. Ao aplicar o gerador, todos os 52 sábados do ano selecionado seguirão essa rotação de equipes cadastradas.
+            </p>
+        </div>
+
+        <div class="flex items-center justify-end gap-3 pt-3 border-t border-slate-200 dark:border-white/10">
+            <button type="button" onclick="closeAutoFillModal()" class="px-4 py-2 text-slate-500 hover:text-slate-800 dark:hover:text-white font-bold">
+                Cancelar
+            </button>
+            <button type="button" onclick="applyAutoFill()" class="px-5 py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl font-black uppercase tracking-wider shadow-lg shadow-cyan-500/20 active:scale-95 transition-all">
+                Aplicar Rodízio
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Datalist para autocomplete de técnicos (Colaboradores cadastrados) -->
+<datalist id="list-technicians-names">
+    {% for u in users %}
+    <option value="{{ u.full_name or u.username }}">{{ u.username }}{% if u.full_name %} - {{ u.full_name }}{% endif %}</option>
+    {% if u.full_name and u.full_name != u.username %}
+    <option value="{{ u.username }}"></option>
+    {% endif %}
+    {% endfor %}
+</datalist>
+
+<!-- Datalist para autocomplete de equipes -->
+<datalist id="list-teams-names">
+    {% for t in teams %}
+    <option value="{{ t.name.upper() }}">{{ t.name }}</option>
+    {% endfor %}
+</datalist>
+
+<script>
+let currentYear = parseInt('{{ current_year }}') || new Date().getFullYear();
+let scheduleData = {
+    year: currentYear,
+    saturdays: [],
+    sundays: [],
+    holidays: []
+};
+let activeModalShift = null; // { type: 'sunday'|'holiday', index: 0 }
+
+document.addEventListener('DOMContentLoaded', () => {
+    loadYearSchedule(currentYear);
+});
+
+// Helper para normalizar lista de técnicos
+function getTechList(raw) {
+    if (!raw) return [];
+    if (Array.isArray(raw)) return raw.filter(Boolean);
+    return String(raw).split(/[;,]/).map(s => s.trim()).filter(Boolean);
+}
+
+// Alterna visualização entre Sábado/Domingo lado a lado e Feriados
+function switchViewMode(mode) {
+    const viewSide = document.getElementById('view-side-by-side');
+    const viewHolidays = document.getElementById('view-holidays');
+    const btnSide = document.getElementById('tab-btn-side');
+    const btnHolidays = document.getElementById('tab-btn-holidays');
+
+    if (mode === 'side-by-side') {
+        viewSide.classList.remove('hidden');
+        viewHolidays.classList.add('hidden');
+        btnSide.className = 'px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 bg-cyan-600 text-white shadow-md shadow-cyan-500/20';
+        btnHolidays.className = 'px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5';
+    } else {
+        viewSide.classList.add('hidden');
+        viewHolidays.classList.remove('hidden');
+        btnHolidays.className = 'px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 bg-rose-600 text-white shadow-md shadow-rose-500/20';
+        btnSide.className = 'px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5';
+    }
+}
+
+// Trocar de ano
+function changeYear(delta) {
+    const select = document.getElementById('select-year');
+    let nextYear = parseInt(select.value) + delta;
+    
+    let exists = false;
+    for (let opt of select.options) {
+        if (parseInt(opt.value) === nextYear) {
+            exists = true;
+            break;
+        }
+    }
+    if (!exists) {
+        let opt = document.createElement('option');
+        opt.value = nextYear;
+        opt.text = nextYear;
+        select.appendChild(opt);
+    }
+    select.value = nextYear;
+    onYearSelected();
+}
+
+function onYearSelected() {
+    const select = document.getElementById('select-year');
+    currentYear = parseInt(select.value);
+    loadYearSchedule(currentYear);
+}
+
+// Carregar dados da API
+async function loadYearSchedule(year) {
+    markSavedStatus(true);
+    try {
+        const res = await fetch(`/api/gestao/cronograma-anual/${year}`);
+        const result = await res.json();
+        if (result.success) {
+            scheduleData = result.data || {};
+            if (result.updated_at) {
+                document.getElementById('label-updated-at').innerText = result.updated_at;
+                document.getElementById('last-update-text').classList.remove('hidden');
+            } else {
+                document.getElementById('last-update-text').classList.add('hidden');
+            }
+            renderAllTables();
+        }
+    } catch (e) {
+        console.error('Erro ao carregar cronograma:', e);
+        if (window.Swal) {
+            Swal.fire({ icon: 'error', title: 'Erro', text: 'Não foi possível carregar o cronograma deste ano.' });
+        }
+    }
+}
+
+// Renderiza todas as tabelas
+function renderAllTables() {
+    renderSaturdaysTable();
+    renderSundaysTable();
+    renderHolidaysTable();
+    updateCounters();
+}
+
+function updateCounters() {
+    document.getElementById('count-saturdays').innerText = (scheduleData.saturdays || []).length;
+    document.getElementById('count-sundays').innerText = (scheduleData.sundays || []).length;
+    const holCount = (scheduleData.holidays || []).length;
+    document.getElementById('count-holidays').innerText = holCount;
+    document.getElementById('tab-count-holidays').innerText = holCount;
+}
+
+// Renderiza Tabela de Sábados
+function renderSaturdaysTable() {
+    const tbody = document.getElementById('tbody-saturdays');
+    tbody.innerHTML = '';
+    
+    (scheduleData.saturdays || []).forEach((sat, idx) => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors schedule-row';
+        tr.setAttribute('data-search', `${sat.date_extenso || ''} ${sat.team || ''}`.toLowerCase());
+
+        let badgeClass = 'text-slate-700 bg-slate-100 dark:bg-slate-800 dark:text-slate-300';
+        const tUpper = (sat.team || '').toUpperCase();
+        if (tUpper.includes('ROSA')) badgeClass = 'text-pink-700 bg-pink-50 border border-pink-200 dark:bg-pink-950/40 dark:text-pink-300 dark:border-pink-800/40';
+        else if (tUpper.includes('AZUL')) badgeClass = 'text-sky-700 bg-sky-50 border border-sky-200 dark:bg-sky-950/40 dark:text-sky-300 dark:border-sky-800/40';
+        else if (tUpper.includes('AMAREL')) badgeClass = 'text-amber-800 bg-amber-50 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800/40';
+        else if (tUpper.includes('VERD')) badgeClass = 'text-emerald-700 bg-emerald-50 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800/40';
+
+        tr.innerHTML = `
+            <td class="py-2.5 px-3 text-slate-700 dark:text-slate-300 font-medium italic">
+                ${sat.date_extenso || sat.date}
+            </td>
+            <td class="py-2.5 px-3 text-center">
+                <input type="text" list="list-teams-names" value="${sat.team || ''}" 
+                       onchange="updateSaturdayTeam(${idx}, this.value)" 
+                       class="px-2.5 py-1 text-center font-black rounded-lg text-xs uppercase outline-none focus:ring-2 focus:ring-cyan-500 transition-all ${badgeClass} w-36">
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+// Renderiza Tabela de Domingos
+function renderSundaysTable() {
+    const tbody = document.getElementById('tbody-sundays');
+    tbody.innerHTML = '';
+
+    (scheduleData.sundays || []).forEach((sun, idx) => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors schedule-row';
+        
+        const internos = getTechList(sun.internos || sun.interno);
+        const externos = getTechList(sun.externos || [sun.externo_1, sun.externo_2]);
+        
+        tr.setAttribute('data-search', `${sun.date_extenso || ''} ${internos.join(' ')} ${externos.join(' ')}`.toLowerCase());
+
+        tr.innerHTML = `
+            <td class="py-2.5 px-3 text-slate-700 dark:text-slate-300 font-medium italic">
+                ${sun.date_extenso || sun.date}
+            </td>
+            <td class="py-2.5 px-2 text-center">
+                <input type="text" list="list-technicians-names" value="${internos.join(', ')}" 
+                       onchange="updateSundayMultiTech(${idx}, 'internos', this.value)" 
+                       placeholder="Ex: Roberth, João" 
+                       class="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 rounded-lg px-2 py-1 text-center text-xs font-semibold text-slate-800 dark:text-white outline-none focus:border-cyan-500" title="Separe por vírgula para múltiplos internos">
+            </td>
+            <td class="py-2.5 px-2 text-center">
+                <input type="text" list="list-technicians-names" value="${externos.join(', ')}" 
+                       onchange="updateSundayMultiTech(${idx}, 'externos', this.value)" 
+                       placeholder="Ex: Adriano, Victor, Lucas, Sidney..." 
+                       class="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 rounded-lg px-2 py-1 text-center text-xs font-semibold text-slate-800 dark:text-white outline-none focus:border-blue-500" title="Separe por vírgula para múltiplos externos">
+            </td>
+            <td class="py-2.5 px-2 text-center">
+                <button type="button" onclick="openShiftModal('sunday', ${idx})" class="p-1.5 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-white/5 rounded-lg transition-all" title="Gerenciar Plantonistas em Modal">
+                    <i class="fa-solid fa-user-pen text-xs"></i>
+                </button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+// Renderiza Tabela de Feriados
+function renderHolidaysTable() {
+    const tbody = document.getElementById('tbody-holidays');
+    tbody.innerHTML = '';
+
+    (scheduleData.holidays || []).forEach((hol, idx) => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors schedule-row';
+        
+        const isPrevalecer = hol.prevalecer_domingo;
+        const internos = getTechList(hol.internos || hol.interno);
+        const externos = getTechList(hol.externos || [hol.externo_1, hol.externo_2]);
+
+        tr.setAttribute('data-search', `${hol.date_extenso || ''} ${hol.name || ''} ${internos.join(' ')} ${externos.join(' ')}`.toLowerCase());
+
+        tr.innerHTML = `
+            <td class="py-3 px-4">
+                <input type="text" value="${hol.date_extenso || hol.name || ''}" 
+                       onchange="updateHolidayField(${idx}, 'date_extenso', this.value)" 
+                       class="w-full bg-transparent border-b border-dashed border-slate-300 dark:border-slate-700 py-1 font-semibold text-slate-800 dark:text-white text-xs outline-none focus:border-rose-500">
+            </td>
+            <td class="py-3 px-2 text-center">
+                ${isPrevalecer ? 
+                    `<span class="text-[10px] text-slate-400 font-bold uppercase italic">Plantão Domingo</span>` : 
+                    `<input type="text" list="list-technicians-names" value="${internos.join(', ')}" onchange="updateHolidayMultiTech(${idx}, 'internos', this.value)" placeholder="Ex: Roberth, João" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-lg px-2 py-1 text-center text-xs font-semibold outline-none focus:border-rose-500">`
+                }
+            </td>
+            <td class="py-3 px-2 text-center">
+                ${isPrevalecer ? 
+                    `<span class="text-[10px] text-slate-400 font-bold uppercase italic">Plantão Domingo</span>` : 
+                    `<input type="text" list="list-technicians-names" value="${externos.join(', ')}" onchange="updateHolidayMultiTech(${idx}, 'externos', this.value)" placeholder="Ex: Adriano, Victor, Lucas..." class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-lg px-2 py-1 text-center text-xs font-semibold outline-none focus:border-rose-500">`
+                }
+            </td>
+            <td class="py-3 px-3 text-center">
+                <button type="button" onclick="toggleHolidayPrevalecer(${idx})" 
+                        class="px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${isPrevalecer ? 'bg-slate-700 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-white'}">
+                    ${isPrevalecer ? '✔ Prevalece Domingo' : 'Feriado Normal'}
+                </button>
+            </td>
+            <td class="py-3 px-3 text-center">
+                <div class="flex items-center justify-center gap-1">
+                    ${!isPrevalecer ? `
+                    <button type="button" onclick="openShiftModal('holiday', ${idx})" class="p-1.5 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-white/5 rounded-lg transition-all" title="Gerenciar Plantonistas">
+                        <i class="fa-solid fa-user-pen text-xs"></i>
+                    </button>
+                    ` : ''}
+                    <button type="button" onclick="removeHoliday(${idx})" class="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg transition-all" title="Remover Feriado">
+                        <i class="fa-solid fa-trash-can text-xs"></i>
+                    </button>
+                </div>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+// Atualizações Diretas
+function updateSaturdayTeam(idx, val) {
+    scheduleData.saturdays[idx].team = val.toUpperCase();
+    markSavedStatus(false);
+    renderSaturdaysTable();
+}
+
+function updateSundayMultiTech(idx, type, val) {
+    const list = getTechList(val);
+    scheduleData.sundays[idx][type] = list;
+    if (type === 'internos') {
+        scheduleData.sundays[idx].interno = list[0] || '';
+    } else {
+        scheduleData.sundays[idx].externo_1 = list[0] || '';
+        scheduleData.sundays[idx].externo_2 = list[1] || '';
+    }
+    markSavedStatus(false);
+}
+
+function updateHolidayMultiTech(idx, type, val) {
+    const list = getTechList(val);
+    scheduleData.holidays[idx][type] = list;
+    if (type === 'internos') {
+        scheduleData.holidays[idx].interno = list[0] || '';
+    } else {
+        scheduleData.holidays[idx].externo_1 = list[0] || '';
+        scheduleData.holidays[idx].externo_2 = list[1] || '';
+    }
+    markSavedStatus(false);
+}
+
+function updateHolidayField(idx, field, val) {
+    scheduleData.holidays[idx][field] = val;
+    markSavedStatus(false);
+}
+
+function toggleHolidayPrevalecer(idx) {
+    scheduleData.holidays[idx].prevalecer_domingo = !scheduleData.holidays[idx].prevalecer_domingo;
+    markSavedStatus(false);
+    renderHolidaysTable();
+}
+
+function removeHoliday(idx) {
+    scheduleData.holidays.splice(idx, 1);
+    markSavedStatus(false);
+    renderHolidaysTable();
+    updateCounters();
+}
+
+function addNewHoliday() {
+    scheduleData.holidays.push({
+        name: "Novo Feriado",
+        date: `${currentYear}-01-01`,
+        date_extenso: `Novo Feriado, ${currentYear}`,
+        internos: [],
+        externos: [],
+        interno: "",
+        externo_1: "",
+        externo_2: "",
+        prevalecer_domingo: false
+    });
+    markSavedStatus(false);
+    renderHolidaysTable();
+    updateCounters();
+}
+
+// 👥 MODAL DE GERENCIAMENTO DE PLANTONISTAS
+function openShiftModal(type, index) {
+    activeModalShift = { type, index };
+    const item = type === 'sunday' ? scheduleData.sundays[index] : scheduleData.holidays[index];
+    
+    document.getElementById('modal-shift-title').innerText = `Plantonistas: ${item.date_extenso || item.name || item.date}`;
+    
+    const internos = getTechList(item.internos || item.interno);
+    const externos = getTechList(item.externos || [item.externo_1, item.externo_2]);
+
+    const listInternos = document.getElementById('modal-list-internos');
+    const listExternos = document.getElementById('modal-list-externos');
+    listInternos.innerHTML = '';
+    listExternos.innerHTML = '';
+
+    if (internos.length === 0) internos.push('');
+    if (externos.length === 0) externos.push('');
+
+    internos.forEach(name => addModalTechInput('internos', name));
+    externos.forEach(name => addModalTechInput('externos', name));
+
+    document.getElementById('modal-manage-shift').classList.remove('hidden');
+    document.getElementById('modal-manage-shift').classList.add('flex');
+}
+
+function closeShiftModal() {
+    document.getElementById('modal-manage-shift').classList.add('hidden');
+    document.getElementById('modal-manage-shift').classList.remove('flex');
+    activeModalShift = null;
+}
+
+function addModalTechInput(group, value = '') {
+    const container = document.getElementById(group === 'internos' ? 'modal-list-internos' : 'modal-list-externos');
+    const div = document.createElement('div');
+    div.className = 'flex items-center gap-2 modal-tech-row';
+    div.setAttribute('data-group', group);
+    div.innerHTML = `
+        <input type="text" list="list-technicians-names" value="${value}" placeholder="Nome do técnico" class="modal-tech-val flex-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 font-bold text-xs text-slate-800 dark:text-white outline-none focus:border-blue-500">
+        <button type="button" onclick="this.parentElement.remove()" class="p-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg">
+            <i class="fa-solid fa-trash text-xs"></i>
+        </button>
+    `;
+    container.appendChild(div);
+}
+
+function saveShiftModal() {
+    if (!activeModalShift) return;
+    const { type, index } = activeModalShift;
+    const item = type === 'sunday' ? scheduleData.sundays[index] : scheduleData.holidays[index];
+
+    const internalInputs = document.querySelectorAll('#modal-list-internos .modal-tech-val');
+    const externalInputs = document.querySelectorAll('#modal-list-externos .modal-tech-val');
+
+    const newInternos = Array.from(internalInputs).map(i => i.value.trim()).filter(Boolean);
+    const newExternos = Array.from(externalInputs).map(i => i.value.trim()).filter(Boolean);
+
+    item.internos = newInternos;
+    item.externos = newExternos;
+    item.interno = newInternos[0] || '';
+    item.externo_1 = newExternos[0] || '';
+    item.externo_2 = newExternos[1] || '';
+
+    closeShiftModal();
+    markSavedStatus(false);
+    if (type === 'sunday') renderSundaysTable();
+    else renderHolidaysTable();
+}
+
+function markSavedStatus(isSaved) {
+    const badge = document.getElementById('badge-status-salvo');
+    if (isSaved) {
+        badge.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300 border border-emerald-500/20 flex items-center gap-1.5';
+        badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Salvo';
+    } else {
+        badge.className = 'px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300 border border-amber-500/20 flex items-center gap-1.5';
+        badge.innerHTML = '<span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping"></span> Alterações não salvas';
+    }
+}
+
+// Salvar Cronograma
+async function saveSchedule() {
+    const btn = document.getElementById('btn-save-schedule');
+    const originalText = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-xs"></i> Salvando...';
+
+    try {
+        const res = await fetch(`/api/gestao/cronograma-anual/${currentYear}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ data: scheduleData })
+        });
+        const result = await res.json();
+        if (result.success) {
+            markSavedStatus(true);
+            if (result.updated_at) {
+                document.getElementById('label-updated-at').innerText = result.updated_at;
+                document.getElementById('last-update-text').classList.remove('hidden');
+            }
+            if (window.Toast) {
+                Toast.fire({ icon: 'success', title: result.message || 'Cronograma salvo com sucesso!' });
+            } else if (window.Swal) {
+                Swal.fire({ icon: 'success', title: 'Salvo!', text: result.message, timer: 1500, showConfirmButton: false });
+            }
+        } else {
+            throw new Error(result.message || 'Erro ao salvar.');
+        }
+    } catch (e) {
+        console.error(e);
+        if (window.Swal) {
+            Swal.fire({ icon: 'error', title: 'Erro ao Salvar', text: e.message || 'Erro de conexão com o servidor.' });
+        }
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+    }
+}
+
+// Pré-visualizar e Baixar PDF
+function previewPDF() {
+    window.open(`/api/gestao/cronograma-anual/${currentYear}/pdf`, '_blank');
+}
+
+function downloadPDF() {
+    window.location.href = `/api/gestao/cronograma-anual/${currentYear}/pdf?download=1`;
+}
+
+// Filtro de busca na tabela
+function filterScheduleTable() {
+    const q = document.getElementById('input-search-table').value.toLowerCase().trim();
+    const rows = document.querySelectorAll('.schedule-row');
+    rows.forEach(r => {
+        const dataStr = r.getAttribute('data-search') || '';
+        if (!q || dataStr.includes(q)) {
+            r.style.display = '';
+        } else {
+            r.style.display = 'none';
+        }
+    });
+}
+
+// Lista de equipes cadastradas extraídas diretamente do datalist do sistema
+function getRegisteredTeams() {
+    const opts = document.querySelectorAll('#list-teams-names option');
+    return Array.from(opts).map(o => ({ name: o.innerText.trim() || o.value.trim() })).filter(t => t.name);
+}
+
+// Modal Autofill
+function openAutoFillModal() {
+    const list = document.getElementById('autofill-teams-list');
+    list.innerHTML = '';
+    
+    const teams = getRegisteredTeams();
+    // Se temos equipes cadastradas, preenche a lista inicial com elas
+    if (teams.length > 0) {
+        teams.forEach(t => addCycleTeamSelect(t.name));
+    } else {
+        addCycleTeamSelect('Equipe Rosa');
+        addCycleTeamSelect('Equipe Azul');
+        addCycleTeamSelect('Equipe Amarela');
+    }
+
+    document.getElementById('modal-autofill').classList.remove('hidden');
+    document.getElementById('modal-autofill').classList.add('flex');
+}
+
+function closeAutoFillModal() {
+    document.getElementById('modal-autofill').classList.add('hidden');
+    document.getElementById('modal-autofill').classList.remove('flex');
+}
+
+function addCycleTeamSelect(selectedValue = '') {
+    const list = document.getElementById('autofill-teams-list');
+    const div = document.createElement('div');
+    div.className = 'flex items-center gap-2 team-cycle-row bg-slate-50 dark:bg-slate-800/60 p-2 rounded-xl border border-slate-200/80 dark:border-white/5';
+    
+    let optionsHtml = '';
+    let found = false;
+    getRegisteredTeams().forEach(t => {
+        const isSel = (t.name.toUpperCase() === selectedValue.toUpperCase());
+        if (isSel) found = true;
+        optionsHtml += `<option value="${t.name.toUpperCase()}" ${isSel ? 'selected' : ''}>${t.name}</option>`;
+    });
+
+    if (!found && selectedValue) {
+        optionsHtml += `<option value="${selectedValue.toUpperCase()}" selected>${selectedValue}</option>`;
+    }
+
+    div.innerHTML = `
+        <div class="flex items-center gap-1 text-slate-400">
+            <button type="button" onclick="moveCycleTeam(this, -1)" class="w-6 h-6 rounded flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300" title="Subir na ordem">
+                <i class="fa-solid fa-chevron-up text-[10px]"></i>
+            </button>
+            <button type="button" onclick="moveCycleTeam(this, 1)" class="w-6 h-6 rounded flex items-center justify-center hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300" title="Descer na ordem">
+                <i class="fa-solid fa-chevron-down text-[10px]"></i>
+            </button>
+        </div>
+        <select class="team-select-cycle flex-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-1.5 font-bold text-xs uppercase text-slate-800 dark:text-white outline-none focus:border-cyan-500">
+            ${optionsHtml}
+        </select>
+        <button type="button" onclick="removeCycleTeam(this)" class="p-1.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg transition-all" title="Remover equipe">
+            <i class="fa-solid fa-trash text-xs"></i>
+        </button>
+    `;
+    list.appendChild(div);
+}
+
+function moveCycleTeam(btn, direction) {
+    const row = btn.closest('.team-cycle-row');
+    if (!row) return;
+    if (direction === -1 && row.previousElementSibling) {
+        row.parentNode.insertBefore(row, row.previousElementSibling);
+    } else if (direction === 1 && row.nextElementSibling) {
+        row.parentNode.insertBefore(row.nextElementSibling, row);
+    }
+}
+
+function removeCycleTeam(btn) {
+    const row = btn.closest('.team-cycle-row');
+    if (document.querySelectorAll('.team-cycle-row').length > 1) {
+        row.remove();
+    }
+}
+
+async function applyAutoFill() {
+    const selects = document.querySelectorAll('.team-select-cycle');
+    const teams = Array.from(selects).map(s => s.value.trim().toUpperCase()).filter(Boolean);
+    
+    if (teams.length === 0) {
+        if (window.Swal) Swal.fire({ icon: 'warning', title: 'Atenção', text: 'Selecione ao menos uma equipe para o rodízio.' });
+        return;
+    }
+
+    try {
+        const res = await fetch(`/api/gestao/cronograma-anual/${currentYear}/auto-fill`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ teams: teams })
+        });
+        const result = await res.json();
+        if (result.success) {
+            scheduleData = result.data;
+            closeAutoFillModal();
+            renderAllTables();
+            markSavedStatus(false);
+            if (window.Toast) {
+                Toast.fire({ icon: 'success', title: 'Rodízio aplicado com sucesso! Clique em Salvar para sincronizar nas Escalas e Calendário.' });
+            } else if (window.Swal) {
+                Swal.fire({ icon: 'success', title: 'Rodízio Gerado!', text: 'As equipes foram distribuídas. Clique em Salvar para gravar no banco e no calendário.', timer: 2000, showConfirmButton: false });
+            }
+        }
+    } catch (e) {
+        console.error(e);
+    }
+}
+</script>
+{% endblock %}

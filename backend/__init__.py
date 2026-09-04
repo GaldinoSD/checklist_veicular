@@ -179,13 +179,11 @@ def create_app():
     from backend.blueprints.auth import auth_bp
     from backend.blueprints.fleet import fleet_bp
     from backend.blueprints.technical import technical_bp
-    from backend.blueprints.network import network_bp
     from backend.blueprints.whatsapp import whatsapp_bp
 
     app.register_blueprint(auth_bp)
     app.register_blueprint(fleet_bp)
     app.register_blueprint(technical_bp)
-    app.register_blueprint(network_bp)
     app.register_blueprint(whatsapp_bp)
 
     # ==========================================
@@ -417,6 +415,16 @@ def create_app():
                     embed_url VARCHAR(500) DEFAULT '',
                     secret_key VARCHAR(255) DEFAULT '',
                     is_enabled BOOLEAN DEFAULT FALSE
+                )
+            '''),
+            text('''
+                CREATE TABLE IF NOT EXISTS annual_scale_schedule (
+                    id SERIAL PRIMARY KEY,
+                    year INTEGER NOT NULL UNIQUE,
+                    data_json TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    created_by INTEGER REFERENCES "user"(id) ON DELETE SET NULL
                 )
             ''')
         ]
