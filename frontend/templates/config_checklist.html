@@ -78,6 +78,11 @@
         <i class="fa-solid fa-van-shuttle"></i> Van
         <span class="px-1.5 py-0.5 rounded-full text-[10px] bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-gray-300 font-black">{{ items_van|length }}</span>
       </button>
+      <button id="tab-btn-onibus" onclick="switchTab('onibus')"
+        class="tab-btn flex items-center gap-2 px-5 py-3.5 text-[11px] font-black uppercase tracking-widest whitespace-nowrap border-b-2 border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-all">
+        <i class="fa-solid fa-bus"></i> Ônibus
+        <span class="px-1.5 py-0.5 rounded-full text-[10px] bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-gray-300 font-black">{{ items_onibus|length }}</span>
+      </button>
     </div>
 
     <!-- ========================= MACRO para painel de cada tipo ========================= -->
@@ -278,6 +283,7 @@
     {{ render_panel("moto",     "emerald",  "fa-motorcycle",   "Moto",     items_moto)     }}
     {{ render_panel("caminhao", "amber",    "fa-truck",        "Caminhão", items_caminhao) }}
     {{ render_panel("van",      "sky",      "fa-van-shuttle",  "Van",      items_van)      }}
+    {{ render_panel("onibus",   "violet",   "fa-bus",          "Ônibus",   items_onibus)   }}
 
   </div><!-- fim card-premium abas -->
 
@@ -290,6 +296,7 @@ const TAB_COLORS = {
   moto:     { border: 'border-emerald-500', text: 'text-emerald-600', dark: 'dark:text-emerald-400', badge: 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-300' },
   caminhao: { border: 'border-amber-500',   text: 'text-amber-600',   dark: 'dark:text-amber-400',   badge: 'bg-amber-100 dark:bg-amber-500/20 text-amber-600 dark:text-amber-300'   },
   van:      { border: 'border-sky-500',     text: 'text-sky-600',     dark: 'dark:text-sky-400',     badge: 'bg-sky-100 dark:bg-sky-500/20 text-sky-600 dark:text-sky-300'     },
+  onibus:   { border: 'border-violet-500',  text: 'text-violet-600',  dark: 'dark:text-violet-400',  badge: 'bg-violet-100 dark:bg-violet-500/20 text-violet-600 dark:text-violet-300' },
 };
 
 function switchTab(vtype) {

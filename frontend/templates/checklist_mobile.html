@@ -156,6 +156,7 @@
                 ("moto",     items_by_type.moto,     "fa-motorcycle",  "Checklist de Moto"),
                 ("caminhao", items_by_type.caminhao, "fa-truck",       "Checklist de Caminhão"),
                 ("van",      items_by_type.van,      "fa-van-shuttle", "Checklist de Van"),
+                ("onibus",   items_by_type.onibus,   "fa-bus",         "Checklist de Ônibus"),
             ] %}
 
             {% for vtype, vtype_items, vicon, vtitle in all_types %}
@@ -774,6 +775,7 @@ const VTYPE_META = {
   moto:     { label: '🏍️ Moto',     color: 'text-emerald-600' },
   caminhao: { label: '🚛 Caminhão', color: 'text-amber-600'   },
   van:      { label: '🚐 Van',      color: 'text-sky-600'     },
+  onibus:   { label: '🚌 Ônibus',   color: 'text-violet-600'  },
 };
 
 function onVehicleChange(selectEl) {

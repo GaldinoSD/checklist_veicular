@@ -504,6 +504,21 @@ def create_app():
         ("Observações gerais", "paragrafo"),
     ]
 
+    DEFAULT_ITEMS_ONIBUS = [
+        ("Pneus e estepe (calibragem/estado)", "sim_nao_na"),
+        ("Luzes frontais e traseiras", "sim_nao_na"),
+        ("Setas e pisca-alerta", "sim_nao_na"),
+        ("Sistema de freios e pressão de ar", "sim_nao_na"),
+        ("Tacógrafo funcionando", "sim_nao_na"),
+        ("Portas de embarque e travas", "sim_nao_na"),
+        ("Saídas e martelos de emergência", "sim_nao_na"),
+        ("Extintor de incêndio (validade/pressão)", "sim_nao_na"),
+        ("Cintos de segurança e assentos", "sim_nao_na"),
+        ("Nível de óleo e arrefecimento", "sim_nao_na"),
+        ("Documentação e licença de transporte", "sim_nao_na"),
+        ("Observações gerais", "paragrafo"),
+    ]
+
     def seed_defaults():
         if not User.query.filter_by(username="ADMIN").first():
             _admin_pwd = secrets.token_urlsafe(16)
@@ -530,6 +545,7 @@ def create_app():
             ("moto",     DEFAULT_ITEMS_MOTO),
             ("caminhao", DEFAULT_ITEMS_CAMINHAO),
             ("van",      DEFAULT_ITEMS_VAN),
+            ("onibus",   DEFAULT_ITEMS_ONIBUS),
         ]
         for vtype, items_list in seeds:
             if ChecklistItem.query.filter_by(vehicle_type=vtype).count() == 0:

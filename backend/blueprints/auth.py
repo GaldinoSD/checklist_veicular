@@ -384,6 +384,7 @@ def api_frota_stats():
     type_moto = Vehicle.query.filter_by(type="moto").count()
     type_caminhao = Vehicle.query.filter_by(type="caminhao").count()
     type_van = Vehicle.query.filter_by(type="van").count()
+    type_onibus = Vehicle.query.filter(Vehicle.type.in_(["onibus", "ônibus"])).count()
 
     return jsonify({
         "fleet_health": fleet_health,
@@ -402,7 +403,8 @@ def api_frota_stats():
             "carro": type_carro,
             "moto": type_moto,
             "caminhao": type_caminhao,
-            "van": type_van
+            "van": type_van,
+            "onibus": type_onibus
         }
     })
 

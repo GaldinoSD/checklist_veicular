@@ -95,6 +95,9 @@
 {% elif tipo == 'van' %}
     {% set card = 'bg-teal-50/70 dark:bg-teal-900/40 border-teal-300/60 dark:border-teal-700/60 hover:bg-teal-100/80 dark:hover:bg-teal-900/50' %}
     {% set icon = 'fa-van-shuttle text-teal-600 dark:text-teal-300' %}
+{% elif tipo in ['onibus', 'ônibus'] %}
+    {% set card = 'bg-indigo-50/70 dark:bg-indigo-900/40 border-indigo-300/60 dark:border-indigo-700/60 hover:bg-indigo-100/80 dark:hover:bg-indigo-900/50' %}
+    {% set icon = 'fa-bus text-indigo-600 dark:text-indigo-300' %}
 {% else %}
     {% set card = 'bg-blue-50/70 dark:bg-blue-900/40 border-blue-300/60 dark:border-blue-700/60 hover:bg-blue-100/80 dark:hover:bg-blue-900/50' %}
     {% set icon = 'fa-car text-blue-600 dark:text-blue-300' %}
@@ -114,6 +117,7 @@
                 {% if tipo == 'caminhao' %} bg-orange-500
                 {% elif tipo == 'moto' %} bg-yellow-500
                 {% elif tipo == 'van' %} bg-teal-500
+                {% elif tipo in ['onibus', 'ônibus'] %} bg-indigo-500
                 {% else %} bg-blue-500 {% endif %}">
     </div>
 
@@ -540,6 +544,7 @@
               <option value="moto" {% if tipo == 'moto' %}selected{% endif %} class="dark:bg-slate-850 dark:text-white">Moto</option>
               <option value="caminhao" {% if tipo == 'caminhao' %}selected{% endif %} class="dark:bg-slate-850 dark:text-white">Caminhão</option>
               <option value="van" {% if tipo == 'van' %}selected{% endif %} class="dark:bg-slate-850 dark:text-white">Van / Utilitário</option>
+              <option value="onibus" {% if tipo in ['onibus', 'ônibus'] %}selected{% endif %} class="dark:bg-slate-850 dark:text-white">Ônibus</option>
             </select>
           </div>
           <div>
@@ -707,6 +712,7 @@
               <option value="moto" class="dark:bg-slate-850 dark:text-white">Moto</option>
               <option value="caminhao" class="dark:bg-slate-850 dark:text-white">Caminhão</option>
               <option value="van" class="dark:bg-slate-850 dark:text-white">Van / Utilitário</option>
+              <option value="onibus" class="dark:bg-slate-850 dark:text-white">Ônibus</option>
             </select>
           </div>
           <div>

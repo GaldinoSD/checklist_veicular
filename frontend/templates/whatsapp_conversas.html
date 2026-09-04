@@ -268,44 +268,105 @@
     </div>
 </div>
 
-<!-- ⚡ MODAL: TEMPLATES RÁPIDOS -->
+<!-- ⚡ MODAL: TEMPLATES RÁPIDOS (DINÂMICO) -->
 <div id="modalTemplates" class="fixed inset-0 hidden items-center justify-center z-50 p-4">
     <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="closeModal('modalTemplates')"></div>
-    <div class="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-3xl p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4">
-        <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+    <div class="relative w-full max-w-lg bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 flex flex-col" style="max-height: 85vh;">
+
+        <!-- Header -->
+        <div class="flex items-center justify-between px-6 pt-6 pb-3 border-b border-slate-100 dark:border-slate-800 shrink-0">
             <h3 class="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <i class="fa-solid fa-bolt text-amber-500"></i> Templates de Mensagem Rápidos
+                <i class="fa-solid fa-bolt text-amber-500"></i> Templates de Mensagem
             </h3>
-            <button type="button" onclick="closeModal('modalTemplates')" class="text-slate-400 hover:text-slate-600">
-                <i class="fa-solid fa-xmark"></i>
-            </button>
-        </div>
-
-        <div class="space-y-2.5">
-            <div onclick="useTemplate('Olá, tudo bem? Lembramos que você tem um checklist pendente para hoje. Por favor, realize a inspeção assim que possível.')" 
-                 class="p-3.5 bg-slate-50 dark:bg-slate-800/60 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded-xl border border-slate-200/60 dark:border-slate-700/60 cursor-pointer transition-all">
-                <h4 class="text-xs font-bold text-slate-800 dark:text-white">🔔 Alerta de Checklist Pendente</h4>
-                <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-1">Lembrete amigável de checklist de veículo pendente.</p>
-            </div>
-
-            <div onclick="useTemplate('Prezado técnico, sua Ordem de Serviço foi atualizada e exige atenção. Verifique os detalhes no painel.')" 
-                 class="p-3.5 bg-slate-50 dark:bg-slate-800/60 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded-xl border border-slate-200/60 dark:border-slate-700/60 cursor-pointer transition-all">
-                <h4 class="text-xs font-bold text-slate-800 dark:text-white">🔧 Atualização de O.S. / Manutenção</h4>
-                <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-1">Aviso sobre mudança de status ou abertura de O.S.</p>
-            </div>
-
-            <div onclick="useTemplate('Olá, confirmamos sua escala de plantão programada. Por favor, confirme a recepção deste comunicado.')" 
-                 class="p-3.5 bg-slate-50 dark:bg-slate-800/60 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded-xl border border-slate-200/60 dark:border-slate-700/60 cursor-pointer transition-all">
-                <h4 class="text-xs font-bold text-slate-800 dark:text-white">📅 Confirmação de Plantão</h4>
-                <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-1">Comunicado oficial para escala operacional.</p>
+            <div class="flex items-center gap-2">
+                <button type="button" id="btnToggleCreateTemplate" onclick="toggleCreateTemplate()" class="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-[11px] font-bold transition-all flex items-center gap-1.5 shadow-sm shadow-emerald-500/20">
+                    <i class="fa-solid fa-plus text-[10px]"></i> Novo
+                </button>
+                <button type="button" onclick="closeModal('modalTemplates')" class="text-slate-400 hover:text-slate-600 p-1">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
             </div>
         </div>
 
-        <div class="flex justify-end pt-2">
-            <button type="button" onclick="closeModal('modalTemplates')" class="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl text-xs font-semibold">Fechar</button>
+        <!-- Formulário de Criação (escondido por padrão) -->
+        <div id="createTemplateForm" class="hidden px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 shrink-0" style="animation: fadeInScale 0.25s ease;">
+            <div class="space-y-3">
+                <div class="flex items-center gap-2 mb-2">
+                    <div class="w-6 h-6 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                        <i class="fa-solid fa-wand-magic-sparkles text-emerald-500 text-[10px]"></i>
+                    </div>
+                    <span class="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">Criar Novo Template</span>
+                </div>
+
+                <div class="flex gap-2">
+                    <!-- Emoji Picker Mini -->
+                    <div class="relative">
+                        <button type="button" id="tplEmojiBtn" onclick="toggleTplEmojiPicker()" class="w-10 h-10 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl flex items-center justify-center text-lg hover:border-emerald-400 transition-all cursor-pointer">
+                            <span id="tplEmojiDisplay">📝</span>
+                        </button>
+                        <div id="tplEmojiDropdown" class="hidden absolute top-12 left-0 z-50 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl p-2 w-56">
+                            <div class="grid grid-cols-7 gap-0.5">
+                                {% set template_emojis = ['📝','🔔','🔧','📅','⚡','🚗','📋','✅','⚠️','📌','🎯','💬','📢','🛠️','📊','📦','🔍','🏗️','🚨','💡','🎓'] %}
+                                {% for em in template_emojis %}
+                                <button type="button" onclick="selectTplEmoji('{{ em }}')" class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 hover:scale-110 active:scale-95 transition-all text-base cursor-pointer">{{ em }}</button>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Título -->
+                    <input id="tplTitleInput" type="text" placeholder="Título do template (ex: Lembrete de Reunião)" maxlength="150"
+                           class="flex-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white px-3 py-2 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-400 outline-none transition-all">
+                </div>
+
+                <textarea id="tplContentInput" rows="3" placeholder="Conteúdo da mensagem..."
+                          class="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white px-3 py-2 rounded-xl text-xs focus:ring-2 focus:ring-emerald-500/40 focus:border-emerald-400 outline-none transition-all resize-none"></textarea>
+
+                <div class="flex justify-end gap-2">
+                    <button type="button" onclick="toggleCreateTemplate()" class="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 text-slate-500 rounded-xl text-[11px] font-semibold hover:bg-slate-200 dark:hover:bg-slate-700 transition-all">Cancelar</button>
+                    <button type="button" onclick="saveNewTemplate()" id="btnSaveTemplate" class="px-4 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl text-[11px] font-bold transition-all shadow-sm shadow-emerald-500/20 flex items-center gap-1.5">
+                        <i class="fa-solid fa-check text-[10px]"></i> Salvar Template
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Lista de Templates (scrollable) -->
+        <div class="flex-1 overflow-y-auto custom-scrollbar px-6 py-4 space-y-2.5" id="templatesList">
+
+            <!-- Templates Personalizados (do banco de dados) -->
+            <div id="customTemplatesContainer">
+            {% for tpl in custom_templates %}
+                <div id="tpl-card-{{ tpl.id }}" class="p-3.5 bg-slate-50 dark:bg-slate-800/60 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded-xl border border-slate-200/60 dark:border-slate-700/60 cursor-pointer transition-all group relative mb-2.5">
+                    <div onclick="useTemplate({{ tpl.content | tojson }})" class="pr-8">
+                        <h4 class="text-xs font-bold text-slate-800 dark:text-white flex items-center gap-2">{{ tpl.emoji or '📝' }} {{ tpl.title }}</h4>
+                        <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-1 line-clamp-2">{{ tpl.content[:120] }}{% if tpl.content|length > 120 %}...{% endif %}</p>
+                    </div>
+                    <button type="button" onclick="event.stopPropagation(); deleteTemplate({{ tpl.id }}, '{{ tpl.title | e }}')" 
+                            class="absolute top-3 right-3 w-7 h-7 rounded-lg bg-red-500/0 hover:bg-red-500/10 flex items-center justify-center text-slate-300 hover:text-red-500 transition-all opacity-0 group-hover:opacity-100"
+                            title="Excluir template">
+                        <i class="fa-solid fa-trash-can text-[10px]"></i>
+                    </button>
+                </div>
+            {% endfor %}
+            </div>
+
+            <!-- Empty State (quando não há templates) -->
+            <div id="emptyCustomTemplates" class="{% if custom_templates %}hidden{% endif %} py-8 text-center">
+                <div class="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center mx-auto mb-3 text-slate-400">
+                    <i class="fa-solid fa-message-pen text-lg"></i>
+                </div>
+                <h4 class="text-xs font-bold text-slate-700 dark:text-slate-300">Nenhum template criado</h4>
+                <p class="text-[11px] text-slate-400 dark:text-slate-500 mt-1 max-w-xs mx-auto">Você pode criar respostas rápidas e templates personalizados clicando em <strong>"Novo"</strong> acima.</p>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="flex justify-end px-6 py-3 border-t border-slate-100 dark:border-slate-800 shrink-0">
+            <button type="button" onclick="closeModal('modalTemplates')" class="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-xl text-xs font-semibold hover:bg-slate-200 dark:hover:bg-slate-700 transition-all">Fechar</button>
         </div>
     </div>
 </div>
+
 
 <!-- SCRIPTS & CLIENT LOGIC -->
 <script>
@@ -419,6 +480,159 @@
         }
         closeModal('modalTemplates');
     }
+
+    // ==========================================
+    // 💬 GESTÃO DE TEMPLATES PERSONALIZADOS
+    // ==========================================
+    let tplSelectedEmoji = '📝';
+
+    function toggleCreateTemplate() {
+        const form = document.getElementById('createTemplateForm');
+        if (form.classList.contains('hidden')) {
+            form.classList.remove('hidden');
+            document.getElementById('tplTitleInput').focus();
+        } else {
+            form.classList.add('hidden');
+            resetCreateForm();
+        }
+    }
+
+    function resetCreateForm() {
+        document.getElementById('tplTitleInput').value = '';
+        document.getElementById('tplContentInput').value = '';
+        tplSelectedEmoji = '📝';
+        document.getElementById('tplEmojiDisplay').textContent = '📝';
+        document.getElementById('tplEmojiDropdown').classList.add('hidden');
+    }
+
+    function toggleTplEmojiPicker() {
+        document.getElementById('tplEmojiDropdown').classList.toggle('hidden');
+    }
+
+    function selectTplEmoji(emoji) {
+        tplSelectedEmoji = emoji;
+        document.getElementById('tplEmojiDisplay').textContent = emoji;
+        document.getElementById('tplEmojiDropdown').classList.add('hidden');
+    }
+
+    // Close emoji dropdown when clicking outside
+    document.addEventListener('click', function(e) {
+        const dropdown = document.getElementById('tplEmojiDropdown');
+        const btn = document.getElementById('tplEmojiBtn');
+        if (dropdown && btn && !dropdown.contains(e.target) && !btn.contains(e.target)) {
+            dropdown.classList.add('hidden');
+        }
+    });
+
+    function saveNewTemplate() {
+        const title = document.getElementById('tplTitleInput').value.trim();
+        const content = document.getElementById('tplContentInput').value.trim();
+
+        if (!title) {
+            document.getElementById('tplTitleInput').focus();
+            document.getElementById('tplTitleInput').classList.add('ring-2', 'ring-red-400');
+            setTimeout(() => document.getElementById('tplTitleInput').classList.remove('ring-2', 'ring-red-400'), 2000);
+            return;
+        }
+        if (!content) {
+            document.getElementById('tplContentInput').focus();
+            document.getElementById('tplContentInput').classList.add('ring-2', 'ring-red-400');
+            setTimeout(() => document.getElementById('tplContentInput').classList.remove('ring-2', 'ring-red-400'), 2000);
+            return;
+        }
+
+        const btn = document.getElementById('btnSaveTemplate');
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-[10px]"></i> Salvando...';
+
+        fetch('/api/whatsapp/message-templates', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ title, content, emoji: tplSelectedEmoji })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                // Hide empty state
+                const empty = document.getElementById('emptyCustomTemplates');
+                if (empty) empty.classList.add('hidden');
+
+                const container = document.getElementById('customTemplatesContainer');
+
+                // Add new card to DOM
+                const tpl = data.template;
+                const card = document.createElement('div');
+                card.id = `tpl-card-${tpl.id}`;
+                card.className = 'p-3.5 bg-slate-50 dark:bg-slate-800/60 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 rounded-xl border border-slate-200/60 dark:border-slate-700/60 cursor-pointer transition-all group relative mb-2.5';
+                card.style.animation = 'fadeInScale 0.3s ease';
+
+                const preview = tpl.content.length > 120 ? tpl.content.substring(0, 120) + '...' : tpl.content;
+                const escapedContent = tpl.content.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"').replace(/\n/g, '\\n');
+                const escapedTitle = tpl.title.replace(/'/g, "\\'").replace(/"/g, '\\"');
+
+                card.innerHTML = `
+                    <div onclick="useTemplate('${escapedContent}')" class="pr-8">
+                        <h4 class="text-xs font-bold text-slate-800 dark:text-white flex items-center gap-2">${tpl.emoji} ${tpl.title}</h4>
+                        <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-1 line-clamp-2">${preview}</p>
+                    </div>
+                    <button type="button" onclick="event.stopPropagation(); deleteTemplate(${tpl.id}, '${escapedTitle}')" 
+                            class="absolute top-3 right-3 w-7 h-7 rounded-lg bg-red-500/0 hover:bg-red-500/10 flex items-center justify-center text-slate-300 hover:text-red-500 transition-all opacity-0 group-hover:opacity-100"
+                            title="Excluir template">
+                        <i class="fa-solid fa-trash-can text-[10px]"></i>
+                    </button>
+                `;
+
+                container.prepend(card);
+
+                // Reset form and hide
+                resetCreateForm();
+                document.getElementById('createTemplateForm').classList.add('hidden');
+
+                // Show toast
+                showToast('✅ Template criado com sucesso!', 'success');
+            } else {
+                showToast(data.error || 'Erro ao criar template.', 'error');
+            }
+        })
+        .catch(err => {
+            console.error('Erro ao salvar template:', err);
+            showToast('Erro de conexão ao salvar template.', 'error');
+        })
+        .finally(() => {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-check text-[10px]"></i> Salvar Template';
+        });
+    }
+
+    function deleteTemplate(id, title) {
+        if (!confirm(`Excluir o template "${title}"?`)) return;
+
+        fetch(`/api/whatsapp/message-templates/${id}`, { method: 'DELETE' })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                const card = document.getElementById(`tpl-card-${id}`);
+                if (card) {
+                    card.style.transition = 'all 0.3s ease';
+                    card.style.opacity = '0';
+                    card.style.transform = 'scale(0.95) translateY(-5px)';
+                    setTimeout(() => {
+                        card.remove();
+                        const container = document.getElementById('customTemplatesContainer');
+                        if (container && container.querySelectorAll('[id^="tpl-card-"]').length === 0) {
+                            const empty = document.getElementById('emptyCustomTemplates');
+                            if (empty) empty.classList.remove('hidden');
+                        }
+                    }, 300);
+                }
+                showToast('Template excluído.', 'success');
+            } else {
+                showToast(data.error || 'Erro ao excluir.', 'error');
+            }
+        })
+        .catch(() => showToast('Erro de conexão.', 'error'));
+    }
+
 
     function openWhatsAppWebDirect() {
         if (!activeNumber) {

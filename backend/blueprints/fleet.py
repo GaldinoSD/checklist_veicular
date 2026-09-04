@@ -1444,6 +1444,7 @@ def config_checklist():
     items_moto    = ChecklistItem.query.filter_by(vehicle_type="moto").order_by(ChecklistItem.order.asc()).all()
     items_caminhao = ChecklistItem.query.filter_by(vehicle_type="caminhao").order_by(ChecklistItem.order.asc()).all()
     items_van     = ChecklistItem.query.filter_by(vehicle_type="van").order_by(ChecklistItem.order.asc()).all()
+    items_onibus  = ChecklistItem.query.filter_by(vehicle_type="onibus").order_by(ChecklistItem.order.asc()).all()
     config = SystemConfig.query.first()
     if not config:
         config = SystemConfig(mode="start_only")
@@ -1455,6 +1456,7 @@ def config_checklist():
         items_moto=items_moto,
         items_caminhao=items_caminhao,
         items_van=items_van,
+        items_onibus=items_onibus,
         config=config
     )
 
@@ -1495,7 +1497,7 @@ def config_checklist_new():
     opts_raw = (request.form.get("options") or "").strip()
     vehicle_type = request.form.get("vehicle_type", "carro")
 
-    allowed_vtypes = {"carro", "moto", "caminhao", "van"}
+    allowed_vtypes = {"carro", "moto", "caminhao", "van", "onibus"}
     if vehicle_type not in allowed_vtypes:
         vehicle_type = "carro"
 
@@ -2877,6 +2879,7 @@ def checklist_mobile():
         "moto":     ChecklistItem.query.filter_by(vehicle_type="moto").order_by(ChecklistItem.order.asc()).all(),
         "caminhao": ChecklistItem.query.filter_by(vehicle_type="caminhao").order_by(ChecklistItem.order.asc()).all(),
         "van":      ChecklistItem.query.filter_by(vehicle_type="van").order_by(ChecklistItem.order.asc()).all(),
+        "onibus":   ChecklistItem.query.filter_by(vehicle_type="onibus").order_by(ChecklistItem.order.asc()).all(),
     }
     # items_qs usado no POST (filtrado pelo tipo do veículo submetido)
     items_qs = []
@@ -2891,7 +2894,7 @@ def checklist_mobile():
         return render_template(
             "checklist_mobile.html",
             vehicles=[],
-            items_by_type={"carro":[], "moto":[], "caminhao":[], "van":[]},
+            items_by_type={"carro":[], "moto":[], "caminhao":[], "van":[], "onibus":[]},
             success=False,
             disabled=True
         )

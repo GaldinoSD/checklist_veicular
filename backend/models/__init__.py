@@ -204,7 +204,7 @@ class ChecklistItem(db.Model):
     require_justif_no = db.Column(db.Boolean, default=False)
     type = db.Column(db.String(50), default="texto_curto")
     options = db.Column(db.Text)
-    # Tipo de veículo ao qual este item pertence: carro | moto | caminhao | van
+    # Tipo de veículo ao qual este item pertence: carro | moto | caminhao | van | onibus
     vehicle_type = db.Column(db.String(20), default="carro")
 
 
@@ -1271,3 +1271,19 @@ class DocumentHistory(db.Model):
     created_at = db.Column(db.DateTime, default=lambda: agora())
 
 
+# ==========================================
+# 💬 MÓDULO: TEMPLATES DE MENSAGEM RÁPIDA
+# ==========================================
+
+class MessageTemplate(db.Model):
+    """Templates personalizados de mensagem rápida para WhatsApp/Chat."""
+    __tablename__ = "message_template"
+
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(150), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    emoji = db.Column(db.String(10), default="📝")
+    created_by = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="SET NULL"), nullable=True)
+    created_at = db.Column(db.DateTime, default=lambda: agora())
+
+    creator = db.relationship("User", backref="message_templates")

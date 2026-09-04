@@ -15,7 +15,8 @@ from backend.models import (
     AvariaOS, Log, Vistoria, VistoriaFoto, SystemConfig, WhatsAppConfig, TelegramConfig, EmailConfig, SystemRuleLog,
     CloudflareConfig, TraccarConfig, MetabaseConfig,
     NetworkNode, NetworkSplitter, NetworkEdge, GPSDevice, GPSLog,
-    DocCategory, TechnicalDocument, DocumentFile, DocumentHistory
+    DocCategory, TechnicalDocument, DocumentFile, DocumentHistory,
+    MessageTemplate
 )
 
 app = create_app()

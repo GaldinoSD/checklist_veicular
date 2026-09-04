@@ -39,7 +39,8 @@ from backend.models import (
     Scale, Meeting, Note, Activity, SystemRule, Company, Contract, ExternalCollaborator,
     AvariaOS, Log, Vistoria, VistoriaFoto, SystemConfig, WhatsAppConfig, WhatsAppLog,
     TelegramConfig, EmailConfig, CloudflareConfig, TraccarConfig, MetabaseConfig,
-    NetworkNode, NetworkSplitter, NetworkEdge, GPSDevice, GPSLog
+    NetworkNode, NetworkSplitter, NetworkEdge, GPSDevice, GPSLog,
+    MessageTemplate
 )
 from backend.utils import (
     agora, registrar_log, send_whatsapp_message, admin_required,
@@ -60,8 +61,9 @@ def whatsapp_conversas():
         return redirect(url_for("dashboard"))
     
     config = WhatsAppConfig.query.first()
+    custom_templates = MessageTemplate.query.order_by(MessageTemplate.created_at.desc()).all()
     from flask import make_response
-    response = make_response(render_template("whatsapp_conversas.html", whatsapp_config=config))
+    response = make_response(render_template("whatsapp_conversas.html", whatsapp_config=config, custom_templates=custom_templates))
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, public, max-age=0"
     response.headers["Pragma"] = "no-cache"
     response.headers["Expires"] = "0"
@@ -619,6 +621,82 @@ def whatsapp_templates_save():
     registrar_log(f"Templates do Whatsapp atualizados por {current_user.username}")
     flash("✅ Templates salvos com sucesso!", "success")
     return redirect(url_for("integracoes", tab="whatsapp"))
+
+
+# ----------------- CRUD TEMPLATES DE MENSAGEM RÁPIDA -----------------
+@whatsapp_bp.route("/api/whatsapp/message-templates", methods=["GET"])
+@login_required
+def api_message_templates_list():
+    """Lista todos os templates de mensagem personalizados."""
+    if not (current_user.is_admin or current_user.has_permission("whatsapp_conversas")):
+        return jsonify({"success": False, "error": "Acesso negado"}), 403
+
+    templates = MessageTemplate.query.order_by(MessageTemplate.created_at.desc()).all()
+    return jsonify({"success": True, "templates": [{
+        "id": t.id,
+        "title": t.title,
+        "content": t.content,
+        "emoji": t.emoji or "📝",
+        "created_by": t.creator.display_name if t.creator else "Sistema",
+        "created_at": t.created_at.strftime("%d/%m/%Y %H:%M") if t.created_at else "-"
+    } for t in templates]})
+
+
+@whatsapp_bp.route("/api/whatsapp/message-templates", methods=["POST"])
+@login_required
+def api_message_templates_create():
+    """Cria um novo template de mensagem rápida."""
+    if not (current_user.is_admin or current_user.has_permission("whatsapp_conversas")):
+        return jsonify({"success": False, "error": "Acesso negado"}), 403
+
+    data = request.get_json(silent=True) or {}
+    title = (data.get("title") or "").strip()
+    content = (data.get("content") or "").strip()
+    emoji = (data.get("emoji") or "📝").strip()
+
+    if not title or not content:
+        return jsonify({"success": False, "error": "Título e conteúdo são obrigatórios."}), 400
+
+    if len(title) > 150:
+        return jsonify({"success": False, "error": "Título muito longo (máx. 150 caracteres)."}), 400
+
+    tpl = MessageTemplate(
+        title=title,
+        content=content,
+        emoji=emoji,
+        created_by=current_user.id
+    )
+    db.session.add(tpl)
+    db.session.commit()
+    registrar_log(f"Template de mensagem rápida criado: {title}")
+
+    return jsonify({"success": True, "template": {
+        "id": tpl.id,
+        "title": tpl.title,
+        "content": tpl.content,
+        "emoji": tpl.emoji,
+        "created_by": current_user.display_name,
+        "created_at": tpl.created_at.strftime("%d/%m/%Y %H:%M") if tpl.created_at else "-"
+    }})
+
+
+@whatsapp_bp.route("/api/whatsapp/message-templates/<int:tid>", methods=["DELETE"])
+@login_required
+def api_message_templates_delete(tid):
+    """Exclui um template de mensagem rápida."""
+    if not (current_user.is_admin or current_user.has_permission("whatsapp_conversas")):
+        return jsonify({"success": False, "error": "Acesso negado"}), 403
+
+    tpl = MessageTemplate.query.get(tid)
+    if not tpl:
+        return jsonify({"success": False, "error": "Template não encontrado."}), 404
+
+    title = tpl.title
+    db.session.delete(tpl)
+    db.session.commit()
+    registrar_log(f"Template de mensagem rápida excluído: {title}")
+
+    return jsonify({"success": True})
 
 
 
