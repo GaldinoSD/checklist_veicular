@@ -23,7 +23,7 @@ ALLOWED_EXT = {".png", ".jpg", ".jpeg", ".webp"}
 class Config:
     SECRET_KEY = os.getenv("SECRET_KEY", "chave-secreta-padrao")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    MAX_CONTENT_LENGTH = 32 * 1024 * 1024  # 32MB
+    MAX_CONTENT_LENGTH = int(os.getenv("MAX_CONTENT_LENGTH", 500 * 1024 * 1024))  # 500MB
     
     # URI do Banco de Dados
     SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URL")

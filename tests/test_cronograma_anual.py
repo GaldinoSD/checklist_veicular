@@ -157,5 +157,135 @@ class TestCronogramaAnual(unittest.TestCase):
         self.assertEqual(res_pdf.mimetype, "application/pdf")
         self.assertGreater(len(res_pdf.data), 1000)
 
+    def test_07_three_or_more_techs(self):
+        """Verifica se plantão com 3 ou mais técnicos externos persiste todos e sincroniza na Scale."""
+        from datetime import date
+        from app import Scale
+        payload = {
+            "data": {
+                "year": 2029,
+                "saturdays": [],
+                "sundays": [
+                    {
+                        "date": "2029-01-07",
+                        "date_extenso": "domingo, 7 de janeiro de 2029",
+                        "interno": "Arthur",
+                        "externos": ["Eric", "Gabriel", "Henrique"]
+                    }
+                ],
+                "holidays": []
+            }
+        }
+        res = self.client.post(
+            "/api/gestao/cronograma-anual/2029",
+            data=json.dumps(payload),
+            content_type="application/json"
+        )
+        self.assertEqual(res.status_code, 200)
+
+        # Checar registro Scale criado para o domingo
+        scale_rec = Scale.query.filter_by(date=date(2029, 1, 7), type="domingo").first()
+        self.assertIsNotNone(scale_rec)
+        self.assertIn("Eric", scale_rec.obs)
+        self.assertIn("Gabriel", scale_rec.obs)
+        self.assertIn("Henrique", scale_rec.obs)
+
+    def test_08_team_change_reflects_in_scales(self):
+        """Verifica se ajustes na equipe refletem imediatamente nas escalas associadas."""
+        from datetime import date, timedelta
+        from app import Team, Scale
+
+        # Criar usuários técnicos de teste
+        t1 = User.query.filter_by(username="TECH_ALPHA_TEST").first()
+        if not t1:
+            t1 = User(username="TECH_ALPHA_TEST", role="tech")
+            t1.set_password("123456")
+            db.session.add(t1)
+
+        t2 = User.query.filter_by(username="TECH_BETA_TEST").first()
+        if not t2:
+            t2 = User(username="TECH_BETA_TEST", role="tech")
+            t2.set_password("123456")
+            db.session.add(t2)
+        db.session.commit()
+
+        # Criar Equipe com t1
+        team = Team.query.filter_by(name="EQUIPE_REFLECT_TEST").first()
+        if not team:
+            team = Team(name="EQUIPE_REFLECT_TEST", color="#00ff00")
+            db.session.add(team)
+            db.session.commit()
+
+        team.members = [t1]
+        db.session.commit()
+
+        # Criar Escala de Sábado futura associada a esta equipe
+        future_sat = date.today() + timedelta(days=10)
+        scale = Scale.query.filter_by(date=future_sat).first()
+        if not scale:
+            scale = Scale(date=future_sat, type="sabado", team_id=team.id, team_ids=str(team.id))
+            db.session.add(scale)
+        else:
+            scale.team_id = team.id
+            scale.team_ids = str(team.id)
+            scale.type = "sabado"
+        db.session.commit()
+
+        # 1. Checa se view=list retorna TECH_ALPHA_TEST na escala da equipe
+        res1 = self.client.get("/api/gestao/escalas?view=list")
+        self.assertEqual(res1.status_code, 200)
+        items1 = res1.get_json()
+        target_s1 = next((item for item in items1 if item["id"] == scale.id), None)
+        self.assertIsNotNone(target_s1)
+        self.assertIn("TECH_ALPHA_TEST", target_s1["technician_names"])
+        self.assertNotIn("TECH_BETA_TEST", target_s1["technician_names"])
+
+        # 2. Agora edita a equipe via API adicionando t2 (TECH_BETA_TEST)
+        payload_update = {
+            "id": team.id,
+            "name": team.name,
+            "color": team.color,
+            "member_ids": [t1.id, t2.id]
+        }
+        res_put = self.client.put(
+            f"/api/gestao/equipes/{team.id}",
+            data=json.dumps(payload_update),
+            content_type="application/json"
+        )
+        self.assertEqual(res_put.status_code, 200)
+
+        # 3. Checa se view=list reflete imediatamente t1 e t2
+        res2 = self.client.get("/api/gestao/escalas?view=list")
+        self.assertEqual(res2.status_code, 200)
+        items2 = res2.get_json()
+        target_s2 = next((item for item in items2 if item["id"] == scale.id), None)
+        self.assertIsNotNone(target_s2)
+        self.assertIn("TECH_ALPHA_TEST", target_s2["technician_names"])
+        self.assertIn("TECH_BETA_TEST", target_s2["technician_names"])
+
+        # 4. Agora remove t1 e deixa apenas t2
+        payload_update2 = {
+            "id": team.id,
+            "name": team.name,
+            "color": team.color,
+            "member_ids": [t2.id]
+        }
+        res_put2 = self.client.put(
+            f"/api/gestao/equipes/{team.id}",
+            data=json.dumps(payload_update2),
+            content_type="application/json"
+        )
+        self.assertEqual(res_put2.status_code, 200)
+
+        # 5. Checa se view=list agora tem apenas t2
+        res3 = self.client.get("/api/gestao/escalas?view=list")
+        self.assertEqual(res3.status_code, 200)
+        items3 = res3.get_json()
+        target_s3 = next((item for item in items3 if item["id"] == scale.id), None)
+        self.assertIsNotNone(target_s3)
+        self.assertNotIn("TECH_ALPHA_TEST", target_s3["technician_names"])
+        self.assertIn("TECH_BETA_TEST", target_s3["technician_names"])
+
 if __name__ == "__main__":
     unittest.main()
+

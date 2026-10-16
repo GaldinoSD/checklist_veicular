@@ -82,10 +82,12 @@ def gestao_tecnica():
 @technical_bp.route("/api/gestao/users", methods=["GET"])
 @login_required
 def api_gestao_users():
-    users = User.query.order_by(User.username.asc()).all()
+    users = User.query.filter(User.username.notin_(["admin", "ADMIN"])).order_by(User.username.asc()).all()
     return jsonify([{
         "id": u.id, 
         "username": u.username, 
+        "full_name": u.full_name or "",
+        "display_name": u.full_name or u.username,
         "role": (u.role or "Colaborador").upper()
     } for u in users])
 
@@ -801,6 +803,14 @@ def api_equipes(id=None):
     if request.method == "DELETE" or (request.method == "POST" and id):
         target_id = id or request.json.get("id")
         t = Team.query.get_or_404(target_id)
+        # Desvincula escalas vinculadas
+        scales_of_team = Scale.query.filter(
+            (Scale.team_id == t.id) | (Scale.team_ids == str(t.id))
+        ).all()
+        for sc in scales_of_team:
+            sc.team_id = None
+            sc.team_ids = None
+            sc.technician_ids = None
         db.session.delete(t)
         db.session.commit()
         return jsonify({"status": "ok"})
@@ -830,6 +840,16 @@ def api_equipes(id=None):
             if u:
                 t.members.append(u)
                 
+        db.session.flush()
+
+        # Sincroniza escalas vinculadas a esta equipe para refletir imediatamente a nova composição de técnicos
+        new_member_ids_str = ",".join(str(m.id) for m in t.members) if t.members else None
+        scales_of_team = Scale.query.filter(
+            (Scale.team_id == t.id) | (Scale.team_ids == str(t.id))
+        ).all()
+        for sc in scales_of_team:
+            sc.technician_ids = new_member_ids_str
+
         db.session.commit()
         return jsonify({"status": "ok", "id": t.id})
 
@@ -1189,7 +1209,307 @@ def atividade_realizada_pdf(id):
 
 
 
-# --- ESCALAS DE PLANTÃO (MANUAIS E AUTOMÁTICAS) ---
+# --- ESCALAS DE PLANTÃO & MEUS PLANTÕES (TÉCNICO) ---
+
+def format_pt_weekday(dt):
+    """Retorna o dia da semana em português."""
+    if not dt:
+        return ""
+    days_pt = ["Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado", "Domingo"]
+    return days_pt[dt.weekday()]
+
+
+def notify_technicians_scale_adjustment(scale, is_new=True, old_scale_date=None, old_tech_ids=None):
+    """
+    Notifica técnicos em tempo real quando uma escala é criada ou ajustada.
+    Dispara comunicado interno (Announcement) no painel e mensagem via WhatsApp (se configurado).
+    """
+    try:
+        current_techs = get_technicians_for_scale(scale)
+        if not current_techs and (scale.team_id or scale.team_ids):
+            t_ids = []
+            if scale.team_id:
+                t_ids.append(scale.team_id)
+            if scale.team_ids:
+                t_ids.extend([int(x.strip()) for x in str(scale.team_ids).split(",") if x.strip().isdigit()])
+            for tid in set(t_ids):
+                tm = Team.query.get(tid)
+                if tm and tm.members:
+                    for m in tm.members:
+                        if m not in current_techs:
+                            current_techs.append(m)
+
+        current_tech_ids = {u.id for u in current_techs}
+        old_tech_ids = set(old_tech_ids or [])
+
+        dt_str = scale.date.strftime("%d/%m/%Y") if scale.date else "Data a definir"
+        weekday_str = format_pt_weekday(scale.date) if scale.date else ""
+        type_str = (scale.type or "Plantão").capitalize()
+
+        colleague_names = [u.username.upper() for u in current_techs]
+        colegas_txt = ", ".join(colleague_names) if colleague_names else "Escala individual"
+        obs_txt = f"\nObs: {scale.obs}" if scale.obs else ""
+
+        # 1. Notificar técnicos atribuídos
+        for tech in current_techs:
+            if is_new or (tech.id not in old_tech_ids):
+                action_title = "Novo Plantão Agendado"
+                action_msg = f"Você foi escalado(a) para o plantão de {type_str} no dia {dt_str} ({weekday_str})."
+            elif old_scale_date and old_scale_date != scale.date:
+                old_dt_str = old_scale_date.strftime("%d/%m/%Y")
+                action_title = "Data do Plantão Alterada"
+                action_msg = f"A data da sua escala de {type_str} foi alterada de {old_dt_str} para {dt_str} ({weekday_str})."
+            else:
+                action_title = "Escala de Plantão Atualizada"
+                action_msg = f"Houve ajustes na sua escala de {type_str} do dia {dt_str} ({weekday_str})."
+
+            full_msg = f"{action_msg}\nEscalados: {colegas_txt}{obs_txt}"
+
+            ann = Announcement(
+                title=f"📅 {action_title}: {dt_str}",
+                content=full_msg,
+                user_id=tech.id,
+                target_type="user",
+                category="escala",
+                created_by=current_user.id if (current_user and current_user.is_authenticated) else None,
+                expires_at=datetime.combine(scale.date + timedelta(days=7), datetime.max.time()) if scale.date else None
+            )
+            db.session.add(ann)
+
+            if tech.phone:
+                w_msg = (
+                    f"📅 *{action_title} - Gestão Técnica*\n"
+                    f"Olá, *{tech.username}*!\n\n"
+                    f"{action_msg}\n\n"
+                    f"🗓️ *Data:* {dt_str} ({weekday_str})\n"
+                    f"⏰ *Tipo:* {type_str}\n"
+                    f"👥 *Escalados:* {colegas_txt}"
+                    f"{obs_txt}\n\n"
+                    f"_Verifique detalhes clicando em 'Meus Plantões' no menu do sistema._"
+                )
+                send_whatsapp_message(tech.phone, w_msg, rule_slug="scale_alert", user_id=tech.id)
+
+        # 2. Notificar técnicos que foram removidos da escala
+        removed_ids = old_tech_ids - current_tech_ids
+        for rid in removed_ids:
+            rem_user = User.query.get(rid)
+            if rem_user:
+                rem_title = "Plantão Desmarcado"
+                rem_msg = f"Você foi removido(a) da escala de {type_str} do dia {dt_str} ({weekday_str})."
+                ann = Announcement(
+                    title=f"❌ {rem_title}: {dt_str}",
+                    content=rem_msg,
+                    user_id=rem_user.id,
+                    target_type="user",
+                    category="escala",
+                    created_by=current_user.id if (current_user and current_user.is_authenticated) else None,
+                    expires_at=datetime.combine(scale.date + timedelta(days=7), datetime.max.time()) if scale.date else None
+                )
+                db.session.add(ann)
+                if rem_user.phone:
+                    w_msg = (
+                        f"❌ *{rem_title} - Gestão Técnica*\n"
+                        f"Olá, *{rem_user.username}*!\n\n"
+                        f"{rem_msg}\n\n"
+                        f"_Consulte suas escalas atualizadas no sistema no botão 'Meus Plantões'._"
+                    )
+                    send_whatsapp_message(rem_user.phone, w_msg, rule_slug="scale_alert", user_id=rem_user.id)
+
+        db.session.commit()
+    except Exception as e:
+        print("⚠️ Erro ao notificar técnicos sobre escala:", e)
+        db.session.rollback()
+
+
+def notify_technicians_scale_cancellation(techs, scale_date_str, scale_type_str):
+    """
+    Notifica técnicos quando um plantão é cancelado ou excluído.
+    """
+    try:
+        type_str = (scale_type_str or "Plantão").capitalize()
+        for tech in techs:
+            ann = Announcement(
+                title=f"❌ Plantão Cancelado: {scale_date_str}",
+                content=f"O seu plantão de {type_str} do dia {scale_date_str} foi cancelado pelo supervisor.",
+                user_id=tech.id,
+                target_type="user",
+                category="escala",
+                created_by=current_user.id if (current_user and current_user.is_authenticated) else None
+            )
+            db.session.add(ann)
+            if tech.phone:
+                w_msg = (
+                    f"❌ *Plantão Cancelado - Gestão Técnica*\n"
+                    f"Olá, *{tech.username}*!\n\n"
+                    f"Informamos que o seu plantão de *{type_str}* agendado para o dia *{scale_date_str}* foi cancelado/removido da escala.\n\n"
+                    f"_Verifique suas escalas atualizadas no sistema no botão 'Meus Plantões'._"
+                )
+                send_whatsapp_message(tech.phone, w_msg, rule_slug="scale_alert", user_id=tech.id)
+        db.session.commit()
+    except Exception as e:
+        print("⚠️ Erro ao notificar cancelamento de escala:", e)
+        db.session.rollback()
+
+
+@technical_bp.route("/meus-plantoes", methods=["GET"])
+@login_required
+def meus_plantoes():
+    """Página dedicada do técnico para visualização de escalas e plantões."""
+    return render_template("meus_plantoes.html")
+
+
+@technical_bp.route("/api/tecnico/minhas-escalas", methods=["GET"])
+@login_required
+def api_tecnico_minhas_escalas():
+    """
+    Retorna todos os plantões e escalas onde o usuário logado está escalado
+    (diretamente ou através da sua equipe), divididos em 'upcoming' e 'past',
+    junto com estatísticas resumidas do mês e ano.
+    """
+    user = current_user
+    today_dt = agora().date()
+
+    user_team_ids = set()
+    all_teams = Team.query.all()
+    for t in all_teams:
+        if any(m.id == user.id for m in t.members):
+            user_team_ids.add(t.id)
+
+    scales = Scale.query.filter(Scale.status == "ATIVO").order_by(Scale.date.asc()).all()
+
+    upcoming = []
+    past = []
+    month_count = 0
+    year_count = 0
+
+    for s in scales:
+        if not s.date:
+            continue
+
+        is_assigned = False
+
+        if s.technician_ids:
+            for part in str(s.technician_ids).split(","):
+                p = part.strip()
+                if p.isdigit() and int(p) == user.id:
+                    is_assigned = True
+                    break
+                elif p.lower() == user.username.lower():
+                    is_assigned = True
+                    break
+
+        if not is_assigned and s.user_id == user.id:
+            is_assigned = True
+
+        if not is_assigned and user_team_ids:
+            s_teams = set()
+            if s.team_id:
+                s_teams.add(s.team_id)
+            if s.team_ids:
+                for tid_str in str(s.team_ids).split(","):
+                    p = tid_str.strip()
+                    if p.isdigit():
+                        s_teams.add(int(p))
+            if s_teams.intersection(user_team_ids):
+                is_assigned = True
+
+        if not is_assigned:
+            continue
+
+        if s.date.year == today_dt.year:
+            year_count += 1
+            if s.date.month == today_dt.month:
+                month_count += 1
+
+        all_techs = get_technicians_for_scale(s)
+        colleague_names = [u.username.upper() for u in all_techs if u.id != user.id]
+
+        team_name = ""
+        if s.team_id:
+            tm = Team.query.get(s.team_id)
+            if tm:
+                team_name = tm.name.upper()
+        elif s.team_ids:
+            t_names = []
+            for tid in [int(x.strip()) for x in str(s.team_ids).split(",") if x.strip().isdigit()]:
+                tm = Team.query.get(tid)
+                if tm:
+                    t_names.append(tm.name.upper())
+            team_name = ", ".join(t_names)
+
+        type_raw = (s.type or "plantao").lower()
+        if "sabado" in type_raw:
+            type_label = "Plantão de Sábado"
+            badge_type = "sabado"
+        elif "domingo" in type_raw:
+            type_label = "Plantão de Domingo"
+            badge_type = "domingo"
+        elif "feriado" in type_raw:
+            type_label = "Plantão de Feriado"
+            badge_type = "feriado"
+        else:
+            type_label = "Plantão Operacional"
+            badge_type = "plantao"
+
+        diff_days = (s.date - today_dt).days
+        if diff_days == 0:
+            timing_badge = "É HOJE"
+            timing_class = "today"
+        elif diff_days == 1:
+            timing_badge = "Amanhã"
+            timing_class = "soon"
+        elif diff_days > 1:
+            timing_badge = f"Em {diff_days} dias"
+            timing_class = "future"
+        elif diff_days == -1:
+            timing_badge = "Ontem"
+            timing_class = "past"
+        else:
+            timing_badge = f"Há {abs(diff_days)} dias"
+            timing_class = "past"
+
+        item = {
+            "id": s.id,
+            "date": s.date.strftime("%Y-%m-%d"),
+            "formatted_date": s.date.strftime("%d/%m/%Y"),
+            "day": s.date.strftime("%d"),
+            "month_short": s.date.strftime("%b").upper(),
+            "weekday": format_pt_weekday(s.date),
+            "type": s.type,
+            "type_label": type_label,
+            "badge_type": badge_type,
+            "team_name": team_name,
+            "colleagues": colleague_names,
+            "obs": s.obs or "",
+            "status": s.status or "ATIVO",
+            "diff_days": diff_days,
+            "timing_badge": timing_badge,
+            "timing_class": timing_class,
+            "is_today": diff_days == 0
+        }
+
+        if s.date >= today_dt:
+            upcoming.append(item)
+        else:
+            past.append(item)
+
+    past.reverse()
+    next_shift = upcoming[0] if upcoming else None
+
+    return jsonify({
+        "success": True,
+        "stats": {
+            "month_count": month_count,
+            "year_count": year_count,
+            "upcoming_count": len(upcoming),
+            "past_count": len(past),
+            "next_shift": next_shift
+        },
+        "upcoming": upcoming,
+        "past": past
+    })
+
+
 @technical_bp.route("/api/gestao/escalas", methods=["GET", "POST"])
 @technical_bp.route("/api/gestao/escalas/<int:id>", methods=["PUT", "DELETE"])
 @supervisor_allowed
@@ -1197,17 +1517,29 @@ def api_escalas(id=None):
     if request.method == "DELETE" or (request.method == "POST" and id):
         target_id = id or request.json.get("id")
         s = Scale.query.get_or_404(target_id)
+        techs_to_notify = get_technicians_for_scale(s)
+        scale_date_str = s.date.strftime("%d/%m/%Y") if s.date else ""
+        scale_type_str = s.type or "Plantão"
         db.session.delete(s)
         db.session.commit()
+        if techs_to_notify:
+            notify_technicians_scale_cancellation(techs_to_notify, scale_date_str, scale_type_str)
         return jsonify({"status": "ok"})
 
     if request.method in ["POST", "PUT"]:
         data = request.json or {}
         sid = id or data.get("id")
+        old_scale_date = None
+        old_tech_ids = set()
+        is_new = True
         if sid:
             s = Scale.query.get(sid)
             if not s:
                 return jsonify({"error": "Escala não encontrada"}), 404
+            is_new = False
+            old_scale_date = s.date
+            old_techs = get_technicians_for_scale(s)
+            old_tech_ids = {u.id for u in old_techs}
         else:
             s = Scale()
             db.session.add(s)
@@ -1233,6 +1565,7 @@ def api_escalas(id=None):
             s.team_ids = team_ids
             
         db.session.commit()
+        notify_technicians_scale_adjustment(s, is_new=is_new, old_scale_date=old_scale_date, old_tech_ids=old_tech_ids)
         return jsonify({"status": "ok", "id": s.id})
 
     # Tratamento de GET
@@ -1243,13 +1576,8 @@ def api_escalas(id=None):
         items = Scale.query.filter(Scale.date >= today_date).order_by(Scale.date.asc()).all()
         res = []
         for s in items:
-            tech_names = ""
-            if s.technician_ids:
-                try:
-                    ids = [int(x) for x in s.technician_ids.split(",") if x.strip().isdigit()]
-                    tech_names = ", ".join([u.username for u in User.query.filter(User.id.in_(ids))])
-                except Exception:
-                    tech_names = s.technician_ids
+            assigned_techs = get_technicians_for_scale(s)
+            tech_names = ", ".join([u.username.upper() for u in assigned_techs])
             t_ids = s.team_ids
             if not t_ids and s.team_id:
                 t_ids = str(s.team_id)
@@ -1259,7 +1587,7 @@ def api_escalas(id=None):
                 "date": str(s.date),
                 "obs": s.obs,
                 "status": s.status,
-                "technician_ids": s.technician_ids,
+                "technician_ids": s.technician_ids or (",".join(str(u.id) for u in assigned_techs) if assigned_techs else None),
                 "technician_names": tech_names,
                 "team_ids": t_ids
             })
@@ -1284,36 +1612,48 @@ def api_escalas(id=None):
     
     for s in items:
         manual_dates.add(s.date)
-        tech_names = ""
-        if s.technician_ids:
-            try:
-                ids = [int(x) for x in s.technician_ids.split(",") if x.strip().isdigit()]
-                tech_names = ", ".join([u.username.upper() for u in User.query.filter(User.id.in_(ids))])
-            except Exception:
-                tech_names = "TÉCNICOS"
+        assigned_techs = get_technicians_for_scale(s)
+        tech_names = ", ".join([u.username.upper() for u in assigned_techs])
+
+        team_name = ""
+        if s.team_id:
+            tm = Team.query.get(s.team_id)
+            if tm:
+                team_name = tm.name.upper()
                 
         is_past = s.date < today_date
         prefix = "✔ REALIZADO: " if is_past else ""
         
-        # Define cores premium específicas para cada tipo de escala manual
-        m_color = "#10B981"  # Padrão: Emerald para Sábado
+        # Cores para cada tipo de escala
+        m_color = "#0EA5E9"  # Sábado: Sky Blue
         if s.type == "domingo":
-            m_color = "#6366F1"  # Indigo para Domingo
+            m_color = "#3B82F6"  # Domingo: Royal Blue
         elif s.type == "feriado":
-            m_color = "#F59E0B"  # Amber/Orange para Feriado
+            m_color = "#F43F5E"  # Feriado: Rose/Red
             
         if is_past:
-            m_color = "#64748B"  # Slate elegante para plantões já realizados
+            m_color = "#64748B"  # Slate para plantões já realizados
+
+        if s.type == "sabado":
+            event_title = f"{prefix}SÁBADO: {team_name or tech_names or 'A DEFINIR'}"
+        elif s.type == "domingo":
+            event_title = f"{prefix}DOMINGO: {tech_names or 'A DEFINIR'}"
+        elif s.type == "feriado":
+            event_title = f"{prefix}FERIADO: {tech_names or 'A DEFINIR'}"
+        else:
+            event_title = f"{prefix}{s.type.upper()}: {tech_names or 'PLANTONISTAS'}"
             
         events.append({
             "id": f"m_{s.id}",
-            "title": f"{prefix}{s.type.upper()}: {tech_names or 'PLANTONISTAS'}",
+            "title": event_title,
             "start": s.date.isoformat(),
             "allDay": True,
             "color": m_color,
             "extendedProps": {
                 "type": "manual",
                 "scale_type": s.type,
+                "team_name": team_name,
+                "technician_names": tech_names,
                 "obs": s.obs,
                 "is_past": is_past
             }
@@ -5716,13 +6056,32 @@ def get_technicians_for_scale(esc):
     """
     Returns the exact list of User objects (technicians) assigned to a given Scale.
     Priority:
-    1. If specific technician_ids (or user_id) are defined, return ONLY those specific technicians.
-    2. Only if NO specific technicians are defined, fallback to the members of the specified team(s).
+    1. For Saturday / Team scales (esc.type == "sabado" or with team_id/team_ids), return the current members of the team!
+    2. If specific technician_ids (or user_id) are defined, return those specific technicians.
+    3. Fallback to team members.
     """
     techs = []
     seen_ids = set()
     
-    # 1. Técnicos explícitos (technician_ids ou user_id)
+    team_ids = []
+    if getattr(esc, "team_id", None):
+        team_ids.append(esc.team_id)
+    if getattr(esc, "team_ids", None):
+        team_ids.extend([int(x.strip()) for x in str(esc.team_ids).split(",") if x.strip().isdigit()])
+
+    # 1. Se for escala de equipe (como Sábado), a composição atual da equipe é a prioridade!
+    if team_ids and getattr(esc, "type", None) == "sabado":
+        for tid in set(team_ids):
+            t = Team.query.get(tid)
+            if t:
+                for m in t.members:
+                    if m.id not in seen_ids:
+                        seen_ids.add(m.id)
+                        techs.append(m)
+        if techs:
+            return techs
+
+    # 2. Técnicos explícitos (technician_ids ou user_id) para Domingos, Feriados e Plantões Manuais
     raw_tech_ids = getattr(esc, "technician_ids", None)
     raw_user_id = getattr(esc, "user_id", None)
     
@@ -5753,17 +6112,12 @@ def get_technicians_for_scale(esc):
         if techs:
             return techs
 
-    team_ids = []
-    if getattr(esc, "team_ids", None):
-        team_ids.extend([int(x.strip()) for x in str(esc.team_ids).split(",") if x.strip().isdigit()])
-    if getattr(esc, "team_id", None):
-        team_ids.append(esc.team_id)
-        
+    # 3. Fallback geral para equipes
     for tid in set(team_ids):
         t = Team.query.get(tid)
         if t:
             for m in t.members:
-                if m.id not in seen_ids and (m.role == "tech" or getattr(m, 'is_tech', False) or True):
+                if m.id not in seen_ids:
                     seen_ids.add(m.id)
                     techs.append(m)
                     
@@ -6959,166 +7313,6 @@ def api_gestao_treinamentos_lms_stats():
         })
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
-
-@technical_bp.route("/api/gestao/treinamentos_lms/templates", methods=["GET"])
-@supervisor_allowed
-def api_gestao_treinamentos_lms_templates():
-    templates = [
-        {
-            "id": "tpl_nr10_35",
-            "title": "NR-10 & NR-35: Trabalho em Altura e Instalações Elétricas",
-            "description": "Treinamento obrigatório de segurança abordando uso correto de EPIs, talabarte, linha de vida e procedimentos para prevenção de choques e quedas.",
-            "category": "Segurança",
-            "difficulty_level": "intermediario",
-            "workload_hours": 2.5,
-            "xp_reward": 150,
-            "passing_grade": 75,
-            "is_mandatory": True,
-            "allow_retake": True,
-            "course_type": "lms",
-            "badge_name": "Segurança em Altura & Elétrica",
-            "badge_icon": "fa-helmet-safety",
-            "badge_color": "#0284c7",
-            "modules": [
-                {
-                    "title": "Módulo 1: Inspeção e Utilização de EPIs e EPCs",
-                    "duration_minutes": 15,
-                    "video_url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-                    "content": "Antes de iniciar qualquer serviço em postes ou escadas, o técnico deve realizar a inspeção visual completa dos equipamentos de proteção individual:\n\n• Capacete com jugular ajustada;\n• Óculos de proteção contra raios UV e estilhaços;\n• Luvas de vaqueta para tração e luvas isolantes para redes elétricas;\n• Cinto tipo paraquedista com talabarte duplo em Y e trava-quedas.\n\n⚠️ Lembrete: Equipamentos com costuras rompidas, fivelas oxidadas ou sem CA válido devem ser imediatamente substituídos na base."
-                },
-                {
-                    "title": "Módulo 2: Procedimento de Ancoragem Segura e Trabalho em Altura",
-                    "duration_minutes": 20,
-                    "video_url": "",
-                    "content": "Para execução segura de passagem de cabo drop ou fixação de alças pré-formadas:\n\n1. Posicione a escada em piso nivelado mantendo a inclinação regulamentar de 1:4 (75 graus);\n2. Amarre o topo e a base da escada ao poste com corda de nylon homologada;\n3. Conecte o trava-quedas na corda guia antes de iniciar a subida;\n4. Ao atingir a altura de trabalho, posicione o talabarte de posicionamento na cinta do poste antes de soltar as mãos."
-                },
-                {
-                    "title": "Módulo 3: Distâncias de Segurança e Redes de Média Tensão",
-                    "duration_minutes": 15,
-                    "video_url": "",
-                    "content": "Regras de convivência com a concessionária de energia:\n\n• Mantenha a distância mínima de 60 cm abaixo da rede secundária de baixa tensão (BT);\n• Nunca posicione cabos de telecomunicação na zona controlada de média tensão (MT);\n• Utilize sempre detector de tensão por aproximação antes de tocar em braços metálicos ou cordoalhas."
-                }
-            ],
-            "questions": [
-                {
-                    "question_text": "Qual é a inclinação correta recomendada para posicionamento seguro de uma escada extensível?",
-                    "option_a": "Proporção de 1:2 (cerca de 60 graus)",
-                    "option_b": "Proporção de 1:4 (cerca de 75 graus)",
-                    "option_c": "Proporção de 1:1 (cerca de 45 graus)",
-                    "option_d": "Totalmente vertical rente ao poste",
-                    "correct_option": "B",
-                    "difficulty": "facil",
-                    "explanation": "A proporção de 1:4 (a base distante 1/4 da altura do topo) garante ângulo de 75 graus, prevenindo escorregamento e tombamento."
-                },
-                {
-                    "question_text": "Qual é a distância mínima regulamentar que a rede de telecomunicações deve manter abaixo da baixa tensão elétrica?",
-                    "option_a": "10 centímetros",
-                    "option_b": "60 centímetros",
-                    "option_c": "1,5 metros",
-                    "option_d": "Não há distância mínima necessária",
-                    "correct_option": "B",
-                    "difficulty": "medio",
-                    "explanation": "A norma técnica de compartilhamento de postes estabelece 60 cm entre a telecom e a rede secundária BT."
-                }
-            ]
-        },
-        {
-            "id": "tpl_fibra_ftth",
-            "title": "POP Telecom: Fusão, Sangria e Certificação Óptica FTTH",
-            "description": "Procedimento padrão de atendimento para ativação de clientes, montagem de conectores de campo, testes com Power Meter e fusão óptica.",
-            "category": "Procedimento",
-            "difficulty_level": "avancado",
-            "workload_hours": 3.0,
-            "xp_reward": 200,
-            "passing_grade": 80,
-            "is_mandatory": True,
-            "allow_retake": True,
-            "course_type": "lms",
-            "badge_name": "Especialista em Fusão & FTTH",
-            "badge_icon": "fa-tower-broadcast",
-            "badge_color": "#0d9488",
-            "modules": [
-                {
-                    "title": "Módulo 1: Decapagem, Clivagem e Limpeza da Fibra",
-                    "duration_minutes": 15,
-                    "video_url": "",
-                    "content": "Para alcançar atenuações abaixo de 0.02 dB por fusão:\n\n1. Utilize o alicate decapador no canal correto sem arranhar a casca de vidro da fibra;\n2. Limpe a fibra com álcool isopropílico 99.8% e lenço de papel sem fiapos (Kimwipes);\n3. Execute a clivagem em ângulo perfeito de 90 graus utilizando clivador de precisão calibrado;\n4. Nunca toque na ponta clivada após a limpeza."
-                },
-                {
-                    "title": "Módulo 2: Leitura de Níveis de Sinal no Power Meter e CTO",
-                    "duration_minutes": 20,
-                    "video_url": "",
-                    "content": "Padrões operacionais de potência óptica na porta do cliente:\n\n• Sinal ideal na saída da CTO (1490nm): Entre -15 dBm e -21 dBm;\n• Limite aceitável na ONU/ONT do assinante: Entre -18 dBm e -24 dBm;\n• Sinais acima de -26 dBm indicam macrocurvaturas, conector sujo ou fusão defeituosa que geram quedas de pacote e degradação do Wi-Fi."
-                }
-            ],
-            "questions": [
-                {
-                    "question_text": "Qual o produto químico e insumo correto para higienização da fibra antes da clivagem?",
-                    "option_a": "Álcool etílico 70% com algodão",
-                    "option_b": "Álcool isopropílico 99.8% com lenço sem fiapos",
-                    "option_c": "Água destilada com flanela",
-                    "option_d": "Solvente de contato elétrico",
-                    "correct_option": "B",
-                    "difficulty": "facil",
-                    "explanation": "O álcool isopropílico evapora rapidamente sem deixar resíduos de água ou minerais que provocariam atenuação óptica."
-                },
-                {
-                    "question_text": "Ao medir o sinal óptico no conector da ONU, qual faixa de potência é considerada padrão de excelência?",
-                    "option_a": "Entre -8 dBm e -12 dBm",
-                    "option_b": "Entre -18 dBm e -24 dBm",
-                    "option_c": "Entre -28 dBm e -35 dBm",
-                    "option_d": "+3 dBm",
-                    "correct_option": "B",
-                    "difficulty": "medio",
-                    "explanation": "A faixa de -18 dBm a -24 dBm garante margem operacional ideal na sensibilidade dos receptores GPON/EPON."
-                }
-            ]
-        },
-        {
-            "id": "tpl_rpg_apagao",
-            "title": "Simulador de Crise (RPG): Rompimento de Fibra Tronco",
-            "description": "Simulação interativa de tomada de decisão rápida sob pressão diante de um incidente crítico na rede que afeta múltiplos bairros.",
-            "category": "Equipamento",
-            "difficulty_level": "especialista",
-            "workload_hours": 1.5,
-            "xp_reward": 250,
-            "passing_grade": 80,
-            "is_mandatory": False,
-            "allow_retake": True,
-            "course_type": "rpg_crisis",
-            "badge_name": "Guardião de Crises de Rede",
-            "badge_icon": "fa-fire",
-            "badge_color": "#e11d48",
-            "modules": [
-                {
-                    "title": "Cenário 1: Alarme do Zabbix & Queda de OLT",
-                    "duration_minutes": 10,
-                    "video_url": "",
-                    "content": "🔴 ALERTA GERAL: Às 14:32h, o NOC detectou a queda simultânea de 8 PONs na OLT do Bairro São José, deixando 2.400 assinantes sem conexão. O supervisor acionou sua equipe de emergência."
-                },
-                {
-                    "title": "Cenário 2: Localização e Lançamento do OTDR",
-                    "duration_minutes": 10,
-                    "video_url": "",
-                    "content": "Você conecta o OTDR no DIO central da POP. O gráfico indica evento reflexivo com queda abrupta aos 3.420 metros da saída, indicando rompimento físico em poste próximo à Avenida Principal."
-                }
-            ],
-            "questions": [
-                {
-                    "question_text": "Ao chegar no local do rompimento e verificar cabos caídos próximos à rede elétrica, qual a primeira ação do técnico líder?",
-                    "option_a": "Iniciar a fusão imediatamente para restaurar o serviço rápido",
-                    "option_b": "Sinalizar e isolar a área com cones, verificar ausência de tensão e solicitar apoio para desvio de trânsito",
-                    "option_c": "Puxar os cabos com força para desvencilhar da fiação elétrica",
-                    "option_d": "Ligar para os clientes avisando que vai demorar",
-                    "correct_option": "B",
-                    "difficulty": "facil",
-                    "explanation": "A segurança da equipe e de pedestres é sempre a prioridade máxima antes de qualquer intervenção física em campo."
-                }
-            ]
-        }
-    ]
-    return jsonify(templates)
 
 
 @technical_bp.route("/api/gestao/treinamentos_lms/<int:id>/duplicar", methods=["POST"])
@@ -10327,6 +10521,88 @@ def format_date_pt(dt, include_year=True):
     return f"{w}, {dt.day} de {m}"
 
 
+def find_user_by_text(name_text, all_users=None):
+    """Localiza o colaborador cadastrado pelo nome digitado no cronograma (username, full_name, etc) de forma estrita."""
+    if not name_text:
+        return None
+    raw = str(name_text).strip().lower()
+    if not raw:
+        return None
+
+    if all_users is None:
+        all_users = User.query.filter(User.username != "admin").all()
+
+    # Mapeamento canônico explícito para os técnicos da empresa
+    TECH_CANONICAL = {
+        "victor leandro": "VICTOR",
+        "victor": "VICTOR",
+        "lucas jr": "LUCASM",
+        "lucas junior": "LUCASM",
+        "lucas júnior": "LUCASM",
+        "lucasm": "LUCASM",
+        "lucas martins": "LUCASM",
+        "samuel celestrino": "SAMUEL",
+        "samuel": "SAMUEL",
+        "marcos antonio": "MARCOS",
+        "marcos antônio": "MARCOS",
+        "marcos": "MARCOS",
+        "wellinton oliviere": "WELLINTON",
+        "wellington oliviere": "WELLINTON",
+        "wellinton": "WELLINTON",
+        "wellington": "WELLINTON",
+        "pablo rafael": "PABLO",
+        "pablo raphael": "PABLO",
+        "pablo": "PABLO",
+        "henrique martins": "HENRIQUE",
+        "carlos henrique": "HENRIQUE",
+        "henrique": "HENRIQUE",
+        "gabriel meireles": "GABRIEL",
+        "gabriel": "GABRIEL",
+        "arthur salgueiro": "ARTHUR",
+        "arthur": "ARTHUR",
+        "jonatas": "JONATAS1",
+        "jonatas1": "JONATAS1",
+    }
+
+    if raw in TECH_CANONICAL:
+        target_username = TECH_CANONICAL[raw]
+        for u in all_users:
+            if (u.username or "").upper() == target_username:
+                return u
+
+    # 1. Match exato em username ou full_name
+    for u in all_users:
+        u_name = (u.username or "").strip().lower()
+        f_name = (u.full_name or "").strip().lower()
+        if raw == u_name or raw == f_name:
+            return u
+
+    # 2. Match onde raw é o primeiro nome ou primeiro + segundo nome do full_name EXATO
+    for u in all_users:
+        parts = [p.lower() for p in (u.full_name or "").split() if p]
+        if parts:
+            if raw == parts[0]:
+                return u
+            if len(parts) >= 2 and raw == f"{parts[0]} {parts[1]}":
+                return u
+
+    return None
+
+
+def find_team_by_text(team_text, all_teams=None):
+    """Localiza a equipe cadastrada pelo nome (ex: 'EQUIPE ROSA' -> 'Equipe rosa')."""
+    if not team_text:
+        return None
+    if all_teams is None:
+        all_teams = Team.query.all()
+    raw = str(team_text).strip().lower()
+    for t in all_teams:
+        t_name = (t.name or "").lower()
+        if raw == t_name or raw.replace("equipe", "").strip() == t_name.replace("equipe", "").strip():
+            return t
+    return None
+
+
 def generate_default_annual_data(year):
     """Gera a estrutura base de escalas de sábado, plantões de domingo e feriados para um ano."""
     # 1. Sábados
@@ -10397,8 +10673,17 @@ def generate_default_annual_data(year):
             "prevalecer_domingo": is_sun
         })
 
-    # Se for o ano de 2026, aplicar o benchmark exato enviado no PDF de referência
+    # Se for o ano de 2026, preencher apenas com técnicos efetivamente cadastrados no sistema; não cadastrados ficam em branco
     if year == 2026:
+        all_reg_users = User.query.filter(User.username != "admin").all()
+        def resolve_reg_tech(name):
+            if not name:
+                return ""
+            u = find_user_by_text(name, all_reg_users)
+            if u:
+                return u.full_name or u.username.upper()
+            return ""
+
         seed_2026_sundays = [
             ("Roberth", "Adriano Mendonça", "Sidney Rodrigues"),
             ("João", "Victor Leandro", "Lucas Jr"),
@@ -10455,9 +10740,9 @@ def generate_default_annual_data(year):
         ]
         for idx, s in enumerate(sundays):
             if idx < len(seed_2026_sundays):
-                s["interno"] = seed_2026_sundays[idx][0]
-                s["externo_1"] = seed_2026_sundays[idx][1]
-                s["externo_2"] = seed_2026_sundays[idx][2]
+                s["interno"] = resolve_reg_tech(seed_2026_sundays[idx][0])
+                s["externo_1"] = resolve_reg_tech(seed_2026_sundays[idx][1])
+                s["externo_2"] = resolve_reg_tech(seed_2026_sundays[idx][2])
 
         seed_2026_holidays = {
             "Carnaval": ("Roberth", "Adriano Mendonça", "Samuel Celestrino"),
@@ -10478,9 +10763,9 @@ def generate_default_annual_data(year):
         }
         for h in holidays:
             if h["name"] in seed_2026_holidays:
-                h["interno"] = seed_2026_holidays[h["name"]][0]
-                h["externo_1"] = seed_2026_holidays[h["name"]][1]
-                h["externo_2"] = seed_2026_holidays[h["name"]][2]
+                h["interno"] = resolve_reg_tech(seed_2026_holidays[h["name"]][0])
+                h["externo_1"] = resolve_reg_tech(seed_2026_holidays[h["name"]][1])
+                h["externo_2"] = resolve_reg_tech(seed_2026_holidays[h["name"]][2])
 
     return {
         "year": year,
@@ -10816,7 +11101,7 @@ def generate_annual_schedule_pdf_buffer(year, data, logo_path=None):
 @supervisor_allowed
 def gestao_tecnica_cronograma_anual():
     current_year = datetime.now().year
-    users = User.query.filter(User.username != "admin").order_by(User.username.asc()).all()
+    users = User.query.filter(User.username.notin_(["admin", "ADMIN"])).order_by(User.username.asc()).all()
     teams = Team.query.order_by(Team.name.asc()).all()
     return render_template(
         "cronograma_anual.html",
@@ -10826,53 +11111,14 @@ def gestao_tecnica_cronograma_anual():
     )
 
 
-def find_user_by_text(name_text, all_users):
-    """Localiza o colaborador cadastrado pelo nome digitado no cronograma (username, full_name, etc)."""
-    if not name_text:
-        return None
-    raw = str(name_text).strip().lower()
-    
-    # 1. Match exato em username ou full_name
-    for u in all_users:
-        u_name = (u.username or "").lower()
-        f_name = (u.full_name or "").lower()
-        if raw == u_name or raw == f_name:
-            return u
-            
-    # 2. Match parcial / substrings significativas
-    words = [w for w in raw.split() if len(w) > 2]
-    best_match = None
-    max_matches = 0
-    for u in all_users:
-        target_text = f"{(u.username or '')} {(u.full_name or '')}".lower()
-        matches = sum(1 for w in words if w in target_text)
-        if matches > max_matches:
-            max_matches = matches
-            best_match = u
-            
-    if max_matches > 0:
-        return best_match
-        
-    return None
-
-
-def find_team_by_text(team_text, all_teams):
-    """Localiza a equipe cadastrada pelo nome (ex: 'EQUIPE ROSA' -> 'Equipe rosa')."""
-    if not team_text:
-        return None
-    raw = str(team_text).strip().lower()
-    for t in all_teams:
-        t_name = (t.name or "").lower()
-        if raw == t_name or raw.replace("equipe", "").strip() == t_name.replace("equipe", "").strip():
-            return t
-    return None
-
-
-def sync_annual_schedule_to_db_scales(year, schedule_data):
-    """Sincroniza as escalas do cronograma anual na tabela 'Scale' para impactar as Escalas e o Calendário em tempo real."""
+def sync_annual_schedule_to_db_scales(year, schedule_data, notify=True):
+    """Sincroniza as escalas do cronograma anual na tabela 'Scale' para impactar as Escalas, o Calendário e Meus Plantões em tempo real."""
     all_users = User.query.filter(User.username != "admin").all()
     all_teams = Team.query.all()
-    
+    today_dt = datetime.now().date()
+    changed_scales = []
+    synced_scale_ids = set()
+
     def parse_t_list(raw_val):
         if not raw_val:
             return []
@@ -10890,7 +11136,7 @@ def sync_annual_schedule_to_db_scales(year, schedule_data):
     saturdays = schedule_data.get("saturdays", [])
     sundays = schedule_data.get("sundays", [])
     holidays = schedule_data.get("holidays", [])
-    
+
     # 1. Sincroniza Sábados
     for sat in saturdays:
         date_str = sat.get("date")
@@ -10900,26 +11146,45 @@ def sync_annual_schedule_to_db_scales(year, schedule_data):
             sat_date = datetime.strptime(date_str, "%Y-%m-%d").date()
         except Exception:
             continue
-            
+
         team_name = sat.get("team", "")
         team_obj = find_team_by_text(team_name, all_teams)
-        
+
         scale_rec = Scale.query.filter_by(date=sat_date, type="sabado").first()
+        is_new = False
+        old_tech_ids = set()
         if not scale_rec:
             scale_rec = Scale.query.filter_by(date=sat_date).first()
             if not scale_rec:
                 scale_rec = Scale(date=sat_date, type="sabado")
                 db.session.add(scale_rec)
+                is_new = True
             else:
                 scale_rec.type = "sabado"
-                
+                old_tech_ids = {u.id for u in get_technicians_for_scale(scale_rec)}
+        else:
+            old_tech_ids = {u.id for u in get_technicians_for_scale(scale_rec)}
+
         if team_obj:
             scale_rec.team_id = team_obj.id
             scale_rec.team_ids = str(team_obj.id)
             if team_obj.members:
                 scale_rec.technician_ids = ",".join(str(m.id) for m in team_obj.members)
-        scale_rec.obs = f"Escala de Sábado: {team_name}"
+            else:
+                scale_rec.technician_ids = None
+            scale_rec.obs = f"Escala de Sábado: {team_obj.name}"
+        else:
+            scale_rec.team_id = None
+            scale_rec.team_ids = None
+            scale_rec.technician_ids = None
+            scale_rec.obs = f"Escala de Sábado: {team_name}" if team_name else "Escala de Sábado"
         scale_rec.status = "ATIVO"
+
+        db.session.flush()
+        synced_scale_ids.add(scale_rec.id)
+
+        if notify and sat_date >= today_dt:
+            changed_scales.append((scale_rec, is_new, old_tech_ids))
 
     # 2. Sincroniza Domingos
     for sun in sundays:
@@ -10930,28 +11195,60 @@ def sync_annual_schedule_to_db_scales(year, schedule_data):
             sun_date = datetime.strptime(date_str, "%Y-%m-%d").date()
         except Exception:
             continue
-            
+
         internos = parse_t_list(sun.get("internos")) or parse_t_list(sun.get("interno"))
         externos = parse_t_list(sun.get("externos")) or (parse_t_list(sun.get("externo_1")) + parse_t_list(sun.get("externo_2")))
-        
+
         matched_user_ids = []
-        for name in (internos + externos):
+        clean_internos = []
+        clean_externos = []
+
+        for name in internos:
             u_obj = find_user_by_text(name, all_users)
-            if u_obj and u_obj.id not in matched_user_ids:
-                matched_user_ids.append(u_obj.id)
-                
+            if u_obj:
+                clean_internos.append(u_obj.full_name or u_obj.username)
+                if u_obj.id not in matched_user_ids:
+                    matched_user_ids.append(u_obj.id)
+
+        for name in externos:
+            u_obj = find_user_by_text(name, all_users)
+            if u_obj:
+                clean_externos.append(u_obj.full_name or u_obj.username)
+                if u_obj.id not in matched_user_ids:
+                    matched_user_ids.append(u_obj.id)
+
         scale_rec = Scale.query.filter_by(date=sun_date, type="domingo").first()
+        is_new = False
+        old_tech_ids = set()
         if not scale_rec:
             scale_rec = Scale.query.filter_by(date=sun_date).first()
             if not scale_rec:
                 scale_rec = Scale(date=sun_date, type="domingo")
                 db.session.add(scale_rec)
+                is_new = True
             else:
                 scale_rec.type = "domingo"
-                
+                old_tech_ids = {u.id for u in get_technicians_for_scale(scale_rec)}
+        else:
+            old_tech_ids = {u.id for u in get_technicians_for_scale(scale_rec)}
+
+        scale_rec.team_id = None
+        scale_rec.team_ids = None
         scale_rec.technician_ids = ",".join(map(str, matched_user_ids)) if matched_user_ids else None
-        scale_rec.obs = f"Plantão Domingo | Internos: {', '.join(internos)} | Externos: {', '.join(externos)}"
+
+        display_internos = clean_internos if clean_internos else [str(x).strip() for x in internos if str(x).strip()]
+        display_externos = clean_externos if clean_externos else [str(x).strip() for x in externos if str(x).strip()]
+        if display_internos or display_externos:
+            scale_rec.obs = f"Plantão Domingo | Internos: {', '.join(display_internos) or 'Nenhum'} | Externos: {', '.join(display_externos) or 'Nenhum'}"
+        else:
+            scale_rec.obs = "Plantão Domingo (A definir)"
         scale_rec.status = "ATIVO"
+
+        db.session.flush()
+        synced_scale_ids.add(scale_rec.id)
+
+        if notify and sun_date >= today_dt:
+            changed_scales.append((scale_rec, is_new, old_tech_ids))
 
     # 3. Sincroniza Feriados
     for hol in holidays:
@@ -10962,33 +11259,90 @@ def sync_annual_schedule_to_db_scales(year, schedule_data):
             hol_date = datetime.strptime(date_str, "%Y-%m-%d").date()
         except Exception:
             continue
-            
+
         if hol.get("prevalecer_domingo"):
             continue
-            
+
         h_internos = parse_t_list(hol.get("internos")) or parse_t_list(hol.get("interno"))
         h_externos = parse_t_list(hol.get("externos")) or (parse_t_list(hol.get("externo_1")) + parse_t_list(hol.get("externo_2")))
-        
+
         matched_user_ids = []
-        for name in (h_internos + h_externos):
+        clean_h_internos = []
+        clean_h_externos = []
+
+        for name in h_internos:
             u_obj = find_user_by_text(name, all_users)
-            if u_obj and u_obj.id not in matched_user_ids:
-                matched_user_ids.append(u_obj.id)
-                
+            if u_obj:
+                clean_h_internos.append(u_obj.full_name or u_obj.username)
+                if u_obj.id not in matched_user_ids:
+                    matched_user_ids.append(u_obj.id)
+
+        for name in h_externos:
+            u_obj = find_user_by_text(name, all_users)
+            if u_obj:
+                clean_h_externos.append(u_obj.full_name or u_obj.username)
+                if u_obj.id not in matched_user_ids:
+                    matched_user_ids.append(u_obj.id)
+
         scale_rec = Scale.query.filter_by(date=hol_date, type="feriado").first()
+        is_new = False
+        old_tech_ids = set()
         if not scale_rec:
             scale_rec = Scale.query.filter_by(date=hol_date).first()
             if not scale_rec:
                 scale_rec = Scale(date=hol_date, type="feriado")
                 db.session.add(scale_rec)
+                is_new = True
             else:
                 scale_rec.type = "feriado"
-                
+                old_tech_ids = {u.id for u in get_technicians_for_scale(scale_rec)}
+        else:
+            old_tech_ids = {u.id for u in get_technicians_for_scale(scale_rec)}
+
+        scale_rec.team_id = None
+        scale_rec.team_ids = None
         scale_rec.technician_ids = ",".join(map(str, matched_user_ids)) if matched_user_ids else None
-        scale_rec.obs = f"Feriado: {hol.get('name', 'Feriado')} | Internos: {', '.join(h_internos)} | Externos: {', '.join(h_externos)}"
+
+        display_h_internos = clean_h_internos if clean_h_internos else [str(x).strip() for x in h_internos if str(x).strip()]
+        display_h_externos = clean_h_externos if clean_h_externos else [str(x).strip() for x in h_externos if str(x).strip()]
+        hol_name = hol.get('name', 'Feriado')
+        if display_h_internos or display_h_externos:
+            scale_rec.obs = f"Feriado: {hol_name} | Internos: {', '.join(display_h_internos) or 'Nenhum'} | Externos: {', '.join(display_h_externos) or 'Nenhum'}"
+        else:
+            scale_rec.obs = f"Feriado: {hol_name} (A definir)"
         scale_rec.status = "ATIVO"
 
+        db.session.flush()
+        synced_scale_ids.add(scale_rec.id)
+
+        if notify and hol_date >= today_dt:
+            changed_scales.append((scale_rec, is_new, old_tech_ids))
+
+    # Remove qualquer escala antiga do mesmo ano que não esteja mais no cronograma
+    from sqlalchemy import extract
+    old_year_scales = Scale.query.filter(
+        extract('year', Scale.date) == year,
+        Scale.type.in_(["sabado", "domingo", "feriado"])
+    ).all()
+    for s_old in old_year_scales:
+        if s_old.id not in synced_scale_ids:
+            db.session.delete(s_old)
+
     db.session.commit()
+
+    db.session.commit()
+
+    # Notifica os técnicos afetados nas escalas futuras
+    if notify and changed_scales:
+        for s_item, is_n, old_ids in changed_scales:
+            try:
+                curr_techs = get_technicians_for_scale(s_item)
+                curr_ids = {u.id for u in curr_techs}
+                if is_n or (curr_ids != old_ids):
+                    notify_technicians_scale_adjustment(s_item, is_new=is_n, old_tech_ids=old_ids)
+            except Exception as e_notif:
+                print("⚠️ Erro ao notificar alteração em escala do cronograma anual:", e_notif)
+
 
 
 @technical_bp.route("/api/gestao/cronograma-anual/<int:year>", methods=["GET", "POST"])

@@ -118,14 +118,14 @@
     <div id="view-side-by-side" class="space-y-6">
         <div class="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
             
-            <!-- TABELA 1: ESCALA DE SÁBADO (Col 1-5) -->
-            <div class="xl:col-span-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-2xl shadow-xl shadow-slate-900/5 overflow-hidden">
+            <!-- TABELA 1: ESCALA DE SÁBADO (Col 1-4) -->
+            <div class="xl:col-span-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-2xl shadow-xl shadow-slate-900/5 overflow-hidden">
                 <div class="p-4 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-white/10 flex items-center justify-between">
                     <div class="flex items-center gap-2">
                         <span class="w-3 h-3 rounded-full bg-cyan-500"></span>
                         <h2 class="text-sm font-black text-slate-800 dark:text-white uppercase tracking-wider">Escala de Sábado</h2>
                     </div>
-                    <span class="text-[10px] font-bold text-slate-400 uppercase">Equipe Escalada</span>
+                    <span class="text-[10px] font-bold text-slate-400 uppercase">Equipe</span>
                 </div>
                 
                 <div class="max-h-[75vh] overflow-y-auto divide-y divide-slate-100 dark:divide-white/5">
@@ -133,7 +133,7 @@
                         <thead class="bg-slate-100/80 dark:bg-slate-800/80 text-[10px] uppercase font-black text-slate-500 dark:text-slate-400 sticky top-0 z-10 backdrop-blur">
                             <tr>
                                 <th class="py-2.5 px-3">Sábado</th>
-                                <th class="py-2.5 px-3 text-center">Equipe</th>
+                                <th class="py-2.5 px-3 text-center">Equipe Escalada</th>
                             </tr>
                         </thead>
                         <tbody id="tbody-saturdays" class="divide-y divide-slate-100 dark:divide-white/5 font-medium">
@@ -143,24 +143,24 @@
                 </div>
             </div>
 
-            <!-- TABELA 2: PLANTÃO DE DOMINGO (Col 6-12) -->
-            <div class="xl:col-span-7 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-2xl shadow-xl shadow-slate-900/5 overflow-hidden">
+            <!-- TABELA 2: PLANTÃO DE DOMINGO (Col 5-12) -->
+            <div class="xl:col-span-8 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-2xl shadow-xl shadow-slate-900/5 overflow-hidden">
                 <div class="p-4 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-white/10 flex items-center justify-between">
                     <div class="flex items-center gap-2">
                         <span class="w-3 h-3 rounded-full bg-blue-500"></span>
                         <h2 class="text-sm font-black text-slate-800 dark:text-white uppercase tracking-wider">Plantão de Domingo</h2>
                     </div>
-                    <span class="text-[10px] font-bold text-slate-400 uppercase">Múltiplos Técnicos (Internos / Externos)</span>
+                    <span class="text-[10px] font-bold text-slate-400 uppercase">Escolha entre os técnicos cadastrados</span>
                 </div>
 
                 <div class="max-h-[75vh] overflow-y-auto divide-y divide-slate-100 dark:divide-white/5">
                     <table class="w-full text-left text-xs">
                         <thead class="bg-slate-100/80 dark:bg-slate-800/80 text-[10px] uppercase font-black text-slate-500 dark:text-slate-400 sticky top-0 z-10 backdrop-blur">
                             <tr>
-                                <th class="py-2.5 px-3">Domingo</th>
-                                <th class="py-2.5 px-2 text-center w-36">Interno(s)</th>
-                                <th class="py-2.5 px-2 text-center">Externo(s)</th>
-                                <th class="py-2.5 px-2 text-center w-14">Ação</th>
+                                <th class="py-2.5 px-3 whitespace-nowrap">Domingo</th>
+                                <th class="py-2.5 px-2 text-center min-w-[140px]">Interno</th>
+                                <th class="py-2.5 px-3 min-w-[280px]">Plantonistas Externos (1, 2, 3 ou mais)</th>
+                                <th class="py-2.5 px-2 text-center w-12">Modal</th>
                             </tr>
                         </thead>
                         <tbody id="tbody-sundays" class="divide-y divide-slate-100 dark:divide-white/5 font-medium">
@@ -190,11 +190,11 @@
                 <table class="w-full text-left text-xs">
                     <thead class="bg-slate-100/80 dark:bg-slate-800/80 text-[10px] uppercase font-black text-slate-500 dark:text-slate-400">
                         <tr>
-                            <th class="py-3 px-4">Feriado / Data</th>
-                            <th class="py-3 px-3 text-center w-40">Interno(s)</th>
-                            <th class="py-3 px-3 text-center">Externo(s)</th>
-                            <th class="py-3 px-3 text-center w-40">Regra de Domingo</th>
-                            <th class="py-3 px-3 text-center w-24">Ações</th>
+                            <th class="py-3 px-4 min-w-[180px]">Feriado / Data</th>
+                            <th class="py-3 px-2 text-center min-w-[140px]">Interno</th>
+                            <th class="py-3 px-3 min-w-[280px]">Plantonistas Externos (1, 2, 3 ou mais)</th>
+                            <th class="py-3 px-3 text-center min-w-[140px]">Regra de Domingo</th>
+                            <th class="py-3 px-3 text-center w-20">Ações</th>
                         </tr>
                     </thead>
                     <tbody id="tbody-holidays" class="divide-y divide-slate-100 dark:divide-white/5 font-medium">
@@ -233,12 +233,19 @@
                         <span class="w-2.5 h-2.5 rounded-full bg-cyan-500"></span>
                         <h4 class="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-200">Técnicos Internos</h4>
                     </div>
-                    <button type="button" onclick="addModalTechInput('internos')" class="px-2.5 py-1 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-black text-[10px] uppercase tracking-wider transition-all flex items-center gap-1">
+                    <button type="button" onclick="addModalTechInput('internos')" class="px-2.5 py-1 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg font-black text-[10px] uppercase tracking-wider transition-all flex items-center gap-1 shadow-xs">
                         <i class="fa-solid fa-plus text-[9px]"></i> + Interno
                     </button>
                 </div>
                 <div id="modal-list-internos" class="space-y-2">
-                    <!-- Inputs inseridos via JS -->
+                    <!-- Selects inseridos via JS -->
+                </div>
+                <!-- Nuvem de Seleção Rápida de Cadastrados -->
+                <div class="pt-2 border-t border-slate-200/60 dark:border-white/5">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5 flex items-center gap-1">
+                        <i class="fa-solid fa-user-check text-cyan-500 text-[10px]"></i> Escolha rápida entre cadastrados:
+                    </span>
+                    <div id="quick-chips-internos" class="flex flex-wrap gap-1.5"></div>
                 </div>
             </div>
 
@@ -249,12 +256,19 @@
                         <span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
                         <h4 class="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-200">Técnicos Externos</h4>
                     </div>
-                    <button type="button" onclick="addModalTechInput('externos')" class="px-2.5 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-black text-[10px] uppercase tracking-wider transition-all flex items-center gap-1">
+                    <button type="button" onclick="addModalTechInput('externos')" class="px-2.5 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-black text-[10px] uppercase tracking-wider transition-all flex items-center gap-1 shadow-xs">
                         <i class="fa-solid fa-plus text-[9px]"></i> + Externo
                     </button>
                 </div>
                 <div id="modal-list-externos" class="space-y-2">
-                    <!-- Inputs inseridos via JS -->
+                    <!-- Selects inseridos via JS -->
+                </div>
+                <!-- Nuvem de Seleção Rápida de Cadastrados -->
+                <div class="pt-2 border-t border-slate-200/60 dark:border-white/5">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5 flex items-center gap-1">
+                        <i class="fa-solid fa-user-check text-blue-500 text-[10px]"></i> Escolha rápida entre cadastrados:
+                    </span>
+                    <div id="quick-chips-externos" class="flex flex-wrap gap-1.5"></div>
                 </div>
             </div>
         </div>
@@ -335,7 +349,83 @@
     {% endfor %}
 </datalist>
 
+<script type="application/json" id="data-registered-techs">
+[
+    {% for u in users %}
+    {
+        "id": {{ u.id }},
+        "username": {{ u.username|tojson }},
+        "full_name": {{ (u.full_name or '')|tojson }},
+        "display_name": {{ (u.full_name or u.username)|tojson }}
+    }{% if not loop.last %},{% endif %}
+    {% endfor %}
+]
+</script>
+
+<script type="application/json" id="data-registered-teams">
+[
+    {% for t in teams %}
+    {{ t.name|tojson }}{% if not loop.last %},{% endif %}
+    {% endfor %}
+]
+</script>
+
 <script>
+let REGISTERED_TECHS = JSON.parse(document.getElementById('data-registered-techs')?.textContent || '[]');
+let REGISTERED_TEAMS = JSON.parse(document.getElementById('data-registered-teams')?.textContent || '[]');
+if (!REGISTERED_TEAMS || REGISTERED_TEAMS.length === 0) {
+    REGISTERED_TEAMS = ['EQUIPE ROSA', 'EQUIPE AZUL', 'EQUIPE AMARELA'];
+}
+
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+function buildTechSelectOptions(currentVal) {
+    let html = '<option value="">-- Deixar em branco --</option>';
+    let matched = false;
+    const currentNorm = (currentVal || '').trim().toLowerCase();
+
+    REGISTERED_TECHS.forEach(tech => {
+        const isMatch = currentNorm && (
+            currentNorm === tech.display_name.toLowerCase() ||
+            currentNorm === tech.username.toLowerCase() ||
+            (tech.full_name && currentNorm === tech.full_name.toLowerCase())
+        );
+        if (isMatch) matched = true;
+        html += `<option value="${escapeHtml(tech.display_name)}" ${isMatch ? 'selected' : ''}>${escapeHtml(tech.display_name)} (@${escapeHtml(tech.username)})</option>`;
+    });
+
+    if (currentVal && !matched) {
+        html += `<option value="${escapeHtml(currentVal)}" selected>${escapeHtml(currentVal)} (Atual)</option>`;
+    }
+    return html;
+}
+
+function buildTeamSelectOptions(currentVal) {
+    let html = '<option value="">-- Selecione a Equipe --</option>';
+    let matched = false;
+    const currentNorm = (currentVal || '').trim().toUpperCase();
+
+    REGISTERED_TEAMS.forEach(team => {
+        const teamNorm = team.toUpperCase();
+        const isMatch = currentNorm && currentNorm.includes(teamNorm);
+        if (isMatch) matched = true;
+        html += `<option value="${escapeHtml(team.toUpperCase())}" ${isMatch ? 'selected' : ''}>${escapeHtml(team)}</option>`;
+    });
+
+    if (currentVal && !matched) {
+        html += `<option value="${escapeHtml(currentVal)}" selected>${escapeHtml(currentVal)}</option>`;
+    }
+    return html;
+}
+
 let currentYear = parseInt('{{ current_year }}') || new Date().getFullYear();
 let scheduleData = {
     year: currentYear,
@@ -345,7 +435,23 @@ let scheduleData = {
 };
 let activeModalShift = null; // { type: 'sunday'|'holiday', index: 0 }
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    if (!REGISTERED_TECHS || REGISTERED_TECHS.length === 0) {
+        try {
+            const uRes = await fetch('/api/gestao/users');
+            const uData = await uRes.json();
+            if (Array.isArray(uData) && uData.length > 0) {
+                REGISTERED_TECHS = uData.map(u => ({
+                    id: u.id,
+                    username: u.username,
+                    full_name: u.full_name || '',
+                    display_name: u.display_name || u.full_name || u.username
+                }));
+            }
+        } catch (err) {
+            console.warn('Erro ao carregar lista de técnicos cadastrados via API:', err);
+        }
+    }
     loadYearSchedule(currentYear);
 });
 
@@ -462,13 +568,14 @@ function renderSaturdaysTable() {
         else if (tUpper.includes('VERD')) badgeClass = 'text-emerald-700 bg-emerald-50 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800/40';
 
         tr.innerHTML = `
-            <td class="py-2.5 px-3 text-slate-700 dark:text-slate-300 font-medium italic">
+            <td class="py-2.5 px-3 text-slate-700 dark:text-slate-300 font-medium italic whitespace-nowrap">
                 ${sat.date_extenso || sat.date}
             </td>
-            <td class="py-2.5 px-3 text-center">
-                <input type="text" list="list-teams-names" value="${sat.team || ''}" 
-                       onchange="updateSaturdayTeam(${idx}, this.value)" 
-                       class="px-2.5 py-1 text-center font-black rounded-lg text-xs uppercase outline-none focus:ring-2 focus:ring-cyan-500 transition-all ${badgeClass} w-36">
+            <td class="py-2.5 px-2 text-center">
+                <select onchange="updateSaturdayTeam(${idx}, this.value)" 
+                        class="px-2.5 py-1.5 text-center font-black rounded-lg text-xs uppercase outline-none focus:ring-2 focus:ring-cyan-500 transition-all ${badgeClass} w-full max-w-[190px] cursor-pointer">
+                    ${buildTeamSelectOptions(sat.team)}
+                </select>
             </td>
         `;
         tbody.appendChild(tr);
@@ -486,27 +593,63 @@ function renderSundaysTable() {
         
         const internos = getTechList(sun.internos || sun.interno);
         const externos = getTechList(sun.externos || [sun.externo_1, sun.externo_2]);
-        
-        tr.setAttribute('data-search', `${sun.date_extenso || ''} ${internos.join(' ')} ${externos.join(' ')}`.toLowerCase());
+        const valInterno = sun.interno || (internos.length > 0 ? internos[0] : '');
+
+        tr.setAttribute('data-search', `${sun.date_extenso || ''} ${valInterno} ${internos.join(' ')} ${externos.join(' ')}`.toLowerCase());
 
         tr.innerHTML = `
-            <td class="py-2.5 px-3 text-slate-700 dark:text-slate-300 font-medium italic">
+            <td class="py-2.5 px-3 text-slate-700 dark:text-slate-300 font-medium italic whitespace-nowrap">
                 ${sun.date_extenso || sun.date}
             </td>
-            <td class="py-2.5 px-2 text-center">
-                <input type="text" list="list-technicians-names" value="${internos.join(', ')}" 
-                       onchange="updateSundayMultiTech(${idx}, 'internos', this.value)" 
-                       placeholder="Ex: Roberth, João" 
-                       class="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 rounded-lg px-2 py-1 text-center text-xs font-semibold text-slate-800 dark:text-white outline-none focus:border-cyan-500" title="Separe por vírgula para múltiplos internos">
+            <td class="py-2 px-1 text-center min-w-[140px]">
+                <div class="space-y-1">
+                    <select onchange="updateSundayInternoField(${idx}, this.value)" 
+                            class="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 rounded-lg px-2 py-1.5 text-xs font-semibold text-slate-800 dark:text-white outline-none focus:border-cyan-500 cursor-pointer">
+                        ${buildTechSelectOptions(valInterno)}
+                    </select>
+                    ${internos.length > 1 ? `
+                        <div class="flex flex-wrap gap-1 justify-center pt-0.5">
+                            ${internos.slice(1).map((extraName, extraIdx) => `
+                                <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-cyan-50 text-cyan-700 dark:bg-cyan-950/40 dark:text-cyan-300 border border-cyan-200/60">
+                                    + ${escapeHtml(extraName)}
+                                    <button type="button" onclick="removeTechFromShiftInline('sunday', ${idx}, 'internos', ${extraIdx + 1})" class="hover:text-rose-500 ml-0.5 font-black" title="Remover">✕</button>
+                                </span>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+                </div>
             </td>
-            <td class="py-2.5 px-2 text-center">
-                <input type="text" list="list-technicians-names" value="${externos.join(', ')}" 
-                       onchange="updateSundayMultiTech(${idx}, 'externos', this.value)" 
-                       placeholder="Ex: Adriano, Victor, Lucas, Sidney..." 
-                       class="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200/80 dark:border-white/10 rounded-lg px-2 py-1 text-center text-xs font-semibold text-slate-800 dark:text-white outline-none focus:border-blue-500" title="Separe por vírgula para múltiplos externos">
+            <td class="py-2 px-3">
+                <div class="flex flex-wrap items-center gap-1.5 min-h-[34px]">
+                    ${externos.map((name, tIdx) => `
+                        <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200/80 dark:border-blue-800/50 shadow-2xs group">
+                            <i class="fa-solid fa-user text-[10px] text-blue-500"></i>
+                            <span>${escapeHtml(name)}</span>
+                            <button type="button" onclick="removeTechFromShiftInline('sunday', ${idx}, 'externos', ${tIdx})" 
+                                    class="text-blue-400 hover:text-rose-500 dark:hover:text-rose-400 transition-colors ml-1 p-0.5 font-black" 
+                                    title="Remover ${escapeHtml(name)}">
+                                ✕
+                            </button>
+                        </span>
+                    `).join('')}
+
+                    <div class="inline-flex items-center">
+                        <select onchange="addTechToShiftInline('sunday', ${idx}, 'externos', this.value); this.value='';" 
+                                class="bg-slate-50 dark:bg-slate-800/80 hover:bg-white dark:hover:bg-slate-800 border border-dashed border-slate-300 dark:border-slate-700 hover:border-blue-500 rounded-lg px-2.5 py-1 text-xs font-semibold text-slate-600 dark:text-slate-300 outline-none transition-all cursor-pointer">
+                            <option value="">+ Adicionar Técnico...</option>
+                            ${REGISTERED_TECHS.map(t => `<option value="${escapeHtml(t.display_name)}">${escapeHtml(t.display_name)} (@${escapeHtml(t.username)})</option>`).join('')}
+                        </select>
+                    </div>
+
+                    ${externos.length >= 3 ? `
+                        <span class="text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                            ${externos.length} técnicos
+                        </span>
+                    ` : ''}
+                </div>
             </td>
-            <td class="py-2.5 px-2 text-center">
-                <button type="button" onclick="openShiftModal('sunday', ${idx})" class="p-1.5 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-white/5 rounded-lg transition-all" title="Gerenciar Plantonistas em Modal">
+            <td class="py-2 px-2 text-center whitespace-nowrap">
+                <button type="button" onclick="openShiftModal('sunday', ${idx})" class="p-1.5 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-white/5 rounded-lg transition-all" title="Gerenciar em Modal (adicionar/reordenar múltiplos)">
                     <i class="fa-solid fa-user-pen text-xs"></i>
                 </button>
             </td>
@@ -527,34 +670,75 @@ function renderHolidaysTable() {
         const isPrevalecer = hol.prevalecer_domingo;
         const internos = getTechList(hol.internos || hol.interno);
         const externos = getTechList(hol.externos || [hol.externo_1, hol.externo_2]);
+        const valInterno = hol.interno || (internos.length > 0 ? internos[0] : '');
 
-        tr.setAttribute('data-search', `${hol.date_extenso || ''} ${hol.name || ''} ${internos.join(' ')} ${externos.join(' ')}`.toLowerCase());
+        tr.setAttribute('data-search', `${hol.date_extenso || ''} ${hol.name || ''} ${valInterno} ${internos.join(' ')} ${externos.join(' ')}`.toLowerCase());
 
         tr.innerHTML = `
-            <td class="py-3 px-4">
-                <input type="text" value="${hol.date_extenso || hol.name || ''}" 
+            <td class="py-3 px-4 min-w-[180px]">
+                <input type="text" value="${escapeHtml(hol.date_extenso || hol.name || '')}" 
                        onchange="updateHolidayField(${idx}, 'date_extenso', this.value)" 
                        class="w-full bg-transparent border-b border-dashed border-slate-300 dark:border-slate-700 py-1 font-semibold text-slate-800 dark:text-white text-xs outline-none focus:border-rose-500">
             </td>
-            <td class="py-3 px-2 text-center">
+            <td class="py-3 px-2 text-center min-w-[140px]">
                 ${isPrevalecer ? 
                     `<span class="text-[10px] text-slate-400 font-bold uppercase italic">Plantão Domingo</span>` : 
-                    `<input type="text" list="list-technicians-names" value="${internos.join(', ')}" onchange="updateHolidayMultiTech(${idx}, 'internos', this.value)" placeholder="Ex: Roberth, João" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-lg px-2 py-1 text-center text-xs font-semibold outline-none focus:border-rose-500">`
+                    `<div class="space-y-1">
+                        <select onchange="updateHolidayInternoField(${idx}, this.value)" class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-lg px-2 py-1.5 text-xs font-semibold outline-none focus:border-rose-500 cursor-pointer">
+                            ${buildTechSelectOptions(valInterno)}
+                        </select>
+                        ${internos.length > 1 ? `
+                            <div class="flex flex-wrap gap-1 justify-center pt-0.5">
+                                ${internos.slice(1).map((extraName, extraIdx) => `
+                                    <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-cyan-50 text-cyan-700 dark:bg-cyan-950/40 dark:text-cyan-300 border border-cyan-200/60">
+                                        + ${escapeHtml(extraName)}
+                                        <button type="button" onclick="removeTechFromShiftInline('holiday', ${idx}, 'internos', ${extraIdx + 1})" class="hover:text-rose-500 ml-0.5 font-black" title="Remover">✕</button>
+                                    </span>
+                                `).join('')}
+                            </div>
+                        ` : ''}
+                    </div>`
                 }
             </td>
-            <td class="py-3 px-2 text-center">
+            <td class="py-3 px-3">
                 ${isPrevalecer ? 
                     `<span class="text-[10px] text-slate-400 font-bold uppercase italic">Plantão Domingo</span>` : 
-                    `<input type="text" list="list-technicians-names" value="${externos.join(', ')}" onchange="updateHolidayMultiTech(${idx}, 'externos', this.value)" placeholder="Ex: Adriano, Victor, Lucas..." class="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-lg px-2 py-1 text-center text-xs font-semibold outline-none focus:border-rose-500">`
+                    `<div class="flex flex-wrap items-center gap-1.5 min-h-[34px]">
+                        ${externos.map((name, tIdx) => `
+                            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-200/80 dark:border-rose-800/50 shadow-2xs group">
+                                <i class="fa-solid fa-user text-[10px] text-rose-500"></i>
+                                <span>${escapeHtml(name)}</span>
+                                <button type="button" onclick="removeTechFromShiftInline('holiday', ${idx}, 'externos', ${tIdx})" 
+                                        class="text-rose-400 hover:text-rose-600 dark:hover:text-rose-300 transition-colors ml-1 p-0.5 font-black" 
+                                        title="Remover ${escapeHtml(name)}">
+                                    ✕
+                                </button>
+                            </span>
+                        `).join('')}
+
+                        <div class="inline-flex items-center">
+                            <select onchange="addTechToShiftInline('holiday', ${idx}, 'externos', this.value); this.value='';" 
+                                    class="bg-slate-50 dark:bg-slate-800/80 hover:bg-white dark:hover:bg-slate-800 border border-dashed border-slate-300 dark:border-slate-700 hover:border-rose-500 rounded-lg px-2.5 py-1 text-xs font-semibold text-slate-600 dark:text-slate-300 outline-none transition-all cursor-pointer">
+                                <option value="">+ Adicionar Técnico...</option>
+                                ${REGISTERED_TECHS.map(t => `<option value="${escapeHtml(t.display_name)}">${escapeHtml(t.display_name)} (@${escapeHtml(t.username)})</option>`).join('')}
+                            </select>
+                        </div>
+
+                        ${externos.length >= 3 ? `
+                            <span class="text-[10px] font-black uppercase px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20">
+                                ${externos.length} técnicos
+                            </span>
+                        ` : ''}
+                    </div>`
                 }
             </td>
-            <td class="py-3 px-3 text-center">
+            <td class="py-3 px-3 text-center whitespace-nowrap">
                 <button type="button" onclick="toggleHolidayPrevalecer(${idx})" 
                         class="px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${isPrevalecer ? 'bg-slate-700 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-white'}">
                     ${isPrevalecer ? '✔ Prevalece Domingo' : 'Feriado Normal'}
                 </button>
             </td>
-            <td class="py-3 px-3 text-center">
+            <td class="py-3 px-3 text-center whitespace-nowrap">
                 <div class="flex items-center justify-center gap-1">
                     ${!isPrevalecer ? `
                     <button type="button" onclick="openShiftModal('holiday', ${idx})" class="p-1.5 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-white/5 rounded-lg transition-all" title="Gerenciar Plantonistas">
@@ -571,11 +755,139 @@ function renderHolidaysTable() {
     });
 }
 
+// Inline e Modal Helpers para Técnicos (Suporte 1, 2, 3 ou mais técnicos)
+function addTechToShiftInline(type, idx, group, techName) {
+    if (!techName) return;
+    const item = type === 'sunday' ? scheduleData.sundays[idx] : scheduleData.holidays[idx];
+    if (!item) return;
+
+    if (!Array.isArray(item[group])) {
+        if (group === 'internos') {
+            item.internos = getTechList(item.internos || item.interno);
+        } else {
+            item.externos = getTechList(item.externos || [item.externo_1, item.externo_2]);
+        }
+    }
+
+    if (!item[group].includes(techName)) {
+        item[group].push(techName);
+    }
+
+    // Sincroniza campos legados
+    if (group === 'internos') {
+        item.interno = item.internos[0] || '';
+    } else {
+        item.externo_1 = item.externos[0] || '';
+        item.externo_2 = item.externos[1] || '';
+    }
+
+    markSavedStatus(false);
+    if (type === 'sunday') renderSundaysTable();
+    else renderHolidaysTable();
+}
+
+function removeTechFromShiftInline(type, idx, group, techIdx) {
+    const item = type === 'sunday' ? scheduleData.sundays[idx] : scheduleData.holidays[idx];
+    if (!item) return;
+
+    if (!Array.isArray(item[group])) {
+        if (group === 'internos') {
+            item.internos = getTechList(item.internos || item.interno);
+        } else {
+            item.externos = getTechList(item.externos || [item.externo_1, item.externo_2]);
+        }
+    }
+
+    item[group].splice(techIdx, 1);
+
+    // Sincroniza campos legados
+    if (group === 'internos') {
+        item.interno = item.internos[0] || '';
+    } else {
+        item.externo_1 = item.externos[0] || '';
+        item.externo_2 = item.externos[1] || '';
+    }
+
+    markSavedStatus(false);
+    if (type === 'sunday') renderSundaysTable();
+    else renderHolidaysTable();
+}
+
+function updateSundayInternoField(idx, val) {
+    if (!scheduleData.sundays || !scheduleData.sundays[idx]) return;
+    const sun = scheduleData.sundays[idx];
+    const valClean = (val || '').trim();
+    sun.interno = valClean;
+    const currentList = getTechList(sun.internos);
+    const extraInternos = currentList.length > 1 ? currentList.slice(1) : [];
+    if (valClean) {
+        sun.internos = [valClean, ...extraInternos];
+    } else {
+        sun.internos = extraInternos;
+    }
+    markSavedStatus(false);
+    renderSundaysTable();
+}
+
+function updateHolidayInternoField(idx, val) {
+    if (!scheduleData.holidays || !scheduleData.holidays[idx]) return;
+    const hol = scheduleData.holidays[idx];
+    const valClean = (val || '').trim();
+    hol.interno = valClean;
+    const currentList = getTechList(hol.internos);
+    const extraInternos = currentList.length > 1 ? currentList.slice(1) : [];
+    if (valClean) {
+        hol.internos = [valClean, ...extraInternos];
+    } else {
+        hol.internos = extraInternos;
+    }
+    markSavedStatus(false);
+    renderHolidaysTable();
+}
+
 // Atualizações Diretas
 function updateSaturdayTeam(idx, val) {
     scheduleData.saturdays[idx].team = val.toUpperCase();
     markSavedStatus(false);
     renderSaturdaysTable();
+}
+
+function updateSundayField(idx, field, val) {
+    if (!scheduleData.sundays || !scheduleData.sundays[idx]) return;
+    const sun = scheduleData.sundays[idx];
+    sun[field] = (val || '').trim();
+    if (field === 'interno') {
+        sun.internos = sun.interno ? [sun.interno] : [];
+    } else if (field === 'externo_1' || field === 'externo_2') {
+        const cur = getTechList(sun.externos);
+        if (field === 'externo_1') {
+            cur[0] = sun[field];
+        } else {
+            if (cur.length < 1) cur[0] = sun.externo_1 || '';
+            cur[1] = sun[field];
+        }
+        sun.externos = cur.filter(Boolean);
+    }
+    markSavedStatus(false);
+}
+
+function updateHolidayField(idx, field, val) {
+    if (!scheduleData.holidays || !scheduleData.holidays[idx]) return;
+    const hol = scheduleData.holidays[idx];
+    hol[field] = (val || '').trim();
+    if (field === 'interno') {
+        hol.internos = hol.interno ? [hol.interno] : [];
+    } else if (field === 'externo_1' || field === 'externo_2') {
+        const cur = getTechList(hol.externos);
+        if (field === 'externo_1') {
+            cur[0] = hol[field];
+        } else {
+            if (cur.length < 1) cur[0] = hol.externo_1 || '';
+            cur[1] = hol[field];
+        }
+        hol.externos = cur.filter(Boolean);
+    }
+    markSavedStatus(false);
 }
 
 function updateSundayMultiTech(idx, type, val) {
@@ -584,6 +896,7 @@ function updateSundayMultiTech(idx, type, val) {
     if (type === 'internos') {
         scheduleData.sundays[idx].interno = list[0] || '';
     } else {
+        scheduleData.sundays[idx].externos = list;
         scheduleData.sundays[idx].externo_1 = list[0] || '';
         scheduleData.sundays[idx].externo_2 = list[1] || '';
     }
@@ -596,14 +909,10 @@ function updateHolidayMultiTech(idx, type, val) {
     if (type === 'internos') {
         scheduleData.holidays[idx].interno = list[0] || '';
     } else {
+        scheduleData.holidays[idx].externos = list;
         scheduleData.holidays[idx].externo_1 = list[0] || '';
         scheduleData.holidays[idx].externo_2 = list[1] || '';
     }
-    markSavedStatus(false);
-}
-
-function updateHolidayField(idx, field, val) {
-    scheduleData.holidays[idx][field] = val;
     markSavedStatus(false);
 }
 
@@ -653,13 +962,48 @@ function openShiftModal(type, index) {
     listExternos.innerHTML = '';
 
     if (internos.length === 0) internos.push('');
-    if (externos.length === 0) externos.push('');
+    if (externos.length === 0) {
+        externos.push('');
+        externos.push('');
+    }
 
     internos.forEach(name => addModalTechInput('internos', name));
     externos.forEach(name => addModalTechInput('externos', name));
 
+    renderQuickChips('internos');
+    renderQuickChips('externos');
+
     document.getElementById('modal-manage-shift').classList.remove('hidden');
     document.getElementById('modal-manage-shift').classList.add('flex');
+}
+
+function renderQuickChips(group) {
+    const container = document.getElementById(group === 'internos' ? 'quick-chips-internos' : 'quick-chips-externos');
+    if (!container) return;
+    container.innerHTML = REGISTERED_TECHS.map(t => `
+        <button type="button" onclick="quickSelectModalTech('${group}', '${escapeHtml(t.display_name)}')" 
+                class="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-white/10 hover:border-cyan-400 hover:text-cyan-600 dark:hover:text-cyan-400 transition-all flex items-center gap-1 active:scale-95 shadow-2xs">
+            <i class="fa-solid fa-plus text-[9px] text-cyan-500"></i>
+            <span>${escapeHtml(t.display_name)}</span>
+        </button>
+    `).join('');
+}
+
+function quickSelectModalTech(group, techName) {
+    const containerId = group === 'internos' ? 'modal-list-internos' : 'modal-list-externos';
+    const rows = document.querySelectorAll(`#${containerId} .modal-tech-row`);
+    let assigned = false;
+    for (const r of rows) {
+        const sel = r.querySelector('.modal-tech-val');
+        if (sel && !sel.value) {
+            sel.value = techName;
+            assigned = true;
+            break;
+        }
+    }
+    if (!assigned) {
+        addModalTechInput(group, techName);
+    }
 }
 
 function closeShiftModal() {
@@ -674,8 +1018,12 @@ function addModalTechInput(group, value = '') {
     div.className = 'flex items-center gap-2 modal-tech-row';
     div.setAttribute('data-group', group);
     div.innerHTML = `
-        <input type="text" list="list-technicians-names" value="${value}" placeholder="Nome do técnico" class="modal-tech-val flex-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 font-bold text-xs text-slate-800 dark:text-white outline-none focus:border-blue-500">
-        <button type="button" onclick="this.parentElement.remove()" class="p-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg">
+        <div class="flex-1">
+            <select class="modal-tech-val w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl px-3 py-2 font-bold text-xs text-slate-800 dark:text-white outline-none focus:border-cyan-500 cursor-pointer">
+                ${buildTechSelectOptions(value)}
+            </select>
+        </div>
+        <button type="button" onclick="this.closest('.modal-tech-row').remove()" class="p-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 rounded-lg transition-colors" title="Remover este campo">
             <i class="fa-solid fa-trash text-xs"></i>
         </button>
     `;

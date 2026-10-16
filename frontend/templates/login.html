@@ -63,7 +63,7 @@
 
     /* Card da Direita com Imagem e Gradiente da Marca */
     .hero-card-bg {
-      background-image: linear-gradient(135deg, rgba(15, 23, 42, 0.85), color-mix(in srgb, var(--login-secondary) 85%, #0f172a 15%)),
+      background-image: linear-gradient(135deg, rgba(15, 23, 42, 0.85), rgba(30, 64, 175, 0.85)),
                         url("{% if sys_config and sys_config.login_bg_desktop %}{{ url_for('static', filename='uploads/layout/' ~ sys_config.login_bg_desktop, v='2') }}{% else %}{{ url_for('static', filename='img.png', v='2') }}{% endif %}");
       background-size: {{ sys_config.login_bg_size_desktop or 'cover' }};
       background-position: {{ sys_config.login_bg_position_desktop or 'center' }};

@@ -115,6 +115,7 @@
         min-width: 260px;
         max-width: 260px;
         height: 100vh;
+        height: 100dvh;
         position: fixed;
         left: 0;
         top: 0;
@@ -122,10 +123,33 @@
         background: #ffffff;
         border-right: 1px solid #e2e8f0;
         transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
+      }
+      #sidebar nav {
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
       }
       .dark #sidebar { 
         background: #0d131f; 
         border-right: 1px solid rgba(255, 255, 255, 0.07);
+      }
+
+      /* ✅ SIDEBAR MOBILE OVERLAY */
+      #sidebar-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.55);
+        backdrop-filter: blur(4px);
+        -webkit-backdrop-filter: blur(4px);
+        z-index: 48;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+      #sidebar-overlay.visible {
+        opacity: 1;
+        pointer-events: auto;
       }
 
       /* ✅ MAIN CONTENT ADJUSTMENT */
@@ -352,6 +376,9 @@
       
       <!-- ✅ SIDEBAR LATERAL PROFISSIONAL -->
       {% if current_user.is_authenticated %}
+      <!-- Backdrop Overlay para Mobile -->
+      <div id="sidebar-overlay" onclick="window.closeMobileSidebar ? window.closeMobileSidebar() : document.getElementById('sidebar').classList.remove('mobile-open')"></div>
+      
       <aside id="sidebar" class="flex flex-col">
         
         <!-- TOP: LOGO -->
@@ -360,7 +387,7 @@
             <img src="{% if sys_config and sys_config.sidebar_logo %}{{ url_for('static', filename='uploads/layout/' ~ sys_config.sidebar_logo, v='2') }}{% else %}{{ url_for('static', filename='imgsidebar.png', v='2') }}{% endif %}" class="w-auto max-w-[180px] object-contain" style="height: {{ sys_config.sidebar_logo_height or 36 }}px;" alt="Logo">
           </div>
           <!-- Mobile Close Button inside sidebar -->
-          <button onclick="document.getElementById('sidebar').classList.remove('mobile-open')" class="lg:hidden p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+          <button onclick="window.closeMobileSidebar ? window.closeMobileSidebar() : document.getElementById('sidebar').classList.remove('mobile-open')" class="lg:hidden p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200" aria-label="Fechar menu">
             <i class="fa-solid fa-xmark text-sm"></i>
           </button>
         </div>
@@ -462,7 +489,7 @@
           </div>
           {% endif %}
 
-          {% if current_user.has_permission('checklist_mobile') or current_user.has_permission('treinamentos_mobile') or current_user.has_permission('manutencao_os') or current_user.has_permission('controle_ferramentas') %}
+          {% if current_user.has_permission('checklist_mobile') or current_user.has_permission('treinamentos_mobile') or current_user.has_permission('manutencao_os') or current_user.has_permission('controle_ferramentas') or current_user.has_permission('meus_plantoes') %}
           <div class="px-3 pt-3 pb-1 text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
             Operacional
           </div>
@@ -516,6 +543,23 @@
                     {% endif %}">
             <i class="fa-solid fa-screwdriver-wrench w-4 text-center text-sm {% if request.endpoint == 'manutencao_os' %}text-white dark:text-slate-900{% else %}text-slate-400 group-hover:text-slate-700 dark:text-slate-500 dark:group-hover:text-slate-300{% endif %} transition-colors"></i>
             <span class="truncate">Manutenção O.S.</span>
+          </a>
+          {% endif %}
+
+          {% if current_user.has_permission('meus_plantoes') %}
+          <!-- ✅ LINK MEUS PLANTÕES (TÉCNICO) -->
+          <a href="{{ url_for('meus_plantoes') }}" 
+             class="flex items-center justify-between px-3 py-2.5 rounded-xl text-[13px] transition-colors group
+                    {% if request.endpoint == 'meus_plantoes' %}
+                      bg-slate-900 text-white font-semibold shadow-sm dark:bg-white dark:text-slate-900
+                    {% else %}
+                      text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800/60 font-medium
+                    {% endif %}">
+            <div class="flex items-center gap-3 truncate">
+              <i class="fa-solid fa-calendar-check w-4 text-center text-sm {% if request.endpoint == 'meus_plantoes' %}text-sky-400 dark:text-sky-600{% else %}text-sky-500 group-hover:scale-110{% endif %} transition-transform"></i>
+              <span class="truncate">Meus Plantões</span>
+            </div>
+            <span id="badge-sidebar-plantoes" class="hidden px-2 py-0.5 rounded-full {% if request.endpoint == 'meus_plantoes' %}bg-sky-400/20 text-sky-200 dark:text-sky-900 border border-sky-400/30{% else %}bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20{% endif %} text-[10px] font-black">0</span>
           </a>
           {% endif %}
           {% endif %}
@@ -962,18 +1006,91 @@
         {% endif %}
       {% endwith %}
 
-      // Sidebar Mobile Logic
+      // Sidebar Mobile Logic & Scroll Lock
       (function() {
         const sidebar = document.getElementById('sidebar');
         const btnMobile = document.getElementById('btnMobileToggle');
+        const overlay = document.getElementById('sidebar-overlay');
 
         if (!sidebar) return;
 
-        if (btnMobile) btnMobile.addEventListener('click', () => sidebar.classList.toggle('mobile-open'));
-        
+        function syncSidebarState(isOpen) {
+          if (overlay) {
+            if (isOpen) overlay.classList.add('visible');
+            else overlay.classList.remove('visible');
+          }
+
+          if (isOpen && window.innerWidth <= 1024) {
+            document.body.classList.add('overflow-hidden');
+            document.body.style.overflow = 'hidden';
+            document.documentElement.style.overflow = 'hidden';
+            // Garante foco de scroll dentro do sidebar
+            const nav = sidebar.querySelector('nav');
+            if (nav) nav.focus({ preventScroll: true });
+          } else {
+            document.body.classList.remove('overflow-hidden');
+            document.body.style.overflow = '';
+            document.documentElement.style.overflow = '';
+          }
+        }
+
+        function openSidebar() {
+          sidebar.classList.add('mobile-open');
+          syncSidebarState(true);
+        }
+
+        function closeSidebar() {
+          sidebar.classList.remove('mobile-open');
+          syncSidebarState(false);
+        }
+
+        function toggleSidebar() {
+          const willOpen = !sidebar.classList.contains('mobile-open');
+          if (willOpen) openSidebar();
+          else closeSidebar();
+        }
+
+        window.openMobileSidebar = openSidebar;
+        window.closeMobileSidebar = closeSidebar;
+        window.toggleMobileSidebar = toggleSidebar;
+
+        // MutationObserver para garantir sincronia mesmo se mobile-open for alterado por qualquer script externo
+        try {
+          const observer = new MutationObserver(() => {
+            syncSidebarState(sidebar.classList.contains('mobile-open'));
+          });
+          observer.observe(sidebar, { attributes: true, attributeFilter: ['class'] });
+        } catch (e) {}
+
+        if (btnMobile) {
+          btnMobile.addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleSidebar();
+          });
+        }
+
+        if (overlay) {
+          overlay.addEventListener('click', closeSidebar);
+          overlay.addEventListener('touchstart', closeSidebar, { passive: true });
+        }
+
         document.addEventListener('click', (e) => {
-          if (window.innerWidth <= 1024 && !sidebar.contains(e.target) && !btnMobile?.contains(e.target)) {
-            sidebar.classList.remove('mobile-open');
+          if (window.innerWidth <= 1024 && sidebar.classList.contains('mobile-open')) {
+            if (!sidebar.contains(e.target) && !btnMobile?.contains(e.target) && (!overlay || !overlay.contains(e.target))) {
+              closeSidebar();
+            }
+          }
+        });
+
+        document.addEventListener('keydown', (e) => {
+          if (e.key === 'Escape' && sidebar.classList.contains('mobile-open')) {
+            closeSidebar();
+          }
+        });
+
+        window.addEventListener('resize', () => {
+          if (window.innerWidth > 1024 && sidebar.classList.contains('mobile-open')) {
+            closeSidebar();
           }
         });
       })();
@@ -1582,6 +1699,28 @@
     </div>
     {% endif %}
 
+    <!-- ✅ SCRIPT: BADGE DE PLANTÕES NO SIDEBAR -->
+    <script>
+      document.addEventListener('DOMContentLoaded', function() {
+        const badgeSidebar = document.getElementById('badge-sidebar-plantoes');
+        if (badgeSidebar) {
+          fetch('/api/tecnico/minhas-escalas?t=' + Date.now())
+            .then(res => res.json())
+            .then(data => {
+              if (data && data.success && data.stats) {
+                const upCount = data.stats.upcoming_count || 0;
+                badgeSidebar.textContent = upCount;
+                if (upCount > 0) {
+                  badgeSidebar.classList.remove('hidden');
+                } else {
+                  badgeSidebar.classList.add('hidden');
+                }
+              }
+            })
+            .catch(() => {});
+        }
+      });
+    </script>
   </body>
 </html>
 

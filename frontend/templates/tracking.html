@@ -416,7 +416,7 @@
         <!-- CONTROLES FLUTUANTES SUPERIORES ESQUERDOS -->
         <div class="absolute top-4 left-4 z-[999] flex gap-2">
             <!-- Botão Menu Hambúrguer para Sidebar (Apenas Mobile/Tablet) -->
-            <button id="btn-menu-sidebar" onclick="document.getElementById('sidebar').classList.toggle('mobile-open')" 
+            <button id="btn-menu-sidebar" onclick="window.toggleMobileSidebar ? window.toggleMobileSidebar() : document.getElementById('sidebar').classList.toggle('mobile-open')" 
                     class="lg:hidden w-12 h-12 rounded-2xl bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border border-slate-900/10 dark:border-white/10 shadow-2xl flex items-center justify-center text-slate-700 dark:text-white hover:scale-105 active:scale-95 transition-all duration-300">
                 <i class="fa-solid fa-bars text-sm"></i>
             </button>
@@ -449,7 +449,7 @@
             <div class="p-4 border-b border-slate-900/5 dark:border-white/5 flex items-center justify-between bg-slate-50/50 dark:bg-white/5 shrink-0">
                 <div class="flex items-center gap-2">
                     <!-- Hamburger para abrir a sidebar a partir do HUD (Mobile) -->
-                    <button onclick="document.getElementById('sidebar').classList.toggle('mobile-open')" class="lg:hidden w-8 h-8 rounded-lg hover:bg-slate-900/5 dark:hover:bg-white/5 text-slate-500 hover:text-slate-800 dark:hover:text-white flex items-center justify-center active:scale-95 transition-all">
+                    <button onclick="window.toggleMobileSidebar ? window.toggleMobileSidebar() : document.getElementById('sidebar').classList.toggle('mobile-open')" class="lg:hidden w-8 h-8 rounded-lg hover:bg-slate-900/5 dark:hover:bg-white/5 text-slate-500 hover:text-slate-800 dark:hover:text-white flex items-center justify-center active:scale-95 transition-all">
                         <i class="fa-solid fa-bars text-sm"></i>
                     </button>
                     <span class="relative flex h-2 w-2">
