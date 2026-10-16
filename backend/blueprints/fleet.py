@@ -1640,13 +1640,27 @@ def config_layout():
         # Processar powerbi_url
         config.powerbi_url = request.form.get("powerbi_url", "").strip() or None
 
+        # Helper para normalizar cores hexadecimais (#RGB ou #RRGGBB)
+        def _normalize_hex(val):
+            if not val:
+                return None
+            val = val.strip()
+            if not val.startswith("#"):
+                val = "#" + val
+            if len(val) == 4 and all(c in "0123456789abcdefABCDEF" for c in val[1:]):
+                return f"#{val[1]*2}{val[2]*2}{val[3]*2}".lower()
+            if len(val) == 7 and all(c in "0123456789abcdefABCDEF" for c in val[1:]):
+                return val.lower()
+            return None
+
         # Processar login_primary_color
-        color = request.form.get("login_primary_color", "").strip()
-        if color:
-            if not color.startswith("#") or len(color) not in {4, 7}:
-                flash("Cor primária inválida. Use um formato hexadecimal (ex: #10b981).", "error")
-                return redirect(url_for("config_layout"))
-            config.login_primary_color = color
+        raw_primary = request.form.get("login_primary_color", "").strip()
+        norm_primary = _normalize_hex(raw_primary)
+        if raw_primary and not norm_primary:
+            flash("Cor primária inválida. Use um formato hexadecimal (ex: #10b981).", "error")
+            return redirect(url_for("config_layout"))
+        if norm_primary:
+            config.login_primary_color = norm_primary
 
         # Processar tamanhos de imagens e filtros
         try:
@@ -1705,20 +1719,18 @@ def config_layout():
             config.login_bg_position_mobile = bg_pos_mobile
 
         # Processar overlay color
-        overlay_color = request.form.get("login_overlay_color", "").strip()
-        if overlay_color and overlay_color.startswith("#"):
-            config.login_overlay_color = overlay_color
+        norm_overlay = _normalize_hex(request.form.get("login_overlay_color", ""))
+        if norm_overlay:
+            config.login_overlay_color = norm_overlay
 
         # Processar secondary color
-        secondary_color = request.form.get("login_secondary_color", "").strip()
-        if secondary_color and secondary_color.startswith("#"):
-            config.login_secondary_color = secondary_color
+        norm_secondary = _normalize_hex(request.form.get("login_secondary_color", ""))
+        if norm_secondary:
+            config.login_secondary_color = norm_secondary
 
         # Processar sidebar colors
-        sb_bg = request.form.get("sidebar_bg_color", "").strip()
-        config.sidebar_bg_color = sb_bg if sb_bg and sb_bg.startswith("#") else None
-        sb_text = request.form.get("sidebar_text_color", "").strip()
-        config.sidebar_text_color = sb_text if sb_text and sb_text.startswith("#") else None
+        config.sidebar_bg_color = _normalize_hex(request.form.get("sidebar_bg_color", ""))
+        config.sidebar_text_color = _normalize_hex(request.form.get("sidebar_text_color", ""))
 
         # Processar posição do card e modo de layout
         allowed_card_positions = {"left", "left-center", "center", "right-center", "right"}
@@ -1731,21 +1743,16 @@ def config_layout():
             config.login_layout_mode = layout_mode
 
         hero_title = request.form.get("login_hero_title", "").strip()
-        if hero_title:
-            config.login_hero_title = hero_title[:255]
+        config.login_hero_title = hero_title[:255] if hero_title else "Gestão Inteligente de Frotas e Equipes"
 
         hero_subtitle = request.form.get("login_hero_subtitle", "").strip()
-        if hero_subtitle:
-            config.login_hero_subtitle = hero_subtitle
+        config.login_hero_subtitle = hero_subtitle if hero_subtitle else "Controle total da sua operação, com mais eficiência, produtividade e segurança."
 
         hero_bullets = request.form.get("login_hero_bullets", "").strip()
-        if hero_bullets:
-            config.login_hero_bullets = hero_bullets
+        config.login_hero_bullets = hero_bullets if hero_bullets else "Gestão completa de frotas e veículos|Controle de equipes e produtividade|Vistorias e checklists digitais em tempo real|Gestão de Ordens de Serviço (O.S.) e avarias|Monitoramento operacional e indicadores|Automação de processos e redução de custos"
 
         footer_text = request.form.get("login_footer_text", "").strip()
-        if footer_text:
-            config.login_footer_text = footer_text[:255]
-
+        config.login_footer_text = footer_text[:255] if footer_text else "© 2026 Painel de Frota. Todos os direitos reservados."
 
         # Processar uploads
 
@@ -1804,6 +1811,8 @@ def reset_layout_field(field):
         "sidebar_bg_color", "sidebar_text_color", "favicon_custom", "login_card_position",
         "login_btn_padding_y", "login_btn_font_size", "login_subtitle_text",
         "login_username_placeholder", "login_password_placeholder",
+        "login_hero_title", "login_hero_subtitle", "login_hero_bullets", "login_footer_text",
+        "login_layout_mode"
     }
     if field not in allowed_fields:
         flash("Campo inválido.", "error")
@@ -1836,6 +1845,11 @@ def reset_layout_field(field):
         "login_overlay_color": "#000000",
         "login_secondary_color": "#064e3b",
         "login_card_position": "right",
+        "login_hero_title": "Gestão Inteligente de Frotas e Equipes",
+        "login_hero_subtitle": "Controle total da sua operação, com mais eficiência, produtividade e segurança.",
+        "login_hero_bullets": "Gestão completa de frotas e veículos|Controle de equipes e produtividade|Vistorias e checklists digitais em tempo real|Gestão de Ordens de Serviço (O.S.) e avarias|Monitoramento operacional e indicadores|Automação de processos e redução de custos",
+        "login_footer_text": "© 2026 Painel de Frota. Todos os direitos reservados.",
+        "login_layout_mode": "split"
     }
 
     if field in simple_defaults:

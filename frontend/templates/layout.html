@@ -103,10 +103,60 @@
     <style>
       @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
       
+      :root {
+        --brand-primary: {% if sys_config and sys_config.login_primary_color %}{{ sys_config.login_primary_color }}{% else %}#10b981{% endif %};
+        --brand-secondary: {% if sys_config and sys_config.login_secondary_color %}{{ sys_config.login_secondary_color }}{% else %}#064e3b{% endif %};
+        --brand-radius: {% if sys_config and sys_config.login_btn_radius %}{{ sys_config.login_btn_radius }}px{% else %}12px{% endif %};
+      }
+
       body {
         font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
+      }
+
+      /* ✅ PADRONIZAÇÃO VISUAL: BOTÕES DE AÇÃO DO SISTEMA */
+      button.bg-emerald-600,
+      button.bg-emerald-500,
+      a.bg-emerald-600,
+      a.bg-emerald-500,
+      button[type="submit"].bg-emerald-600,
+      button[type="submit"].bg-emerald-500,
+      .btn-primary,
+      .custom-btn-primary {
+        background-color: var(--brand-primary) !important;
+        border-radius: var(--brand-radius) !important;
+        color: #ffffff !important;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      }
+
+      button.bg-emerald-600:hover,
+      button.bg-emerald-500:hover,
+      a.bg-emerald-600:hover,
+      a.bg-emerald-500:hover,
+      .btn-primary:hover {
+        filter: brightness(0.92);
+      }
+
+      button.bg-emerald-600:active,
+      button.bg-emerald-500:active,
+      a.bg-emerald-600:active,
+      a.bg-emerald-500:active,
+      .btn-primary:active {
+        filter: brightness(0.85);
+      }
+
+      /* Destaque ativo da navegação lateral */
+      #sidebar a.bg-slate-900,
+      #sidebar .dark a.dark\:bg-white,
+      #sidebar a[class*="bg-slate-900"] {
+        background-color: var(--brand-primary) !important;
+        color: #ffffff !important;
+        border-radius: var(--brand-radius) !important;
+      }
+      #sidebar a.bg-slate-900 i,
+      #sidebar a[class*="bg-slate-900"] i {
+        color: #ffffff !important;
       }
 
       /* ✅ SIDEBAR FIXO PROFISSIONAL */
@@ -356,7 +406,7 @@
 
       .btn-premium {
         padding: 0.625rem 1.25rem;
-        border-radius: 0.75rem;
+        border-radius: var(--brand-radius, 0.75rem);
         font-weight: 600;
         font-size: 0.875rem;
         transition: all 0.15s ease;
@@ -368,6 +418,31 @@
       .btn-premium:active { transform: scale(0.98); }
 
     </style>
+
+    {% if sys_config and (sys_config.sidebar_bg_color or sys_config.sidebar_text_color) %}
+    <style>
+      {% if sys_config.sidebar_bg_color %}
+      #sidebar, .dark #sidebar {
+        background-color: {{ sys_config.sidebar_bg_color }} !important;
+        border-right-color: rgba(255, 255, 255, 0.08) !important;
+      }
+      {% endif %}
+      {% if sys_config.sidebar_text_color %}
+      #sidebar a:not([class*="bg-slate-900"]),
+      #sidebar button,
+      #sidebar span:not(.badge),
+      #sidebar .text-slate-600,
+      #sidebar .text-slate-400,
+      #sidebar .dark\:text-slate-400 {
+        color: {{ sys_config.sidebar_text_color }} !important;
+      }
+      #sidebar i:not(.text-white) {
+        color: {{ sys_config.sidebar_text_color }} !important;
+        opacity: 0.9;
+      }
+      {% endif %}
+    </style>
+    {% endif %}
   </head>
 
   <body class="min-h-screen bg-[#f8fafc] dark:bg-[#090d16] text-slate-800 dark:text-slate-100">

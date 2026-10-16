@@ -111,6 +111,7 @@
     <!-- TAB PANEL CONTENT -->
     <div class="flex-1">
       <form id="layoutForm" method="post" enctype="multipart/form-data" class="space-y-6">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         
         <div class="flex flex-col xl:flex-row gap-6 items-start">
           
@@ -129,8 +130,8 @@
               <!-- Primary Color Picker -->
               <div class="space-y-3">
                 <div>
-                  <label class="text-sm font-semibold text-slate-700 dark:text-slate-300 block">Cor Primária (Acentos & Botões)</label>
-                  <p class="text-xs text-slate-400 mt-0.5">Define a cor principal na tela de Login, botões de ação e elementos de destaque visual do sistema.</p>
+                  <label class="text-sm font-semibold text-slate-700 dark:text-slate-300 block">Cor Primária (Acentos & Botões do Sistema)</label>
+                  <p class="text-xs text-slate-400 mt-0.5">Define a cor dos botões de ação do sistema (Salvar, Criar, Confirmar), navegação ativa e tela de login.</p>
                 </div>
                 
                 <div class="flex items-center gap-3">
@@ -640,7 +641,7 @@
                   <!-- Button Radius Slider -->
                   <div class="space-y-1.5">
                     <div class="flex items-center justify-between">
-                      <label class="text-xs font-semibold text-slate-600 dark:text-slate-400">Arredondamento das Bordas</label>
+                      <label class="text-xs font-semibold text-slate-600 dark:text-slate-400">Arredondamento das Bordas (Sistema & Login)</label>
                       <span id="login_btn_radius_val" class="text-xs font-mono font-black text-emerald-500">{{ config.login_btn_radius or 12 }}px</span>
                     </div>
                     <div class="flex items-center gap-2">
@@ -650,6 +651,7 @@
                              oninput="document.getElementById('login_btn_radius_val').textContent = this.value + 'px'; updateEffectsPreview()">
                       <button type="button" onclick="triggerReset('login_btn_radius')" class="text-xs text-slate-400 hover:text-red-500 transition-colors"><i class="fa-solid fa-undo"></i></button>
                     </div>
+                    <p class="text-[10px] text-slate-400">Padroniza as curvas de todos os botões de ação do painel e da tela de login.</p>
                   </div>
 
                   <!-- Button Padding/Height Slider -->
@@ -893,13 +895,15 @@
                         <div class="relative w-10 h-8 rounded-lg overflow-hidden border border-slate-200 dark:border-white/10 shadow-sm cursor-pointer">
                           <input type="color" id="sidebar_bg_color_picker" 
                                  value="{{ config.sidebar_bg_color or '#0f172a' }}" 
-                                 class="absolute inset-0 w-full h-full p-0 border-0 cursor-pointer bg-transparent">
+                                 class="absolute inset-0 w-full h-full p-0 border-0 cursor-pointer bg-transparent"
+                                 oninput="syncSidebarBgPickerToText(this.value)">
                         </div>
                         <input type="text" name="sidebar_bg_color" id="sidebar_bg_color_text"
                                value="{{ config.sidebar_bg_color or '' }}"
                                placeholder="Padrão do tema"
-                               class="flex-1 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 focus:outline-none focus:border-emerald-500 transition-all">
-                        <button type="button" onclick="triggerReset('sidebar_bg_color')" class="text-[10px] text-slate-400 hover:text-red-500 transition-colors"><i class="fa-solid fa-undo"></i></button>
+                               class="flex-1 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 focus:outline-none focus:border-emerald-500 transition-all"
+                               oninput="syncSidebarBgTextToPicker(this.value)">
+                        <button type="button" onclick="triggerReset('sidebar_bg_color')" class="text-[10px] text-slate-400 hover:text-red-500 transition-colors" title="Resetar"><i class="fa-solid fa-undo"></i></button>
                       </div>
                     </div>
 
@@ -910,13 +914,15 @@
                         <div class="relative w-10 h-8 rounded-lg overflow-hidden border border-slate-200 dark:border-white/10 shadow-sm cursor-pointer">
                           <input type="color" id="sidebar_text_color_picker" 
                                  value="{{ config.sidebar_text_color or '#e2e8f0' }}" 
-                                 class="absolute inset-0 w-full h-full p-0 border-0 cursor-pointer bg-transparent">
+                                 class="absolute inset-0 w-full h-full p-0 border-0 cursor-pointer bg-transparent"
+                                 oninput="syncSidebarTextPickerToText(this.value)">
                         </div>
                         <input type="text" name="sidebar_text_color" id="sidebar_text_color_text"
                                value="{{ config.sidebar_text_color or '' }}"
                                placeholder="Padrão do tema"
-                               class="flex-1 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 focus:outline-none focus:border-emerald-500 transition-all">
-                        <button type="button" onclick="triggerReset('sidebar_text_color')" class="text-[10px] text-slate-400 hover:text-red-500 transition-colors"><i class="fa-solid fa-undo"></i></button>
+                               class="flex-1 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-white/10 rounded-lg px-3 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 focus:outline-none focus:border-emerald-500 transition-all"
+                               oninput="syncSidebarTextTextToPicker(this.value)">
+                        <button type="button" onclick="triggerReset('sidebar_text_color')" class="text-[10px] text-slate-400 hover:text-red-500 transition-colors" title="Resetar"><i class="fa-solid fa-undo"></i></button>
                       </div>
                     </div>
                   </div>
@@ -1143,7 +1149,9 @@ WWW.ADAPTLINK.COM.BR{% endif %}</textarea>
   </div>
 
   <!-- HIDDEN RESET FORMS -->
-  <form id="resetForm" method="post" action="" class="hidden"></form>
+  <form id="resetForm" method="post" action="" class="hidden">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  </form>
 
   <!-- PREVIEW VISUALIZER MODAL -->
   <div id="previewVisualizerModal" class="fixed inset-0 hidden items-center justify-center z-[200] p-4">
@@ -1375,21 +1383,90 @@ WWW.ADAPTLINK.COM.BR{% endif %}</textarea>
     }
   }
 
-  // COLOR SYNC
+  // COLOR HELPERS & SYNC
+  function formatHex(val) {
+    if (!val) return '';
+    val = val.trim();
+    if (!val.startsWith('#')) val = '#' + val;
+    if (/^#[0-9A-Fa-f]{3}$/.test(val)) {
+      val = '#' + val[1] + val[1] + val[2] + val[2] + val[3] + val[3];
+    }
+    return /^#[0-9A-Fa-f]{6}$/.test(val) ? val.toLowerCase() : '';
+  }
+
   function syncColorPickerToText(val) {
-    document.getElementById('login_primary_color_text').value = val;
+    const textEl = document.getElementById('login_primary_color_text');
+    if (textEl) textEl.value = val;
     updateEffectsPreview();
   }
   function syncColorTextToPicker(val) {
-    if (/^#[0-9A-F]{6}$/i.test(val)) {
-      document.getElementById('login_primary_color_picker').value = val;
-      updateEffectsPreview();
+    const hex = formatHex(val);
+    if (hex) {
+      const picker = document.getElementById('login_primary_color_picker');
+      if (picker) picker.value = hex;
     }
+    updateEffectsPreview();
   }
   function selectPaletteColor(val) {
-    document.getElementById('login_primary_color_picker').value = val;
-    document.getElementById('login_primary_color_text').value = val;
+    const picker = document.getElementById('login_primary_color_picker');
+    const textEl = document.getElementById('login_primary_color_text');
+    if (picker) picker.value = val;
+    if (textEl) textEl.value = val;
     updateEffectsPreview();
+  }
+
+  function syncSecondaryPickerToText(val) {
+    const textEl = document.getElementById('login_secondary_color_text');
+    if (textEl) textEl.value = val;
+    updateEffectsPreview();
+  }
+  function syncSecondaryTextToPicker(val) {
+    const hex = formatHex(val);
+    if (hex) {
+      const picker = document.getElementById('login_secondary_color_picker');
+      if (picker) picker.value = hex;
+    }
+    updateEffectsPreview();
+  }
+
+  function syncSidebarBgPickerToText(val) {
+    const textEl = document.getElementById('sidebar_bg_color_text');
+    if (textEl) textEl.value = val;
+    updateSidebarPreviewLive();
+  }
+  function syncSidebarBgTextToPicker(val) {
+    const hex = formatHex(val);
+    if (hex) {
+      const picker = document.getElementById('sidebar_bg_color_picker');
+      if (picker) picker.value = hex;
+    }
+    updateSidebarPreviewLive();
+  }
+
+  function syncSidebarTextPickerToText(val) {
+    const textEl = document.getElementById('sidebar_text_color_text');
+    if (textEl) textEl.value = val;
+    updateSidebarPreviewLive();
+  }
+  function syncSidebarTextTextToPicker(val) {
+    const hex = formatHex(val);
+    if (hex) {
+      const picker = document.getElementById('sidebar_text_color_picker');
+      if (picker) picker.value = hex;
+    }
+    updateSidebarPreviewLive();
+  }
+
+  function updateSidebarPreviewLive() {
+    const bg = document.getElementById('sidebar_bg_color_text')?.value?.trim() || '#0f172a';
+    const text = document.getElementById('sidebar_text_color_text')?.value?.trim() || '#e2e8f0';
+    const prev = document.getElementById('sidebarPreview');
+    if (prev) {
+      prev.style.backgroundColor = bg;
+      prev.querySelectorAll('div').forEach(b => {
+        b.style.backgroundColor = text;
+      });
+    }
   }
 
   // RESET HANDLER
@@ -1397,15 +1474,16 @@ WWW.ADAPTLINK.COM.BR{% endif %}</textarea>
     if (confirm('Tem certeza de que deseja restaurar esta configuração para o padrão do sistema?')) {
       const form = document.getElementById('resetForm');
       form.action = `/configuracoes/layout/reset/${field}`;
-      if (!form.querySelector('input[name="csrf_token"]')) {
-        const tokenMeta = document.querySelector('meta[name="csrf-token"]');
-        if (tokenMeta) {
-          const input = document.createElement('input');
-          input.type = 'hidden';
-          input.name = 'csrf_token';
-          input.value = tokenMeta.content;
-          form.appendChild(input);
-        }
+      let csrfInput = form.querySelector('input[name="csrf_token"]');
+      if (!csrfInput) {
+        csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrf_token';
+        form.appendChild(csrfInput);
+      }
+      const tokenMeta = document.querySelector('meta[name="csrf-token"]');
+      if (tokenMeta && !csrfInput.value) {
+        csrfInput.value = tokenMeta.content;
       }
       form.submit();
     }
@@ -1487,6 +1565,7 @@ WWW.ADAPTLINK.COM.BR{% endif %}</textarea>
       'login_bg_zoom', 'login_bg_blur', 'login_bg_opacity', 'login_overlay_color_text',
       'login_card_opacity', 'login_card_blur', 'login_card_radius',
       'login_primary_color_text', 'login_secondary_color_text',
+      'sidebar_bg_color_text', 'sidebar_text_color_text',
       'login_title_text', 'login_subtitle_text', 'login_username_placeholder', 'login_password_placeholder',
       'login_btn_text', 'login_btn_radius', 'login_btn_padding_y', 'login_btn_font_size', 'login_logo_height',
       'login_hero_title', 'login_hero_subtitle', 'login_hero_bullets', 'login_footer_text'
@@ -1506,6 +1585,7 @@ WWW.ADAPTLINK.COM.BR{% endif %}</textarea>
 
     // Initial load
     setSimulatorMode('desktop');
+    updateSidebarPreviewLive();
   });
 </script>
 {% endblock %}
