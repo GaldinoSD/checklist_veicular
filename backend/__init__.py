@@ -341,6 +341,24 @@ def create_app():
             text('ALTER TABLE training_course ADD COLUMN IF NOT EXISTS course_type VARCHAR(50) DEFAULT \'lms\''),
             text('ALTER TABLE user_tool_inspection ADD COLUMN IF NOT EXISTS is_locked BOOLEAN DEFAULT true'),
             text('ALTER TABLE user_tool_status ADD COLUMN IF NOT EXISTS is_editable BOOLEAN DEFAULT false'),
+            text('ALTER TABLE user_tool_status ADD COLUMN IF NOT EXISTS unlock_requested BOOLEAN DEFAULT false'),
+            text('ALTER TABLE user_tool_status ADD COLUMN IF NOT EXISTS unlock_reason TEXT'),
+            text('ALTER TABLE user_tool_status ADD COLUMN IF NOT EXISTS last_released_at TIMESTAMP'),
+            text('ALTER TABLE user_tool_status ADD COLUMN IF NOT EXISTS last_released_by_id INTEGER REFERENCES "user"(id)'),
+            text('''
+                CREATE TABLE IF NOT EXISTS tool_release_request (
+                    id SERIAL PRIMARY KEY,
+                    user_id INTEGER NOT NULL REFERENCES "user"(id) ON DELETE CASCADE,
+                    tool_id INTEGER NOT NULL REFERENCES tool(id) ON DELETE CASCADE,
+                    inspection_id INTEGER NOT NULL REFERENCES user_tool_inspection(id) ON DELETE CASCADE,
+                    reason TEXT NOT NULL,
+                    status VARCHAR(20) DEFAULT 'pendente',
+                    reviewed_by_id INTEGER REFERENCES "user"(id) ON DELETE SET NULL,
+                    reviewed_at TIMESTAMP,
+                    review_notes TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            '''),
             text('ALTER TABLE user_tool_inspection ADD COLUMN IF NOT EXISTS signature VARCHAR(255)'),
             text('ALTER TABLE checklist ADD COLUMN IF NOT EXISTS signature VARCHAR(255)'),
             text("ALTER TABLE checklist_item ADD COLUMN IF NOT EXISTS vehicle_type VARCHAR(20) DEFAULT 'carro'"),

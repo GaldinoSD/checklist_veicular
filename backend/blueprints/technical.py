@@ -32,7 +32,7 @@ from backend.config import (
 from backend.models import (
     User, Vehicle, VehicleInfo, VehicleMov, Checklist, ChecklistItem,
     Announcement, AnnouncementRead, Manual, ToolCategory, Tool, UserToolInspection,
-    UserToolStatus, ToolSuggestion, Training, TrainingCourse, TrainingModule,
+    UserToolStatus, ToolSuggestion, ToolReleaseRequest, Training, TrainingCourse, TrainingModule,
     TrainingQuestion, TrainingAssignment, TrainingAttempt, Badge, Generator,
     RFO, Solicitacao, SupervisaoTecnica, RotaExata, Team, Task, CompletedActivity, Patio, Encerramento,
     Scale, AnnualScaleSchedule, Schedule, Meeting, Note, Activity, SystemRule, Company, Contract, ExternalCollaborator, SystemRuleLog,
@@ -9353,7 +9353,10 @@ def controle_ferramentas():
                 "status": status_item.status,
                 "sub_status": status_item.sub_status,
                 "damage_description": status_item.damage_description or "",
-                "is_editable": status_item.is_editable
+                "is_editable": status_item.is_editable,
+                "unlock_requested": getattr(status_item, "unlock_requested", False),
+                "unlock_reason": getattr(status_item, "unlock_reason", None) or "",
+                "last_released_at": status_item.last_released_at.strftime("%d/%m/%Y %H:%M") if getattr(status_item, "last_released_at", None) else None
             }
 
     if request.method == "POST":
@@ -9380,6 +9383,7 @@ def controle_ferramentas():
         if inspection and inspection.is_locked:
             # Vistoria bloqueada - Apenas atualiza ferramentas com is_editable == True
             editable_statuses = {s.tool_id: s for s in inspection.statuses if s.is_editable}
+            updated_count = 0
             for tool in active_tools:
                 if tool.id in editable_statuses:
                     status = request.form.get(f"tool_status_{tool.id}")
@@ -9395,27 +9399,30 @@ def controle_ferramentas():
                         damage_description = None
                         
                     tool_status = editable_statuses[tool.id]
+                    tool_status.status = status
+                    tool_status.sub_status = sub_status
+                    tool_status.damage_description = damage_description
+                    tool_status.is_editable = False  # Tranca novamente após o novo envio!
+                    tool_status.unlock_requested = False
+                    tool_status.unlock_reason = None
+                    tool_status.updated_at = agora()
+                    updated_count += 1
                     
-                    # Verifica se o item foi realmente modificado pelo técnico
-                    is_changed = (
-                        tool_status.status != status or
-                        tool_status.sub_status != sub_status or
-                        tool_status.damage_description != damage_description
-                    )
-                    
-                    if is_changed:
-                        tool_status.status = status
-                        tool_status.sub_status = sub_status
-                        tool_status.damage_description = damage_description
-                        tool_status.is_editable = False  # Bloqueia de volta apenas se foi modificado!
-                        tool_status.updated_at = agora()
+                    # Conclui qualquer solicitação pendente/aprovada desta ferramenta
+                    resolved_reqs = ToolReleaseRequest.query.filter_by(
+                        user_id=current_user.id,
+                        tool_id=tool.id,
+                        inspection_id=inspection.id
+                    ).filter(ToolReleaseRequest.status.in_(["pendente", "aprovado"])).all()
+                    for req_item in resolved_reqs:
+                        req_item.status = "concluido"
             
             inspection.updated_at = agora()
             if sig_filename:
                 inspection.signature = sig_filename
             db.session.commit()
-            registrar_log(f"Itens liberados do controle de ferramentas atualizados pelo técnico: {current_user.username}")
-            flash("Controle de ferramentas updated com sucesso!", "success")
+            registrar_log(f"Itens liberados ({updated_count}) do controle de ferramentas atualizados pelo técnico: {current_user.username}")
+            flash(f"Checklist atualizado com sucesso! {updated_count} item(ns) liberado(s) reenviado(s).", "success")
         else:
             # Vistoria nova ou totalmente desbloqueada
             if not inspection:
@@ -9455,7 +9462,8 @@ def controle_ferramentas():
                         status=status,
                         sub_status=sub_status,
                         damage_description=damage_description,
-                        is_editable=False # Bloqueada por padrão
+                        is_editable=False, # Bloqueada por padrão
+                        unlock_requested=False
                     )
                     db.session.add(tool_status)
                 else:
@@ -9463,6 +9471,7 @@ def controle_ferramentas():
                     tool_status.sub_status = sub_status
                     tool_status.damage_description = damage_description
                     tool_status.is_editable = False # Bloqueada por padrão
+                    tool_status.unlock_requested = False
                     tool_status.updated_at = agora()
                     
             db.session.commit()
@@ -9486,16 +9495,73 @@ def controle_ferramentas():
 
 
 
+@technical_bp.route("/controle/ferramentas/solicitar-liberacao/<int:tool_id>", methods=["POST"])
+@login_required
+def controle_ferramentas_solicitar_liberacao(tool_id):
+    if not current_user.has_permission("controle_ferramentas"):
+        return jsonify({"success": False, "message": "Você não tem permissão para controle de ferramentas."}), 403
+
+    reason = request.form.get("reason", "").strip() or (request.json.get("reason", "").strip() if request.is_json else "")
+    if not reason:
+        return jsonify({"success": False, "message": "Por favor, descreva o motivo da solicitação de liberação."}), 400
+
+    inspection = UserToolInspection.query.filter_by(user_id=current_user.id).first()
+    if not inspection or not inspection.is_locked:
+        return jsonify({"success": False, "message": "O seu controle de ferramentas não está trancado."}), 400
+
+    tool = Tool.query.filter_by(id=tool_id, is_active=True).first_or_404()
+    tool_status = UserToolStatus.query.filter_by(inspection_id=inspection.id, tool_id=tool.id).first()
+    if not tool_status:
+        return jsonify({"success": False, "message": "Ferramenta não encontrada na sua vistoria atual."}), 404
+
+    if tool_status.is_editable:
+        return jsonify({"success": False, "message": "Esta ferramenta já está liberada para edição no seu checklist!"}), 400
+
+    # Verifica se já existe solicitação pendente
+    existing = ToolReleaseRequest.query.filter_by(
+        user_id=current_user.id,
+        tool_id=tool.id,
+        inspection_id=inspection.id,
+        status="pendente"
+    ).first()
+    if existing:
+        return jsonify({"success": False, "message": "Já existe uma solicitação pendente para este item aguardando avaliação do supervisor."}), 400
+
+    req = ToolReleaseRequest(
+        user_id=current_user.id,
+        tool_id=tool.id,
+        inspection_id=inspection.id,
+        reason=reason,
+        status="pendente"
+    )
+    db.session.add(req)
+    tool_status.unlock_requested = True
+    tool_status.unlock_reason = reason
+    db.session.commit()
+
+    registrar_log(f"Técnico {current_user.username} solicitou liberação da ferramenta '{tool.name}'. Motivo: {reason}")
+    return jsonify({
+        "success": True,
+        "message": f"Solicitação de liberação para '{tool.name}' enviada ao supervisor com sucesso!"
+    })
+
+
+
 @technical_bp.route("/controle/ferramentas/atual")
 @admin_required
 def controle_ferramentas_atual():
     # Carrega todas as inspeções realizadas pelos técnicos
     inspections = UserToolInspection.query.order_by(UserToolInspection.updated_at.desc()).all()
     
+    # Carrega solicitações pendentes de liberação
+    pending_requests = ToolReleaseRequest.query.filter_by(status="pendente").order_by(ToolReleaseRequest.created_at.desc()).all()
+    
     # Montamos as estatísticas para os boxes informativos
     total_tecnicos = len(inspections)
+    total_solicitacoes_pendentes = len(pending_requests)
     total_avarias = 0
     total_perdidos = 0
+    total_liberados = 0
     
     inspections_data = []
     for ins in inspections:
@@ -9506,9 +9572,10 @@ def controle_ferramentas_atual():
         count_avaria = 0
         count_perdido = 0
         count_nao_recebi = 0
+        count_solicitacoes_pendentes = 0
+        count_liberados = 0
         
         for s in statuses:
-            # Conta se a ferramenta está ativa atualmente (para evitar contabilizar ferramentas desativadas)
             if s.tool and s.tool.is_active:
                 if s.status == "possui":
                     if s.sub_status == "bom":
@@ -9522,6 +9589,12 @@ def controle_ferramentas_atual():
                         total_perdidos += 1
                     else:
                         count_nao_recebi += 1
+                
+                if getattr(s, "unlock_requested", False):
+                    count_solicitacoes_pendentes += 1
+                if getattr(s, "is_editable", False):
+                    count_liberados += 1
+                    total_liberados += 1
                         
         inspections_data.append({
             "inspection": ins,
@@ -9530,15 +9603,20 @@ def controle_ferramentas_atual():
             "count_avaria": count_avaria,
             "count_perdido": count_perdido,
             "count_nao_recebi": count_nao_recebi,
+            "count_solicitacoes": count_solicitacoes_pendentes,
+            "count_liberados": count_liberados,
             "total_items": count_ok + count_avaria + count_perdido + count_nao_recebi
         })
         
     return render_template(
         "controle_ferramentas_atual.html", 
         inspections=inspections_data,
+        pending_requests=pending_requests,
         total_tecnicos=total_tecnicos,
+        total_solicitacoes_pendentes=total_solicitacoes_pendentes,
         total_avarias=total_avarias,
-        total_perdidos=total_perdidos
+        total_perdidos=total_perdidos,
+        total_liberados=total_liberados
     )
 
 
@@ -9552,6 +9630,14 @@ def controle_ferramentas_detalhes(user_id):
     statuses_data = []
     for s in inspection.statuses:
         if s.tool and s.tool.is_active:
+            # Verifica se há solicitação pendente desta ferramenta
+            pending_req = ToolReleaseRequest.query.filter_by(
+                user_id=user_id,
+                tool_id=s.tool.id,
+                inspection_id=inspection.id,
+                status="pendente"
+            ).order_by(ToolReleaseRequest.created_at.desc()).first()
+
             statuses_data.append({
                 "tool_id": s.tool.id,
                 "tool_name": s.tool.name,
@@ -9559,17 +9645,107 @@ def controle_ferramentas_detalhes(user_id):
                 "status": s.status,
                 "sub_status": s.sub_status,
                 "damage_description": s.damage_description or "",
-                "is_editable": s.is_editable
+                "is_editable": s.is_editable,
+                "unlock_requested": getattr(s, "unlock_requested", False),
+                "unlock_reason": getattr(s, "unlock_reason", "") or "",
+                "pending_request_id": pending_req.id if pending_req else None,
+                "last_released_at": s.last_released_at.strftime("%d/%m/%Y %H:%M") if getattr(s, "last_released_at", None) else None,
+                "last_released_by": s.last_released_by.username if getattr(s, "last_released_by", None) else None
             })
             
+    # Histórico recente de solicitações deste técnico
+    recent_requests = ToolReleaseRequest.query.filter_by(user_id=user_id).order_by(ToolReleaseRequest.created_at.desc()).limit(15).all()
+    history_data = []
+    for r in recent_requests:
+        history_data.append({
+            "id": r.id,
+            "tool_name": r.tool.name if r.tool else "Ferramenta",
+            "category": r.tool.category if (r.tool and r.tool.category) else "Outros",
+            "reason": r.reason,
+            "status": r.status,
+            "created_at": r.created_at.strftime("%d/%m/%Y %H:%M") if r.created_at else "-",
+            "reviewed_by": r.reviewed_by.username if r.reviewed_by else "-",
+            "reviewed_at": r.reviewed_at.strftime("%d/%m/%Y %H:%M") if r.reviewed_at else "-",
+            "review_notes": r.review_notes or ""
+        })
+
     return jsonify({
         "user_id": user_id,
         "technician": inspection.user.username,
         "updated_at": inspection.updated_at.strftime("%d/%m/%Y %H:%M:%S"),
         "notes": inspection.notes or "",
         "statuses": statuses_data,
-        "is_locked": inspection.is_locked
+        "is_locked": inspection.is_locked,
+        "history": history_data
     })
+
+
+
+@technical_bp.route("/controle/ferramentas/atual/solicitacao/aprovar/<int:request_id>", methods=["POST"])
+@admin_required
+def controle_ferramentas_aprovar_solicitacao(request_id):
+    req = ToolReleaseRequest.query.get_or_404(request_id)
+    review_notes = request.form.get("review_notes", "").strip() or (request.json.get("review_notes", "").strip() if request.is_json else "")
+
+    req.status = "aprovado"
+    req.reviewed_by_id = current_user.id
+    req.reviewed_at = agora()
+    req.review_notes = review_notes
+
+    inspection = UserToolInspection.query.get(req.inspection_id)
+    if inspection:
+        inspection.is_locked = True
+        status_item = UserToolStatus.query.filter_by(inspection_id=inspection.id, tool_id=req.tool_id).first()
+        if status_item:
+            status_item.is_editable = True
+            status_item.unlock_requested = False
+            status_item.last_released_at = agora()
+            status_item.last_released_by_id = current_user.id
+
+    db.session.commit()
+    registrar_log(f"Solicitação de liberação #{req.id} para '{req.tool.name}' do técnico {req.user.username} aprovada pelo supervisor {current_user.username}.")
+
+    if request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return jsonify({
+            "success": True,
+            "message": f"Item '{req.tool.name}' liberado com sucesso para o técnico {req.user.username}!"
+        })
+    flash(f"Item '{req.tool.name}' liberado com sucesso para o técnico {req.user.username}!", "success")
+    return redirect(url_for("controle_ferramentas_atual"))
+
+
+
+@technical_bp.route("/controle/ferramentas/atual/solicitacao/recusar/<int:request_id>", methods=["POST"])
+@admin_required
+def controle_ferramentas_recusar_solicitacao(request_id):
+    req = ToolReleaseRequest.query.get_or_404(request_id)
+    review_notes = request.form.get("review_notes", "").strip() or (request.json.get("review_notes", "").strip() if request.is_json else "")
+    if not review_notes:
+        msg = "Por favor, informe a justificativa da recusa para orientar o técnico."
+        if request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+            return jsonify({"success": False, "message": msg}), 400
+        flash(msg, "warning")
+        return redirect(url_for("controle_ferramentas_atual"))
+
+    req.status = "recusado"
+    req.reviewed_by_id = current_user.id
+    req.reviewed_at = agora()
+    req.review_notes = review_notes
+
+    status_item = UserToolStatus.query.filter_by(inspection_id=req.inspection_id, tool_id=req.tool_id).first()
+    if status_item:
+        status_item.unlock_requested = False
+
+    db.session.commit()
+    registrar_log(f"Solicitação de liberação #{req.id} para '{req.tool.name}' do técnico {req.user.username} recusada pelo supervisor {current_user.username}. Motivo: {review_notes}")
+
+    if request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest":
+        return jsonify({
+            "success": True,
+            "message": f"Solicitação para '{req.tool.name}' recusada."
+        })
+    flash("Solicitação de liberação recusada.", "info")
+    return redirect(url_for("controle_ferramentas_atual"))
 
 
 
@@ -9597,6 +9773,7 @@ def controle_ferramentas_liberar_total(user_id):
     
     for s in inspection.statuses:
         s.is_editable = False
+        s.unlock_requested = False
         
     db.session.commit()
     
@@ -9614,14 +9791,70 @@ def controle_ferramentas_liberar_item(user_id, tool_id):
     
     inspection.is_locked = True
     status_item.is_editable = True
+    status_item.unlock_requested = False
+    status_item.last_released_at = agora()
+    status_item.last_released_by_id = current_user.id
     
+    # Se houver solicitação pendente deste item, marca como aprovada
+    pending = ToolReleaseRequest.query.filter_by(
+        user_id=user_id,
+        tool_id=tool_id,
+        inspection_id=inspection.id,
+        status="pendente"
+    ).first()
+    if pending:
+        pending.status = "aprovado"
+        pending.reviewed_by_id = current_user.id
+        pending.reviewed_at = agora()
+        pending.review_notes = "Liberado diretamente pelo supervisor no painel."
+
     db.session.commit()
     
     registrar_log(f"Ferramenta '{status_item.tool.name}' liberada para edição do técnico {inspection.user.username} por administrador.")
     return jsonify({
         "success": True,
-        "message": f"Item '{status_item.tool.name}' liberado com sucesso!"
+        "message": f"Item '{status_item.tool.name}' liberado com sucesso para {inspection.user.username}!"
     })
+
+
+
+@technical_bp.route("/controle/ferramentas/atual/bloquear-item/<int:user_id>/<int:tool_id>", methods=["POST"])
+@admin_required
+def controle_ferramentas_bloquear_item(user_id, tool_id):
+    inspection = UserToolInspection.query.filter_by(user_id=user_id).first_or_404()
+    status_item = UserToolStatus.query.filter_by(inspection_id=inspection.id, tool_id=tool_id).first_or_404()
+    
+    status_item.is_editable = False
+    status_item.unlock_requested = False
+    db.session.commit()
+    
+    registrar_log(f"Ferramenta '{status_item.tool.name}' do técnico {inspection.user.username} bloqueada novamente por {current_user.username}.")
+    return jsonify({
+        "success": True,
+        "message": f"Item '{status_item.tool.name}' bloqueado novamente."
+    })
+
+
+
+@technical_bp.route("/controle/ferramentas/atual/solicitacoes/historico")
+@admin_required
+def controle_ferramentas_solicitacoes_historico():
+    requests_list = ToolReleaseRequest.query.order_by(ToolReleaseRequest.created_at.desc()).limit(100).all()
+    data = []
+    for r in requests_list:
+        data.append({
+            "id": r.id,
+            "technician": r.user.username if r.user else "Desconhecido",
+            "tool_name": r.tool.name if r.tool else "Ferramenta",
+            "category": r.tool.category if (r.tool and r.tool.category) else "Geral",
+            "reason": r.reason,
+            "status": r.status,
+            "reviewed_by": r.reviewed_by.username if r.reviewed_by else "-",
+            "reviewed_at": r.reviewed_at.strftime("%d/%m/%Y %H:%M") if r.reviewed_at else "-",
+            "review_notes": r.review_notes or "-",
+            "created_at": r.created_at.strftime("%d/%m/%Y %H:%M") if r.created_at else "-"
+        })
+    return jsonify({"requests": data})
 
 
 

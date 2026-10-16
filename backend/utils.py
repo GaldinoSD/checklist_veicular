@@ -367,7 +367,17 @@ def admin_required(view):
             allowed = current_user.has_permission("config_layout")
         elif endpoint_name in {"config_ferramentas", "config_ferramentas_new", "config_ferramentas_edit", "config_ferramentas_del", "config_ferramentas_toggle"}:
             allowed = current_user.has_permission("config_ferramentas")
-        elif endpoint_name in {"controle_ferramentas_atual", "controle_ferramentas_detalhes"}:
+        elif endpoint_name in {
+            "controle_ferramentas_atual", 
+            "controle_ferramentas_detalhes",
+            "controle_ferramentas_liberar_item",
+            "controle_ferramentas_bloquear_item",
+            "controle_ferramentas_liberar_total",
+            "controle_ferramentas_excluir",
+            "controle_ferramentas_aprovar_solicitacao",
+            "controle_ferramentas_recusar_solicitacao",
+            "controle_ferramentas_solicitacoes_historico"
+        }:
             allowed = current_user.has_permission("controle_ferramentas_atual")
             
         if allowed:

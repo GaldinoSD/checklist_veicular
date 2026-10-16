@@ -289,6 +289,30 @@ class UserToolStatus(db.Model):
     damage_description = db.Column(db.Text)
     updated_at = db.Column(db.DateTime, default=agora, onupdate=agora)
     is_editable = db.Column(db.Boolean, default=False, nullable=False)
+    unlock_requested = db.Column(db.Boolean, default=False, nullable=False)
+    unlock_reason = db.Column(db.Text, nullable=True)
+    last_released_at = db.Column(db.DateTime, nullable=True)
+    last_released_by_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="SET NULL"), nullable=True)
+    last_released_by = db.relationship("User", foreign_keys=[last_released_by_id])
+
+
+class ToolReleaseRequest(db.Model):
+    """Solicitação de liberação/desbloqueio de ferramenta feita pelo técnico para avaliação do supervisor."""
+    __tablename__ = "tool_release_request"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="CASCADE"), nullable=False)
+    user = db.relationship("User", foreign_keys=[user_id], backref=db.backref("tool_release_requests", lazy=True, cascade="all, delete-orphan"))
+    tool_id = db.Column(db.Integer, db.ForeignKey("tool.id", ondelete="CASCADE"), nullable=False)
+    tool = db.relationship("Tool")
+    inspection_id = db.Column(db.Integer, db.ForeignKey("user_tool_inspection.id", ondelete="CASCADE"), nullable=False)
+    inspection = db.relationship("UserToolInspection", backref=db.backref("release_requests", lazy=True, cascade="all, delete-orphan"))
+    reason = db.Column(db.Text, nullable=False)
+    status = db.Column(db.String(20), default="pendente", nullable=False)  # pendente, aprovado, recusado, concluido
+    reviewed_by_id = db.Column(db.Integer, db.ForeignKey("user.id", ondelete="SET NULL"), nullable=True)
+    reviewed_by = db.relationship("User", foreign_keys=[reviewed_by_id])
+    reviewed_at = db.Column(db.DateTime, nullable=True)
+    review_notes = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=agora)
 
 
 class ToolSuggestion(db.Model):
