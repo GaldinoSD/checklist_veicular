@@ -844,11 +844,19 @@ def api_equipes(id=None):
 
         # Sincroniza escalas vinculadas a esta equipe para refletir imediatamente a nova composição de técnicos
         new_member_ids_str = ",".join(str(m.id) for m in t.members) if t.members else None
-        scales_of_team = Scale.query.filter(
-            (Scale.team_id == t.id) | (Scale.team_ids == str(t.id))
-        ).all()
+        scales_of_team = Scale.query.all()
         for sc in scales_of_team:
-            sc.technician_ids = new_member_ids_str
+            sc_team_ids = set()
+            if sc.team_id:
+                sc_team_ids.add(sc.team_id)
+            if sc.team_ids:
+                for part in str(sc.team_ids).split(","):
+                    if part.strip().isdigit():
+                        sc_team_ids.add(int(part.strip()))
+            if t.id in sc_team_ids:
+                sc_type = str(sc.type or "").lower()
+                if "sab" in sc_type or not sc.technician_ids or sc.team_id == t.id:
+                    sc.technician_ids = new_member_ids_str
 
         db.session.commit()
         return jsonify({"status": "ok", "id": t.id})
@@ -6069,10 +6077,20 @@ def get_technicians_for_scale(esc):
     if getattr(esc, "team_ids", None):
         team_ids.extend([int(x.strip()) for x in str(esc.team_ids).split(",") if x.strip().isdigit()])
 
-    # 1. Se for escala de equipe (como Sábado), a composição atual da equipe é a prioridade!
-    if team_ids and getattr(esc, "type", None) == "sabado":
+    esc_type = str(getattr(esc, "type", "") or "").lower()
+    is_sat = "sab" in esc_type
+    if not is_sat and getattr(esc, "date", None):
+        try:
+            d_val = esc.date if isinstance(esc.date, date) else datetime.strptime(str(esc.date)[:10], "%Y-%m-%d").date()
+            if d_val.weekday() == 5:
+                is_sat = True
+        except Exception:
+            pass
+
+    # 1. Se for escala de equipe (como Sábado) ou sem técnicos individuais definidos, a composição atual da equipe é a prioridade!
+    if team_ids and (is_sat or not getattr(esc, "technician_ids", None)):
         for tid in set(team_ids):
-            t = Team.query.get(tid)
+            t = db.session.get(Team, tid) if hasattr(db.session, "get") else Team.query.get(tid)
             if t:
                 for m in t.members:
                     if m.id not in seen_ids:

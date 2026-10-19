@@ -11,7 +11,7 @@ class TestGestaoDashboardStats(unittest.TestCase):
         self.ctx.push()
 
         # Obter ou criar usuário supervisor
-        self.supervisor = User.query.filter_by(username="supervisor_test_gt").first()
+        self.supervisor = User.query.filter(User.username.ilike("supervisor_test_gt")).first()
         if not self.supervisor:
             self.supervisor = User(
                 username="supervisor_test_gt",
@@ -21,7 +21,7 @@ class TestGestaoDashboardStats(unittest.TestCase):
             db.session.add(self.supervisor)
 
         # Criar técnico de teste
-        self.tech1 = User.query.filter_by(username="tecnico_test_1").first()
+        self.tech1 = User.query.filter(User.username.ilike("tecnico_test_1")).first()
         if not self.tech1:
             self.tech1 = User(
                 username="tecnico_test_1",
@@ -31,7 +31,7 @@ class TestGestaoDashboardStats(unittest.TestCase):
             db.session.add(self.tech1)
 
         # Criar equipe de teste
-        self.team1 = Team.query.filter_by(name="Equipe Alfa GT").first()
+        self.team1 = Team.query.filter(Team.name.ilike("Equipe Alfa GT")).first()
         if not self.team1:
             self.team1 = Team(name="Equipe Alfa GT", leader_id=self.supervisor.id)
             db.session.add(self.team1)
@@ -86,6 +86,35 @@ class TestGestaoDashboardStats(unittest.TestCase):
         self.assertEqual(data["proximo_plantao"]["type"], "Sábado")
         tech_names_upper = [t.upper() for t in data["proximo_plantao"]["techs"]]
         self.assertIn("TECNICO_TEST_1", tech_names_upper)
+
+    def test_dynamic_team_members_reflected_in_dashboard(self):
+        # Criar segundo técnico de teste e associar à equipe
+        tech2 = User.query.filter(User.username.ilike("tecnico_test_2")).first()
+        if not tech2:
+            tech2 = User(username="tecnico_test_2", role="tech")
+            tech2.set_password("123456")
+            db.session.add(tech2)
+            db.session.commit()
+
+        # Adicionar tech1 e tech2 à equipe
+        self.team1.members = [self.tech1, tech2]
+        db.session.commit()
+
+        with self.client.session_transaction() as sess:
+            sess['_user_id'] = str(self.supervisor.id)
+            sess['_fresh'] = True
+
+        res = self.client.get("/api/gestao/dashboard_stats")
+        self.assertEqual(res.status_code, 200)
+        data = json.loads(res.data.decode('utf-8'))
+
+        # Encontra a escala nos próximos plantões
+        sat_plantao = next((p for p in data.get("proximos_plantoes", []) if p.get("team_name") == self.team1.name), None)
+        self.assertIsNotNone(sat_plantao)
+        self.assertEqual(len(sat_plantao["techs"]), 2)
+        tech_upper = [t.upper() for t in sat_plantao["techs"]]
+        self.assertIn("TECNICO_TEST_1", tech_upper)
+        self.assertIn("TECNICO_TEST_2", tech_upper)
 
 if __name__ == "__main__":
     unittest.main()

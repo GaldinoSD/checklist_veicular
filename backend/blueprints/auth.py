@@ -770,37 +770,6 @@ def api_gestao_stats():
         s_date = to_date(s.date)
         if not s_date:
             continue
-        tech_names = []
-        tech_ids = []
-        if s.technician_ids:
-            tids = [int(x.strip()) for x in s.technician_ids.split(",") if x.strip().isdigit()]
-            tech_ids = [tid for tid in tids if tid in users_dict]
-            tech_names = [users_dict[tid].username for tid in tech_ids]
-        elif s.user_id and s.user_id in users_dict:
-            tech_ids = [s.user_id]
-            tech_names = [users_dict[s.user_id].username]
-
-        team_names = []
-        if s.team_ids:
-            tm_ids = [int(x.strip()) for x in s.team_ids.split(",") if x.strip().isdigit()]
-            team_names = [teams_dict[tmid].name for tmid in tm_ids if tmid in teams_dict]
-        elif s.team_id and s.team_id in teams_dict:
-            team_names = [teams_dict[s.team_id].name]
-
-        # Se não há técnicos específicos gravados no campo technician_ids, utiliza os membros da equipe vinculada
-        if not tech_names:
-            if s.team_ids:
-                tm_ids = [int(x.strip()) for x in s.team_ids.split(",") if x.strip().isdigit()]
-                for tmid in tm_ids:
-                    if tmid in teams_dict and teams_dict[tmid].members:
-                        for m in teams_dict[tmid].members:
-                            tech_names.append(m.username)
-                            tech_ids.append(m.id)
-            elif s.team_id and s.team_id in teams_dict and teams_dict[s.team_id].members:
-                for m in teams_dict[s.team_id].members:
-                    tech_names.append(m.username)
-                    tech_ids.append(m.id)
-
         scale_type_raw = (s.type or "Plantão").strip()
         type_lower = scale_type_raw.lower()
         obs_lower = (s.obs or "").lower()
@@ -818,6 +787,52 @@ def api_gestao_stats():
             canonical_type = "Sábado"
         else:
             canonical_type = scale_type_raw.capitalize()
+
+        team_names = []
+        team_objs = []
+        if s.team_ids:
+            tm_ids = [int(x.strip()) for x in str(s.team_ids).split(",") if x.strip().isdigit()]
+            for tmid in tm_ids:
+                if tmid in teams_dict:
+                    team_names.append(teams_dict[tmid].name)
+                    team_objs.append(teams_dict[tmid])
+        elif s.team_id and s.team_id in teams_dict:
+            team_names = [teams_dict[s.team_id].name]
+            team_objs.append(teams_dict[s.team_id])
+
+        tech_names = []
+        tech_ids = []
+        seen_tids = set()
+
+        # Prioridade para escalas de equipe (como Sábado ou escala com equipe atribuída):
+        # A composição atual dos técnicos da equipe é a fonte prioritária e reflete em tempo real!
+        team_has_members = any(tm.members for tm in team_objs)
+        if (canonical_type == "Sábado" and team_has_members) or (team_has_members and not s.technician_ids and not s.user_id):
+            for tm in team_objs:
+                if tm.members:
+                    for m in tm.members:
+                        if m.id not in seen_tids:
+                            seen_tids.add(m.id)
+                            tech_ids.append(m.id)
+                            tech_names.append(m.username)
+        elif s.technician_ids:
+            tids = [int(x.strip()) for x in str(s.technician_ids).split(",") if x.strip().isdigit()]
+            for tid in tids:
+                if tid in users_dict and tid not in seen_tids:
+                    seen_tids.add(tid)
+                    tech_ids.append(tid)
+                    tech_names.append(users_dict[tid].username)
+        elif s.user_id and s.user_id in users_dict:
+            tech_ids = [s.user_id]
+            tech_names = [users_dict[s.user_id].username]
+        elif team_objs:
+            for tm in team_objs:
+                if tm.members:
+                    for m in tm.members:
+                        if m.id not in seen_tids:
+                            seen_tids.add(m.id)
+                            tech_ids.append(m.id)
+                            tech_names.append(m.username)
 
         unified_scales.append({
             "id": s.id,
