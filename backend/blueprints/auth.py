@@ -410,6 +410,264 @@ def api_frota_stats():
 
 
 
+# --- API DASHBOARD FROTA: CHECKLISTS POR TÉCNICO (GRÁFICO AGRUPADO & RANKING) ---
+@auth_bp.route("/api/frota/tech_stats")
+@supervisor_allowed
+def api_frota_tech_stats():
+    now = agora()
+    intervalo = request.args.get("intervalo", "dia").strip().lower()
+    periodo = request.args.get("periodo", "").strip()
+
+    # Cores modernas, vibrantes e distintas (cumprindo a regra do Purple Ban - sem roxo)
+    PALETTE = [
+        "#10b981",  # Esmeralda
+        "#06b6d4",  # Ciano
+        "#3b82f6",  # Azul Real
+        "#f59e0b",  # Âmbar
+        "#f97316",  # Laranja
+        "#f43f5e",  # Coral / Rose
+        "#14b8a6",  # Verde Petróleo / Teal
+        "#0ea5e9",  # Azul Céu
+        "#84cc16",  # Lima
+        "#64748b",  # Ardósia
+        "#ec4899",  # Rosa
+        "#eab308",  # Ouro
+        "#2563eb",  # Azul Cobalto
+        "#0d9488",  # Teal Escuro
+        "#d97706",  # Âmbar Escuro
+        "#059669",  # Esmeralda Escuro
+    ]
+
+    # Mapeamento canônico de técnicos: lower -> display_name
+    display_map = {}
+    users = User.query.filter(User.username != 'admin').all()
+    for u in users:
+        uname = (u.username or '').strip()
+        if uname and uname.lower() != 'admin':
+            display_map[uname.lower()] = uname
+
+    raw_techs = db.session.query(Checklist.technician).filter(Checklist.technician.isnot(None)).distinct().all()
+    for (rt,) in raw_techs:
+        if rt and rt.strip() and rt.strip().lower() != 'admin':
+            clean = rt.strip()
+            if clean.lower() not in display_map:
+                display_map[clean.lower()] = clean.upper()
+
+    # Período customizado se fornecido (Formato: AAAA-MM-DD - AAAA-MM-DD)
+    custom_start = None
+    custom_end = None
+    if periodo and " - " in periodo:
+        try:
+            s_str, e_str = periodo.split(" - ")
+            custom_start = datetime.strptime(s_str.strip(), "%Y-%m-%d")
+            custom_end = datetime.strptime(e_str.strip(), "%Y-%m-%d").replace(hour=23, minute=59, second=59)
+        except Exception:
+            custom_start = None
+            custom_end = None
+
+    buckets = []  # list of dicts: {'label': str, 'start': dt, 'end': dt}
+
+    if custom_start and custom_end:
+        start_bound = custom_start
+        end_bound = custom_end
+        if intervalo == "mes":
+            cur_y, cur_m = custom_start.year, custom_start.month
+            end_y, end_m = custom_end.year, custom_end.month
+            month_names = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+            while (cur_y < end_y) or (cur_y == end_y and cur_m <= end_m):
+                m_start = datetime(cur_y, cur_m, 1)
+                if cur_m == 12:
+                    m_end = datetime(cur_y + 1, 1, 1) - timedelta(seconds=1)
+                    next_y, next_m = cur_y + 1, 1
+                else:
+                    m_end = datetime(cur_y, cur_m + 1, 1) - timedelta(seconds=1)
+                    next_y, next_m = cur_y, cur_m + 1
+                buckets.append({
+                    'label': f"{month_names[cur_m - 1]}/{str(cur_y)[2:]}",
+                    'start': max(m_start, custom_start),
+                    'end': min(m_end, custom_end)
+                })
+                cur_y, cur_m = next_y, next_m
+        elif intervalo == "semana":
+            cur_dt = custom_start
+            while cur_dt <= custom_end:
+                w_start = (cur_dt - timedelta(days=cur_dt.weekday())).replace(hour=0, minute=0, second=0)
+                w_end = (w_start + timedelta(days=6)).replace(hour=23, minute=59, second=59)
+                b_start = max(w_start, custom_start)
+                b_end = min(w_end, custom_end)
+                buckets.append({
+                    'label': f"{b_start.strftime('%d/%m')} - {b_end.strftime('%d/%m')}",
+                    'start': b_start,
+                    'end': b_end
+                })
+                cur_dt = w_end + timedelta(seconds=1)
+        else:  # dia
+            delta_days = (custom_end.date() - custom_start.date()).days + 1
+            max_days = min(delta_days, 60)
+            for i in range(max_days):
+                d_start = (custom_start + timedelta(days=i)).replace(hour=0, minute=0, second=0)
+                d_end = d_start.replace(hour=23, minute=59, second=59)
+                buckets.append({
+                    'label': d_start.strftime('%d/%m'),
+                    'start': d_start,
+                    'end': d_end
+                })
+    else:
+        # Padrão sem período customizado
+        if intervalo == "mes":
+            month_names = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
+            months_list = []
+            y, m = now.year, now.month
+            for _ in range(6):
+                months_list.append((y, m))
+                m -= 1
+                if m == 0:
+                    m = 12
+                    y -= 1
+            months_list.reverse()
+            for (cy, cm) in months_list:
+                m_start = datetime(cy, cm, 1)
+                if cm == 12:
+                    m_end = datetime(cy + 1, 1, 1) - timedelta(seconds=1)
+                else:
+                    m_end = datetime(cy, cm + 1, 1) - timedelta(seconds=1)
+                buckets.append({
+                    'label': f"{month_names[cm - 1]}/{str(cy)[2:]}",
+                    'start': m_start,
+                    'end': m_end
+                })
+            start_bound = buckets[0]['start']
+            end_bound = buckets[-1]['end']
+        elif intervalo == "semana":
+            curr_monday = (now - timedelta(days=now.weekday())).replace(hour=0, minute=0, second=0, microsecond=0)
+            for w in range(7, -1, -1):
+                w_start = curr_monday - timedelta(weeks=w)
+                w_end = (w_start + timedelta(days=6)).replace(hour=23, minute=59, second=59)
+                buckets.append({
+                    'label': f"{w_start.strftime('%d/%m')} a {w_end.strftime('%d/%m')}",
+                    'start': w_start,
+                    'end': w_end
+                })
+            start_bound = buckets[0]['start']
+            end_bound = buckets[-1]['end']
+        else:  # dia
+            start_bound = (now - timedelta(days=13)).replace(hour=0, minute=0, second=0, microsecond=0)
+            end_bound = now.replace(hour=23, minute=59, second=59)
+            for i in range(14):
+                d_start = start_bound + timedelta(days=i)
+                d_end = d_start.replace(hour=23, minute=59, second=59)
+                buckets.append({
+                    'label': d_start.strftime('%d/%m'),
+                    'start': d_start,
+                    'end': d_end
+                })
+
+    # Consulta checklists no período
+    checklists = Checklist.query.filter(
+        Checklist.date >= start_bound,
+        Checklist.date <= end_bound,
+        Checklist.technician.isnot(None)
+    ).all()
+
+    # Contagem total all-time de cada técnico
+    all_time_counts = dict(db.session.query(
+        db.func.lower(Checklist.technician),
+        db.func.count(Checklist.id)
+    ).group_by(db.func.lower(Checklist.technician)).all())
+
+    # Agrupamento: lower_name -> [counts per bucket]
+    tech_bucket_counts = {t_lower: [0] * len(buckets) for t_lower in display_map.keys()}
+
+    for c in checklists:
+        t_clean = (c.technician or "").strip().lower()
+        if not t_clean or t_clean == "admin":
+            continue
+        if t_clean not in tech_bucket_counts:
+            tech_bucket_counts[t_clean] = [0] * len(buckets)
+            display_map[t_clean] = c.technician.strip().upper()
+
+        c_dt = c.date
+        for idx, b in enumerate(buckets):
+            if b['start'] <= c_dt <= b['end']:
+                tech_bucket_counts[t_clean][idx] += 1
+                break
+
+    # Lista consolidada de técnicos
+    tech_stats = []
+    for t_lower, counts in tech_bucket_counts.items():
+        period_total = sum(counts)
+        total_geral = all_time_counts.get(t_lower, 0)
+        display_name = display_map.get(t_lower, t_lower.upper())
+        if period_total > 0 or total_geral > 0:
+            tech_stats.append({
+                'lower': t_lower,
+                'name': display_name,
+                'counts': counts,
+                'period_total': period_total,
+                'total_geral': total_geral
+            })
+
+    # Ordena por maior produtividade no período, seguido do total geral
+    tech_stats.sort(key=lambda x: (x['period_total'], x['total_geral']), reverse=True)
+
+    # Associa cores consistentes
+    for idx, t in enumerate(tech_stats):
+        t['color'] = PALETTE[idx % len(PALETTE)]
+
+    # Datasets do Chart.js (prioriza quem teve envios no período)
+    active_for_chart = [t for t in tech_stats if t['period_total'] > 0]
+    if not active_for_chart:
+        active_for_chart = tech_stats[:8]
+
+    chart_datasets = []
+    for t in active_for_chart:
+        chart_datasets.append({
+            'label': t['name'],
+            'data': t['counts'],
+            'backgroundColor': t['color'],
+            'borderColor': t['color'],
+            'borderRadius': 4,
+            'borderSkipped': False,
+            'total': t['period_total']
+        })
+
+    # KPIs de resumo
+    total_periodo = sum(t['period_total'] for t in tech_stats)
+    top_tech = tech_stats[0]['name'] if tech_stats and tech_stats[0]['period_total'] > 0 else (tech_stats[0]['name'] if tech_stats else "Nenhum")
+    top_tech_count = tech_stats[0]['period_total'] if tech_stats else 0
+    active_techs_count = len([t for t in tech_stats if t['period_total'] > 0])
+    avg_bucket = round(total_periodo / max(len(buckets), 1), 1)
+
+    max_period = tech_stats[0]['period_total'] if tech_stats and tech_stats[0]['period_total'] > 0 else 1
+
+    ranking_list = []
+    for idx, t in enumerate(tech_stats):
+        pct = int((t['period_total'] / max_period) * 100)
+        ranking_list.append({
+            'posicao': idx + 1,
+            'name': t['name'],
+            'color': t['color'],
+            'period_total': t['period_total'],
+            'total_geral': t['total_geral'],
+            'pct': pct
+        })
+
+    return jsonify({
+        'intervalo': intervalo,
+        'labels': [b['label'] for b in buckets],
+        'datasets': chart_datasets,
+        'kpis': {
+            'total_periodo': total_periodo,
+            'top_tech': top_tech,
+            'top_tech_count': top_tech_count,
+            'active_techs_count': active_techs_count,
+            'avg_bucket': avg_bucket
+        },
+        'ranking': ranking_list
+    })
+
+
+
 # --- API DASHBOARD GESTÃO (DADOS REAIS E FOCO EM PLANTÕES & ESCALAS) ---
 @auth_bp.route("/api/gestao/dashboard_stats")
 @supervisor_allowed

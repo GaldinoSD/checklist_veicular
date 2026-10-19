@@ -264,80 +264,153 @@
         </div>
     </div>
 
-    <!-- Tabelas de Histórico (Manter o que já tinha, mas com estilo premium e suporte a filtro de período) -->
-    <div class="card-premium p-8 mb-8">
-        <h3 class="text-sm font-black text-slate-800 dark:text-white mb-6 uppercase tracking-widest flex items-center gap-2">
-            <i class="fa-solid fa-users text-blue-500"></i> Checklist por Técnico
-        </h3>
-        {% set max_total = 1 %}
-        {% if user_stats_list %}
-            {% if request.args.get('periodo') %}
-                {% set max_total = user_stats_list[0].semanal if user_stats_list[0].semanal > 0 else 1 %}
-            {% else %}
-                {% set max_total = user_stats_list[0].total if user_stats_list[0].total > 0 else 1 %}
-            {% endif %}
-        {% endif %}
-        <div class="overflow-x-auto">
-            <table class="w-full text-left border-collapse">
-                <thead>
-                    <tr class="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-900/5 dark:border-white/5">
-                        <th class="py-4 px-2">Posição / Técnico</th>
-                        {% if request.args.get('periodo') %}
-                        <th class="py-4 px-2 text-center text-blue-500">Checklists no Período</th>
-                        {% else %}
-                        <th class="py-4 px-2 text-center">Semana</th>
-                        <th class="py-4 px-2 text-center">Mês</th>
-                        <th class="py-4 px-2 text-center">Ano</th>
+    <!-- Card Premium: Volume de Checklists por Técnico (Gráfico Agrupado por Cor & Ranking) -->
+    <div class="card-premium p-6 sm:p-8 mb-8 space-y-6">
+        <!-- Topo: Título e Filtro de Granularidade (Dia, Semana, Mês) -->
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-900/5 dark:border-white/5">
+            <div>
+                <h3 class="text-sm font-black text-slate-800 dark:text-white uppercase tracking-widest flex items-center gap-2">
+                    <i class="fa-solid fa-chart-column text-blue-500"></i> Volume de Checklists por Técnico
+                </h3>
+                <p class="text-xs text-slate-400 mt-1">Comparativo de envios no tempo por técnico e ranking de produtividade</p>
+            </div>
+            <!-- Segmented Control de Intervalos -->
+            <div class="flex items-center gap-1.5 self-start md:self-auto bg-slate-100 dark:bg-white/5 p-1 rounded-2xl border border-slate-900/5 dark:border-white/5">
+                <button type="button" onclick="changeTechInterval('dia')" id="btn-tech-dia"
+                    class="px-4 py-1.5 rounded-xl text-xs font-black transition-all bg-blue-600 text-white shadow-md shadow-blue-500/20">
+                    <i class="fa-regular fa-calendar-day mr-1"></i> Dia
+                </button>
+                <button type="button" onclick="changeTechInterval('semana')" id="btn-tech-semana"
+                    class="px-4 py-1.5 rounded-xl text-xs font-black transition-all text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white">
+                    <i class="fa-regular fa-calendar-week mr-1"></i> Semana
+                </button>
+                <button type="button" onclick="changeTechInterval('mes')" id="btn-tech-mes"
+                    class="px-4 py-1.5 rounded-xl text-xs font-black transition-all text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white">
+                    <i class="fa-regular fa-calendar mr-1"></i> Mês
+                </button>
+            </div>
+        </div>
+
+        <!-- Cockpit KPIs Resumo -->
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 flex items-center gap-3.5">
+                <div class="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center text-lg">
+                    <i class="fa-solid fa-clipboard-check"></i>
+                </div>
+                <div>
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Total Período</span>
+                    <span id="tech-kpi-total" class="text-base sm:text-lg font-black text-slate-800 dark:text-white">...</span>
+                </div>
+            </div>
+
+            <div class="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 flex items-center gap-3.5">
+                <div class="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center text-lg">
+                    <i class="fa-solid fa-trophy"></i>
+                </div>
+                <div class="min-w-0">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block truncate">Técnico Destaque</span>
+                    <span id="tech-kpi-top" class="text-base sm:text-lg font-black text-slate-800 dark:text-white block truncate">...</span>
+                    <span id="tech-kpi-top-sub" class="text-[9px] text-slate-400 block truncate">...</span>
+                </div>
+            </div>
+
+            <div class="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 flex items-center gap-3.5">
+                <div class="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center text-lg">
+                    <i class="fa-solid fa-users"></i>
+                </div>
+                <div>
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Técnicos Ativos</span>
+                    <span id="tech-kpi-active" class="text-base sm:text-lg font-black text-slate-800 dark:text-white">...</span>
+                </div>
+            </div>
+
+            <div class="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 flex items-center gap-3.5">
+                <div class="w-10 h-10 rounded-xl bg-cyan-500/10 text-cyan-500 flex items-center justify-center text-lg">
+                    <i class="fa-solid fa-chart-line"></i>
+                </div>
+                <div>
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Média por Faixa</span>
+                    <span id="tech-kpi-avg" class="text-base sm:text-lg font-black text-slate-800 dark:text-white">...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Área do Gráfico Agrupado -->
+        <div class="space-y-3 pt-2">
+            <div class="flex items-center justify-between">
+                <span class="text-[11px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-2">
+                    <i class="fa-solid fa-signal text-blue-500"></i> Gráfico Comparativo
+                </span>
+                <span class="text-[10px] text-slate-400 hidden sm:inline">Dica: clique no técnico na legenda para ocultar/exibir</span>
+            </div>
+            <div class="relative w-full h-80 sm:h-96 bg-slate-50/50 dark:bg-white/[0.02] p-4 rounded-2xl border border-slate-900/5 dark:border-white/5">
+                <canvas id="chartChecklistTecnico"></canvas>
+            </div>
+            <!-- Legenda Dinâmica e Clicável -->
+            <div id="tech-chart-legend" class="flex flex-wrap items-center justify-center gap-2 pt-2"></div>
+        </div>
+
+        <!-- Tabela de Ranking e Produtividade -->
+        <div class="pt-6 border-t border-slate-900/5 dark:border-white/5 space-y-4">
+            <div class="flex items-center justify-between">
+                <h4 class="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                    <i class="fa-solid fa-ranking-star text-amber-500"></i> Ranking de Envios & Produtividade
+                </h4>
+                <span class="text-[10px] font-bold text-slate-400" id="tech-ranking-subtitle">Visualização dinâmica do período</span>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-900/5 dark:border-white/5">
+                            <th class="py-3 px-2">Posição / Técnico</th>
+                            <th class="py-3 px-2 text-center text-blue-500" id="th-periodo-label">Envios no Período</th>
+                            <th class="py-3 px-2 text-center">Total Geral</th>
+                            <th class="py-3 px-2 text-center hidden md:table-cell w-48">Produtividade no Período</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tech-ranking-tbody">
+                        {% set max_total = 1 %}
+                        {% if user_stats_list %}
+                            {% set max_total = user_stats_list[0].total if user_stats_list[0].total > 0 else 1 %}
                         {% endif %}
-                        <th class="py-4 px-2 text-center">Total Geral</th>
-                        <th class="py-4 px-2 text-center hidden md:table-cell w-40">Produtividade</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for us in user_stats_list %}
-                    {% set current_val = us.semanal if request.args.get('periodo') else us.total %}
-                    {% set pct = ((current_val / max_total) * 100)|int %}
-                    <tr class="border-b border-slate-900/5 dark:border-white/5 hover:bg-slate-50 dark:hover:bg-white/5 transition-all">
-                        <td class="py-4 px-2">
-                            <div class="flex items-center gap-3">
-                                <!-- Ranking Badge / Medal -->
-                                <div class="flex items-center justify-center w-6 text-center font-black text-xs text-slate-400">
-                                    {% if loop.index == 1 %}
-                                        <span class="text-lg" title="1º Lugar - Líder">🥇</span>
-                                    {% elif loop.index == 2 %}
-                                        <span class="text-lg" title="2º Lugar">🥈</span>
-                                    {% elif loop.index == 3 %}
-                                        <span class="text-lg" title="3º Lugar">🥉</span>
-                                    {% else %}
-                                        {{ loop.index }}º
-                                    {% endif %}
+                        {% for us in user_stats_list %}
+                        {% set pct = ((us.total / max_total) * 100)|int %}
+                        <tr class="border-b border-slate-900/5 dark:border-white/5 hover:bg-slate-50 dark:hover:bg-white/5 transition-all">
+                            <td class="py-3 px-2">
+                                <div class="flex items-center gap-3">
+                                    <div class="flex items-center justify-center w-6 text-center font-black text-xs text-slate-400">
+                                        {% if loop.index == 1 %}
+                                            <span class="text-lg" title="1º Lugar - Líder">🥇</span>
+                                        {% elif loop.index == 2 %}
+                                            <span class="text-lg" title="2º Lugar">🥈</span>
+                                        {% elif loop.index == 3 %}
+                                            <span class="text-lg" title="3º Lugar">🥉</span>
+                                        {% else %}
+                                            {{ loop.index }}º
+                                        {% endif %}
+                                    </div>
+                                    <div class="w-8 h-8 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-xs shadow-md shadow-blue-500/10">
+                                        {{ us.username[0]|upper }}
+                                    </div>
+                                    <span class="text-xs font-bold text-slate-700 dark:text-gray-200">{{ us.username }}</span>
                                 </div>
-                                <div class="w-8 h-8 rounded-full bg-gradient-to-br from-blue-600 to-indigo-500 text-white flex items-center justify-center font-bold text-xs shadow-md shadow-blue-500/10">
-                                    {{ us.username[0]|upper }}
+                            </td>
+                            <td class="py-3 px-2 text-center text-sm font-black text-blue-600">{{ us.semanal if request.args.get('periodo') else us.total }}</td>
+                            <td class="py-3 px-2 text-center text-sm font-black text-slate-800 dark:text-white">{{ us.total }}</td>
+                            <td class="py-3 px-2 hidden md:table-cell align-middle">
+                                <div class="flex items-center gap-2">
+                                    <div class="flex-1 h-2 bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden">
+                                        <div class="h-full bg-blue-600 rounded-full transition-all duration-1000" style="max-width: 100%;"></div>
+                                    </div>
+                                    <span class="text-[10px] font-black text-slate-400 w-8 text-right">{{ pct }}%</span>
                                 </div>
-                                <span class="text-xs font-bold text-slate-700 dark:text-gray-200">{{ us.username }}</span>
-                            </div>
-                        </td>
-                        {% if request.args.get('periodo') %}
-                        <td class="py-4 px-2 text-center text-sm font-black text-blue-600">{{ us.semanal }}</td>
-                        {% else %}
-                        <td class="py-4 px-2 text-center text-xs font-bold text-slate-600 dark:text-gray-400">{{ us.semanal }}</td>
-                        <td class="py-4 px-2 text-center text-xs font-bold text-slate-600 dark:text-gray-400">{{ us.mensal }}</td>
-                        <td class="py-4 px-2 text-center text-xs font-bold text-slate-600 dark:text-gray-400">{{ us.anual }}</td>
-                        {% endif %}
-                        <td class="py-4 px-2 text-center text-sm font-black text-slate-800 dark:text-white">{{ us.total }}</td>
-                        <td class="py-4 px-2 hidden md:table-cell align-middle">
-                            <div class="flex items-center gap-2">
-                                <div class="flex-1 h-1.5 bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden">
-                                    <div class="h-full bg-gradient-to-r from-blue-600 to-indigo-500 rounded-full transition-all duration-1000" style="width: {{ pct }}%"></div>
-                                </div>
-                                <span class="text-[9px] font-black text-slate-400 w-6 text-right">{{ pct }}%</span>
-                            </div>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>
@@ -720,7 +793,230 @@
                 if (compOnibus) compOnibus.textContent = data.types_dist.onibus || 0;
             }
 
+            // Carrega o gráfico e ranking dinâmico de checklists por técnico
+            await loadTechStats(currentTechInterval);
+
         } catch (e) { console.error("Erro dashboard frota:", e); }
+    }
+
+    // --- ESTÁTISTICAS E GRÁFICO POR TÉCNICO (FROTA) ---
+    let chartChecklistTecnico = null;
+    let currentTechInterval = 'dia';
+
+    async function changeTechInterval(intervalo) {
+        currentTechInterval = intervalo;
+        await loadTechStats(intervalo);
+    }
+
+    async function loadTechStats(intervalo = currentTechInterval) {
+        currentTechInterval = intervalo;
+
+        // Atualiza botões de filtro (Dia, Semana, Mês)
+        const btnDia = document.getElementById('btn-tech-dia');
+        const btnSemana = document.getElementById('btn-tech-semana');
+        const btnMes = document.getElementById('btn-tech-mes');
+
+        const activeClass = "px-4 py-1.5 rounded-xl text-xs font-black transition-all bg-blue-600 text-white shadow-md shadow-blue-500/20";
+        const inactiveClass = "px-4 py-1.5 rounded-xl text-xs font-black transition-all text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white";
+
+        if (btnDia) btnDia.className = (intervalo === 'dia') ? activeClass : inactiveClass;
+        if (btnSemana) btnSemana.className = (intervalo === 'semana') ? activeClass : inactiveClass;
+        if (btnMes) btnMes.className = (intervalo === 'mes') ? activeClass : inactiveClass;
+
+        const thLabel = document.getElementById('th-periodo-label');
+        if (thLabel) {
+            thLabel.textContent = intervalo === 'dia' ? 'Envios no Dia / Período' : (intervalo === 'semana' ? 'Envios na Semana' : 'Envios no Mês');
+        }
+
+        const rankingSubtitle = document.getElementById('tech-ranking-subtitle');
+        if (rankingSubtitle) {
+            rankingSubtitle.textContent = `Visualização detalhada por ${intervalo === 'dia' ? 'dia' : (intervalo === 'semana' ? 'semana' : 'mês')}`;
+        }
+
+        try {
+            const urlParams = new URLSearchParams(window.location.search);
+            const periodo = urlParams.get('periodo') || '';
+            const res = await fetch(`/api/frota/tech_stats?intervalo=${intervalo}&periodo=${encodeURIComponent(periodo)}`);
+            const data = await res.json();
+
+            // Atualiza Cockpit KPIs
+            const kpiTotal = document.getElementById('tech-kpi-total');
+            if (kpiTotal) kpiTotal.textContent = data.kpis.total_periodo;
+
+            const kpiTop = document.getElementById('tech-kpi-top');
+            if (kpiTop) kpiTop.textContent = data.kpis.top_tech;
+
+            const kpiTopSub = document.getElementById('tech-kpi-top-sub');
+            if (kpiTopSub) kpiTopSub.textContent = `${data.kpis.top_tech_count} envios no período`;
+
+            const kpiActive = document.getElementById('tech-kpi-active');
+            if (kpiActive) kpiActive.textContent = `${data.kpis.active_techs_count} ativos`;
+
+            const kpiAvg = document.getElementById('tech-kpi-avg');
+            if (kpiAvg) {
+                const sufixo = intervalo === 'dia' ? '/dia' : (intervalo === 'semana' ? '/sem' : '/mês');
+                kpiAvg.textContent = `${data.kpis.avg_bucket} ${sufixo}`;
+            }
+
+            // Renderiza Gráfico Agrupado (Chart.js Bar)
+            const canvas = document.getElementById('chartChecklistTecnico');
+            if (canvas) {
+                const ctx = canvas.getContext('2d');
+                if (chartChecklistTecnico) chartChecklistTecnico.destroy();
+
+                chartChecklistTecnico = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: data.labels,
+                        datasets: data.datasets.map(d => ({
+                            label: d.label,
+                            data: d.data,
+                            backgroundColor: d.backgroundColor,
+                            borderColor: d.borderColor,
+                            borderWidth: 0,
+                            borderRadius: 4,
+                            borderSkipped: false,
+                            maxBarThickness: 28,
+                            categoryPercentage: 0.85,
+                            barPercentage: 0.85
+                        }))
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: {
+                            mode: 'index',
+                            intersect: false
+                        },
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                backgroundColor: isDark() ? 'rgba(15, 23, 42, 0.95)' : 'rgba(255, 255, 255, 0.95)',
+                                titleColor: isDark() ? '#f8fafc' : '#0f172a',
+                                bodyColor: isDark() ? '#cbd5e1' : '#334155',
+                                borderColor: isDark() ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)',
+                                borderWidth: 1,
+                                padding: 12,
+                                boxPadding: 6,
+                                usePointStyle: true,
+                                callbacks: {
+                                    title: function(items) {
+                                        return `📅 ${items[0].label}`;
+                                    },
+                                    label: function(context) {
+                                        const val = context.raw || 0;
+                                        return ` ${context.dataset.label}: ${val} checklist${val !== 1 ? 's' : ''}`;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                grid: { display: false },
+                                ticks: {
+                                    color: isDark() ? '#94a3b8' : '#64748b',
+                                    font: { size: 10, weight: 'bold' }
+                                }
+                            },
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    precision: 0,
+                                    color: isDark() ? '#94a3b8' : '#64748b',
+                                    font: { size: 10 }
+                                },
+                                grid: {
+                                    color: isDark() ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.05)'
+                                }
+                            }
+                        }
+                    }
+                });
+
+                renderTechLegend(data.datasets);
+            }
+
+            // Renderiza Tabela de Ranking
+            renderTechRankingTable(data.ranking);
+
+        } catch (e) {
+            console.error("Erro ao carregar estatísticas de técnicos:", e);
+        }
+    }
+
+    function renderTechLegend(datasets) {
+        const container = document.getElementById('tech-chart-legend');
+        if (!container) return;
+        if (!datasets || datasets.length === 0) {
+            container.innerHTML = '<span class="text-xs text-slate-400">Nenhum técnico com checklists no período selecionado</span>';
+            return;
+        }
+
+        container.innerHTML = datasets.map((d, idx) => `
+            <button type="button" onclick="toggleTechDataset(${idx})" id="legend-tech-btn-${idx}"
+                class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold border border-slate-900/5 dark:border-white/5 bg-white dark:bg-white/5 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/10 transition-all cursor-pointer shadow-xs">
+                <span class="w-2.5 h-2.5 rounded-full shrink-0" style="background-color: ${d.backgroundColor};"></span>
+                <span class="truncate max-w-[120px]">${d.label}</span>
+                <span class="text-[9px] px-1.5 py-0.5 rounded-md bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-400 font-black">${d.total}</span>
+            </button>
+        `).join('');
+    }
+
+    function toggleTechDataset(index) {
+        if (!chartChecklistTecnico) return;
+        const isVisible = chartChecklistTecnico.isDatasetVisible(index);
+        chartChecklistTecnico.setDatasetVisibility(index, !isVisible);
+        chartChecklistTecnico.update();
+        const btn = document.getElementById(`legend-tech-btn-${index}`);
+        if (btn) {
+            if (isVisible) {
+                btn.classList.add('opacity-40', 'line-through');
+            } else {
+                btn.classList.remove('opacity-40', 'line-through');
+            }
+        }
+    }
+
+    function renderTechRankingTable(ranking) {
+        const tbody = document.getElementById('tech-ranking-tbody');
+        if (!tbody) return;
+        if (!ranking || ranking.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="4" class="py-8 text-center text-xs text-slate-400">Nenhum técnico encontrado para este período.</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = ranking.map(r => {
+            let medal = `${r.posicao}º`;
+            if (r.posicao === 1) medal = `<span class="text-lg" title="1º Lugar - Líder">🥇</span>`;
+            else if (r.posicao === 2) medal = `<span class="text-lg" title="2º Lugar">🥈</span>`;
+            else if (r.posicao === 3) medal = `<span class="text-lg" title="3º Lugar">🥉</span>`;
+
+            return `
+            <tr class="border-b border-slate-900/5 dark:border-white/5 hover:bg-slate-50 dark:hover:bg-white/5 transition-all">
+                <td class="py-3 px-2">
+                    <div class="flex items-center gap-3">
+                        <div class="flex items-center justify-center w-6 text-center font-black text-xs text-slate-400">
+                            ${medal}
+                        </div>
+                        <div class="w-8 h-8 rounded-full text-white flex items-center justify-center font-bold text-xs shadow-md" style="background-color: ${r.color};">
+                            ${r.name.charAt(0).toUpperCase()}
+                        </div>
+                        <span class="text-xs font-bold text-slate-700 dark:text-gray-200">${r.name}</span>
+                    </div>
+                </td>
+                <td class="py-3 px-2 text-center text-sm font-black text-blue-600">${r.period_total}</td>
+                <td class="py-3 px-2 text-center text-sm font-black text-slate-800 dark:text-white">${r.total_geral}</td>
+                <td class="py-3 px-2 hidden md:table-cell align-middle">
+                    <div class="flex items-center gap-2">
+                        <div class="flex-1 h-2 bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden">
+                            <div class="h-full rounded-full transition-all duration-1000" style="width: ${r.pct}%; background-color: ${r.color};"></div>
+                        </div>
+                        <span class="text-[10px] font-black text-slate-400 w-8 text-right">${r.pct}%</span>
+                    </div>
+                </td>
+            </tr>
+            `;
+        }).join('');
     }
 
     // --- DASHBOARD GESTÃO TÉCNICA (PLANTÕES & ESCALAS) ---
