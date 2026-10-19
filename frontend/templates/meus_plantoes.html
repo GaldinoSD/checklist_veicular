@@ -3,7 +3,7 @@
 
 {% block content %}
 <style>
-/* Animações e Micro-interações dedicadas ao Plantão & Responsabilidade */
+/* Micro-interações e efeitos dedicados ao Plantão Operacional */
 @keyframes pulseRadarRing {
     0% { transform: scale(0.95); opacity: 0.8; }
     50% { transform: scale(1.15); opacity: 0.2; }
@@ -12,12 +12,12 @@
 
 @keyframes floatGentle {
     0%, 100% { transform: translateY(0px); }
-    50% { transform: translateY(-3px); }
+    50% { transform: translateY(-2px); }
 }
 
 @keyframes beaconGlow {
     0%, 100% { box-shadow: 0 0 10px rgba(14, 165, 233, 0.4), inset 0 0 8px rgba(16, 185, 129, 0.2); }
-    50% { box-shadow: 0 0 22px rgba(16, 185, 129, 0.6), inset 0 0 14px rgba(14, 165, 233, 0.4); }
+    50% { box-shadow: 0 0 20px rgba(16, 185, 129, 0.5), inset 0 0 12px rgba(14, 165, 233, 0.3); }
 }
 
 .radar-beacon {
@@ -31,44 +31,61 @@
 .operational-float {
     animation: floatGentle 4s ease-in-out infinite;
 }
+
+/* Ocultar barra de rolagem nos filtros no mobile mantendo scroll por toque */
+.scrollbar-none::-webkit-scrollbar {
+    display: none;
+}
+.scrollbar-none {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
 </style>
 
-<div class="max-w-7xl mx-auto pb-16 px-1 sm:px-4 space-y-6">
+<div class="max-w-7xl mx-auto pb-16 px-2 sm:px-4 space-y-4 sm:space-y-6">
 
     <!-- ======================================================== -->
-    <!-- CENTRAL DE PLANTÃO OPERACIONAL COM SINCRONIZAÇÃO         -->
+    <!-- 1. CENTRAL DE PLANTÃO OPERACIONAL COM SINCRONIZAÇÃO     -->
     <!-- ======================================================== -->
     <div id="card-hero-responsabilidade" 
-         class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-50 via-white to-sky-50/40 dark:from-slate-900 dark:via-slate-900/95 dark:to-slate-850 p-5 sm:p-6 border border-slate-200/90 dark:border-white/10 shadow-sm hover:shadow-md transition-all">
+         class="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-slate-50 via-white to-sky-50/40 dark:from-slate-900 dark:via-slate-900/95 dark:to-slate-850 p-4 sm:p-6 border border-slate-200/90 dark:border-white/10 shadow-xs hover:shadow-sm transition-all">
         
-        <!-- Elementos de iluminação de fundo suaves -->
-        <div class="absolute -right-12 -top-12 w-48 h-48 rounded-full bg-sky-500/10 dark:bg-sky-500/15 blur-3xl pointer-events-none"></div>
-        <div class="absolute -left-12 -bottom-12 w-48 h-48 rounded-full bg-emerald-500/10 dark:bg-emerald-500/10 blur-3xl pointer-events-none"></div>
+        <!-- Elementos de iluminação suave em background -->
+        <div class="absolute -right-12 -top-12 w-44 h-44 rounded-full bg-sky-500/10 dark:bg-sky-500/15 blur-3xl pointer-events-none"></div>
+        <div class="absolute -left-12 -bottom-12 w-44 h-44 rounded-full bg-emerald-500/10 dark:bg-emerald-500/10 blur-3xl pointer-events-none"></div>
 
-        <div class="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div class="relative z-10 flex flex-col gap-3.5 sm:gap-4">
             
-            <!-- Bloco do Radar Animado + Texto de Responsabilidade -->
-            <div class="flex items-start gap-4">
-                
-                <!-- Radar Holográfico de Plantão Operacional -->
-                <div class="relative flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-tr from-sky-600 to-emerald-500 text-white shrink-0 radar-beacon shadow-lg shadow-sky-500/20">
-                    <!-- Ondas do radar -->
-                    <span class="absolute w-full h-full rounded-2xl border-2 border-emerald-400/50 radar-wave"></span>
-                    <i id="hero-radar-icon" class="fa-solid fa-shield-halved text-2xl relative z-10 drop-shadow"></i>
+            <!-- Barra Superior do Card (Pill de Status + Sincronização) -->
+            <div class="flex items-center justify-between gap-2 flex-wrap">
+                <div class="flex items-center gap-2">
+                    <span class="text-[10px] font-black uppercase tracking-wider text-sky-600 dark:text-sky-400 flex items-center gap-1.5">
+                        <i class="fa-solid fa-satellite-dish text-[10px]"></i>
+                        <span>Central de Plantões</span>
+                    </span>
+                    <span id="hero-timing-pill" class="text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10">
+                        Monitorando
+                    </span>
                 </div>
 
-                <div class="space-y-1">
-                    <div class="flex items-center gap-2 flex-wrap">
-                        <span class="text-[10px] font-black uppercase tracking-widest text-sky-600 dark:text-sky-400 flex items-center gap-1.5">
-                            <i class="fa-solid fa-satellite-dish text-[10px]"></i>
-                            <span>Central de Plantão Operacional</span>
-                        </span>
-                        <span id="hero-timing-pill" class="text-[10px] font-black uppercase px-2 py-0.5 rounded-full bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10">
-                            Monitorando
-                        </span>
-                    </div>
+                <button type="button" onclick="loadMeusPlantoesPage(true)" id="btn-refresh-plantoes"
+                        class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200/90 dark:border-white/10 text-[11px] font-bold text-slate-700 dark:text-slate-200 hover:text-sky-600 dark:hover:text-sky-400 shadow-2xs active:scale-95 transition-all">
+                    <i class="fa-solid fa-rotate-right text-xs text-sky-500" id="icon-refresh-spin"></i>
+                    <span>Sincronizar</span>
+                </button>
+            </div>
 
-                    <h3 id="hero-responsibility-title" class="text-base sm:text-lg font-black text-slate-900 dark:text-white tracking-tight leading-snug">
+            <!-- Corpo de Identificação Operacional -->
+            <div class="flex items-start gap-3.5 sm:gap-4">
+                
+                <!-- Radar Indicador de Plantão -->
+                <div class="relative flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-tr from-sky-600 to-emerald-500 text-white shrink-0 radar-beacon shadow-md shadow-sky-500/20">
+                    <span class="absolute w-full h-full rounded-2xl border-2 border-emerald-400/50 radar-wave"></span>
+                    <i id="hero-radar-icon" class="fa-solid fa-shield-halved text-xl sm:text-2xl relative z-10 drop-shadow"></i>
+                </div>
+
+                <div class="space-y-1 min-w-0 flex-1">
+                    <h3 id="hero-responsibility-title" class="text-sm sm:text-base font-black text-slate-900 dark:text-white tracking-tight leading-snug">
                         Compromisso Técnico e Responsabilidade de Plantão
                     </h3>
 
@@ -79,65 +96,84 @@
 
             </div>
 
-            <!-- Botão de Sincronização de Plantões -->
-            <div class="flex items-center self-start sm:self-center shrink-0">
-                <button type="button" onclick="loadMeusPlantoesPage(true)" id="btn-refresh-plantoes"
-                        class="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200/90 dark:border-white/10 text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-sky-600 dark:hover:text-sky-400 shadow-sm hover:border-sky-300 dark:hover:border-sky-600 active:scale-95 transition-all">
-                    <i class="fa-solid fa-rotate-right text-xs text-sky-500" id="icon-refresh-spin"></i>
-                    <span>Sincronizar Plantões</span>
-                </button>
-            </div>
-
         </div>
 
     </div>
 
-    <!-- ========================================== -->
-    <!-- 4. CONTROLES: FILTRO RÁPIDO & BUSCA        -->
-    <!-- (Removida a aba 'Histórico de Realizados') -->
-    <!-- ========================================== -->
-    <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-white/10 p-4 shadow-sm space-y-3.5">
+    <!-- ======================================================== -->
+    <!-- 2. BARRA DE MÉTRICAS RÁPIDAS (MOBILE & DESKTOP)          -->
+    <!-- ======================================================== -->
+    <div class="grid grid-cols-3 gap-2 sm:gap-3.5">
+        <div class="bg-white dark:bg-slate-900 rounded-2xl p-3 sm:p-4 border border-slate-200/80 dark:border-white/10 shadow-xs flex flex-col justify-between">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Agendados</span>
+            <div class="flex items-baseline justify-between mt-1">
+                <span id="stat-upcoming-count" class="text-lg sm:text-2xl font-black text-sky-600 dark:text-sky-400 leading-none">0</span>
+                <i class="fa-solid fa-calendar-check text-xs text-sky-500/40"></i>
+            </div>
+        </div>
+
+        <div class="bg-white dark:bg-slate-900 rounded-2xl p-3 sm:p-4 border border-slate-200/80 dark:border-white/10 shadow-xs flex flex-col justify-between">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Neste Mês</span>
+            <div class="flex items-baseline justify-between mt-1">
+                <span id="stat-month-count" class="text-lg sm:text-2xl font-black text-slate-900 dark:text-white leading-none">0</span>
+                <i class="fa-solid fa-calendar text-xs text-slate-400/40"></i>
+            </div>
+        </div>
+
+        <div class="bg-white dark:bg-slate-900 rounded-2xl p-3 sm:p-4 border border-slate-200/80 dark:border-white/10 shadow-xs flex flex-col justify-between">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Neste Ano</span>
+            <div class="flex items-baseline justify-between mt-1">
+                <span id="stat-year-count" class="text-lg sm:text-2xl font-black text-slate-900 dark:text-white leading-none">0</span>
+                <i class="fa-solid fa-chart-simple text-xs text-slate-400/40"></i>
+            </div>
+        </div>
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- 3. CONTROLES: FILTRO RÁPIDO & BUSCA DINÂMICA             -->
+    <!-- ======================================================== -->
+    <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-white/10 p-3.5 sm:p-4 shadow-xs space-y-3">
         
         <!-- Header da Seção de Escalas com Contador -->
         <div class="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-white/5">
             <div class="flex items-center gap-2">
-                <span class="w-2.5 h-2.5 rounded-full bg-sky-500 shadow-xs shadow-sky-500/50"></span>
+                <span class="w-2 h-2 rounded-full bg-sky-500 shadow-xs shadow-sky-500/50"></span>
                 <h3 class="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200">
                     Cronograma de Plantões
                 </h3>
             </div>
-            <span id="badge-page-upcoming" class="px-2.5 py-0.5 rounded-full bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 border border-sky-200/60 dark:border-sky-800/40 text-[11px] font-black">
+            <span id="badge-page-upcoming" class="px-2.5 py-0.5 rounded-full bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 border border-sky-200/60 dark:border-sky-800/40 text-[10px] sm:text-[11px] font-black">
                 0 agendados
             </span>
         </div>
 
-        <!-- Filtros Rápidos & Campo de Busca -->
-        <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-1">
+        <!-- Filtros Rápidos & Campo de Busca Mobile-First -->
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 pt-0.5">
             
             <!-- Campo de Busca Dinâmica -->
             <div class="relative flex-1">
-                <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-xs text-slate-400"></i>
+                <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-400"></i>
                 <input type="text" id="input-search-plantoes" oninput="filterPlantoesPageList()"
-                       placeholder="Buscar por data, equipe, parceiro ou observação..."
-                       class="w-full pl-9 pr-3 py-2.5 rounded-xl text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 text-slate-800 dark:text-white placeholder:text-slate-400 outline-none focus:border-sky-500 transition-colors">
+                       placeholder="Buscar data, equipe, parceiro..."
+                       class="w-full pl-8 pr-3 py-2 rounded-xl text-xs bg-slate-50 dark:bg-slate-800/90 border border-slate-200 dark:border-white/10 text-slate-800 dark:text-white placeholder:text-slate-400 outline-none focus:border-sky-500 transition-colors">
             </div>
 
-            <!-- Botões de Filtro por Tipo de Plantão -->
+            <!-- Botões de Filtro por Tipo de Plantão com Rolagem Suave -->
             <div class="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
                 <button type="button" onclick="setTypeFilter('all', this)"
-                        class="type-filter-btn px-3.5 py-2 rounded-xl text-xs font-black transition-all bg-slate-900 text-white dark:bg-white dark:text-slate-900 shrink-0 shadow-xs active:scale-95">
+                        class="type-filter-btn px-3 py-1.5 rounded-xl text-xs font-black transition-all bg-slate-900 text-white dark:bg-white dark:text-slate-900 shrink-0 shadow-2xs active:scale-95">
                     Todos
                 </button>
                 <button type="button" onclick="setTypeFilter('sabado', this)"
-                        class="type-filter-btn px-3.5 py-2 rounded-xl text-xs font-bold transition-all bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 shrink-0 active:scale-95">
+                        class="type-filter-btn px-3 py-1.5 rounded-xl text-xs font-bold transition-all bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 shrink-0 active:scale-95">
                     Sábados
                 </button>
                 <button type="button" onclick="setTypeFilter('domingo', this)"
-                        class="type-filter-btn px-3.5 py-2 rounded-xl text-xs font-bold transition-all bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 shrink-0 active:scale-95">
+                        class="type-filter-btn px-3 py-1.5 rounded-xl text-xs font-bold transition-all bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 shrink-0 active:scale-95">
                     Domingos
                 </button>
                 <button type="button" onclick="setTypeFilter('feriado', this)"
-                        class="type-filter-btn px-3.5 py-2 rounded-xl text-xs font-bold transition-all bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 shrink-0 active:scale-95">
+                        class="type-filter-btn px-3 py-1.5 rounded-xl text-xs font-bold transition-all bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 shrink-0 active:scale-95">
                     Feriados
                 </button>
             </div>
@@ -146,43 +182,55 @@
 
     </div>
 
-    <!-- ========================================== -->
-    <!-- 5. LISTA DE PLANTÕES (CARDS RESPONSIVOS)   -->
-    <!-- ========================================== -->
-    <div id="page-plantoes-list-container" class="space-y-3.5 min-h-[300px]">
+    <!-- ======================================================== -->
+    <!-- 4. LISTA DE PLANTÕES (CARDS MOBILE OTIMIZADOS)           -->
+    <!-- ======================================================== -->
+    <div id="page-plantoes-list-container" class="space-y-3 min-h-[260px]">
         
-        <!-- Loading State com skeleton sutil -->
-        <div class="text-center py-20 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-white/10 shadow-sm">
-            <div class="animate-spin inline-block w-8 h-8 border-3 border-sky-500 border-t-transparent rounded-full mb-3"></div>
-            <p class="text-xs font-black text-slate-400 uppercase tracking-widest">Consultando seus plantões no sistema...</p>
+        <!-- Skeleton Loading State com shimmer moderno -->
+        <div class="space-y-3 animate-pulse">
+            <div class="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-white/10 shadow-xs flex items-center gap-3.5">
+                <div class="w-13 h-13 rounded-xl bg-slate-100 dark:bg-slate-800 shrink-0"></div>
+                <div class="flex-1 space-y-2">
+                    <div class="h-3.5 bg-slate-200 dark:bg-slate-800 rounded w-1/3"></div>
+                    <div class="h-2.5 bg-slate-100 dark:bg-slate-800/60 rounded w-1/2"></div>
+                </div>
+            </div>
+            <div class="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-white/10 shadow-xs flex items-center gap-3.5">
+                <div class="w-13 h-13 rounded-xl bg-slate-100 dark:bg-slate-800 shrink-0"></div>
+                <div class="flex-1 space-y-2">
+                    <div class="h-3.5 bg-slate-200 dark:bg-slate-800 rounded w-1/4"></div>
+                    <div class="h-2.5 bg-slate-100 dark:bg-slate-800/60 rounded w-2/3"></div>
+                </div>
+            </div>
         </div>
 
     </div>
 
-    <!-- ========================================== -->
-    <!-- 6. BANNER INFORMATIVO DE NOTIFICAÇÕES     -->
-    <!-- ========================================== -->
-    <div class="p-4 sm:p-5 rounded-2xl bg-slate-100/90 dark:bg-slate-900 border border-slate-200/80 dark:border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-slate-600 dark:text-slate-400 shadow-sm">
+    <!-- ======================================================== -->
+    <!-- 5. BANNER INFORMATIVO DE NOTIFICAÇÕES                    -->
+    <!-- ======================================================== -->
+    <div class="p-3.5 sm:p-4 rounded-2xl bg-slate-100/90 dark:bg-slate-900 border border-slate-200/80 dark:border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-slate-600 dark:text-slate-400 shadow-2xs">
         <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-500 border border-amber-500/20 flex items-center justify-center shrink-0">
-                <i class="fa-solid fa-bell text-base"></i>
+            <div class="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-500 border border-amber-500/20 flex items-center justify-center shrink-0">
+                <i class="fa-solid fa-bell text-sm"></i>
             </div>
-            <div>
+            <div class="min-w-0">
                 <span class="font-extrabold text-slate-800 dark:text-slate-200 block sm:inline">Alertas Automáticos em Tempo Real:</span>
-                <span>Qualquer inclusão, alteração ou troca de plantão no Cronograma Anual é notificada de imediato no sininho e no seu WhatsApp.</span>
+                <span class="leading-relaxed">Qualquer inclusão, alteração ou troca de escala no cronograma é notificada de imediato no sininho e no seu WhatsApp.</span>
             </div>
         </div>
-        <div class="text-[11px] font-bold text-slate-400 shrink-0 flex items-center gap-1.5 self-start sm:self-auto">
-            <i class="fa-solid fa-shield-check text-emerald-500"></i>
+        <div class="text-[11px] font-bold text-slate-400 shrink-0 flex items-center gap-1.5 self-start sm:self-auto pl-12 sm:pl-0">
+            <i class="fa-solid fa-circle-check text-emerald-500"></i>
             <span>Sincronizado com Gestão Técnica</span>
         </div>
     </div>
 
 </div>
 
-<!-- ========================================== -->
-<!-- 7. JAVASCRIPT DE CONTROLE DA PÁGINA        -->
-<!-- ========================================== -->
+<!-- ======================================================== -->
+<!-- 6. JAVASCRIPT DE CONTROLE E RENDERIZAÇÃO DA PÁGINA       -->
+<!-- ======================================================== -->
 <script>
     let plantoesMasterData = null;
     let currentTypeFilter = 'all';
@@ -191,9 +239,9 @@
     function setTypeFilter(type, btn) {
         currentTypeFilter = type;
         document.querySelectorAll('.type-filter-btn').forEach(b => {
-            b.className = 'type-filter-btn px-3.5 py-2 rounded-xl text-xs font-bold transition-all bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 shrink-0 active:scale-95';
+            b.className = 'type-filter-btn px-3 py-1.5 rounded-xl text-xs font-bold transition-all bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 shrink-0 active:scale-95';
         });
-        btn.className = 'type-filter-btn px-3.5 py-2 rounded-xl text-xs font-black transition-all bg-slate-900 text-white dark:bg-white dark:text-slate-900 shrink-0 shadow-xs active:scale-95';
+        btn.className = 'type-filter-btn px-3 py-1.5 rounded-xl text-xs font-black transition-all bg-slate-900 text-white dark:bg-white dark:text-slate-900 shrink-0 shadow-2xs active:scale-95';
         renderPlantoesPage();
     }
 
@@ -228,14 +276,20 @@
             if (data && data.success) {
                 plantoesMasterData = data;
 
-                // Atualiza Contadores
+                // Atualiza Contadores e Estatísticas
                 const badgeUp = document.getElementById('badge-page-upcoming');
                 const sidebarBadge = document.getElementById('badge-sidebar-plantoes');
+                const statUpcoming = document.getElementById('stat-upcoming-count');
+                const statMonth = document.getElementById('stat-month-count');
+                const statYear = document.getElementById('stat-year-count');
 
-                if (badgeUp) badgeUp.textContent = `${data.stats.upcoming_count || 0} agendados`;
+                const upCount = (data.stats && data.stats.upcoming_count) || 0;
+                if (badgeUp) badgeUp.textContent = `${upCount} agendados`;
+                if (statUpcoming) statUpcoming.textContent = upCount;
+                if (statMonth) statMonth.textContent = (data.stats && data.stats.month_count) || 0;
+                if (statYear) statYear.textContent = (data.stats && data.stats.year_count) || 0;
 
                 if (sidebarBadge) {
-                    const upCount = data.stats.upcoming_count || 0;
                     sidebarBadge.textContent = upCount;
                     if (upCount > 0) {
                         sidebarBadge.classList.remove('hidden');
@@ -244,7 +298,7 @@
                     }
                 }
 
-                // Atualiza Hero & Banner de Responsabilidade Operacional
+                // Atualiza Hero e Banner de Responsabilidade Operacional (Sem Emojis)
                 const heroTitle = document.getElementById('hero-responsibility-title');
                 const heroDesc = document.getElementById('hero-responsibility-desc');
                 const heroPill = document.getElementById('hero-timing-pill');
@@ -255,31 +309,31 @@
                         const next = data.stats.next_shift;
 
                         if (next.is_today) {
-                            heroTitle.textContent = `🚨 Você está escalado de plantão HOJE (${next.weekday})!`;
-                            heroDesc.textContent = `Mantenha seu telefone disponível para acionamento, realize o checklist matinal e esteja pronto para o atendimento operacional da sua equipe.`;
+                            heroTitle.textContent = `Você está de plantão hoje (${next.weekday})`;
+                            heroDesc.textContent = `Mantenha seu telefone disponível para acionamento, realize o checklist preventivo do veículo e confira seus equipamentos de atendimento.`;
                             heroPill.textContent = 'Plantão Hoje';
-                            heroPill.className = 'text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-emerald-500 text-white animate-pulse';
-                            heroIcon.className = 'fa-solid fa-triangle-exclamation text-2xl relative z-10 text-white';
+                            heroPill.className = 'text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-emerald-600 text-white animate-pulse';
+                            heroIcon.className = 'fa-solid fa-triangle-exclamation text-xl sm:text-2xl relative z-10 text-white';
                         } else {
-                            heroTitle.textContent = `🛡️ Próximo Plantão: ${next.formatted_date} (${next.weekday})`;
-                            heroDesc.textContent = `Escalado como ${next.type_label} (${next.timing_badge}). Lembre-se: pontualidade, segurança e comunicação direta com a supervisão são pilares da nossa operação.`;
+                            heroTitle.textContent = `Próximo plantão: ${next.formatted_date} (${next.weekday})`;
+                            heroDesc.textContent = `Escalado como ${next.type_label} (${next.timing_badge}). Pontualidade, segurança e comunicação direta com a supervisão são fundamentais na nossa operação.`;
                             heroPill.textContent = next.timing_badge;
                             heroPill.className = 'text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-sky-100 dark:bg-sky-500/20 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-400/30';
-                            heroIcon.className = 'fa-solid fa-shield-halved text-2xl relative z-10 text-white';
+                            heroIcon.className = 'fa-solid fa-shield-halved text-xl sm:text-2xl relative z-10 text-white';
                         }
                     } else {
-                        heroTitle.textContent = `✅ Situação Regular • Sem Plantões Pendentes`;
+                        heroTitle.textContent = `Situação regular • Sem plantões pendentes`;
                         heroDesc.textContent = `Você não possui escalas ou plantões agendados para os próximos dias. Continue com o excelente trabalho e dedicação!`;
                         heroPill.textContent = 'Operação Regular';
                         heroPill.className = 'text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700';
-                        heroIcon.className = 'fa-solid fa-circle-check text-2xl relative z-10 text-white';
+                        heroIcon.className = 'fa-solid fa-circle-check text-xl sm:text-2xl relative z-10 text-white';
                     }
                 }
 
                 renderPlantoesPage();
             } else {
                 container.innerHTML = `
-                    <div class="text-center py-16 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-white/10">
+                    <div class="text-center py-16 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-white/10 shadow-xs">
                         <i class="fa-solid fa-triangle-exclamation text-amber-500 text-2xl mb-2"></i>
                         <p class="text-xs font-semibold text-slate-600 dark:text-slate-300">Não foi possível carregar as escalas.</p>
                     </div>
@@ -288,7 +342,7 @@
         } catch (err) {
             console.error("Erro ao carregar plantões:", err);
             container.innerHTML = `
-                <div class="text-center py-16 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-white/10">
+                <div class="text-center py-16 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-white/10 shadow-xs">
                     <i class="fa-solid fa-triangle-exclamation text-rose-500 text-2xl mb-2"></i>
                     <p class="text-xs font-semibold text-slate-600 dark:text-slate-300">Erro de conexão ao carregar plantões.</p>
                 </div>
@@ -300,7 +354,7 @@
         }
     }
 
-    // Renderiza a lista de plantões futuros com filtros
+    // Renderiza a lista de plantões futuros com design mobile aprimorado
     function renderPlantoesPage() {
         const container = document.getElementById('page-plantoes-list-container');
         if (!container || !plantoesMasterData) return;
@@ -312,7 +366,7 @@
             list = list.filter(item => item.badge_type === currentTypeFilter);
         }
 
-        // 2. Filtro de Busca
+        // 2. Filtro de Busca Dinâmica
         const searchVal = (document.getElementById('input-search-plantoes')?.value || '').toLowerCase().trim();
         if (searchVal) {
             list = list.filter(item => {
@@ -328,14 +382,14 @@
             });
         }
 
-        // Caso vazio
+        // Estado Vazio com estética limpa
         if (list.length === 0) {
             container.innerHTML = `
-                <div class="text-center py-16 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-white/10 shadow-sm p-6">
-                    <div class="w-16 h-16 rounded-2xl bg-sky-500/10 text-sky-500 flex items-center justify-center text-3xl mx-auto mb-3 shadow-sm">
+                <div class="text-center py-14 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-white/10 shadow-xs p-6">
+                    <div class="w-14 h-14 rounded-2xl bg-sky-500/10 text-sky-500 flex items-center justify-center text-2xl mx-auto mb-3 shadow-2xs">
                         <i class="fa-solid fa-calendar-check"></i>
                     </div>
-                    <h4 class="text-base font-extrabold text-slate-800 dark:text-white">
+                    <h4 class="text-sm font-extrabold text-slate-800 dark:text-white">
                         ${searchVal ? 'Nenhum plantão localizado' : 'Nenhum plantão agendado'}
                     </h4>
                     <p class="text-xs text-slate-400 max-w-sm mx-auto mt-1 leading-relaxed">
@@ -348,7 +402,7 @@
             return;
         }
 
-        // Renderiza cada card com acabamento profissional
+        // Renderiza cada card com acabamento profissional mobile-first
         const cardsHtml = list.map(item => {
             let badgeColorClass = 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-white/10';
             let dateBarColor = 'bg-sky-500';
@@ -367,77 +421,90 @@
             let timingBadgeHtml = '';
             if (item.timing_class === 'today') {
                 timingBadgeHtml = `
-                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500 text-white text-[11px] font-black uppercase shadow-md shadow-emerald-500/20 animate-pulse">
-                        <span class="w-1.5 h-1.5 rounded-full bg-white"></span>
-                        <span>É HOJE</span>
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-600 text-white text-[10px] font-black uppercase tracking-wider shadow-xs">
+                        <span class="w-1.5 h-1.5 rounded-full bg-white animate-ping"></span>
+                        <span>Hoje</span>
                     </span>`;
             } else if (item.timing_class === 'soon') {
                 timingBadgeHtml = `
-                    <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-amber-500 text-white text-[11px] font-black uppercase shadow-md shadow-amber-500/20">
+                    <span class="inline-flex items-center px-2.5 py-1 rounded-lg bg-amber-500 text-white text-[10px] font-black uppercase tracking-wider shadow-xs">
                         <span>Amanhã</span>
                     </span>`;
             } else {
                 timingBadgeHtml = `
-                    <span class="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-white/10 text-[11px] font-bold">
+                    <span class="inline-flex items-center px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-white/10 text-[10px] font-bold">
                         <span>${escapeHtml(item.timing_badge)}</span>
                     </span>`;
             }
 
             const teamHtml = item.team_name
-                ? `<div class="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300 mt-1.5">
-                     <i class="fa-solid fa-users text-[11px] text-sky-500"></i>
-                     <span class="font-bold text-slate-400">Equipe:</span>
-                     <span class="font-extrabold text-slate-800 dark:text-slate-100">${escapeHtml(item.team_name)}</span>
+                ? `<div class="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
+                     <i class="fa-solid fa-users text-[11px] text-sky-500 shrink-0"></i>
+                     <span class="text-slate-400 font-medium">Equipe:</span>
+                     <span class="font-extrabold text-slate-900 dark:text-slate-100 truncate">${escapeHtml(item.team_name)}</span>
                    </div>`
                 : '';
 
             const colleaguesHtml = (item.colleagues && item.colleagues.length > 0)
-                ? `<div class="flex items-center gap-1.5 text-xs text-slate-600 dark:text-slate-300 mt-1">
-                     <i class="fa-solid fa-user-group text-[11px] text-emerald-500"></i>
-                     <span class="font-bold text-slate-400">Parceiros escalados:</span>
+                ? `<div class="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
+                     <i class="fa-solid fa-user-group text-[11px] text-emerald-500 shrink-0"></i>
+                     <span class="text-slate-400 font-medium">Parceiros:</span>
                      <span class="font-semibold text-slate-800 dark:text-slate-200">${item.colleagues.map(escapeHtml).join(', ')}</span>
                    </div>`
                 : '';
 
             const obsHtml = item.obs 
-                ? `<div class="mt-3 text-xs text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/60 p-3 rounded-xl border border-slate-100 dark:border-white/5 flex items-start gap-2.5">
+                ? `<div class="mt-1 text-xs text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-xl border-l-2 border-sky-500 border border-slate-200/60 dark:border-white/5 flex items-start gap-2.5">
                      <i class="fa-regular fa-message text-xs text-sky-500 mt-0.5 shrink-0"></i>
                      <span class="leading-relaxed font-medium">${escapeHtml(item.obs)}</span>
                    </div>`
                 : '';
 
             return `
-                <div class="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-white/10 shadow-sm hover:shadow-md hover:border-sky-400/50 dark:hover:border-sky-500/30 transition-all flex flex-col sm:flex-row sm:items-start gap-4 group relative overflow-hidden">
+                <div class="relative overflow-hidden rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-white/10 p-3.5 sm:p-5 shadow-xs hover:shadow-md hover:border-sky-400/50 dark:hover:border-sky-500/30 transition-all active:scale-[0.99] group">
                     
-                    <!-- Linha lateral decorativa colorida -->
+                    <!-- Linha lateral decorativa colorida por tipo -->
                     <div class="absolute top-0 left-0 w-1 sm:w-1.5 h-full ${dateBarColor}"></div>
 
-                    <!-- Bloco Visual de Data (Mobile & Desktop) -->
-                    <div class="flex sm:flex-col items-center justify-between sm:justify-center w-full sm:w-16 h-14 sm:h-18 px-3 sm:px-0 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200/70 dark:border-white/5 shrink-0 group-hover:scale-105 transition-transform shadow-2xs">
-                        <div class="flex items-center sm:flex-col sm:items-center gap-2 sm:gap-0.5">
-                            <span class="text-[10px] font-black uppercase text-slate-400 tracking-wider leading-none">${escapeHtml(item.month_short)}</span>
-                            <span class="text-2xl font-black text-slate-900 dark:text-white leading-none sm:mt-1">${escapeHtml(item.day)}</span>
-                        </div>
-                        <span class="sm:hidden text-xs font-bold text-slate-700 dark:text-slate-300">${escapeHtml(item.weekday)}</span>
-                    </div>
+                    <div class="pl-2 sm:pl-3 flex flex-col gap-2.5 sm:gap-3">
+                        
+                        <!-- Linha Superior: Tile de Data + Tipo de Plantão + Timing Badge -->
+                        <div class="flex items-start justify-between gap-3">
+                            
+                            <div class="flex items-center gap-3 min-w-0">
+                                <!-- Tile de Data Compacto -->
+                                <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-slate-50 dark:bg-slate-800/90 border border-slate-200/70 dark:border-white/10 flex flex-col items-center justify-center shrink-0 shadow-2xs group-hover:scale-105 transition-transform">
+                                    <span class="text-[9px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-400 leading-none">${escapeHtml(item.month_short)}</span>
+                                    <span class="text-lg sm:text-xl font-black text-slate-900 dark:text-white leading-none mt-0.5">${escapeHtml(item.day)}</span>
+                                </div>
 
-                    <!-- Detalhes do Plantão -->
-                    <div class="flex-1 min-w-0">
-                        <div class="flex items-center justify-between gap-2 flex-wrap pb-1">
-                            <div class="flex items-center gap-2">
-                                <span class="hidden sm:inline text-sm font-black text-slate-900 dark:text-white">${escapeHtml(item.weekday)}</span>
-                                <span class="px-2.5 py-0.5 rounded-full text-[11px] font-black border ${badgeColorClass}">
-                                    ${escapeHtml(item.type_label)}
-                                </span>
+                                <!-- Detalhes do Dia e Categoria -->
+                                <div class="min-w-0">
+                                    <h4 class="text-sm font-black text-slate-900 dark:text-white capitalize truncate">${escapeHtml(item.weekday)}</h4>
+                                    <div class="mt-0.5">
+                                        <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-black border ${badgeColorClass}">
+                                            ${escapeHtml(item.type_label)}
+                                        </span>
+                                    </div>
+                                </div>
                             </div>
-                            <div>
+
+                            <!-- Badge de Tempo (Hoje, Amanhã, Em X dias) -->
+                            <div class="shrink-0 pt-0.5">
                                 ${timingBadgeHtml}
                             </div>
+
                         </div>
 
-                        ${teamHtml}
-                        ${colleaguesHtml}
+                        <!-- Detalhes de Equipe e Parceiros -->
+                        <div class="space-y-1.5 pt-0.5 text-xs">
+                            ${teamHtml}
+                            ${colleaguesHtml}
+                        </div>
+
+                        <!-- Observação/Nota de Operação -->
                         ${obsHtml}
+
                     </div>
 
                 </div>

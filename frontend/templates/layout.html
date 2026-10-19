@@ -564,81 +564,6 @@
           </div>
           {% endif %}
 
-          {% if current_user.has_permission('checklist_mobile') or current_user.has_permission('treinamentos_mobile') or current_user.has_permission('manutencao_os') or current_user.has_permission('controle_ferramentas') or current_user.has_permission('meus_plantoes') %}
-          <div class="px-3 pt-3 pb-1 text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
-            Operacional
-          </div>
-          
-          {% if current_user.has_permission('checklist_mobile') %}
-          <a href="{{ url_for('checklist_mobile') }}" 
-             class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] transition-colors group
-                    {% if request.endpoint == 'checklist_mobile' %}
-                      bg-slate-900 text-white font-semibold shadow-sm dark:bg-white dark:text-slate-900
-                    {% else %}
-                      text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800/60 font-medium
-                    {% endif %}">
-            <i class="fa-solid fa-mobile-button w-4 text-center text-sm {% if request.endpoint == 'checklist_mobile' %}text-white dark:text-slate-900{% else %}text-slate-400 group-hover:text-slate-700 dark:text-slate-500 dark:group-hover:text-slate-300{% endif %} transition-colors"></i>
-            <span class="truncate">Checklist Técnico</span>
-          </a>
-          {% endif %}
-
-          {% if current_user.has_permission('controle_ferramentas') %}
-          <a href="{{ url_for('controle_ferramentas') }}" 
-             class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] transition-colors group
-                    {% if request.endpoint == 'controle_ferramentas' %}
-                      bg-slate-900 text-white font-semibold shadow-sm dark:bg-white dark:text-slate-900
-                    {% else %}
-                      text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800/60 font-medium
-                    {% endif %}">
-            <i class="fa-solid fa-toolbox w-4 text-center text-sm {% if request.endpoint == 'controle_ferramentas' %}text-white dark:text-slate-900{% else %}text-slate-400 group-hover:text-slate-700 dark:text-slate-500 dark:group-hover:text-slate-300{% endif %} transition-colors"></i>
-            <span class="truncate">Controle Ferramentas</span>
-          </a>
-          {% endif %}
-
-          {% if current_user.has_permission('treinamentos_mobile') %}
-          <a href="{{ url_for('treinamentos_mobile') }}" 
-             class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] transition-colors group
-                    {% if request.endpoint == 'treinamentos_mobile' %}
-                      bg-slate-900 text-white font-semibold shadow-sm dark:bg-white dark:text-slate-900
-                    {% else %}
-                      text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800/60 font-medium
-                    {% endif %}">
-            <i class="fa-solid fa-graduation-cap w-4 text-center text-sm {% if request.endpoint == 'treinamentos_mobile' %}text-white dark:text-slate-900{% else %}text-slate-400 group-hover:text-slate-700 dark:text-slate-500 dark:group-hover:text-slate-300{% endif %} transition-colors"></i>
-            <span class="truncate">Treinamentos</span>
-          </a>
-          {% endif %}
-
-          {% if current_user.has_permission('manutencao_os') %}
-          <a href="{{ url_for('manutencao_os') }}" 
-             class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] transition-colors group
-                    {% if request.endpoint == 'manutencao_os' %}
-                      bg-slate-900 text-white font-semibold shadow-sm dark:bg-white dark:text-slate-900
-                    {% else %}
-                      text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800/60 font-medium
-                    {% endif %}">
-            <i class="fa-solid fa-screwdriver-wrench w-4 text-center text-sm {% if request.endpoint == 'manutencao_os' %}text-white dark:text-slate-900{% else %}text-slate-400 group-hover:text-slate-700 dark:text-slate-500 dark:group-hover:text-slate-300{% endif %} transition-colors"></i>
-            <span class="truncate">Manutenção O.S.</span>
-          </a>
-          {% endif %}
-
-          {% if current_user.has_permission('meus_plantoes') %}
-          <!-- ✅ LINK MEUS PLANTÕES (TÉCNICO) -->
-          <a href="{{ url_for('meus_plantoes') }}" 
-             class="flex items-center justify-between px-3 py-2.5 rounded-xl text-[13px] transition-colors group
-                    {% if request.endpoint == 'meus_plantoes' %}
-                      bg-slate-900 text-white font-semibold shadow-sm dark:bg-white dark:text-slate-900
-                    {% else %}
-                      text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800/60 font-medium
-                    {% endif %}">
-            <div class="flex items-center gap-3 truncate">
-              <i class="fa-solid fa-calendar-check w-4 text-center text-sm {% if request.endpoint == 'meus_plantoes' %}text-sky-400 dark:text-sky-600{% else %}text-sky-500 group-hover:scale-110{% endif %} transition-transform"></i>
-              <span class="truncate">Meus Plantões</span>
-            </div>
-            <span id="badge-sidebar-plantoes" class="hidden px-2 py-0.5 rounded-full {% if request.endpoint == 'meus_plantoes' %}bg-sky-400/20 text-sky-200 dark:text-sky-900 border border-sky-400/30{% else %}bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20{% endif %} text-[10px] font-black">0</span>
-          </a>
-          {% endif %}
-          {% endif %}
-
           {% set tech_tabs = [
             ('calendario', 'Calendário', 'fa-calendar-days'),
             ('escalas', 'Escalas', 'fa-clock-rotate-left'),
@@ -663,6 +588,86 @@
               {% set ns.has_any_gestao = true %}
             {% endif %}
           {% endfor %}
+
+          {% set is_admin_or_supervisor = current_user.is_admin or current_user.is_supervisor or (current_user.role in ['admin', 'supervisor']) %}
+          {% set has_tecnico_operational = (not is_admin_or_supervisor) and (current_user.has_permission('checklist_mobile') or current_user.has_permission('treinamentos_mobile') or current_user.has_permission('manutencao_os') or current_user.has_permission('controle_ferramentas') or current_user.has_permission('meus_plantoes')) %}
+
+          {% if has_tecnico_operational or ns.has_any_gestao %}
+          <div class="px-3 pt-3 pb-1 text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+            Operacional
+          </div>
+          {% endif %}
+          
+          {% if not is_admin_or_supervisor %}
+            {% if current_user.has_permission('checklist_mobile') %}
+            <a href="{{ url_for('checklist_mobile') }}" 
+               class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] transition-colors group
+                      {% if request.endpoint == 'checklist_mobile' %}
+                        bg-slate-900 text-white font-semibold shadow-sm dark:bg-white dark:text-slate-900
+                      {% else %}
+                        text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800/60 font-medium
+                      {% endif %}">
+              <i class="fa-solid fa-mobile-button w-4 text-center text-sm {% if request.endpoint == 'checklist_mobile' %}text-white dark:text-slate-900{% else %}text-slate-400 group-hover:text-slate-700 dark:text-slate-500 dark:group-hover:text-slate-300{% endif %} transition-colors"></i>
+              <span class="truncate">Checklist Técnico</span>
+            </a>
+            {% endif %}
+
+            {% if current_user.has_permission('controle_ferramentas') %}
+            <a href="{{ url_for('controle_ferramentas') }}" 
+               class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] transition-colors group
+                      {% if request.endpoint == 'controle_ferramentas' %}
+                        bg-slate-900 text-white font-semibold shadow-sm dark:bg-white dark:text-slate-900
+                      {% else %}
+                        text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800/60 font-medium
+                      {% endif %}">
+              <i class="fa-solid fa-toolbox w-4 text-center text-sm {% if request.endpoint == 'controle_ferramentas' %}text-white dark:text-slate-900{% else %}text-slate-400 group-hover:text-slate-700 dark:text-slate-500 dark:group-hover:text-slate-300{% endif %} transition-colors"></i>
+              <span class="truncate">Controle Ferramentas</span>
+            </a>
+            {% endif %}
+
+            {% if current_user.has_permission('treinamentos_mobile') %}
+            <a href="{{ url_for('treinamentos_mobile') }}" 
+               class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] transition-colors group
+                      {% if request.endpoint == 'treinamentos_mobile' %}
+                        bg-slate-900 text-white font-semibold shadow-sm dark:bg-white dark:text-slate-900
+                      {% else %}
+                        text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800/60 font-medium
+                      {% endif %}">
+              <i class="fa-solid fa-graduation-cap w-4 text-center text-sm {% if request.endpoint == 'treinamentos_mobile' %}text-white dark:text-slate-900{% else %}text-slate-400 group-hover:text-slate-700 dark:text-slate-500 dark:group-hover:text-slate-300{% endif %} transition-colors"></i>
+              <span class="truncate">Treinamentos</span>
+            </a>
+            {% endif %}
+
+            {% if current_user.has_permission('manutencao_os') %}
+            <a href="{{ url_for('manutencao_os') }}" 
+               class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] transition-colors group
+                      {% if request.endpoint == 'manutencao_os' %}
+                        bg-slate-900 text-white font-semibold shadow-sm dark:bg-white dark:text-slate-900
+                      {% else %}
+                        text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800/60 font-medium
+                      {% endif %}">
+              <i class="fa-solid fa-screwdriver-wrench w-4 text-center text-sm {% if request.endpoint == 'manutencao_os' %}text-white dark:text-slate-900{% else %}text-slate-400 group-hover:text-slate-700 dark:text-slate-500 dark:group-hover:text-slate-300{% endif %} transition-colors"></i>
+              <span class="truncate">Manutenção O.S.</span>
+            </a>
+            {% endif %}
+
+            {% if current_user.has_permission('meus_plantoes') %}
+            <!-- ✅ LINK MEUS PLANTÕES (TÉCNICO) -->
+            <a href="{{ url_for('meus_plantoes') }}" 
+               class="flex items-center justify-between px-3 py-2.5 rounded-xl text-[13px] transition-colors group
+                      {% if request.endpoint == 'meus_plantoes' %}
+                        bg-slate-900 text-white font-semibold shadow-sm dark:bg-white dark:text-slate-900
+                      {% else %}
+                        text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800/60 font-medium
+                      {% endif %}">
+              <div class="flex items-center gap-3 truncate">
+                <i class="fa-solid fa-calendar-check w-4 text-center text-sm {% if request.endpoint == 'meus_plantoes' %}text-sky-400 dark:text-sky-600{% else %}text-sky-500 group-hover:scale-110{% endif %} transition-transform"></i>
+                <span class="truncate">Meus Plantões</span>
+              </div>
+              <span id="badge-sidebar-plantoes" class="hidden px-2 py-0.5 rounded-full {% if request.endpoint == 'meus_plantoes' %}bg-sky-400/20 text-sky-200 dark:text-sky-900 border border-sky-400/30{% else %}bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20{% endif %} text-[10px] font-black">0</span>
+            </a>
+            {% endif %}
+          {% endif %}
 
           {% if ns.has_any_gestao %}
           <!-- ✅ GESTÃO TÉCNICA COLLAPSIBLE -->
