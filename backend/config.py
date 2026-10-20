@@ -40,6 +40,7 @@ AVARIAS_UPLOAD_DIR = BASE_DIR / "frontend" / "static" / "avarias_fotos"
 TREINAMENTOS_UPLOAD_DIR = BASE_DIR / "frontend" / "static" / "uploads" / "treinamentos"
 UPLOAD_DIR = BASE_DIR / "frontend" / "static" / "checklist_fotos"
 LAYOUT_UPLOAD_DIR = BASE_DIR / "frontend" / "static" / "uploads" / "layout"
+APR_UPLOAD_DIR = BASE_DIR / "frontend" / "static" / "uploads" / "apr"
 LOGO_PATH = BASE_DIR / "frontend" / "static" / "logo.png"
 
 INBOX_DIR = BASE_DIR / "inbox"

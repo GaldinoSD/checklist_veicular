@@ -1,0 +1,512 @@
+{% extends 'layout.html' %}
+{% set page_title = "Gerenciamento de APRs - Segurança do Trabalho" %}
+
+{% block content %}
+<!-- Leaflet Map CSS & JS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<div class="space-y-6 max-w-7xl mx-auto px-3 sm:px-6 py-4 pb-16">
+
+    <!-- ✅ HEADER GERENCIAL -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/70 dark:bg-slate-900/40 backdrop-blur-md border border-slate-200/50 dark:border-white/10 rounded-3xl p-6 shadow-sm">
+        <div class="flex items-center gap-4">
+            <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-700 flex items-center justify-center text-white shadow-xl shadow-emerald-500/20 shrink-0">
+                <i class="fa-solid fa-shield-halved text-2xl"></i>
+            </div>
+            <div>
+                <nav class="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">
+                    <span>Gerenciamento</span>
+                    <i class="fa-solid fa-chevron-right text-[8px] opacity-40"></i>
+                    <span class="text-emerald-500">Segurança do Trabalho (TST)</span>
+                </nav>
+                <h1 class="text-2xl font-black text-slate-800 dark:text-white tracking-tight">Painel de APRs de Campo</h1>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    Acompanhamento em tempo real das Análises Preliminares de Riscos, condições impeditivas e medidas preventivas.
+                </p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-3">
+            <a href="{{ url_for('config_apr') }}"
+               class="inline-flex items-center gap-2 px-5 py-3 rounded-2xl font-bold text-xs bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-lg transition-all active:scale-95">
+                <i class="fa-solid fa-sliders"></i> Configurar Perguntas
+            </a>
+            <a href="{{ url_for('apr_mobile') }}" target="_blank"
+               class="inline-flex items-center gap-2 px-5 py-3 rounded-2xl font-bold text-xs bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-600/20 transition-all active:scale-95">
+                <i class="fa-solid fa-mobile-screen"></i> Abrir APR de Campo
+            </a>
+        </div>
+    </div>
+
+    <!-- ✅ CARDS DE INDICADORES (KPIs) -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <!-- Total APRs -->
+        <div class="bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/60 dark:border-white/10 rounded-3xl p-5 shadow-sm">
+            <div class="flex items-center justify-between mb-3">
+                <span class="text-[10px] font-black uppercase tracking-wider text-slate-400">Total de APRs</span>
+                <div class="w-8 h-8 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500 text-xs">
+                    <i class="fa-solid fa-clipboard-list"></i>
+                </div>
+            </div>
+            <div class="text-2xl font-black text-slate-800 dark:text-white">{{ total_aprs }}</div>
+            <p class="text-[10px] text-slate-400 mt-1">Registros digitais de campo</p>
+        </div>
+
+        <!-- Liberadas -->
+        <div class="bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/60 dark:border-white/10 rounded-3xl p-5 shadow-sm">
+            <div class="flex items-center justify-between mb-3">
+                <span class="text-[10px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400">APRs Liberadas</span>
+                <div class="w-8 h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 text-xs">
+                    <i class="fa-solid fa-circle-check"></i>
+                </div>
+            </div>
+            <div class="text-2xl font-black text-emerald-600 dark:text-emerald-400">{{ total_liberadas }}</div>
+            <p class="text-[10px] text-slate-400 mt-1">Trabalho autorizado com segurança</p>
+        </div>
+
+        <!-- Bloqueadas -->
+        <div class="bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/60 dark:border-white/10 rounded-3xl p-5 shadow-sm">
+            <div class="flex items-center justify-between mb-3">
+                <span class="text-[10px] font-black uppercase tracking-wider text-red-600 dark:text-red-400">Bloqueadas</span>
+                <div class="w-8 h-8 rounded-xl bg-red-500/10 flex items-center justify-center text-red-500 text-xs">
+                    <i class="fa-solid fa-ban"></i>
+                </div>
+            </div>
+            <div class="text-2xl font-black text-red-600 dark:text-red-400">{{ total_bloqueadas }}</div>
+            <p class="text-[10px] text-slate-400 mt-1">Condição impeditiva não tratada</p>
+        </div>
+
+        <!-- Com Medida Emergencial -->
+        <div class="bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/60 dark:border-white/10 rounded-3xl p-5 shadow-sm">
+            <div class="flex items-center justify-between mb-3">
+                <span class="text-[10px] font-black uppercase tracking-wider text-amber-600 dark:text-amber-400">Medidas Adotadas</span>
+                <div class="w-8 h-8 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500 text-xs">
+                    <i class="fa-solid fa-screwdriver-wrench"></i>
+                </div>
+            </div>
+            <div class="text-2xl font-black text-amber-600 dark:text-amber-400">{{ total_com_medida }}</div>
+            <p class="text-[10px] text-slate-400 mt-1">Impeditivo sanado pelo técnico</p>
+        </div>
+    </div>
+
+    <!-- ✅ BARRA DE FILTROS AVANÇADOS -->
+    <div class="bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/60 dark:border-white/10 rounded-3xl p-5 shadow-sm">
+        <form method="get" action="{{ url_for('apr_gerenciamento') }}" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+            <div>
+                <label class="text-[9px] font-black uppercase tracking-widest text-slate-400 block mb-1">Busca Rápida</label>
+                <div class="relative">
+                    <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3.5 text-xs text-slate-400"></i>
+                    <input type="text" name="q" value="{{ q }}" placeholder="Protocolo, local, OS..."
+                           class="w-full rounded-2xl pl-9 pr-3 py-2.5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500">
+                </div>
+            </div>
+
+            <div>
+                <label class="text-[9px] font-black uppercase tracking-widest text-slate-400 block mb-1">Status</label>
+                <select name="status" class="w-full rounded-2xl px-3 py-2.5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs font-bold text-slate-800 dark:text-white outline-none cursor-pointer">
+                    <option value="">Todos os Status</option>
+                    <option value="liberada" {% if status_filter == 'liberada' %}selected{% endif %}>Liberada</option>
+                    <option value="bloqueada" {% if status_filter == 'bloqueada' %}selected{% endif %}>Bloqueada</option>
+                </select>
+            </div>
+
+            <div>
+                <label class="text-[9px] font-black uppercase tracking-widest text-slate-400 block mb-1">Técnico Líder</label>
+                <select name="tech_id" class="w-full rounded-2xl px-3 py-2.5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs font-bold text-slate-800 dark:text-white outline-none cursor-pointer">
+                    <option value="">Todos os Técnicos</option>
+                    {% for t in tecnicos %}
+                    <option value="{{ t.id }}" {% if tech_filter == t.id %}selected{% endif %}>{{ t.display_name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div>
+                <label class="text-[9px] font-black uppercase tracking-widest text-slate-400 block mb-1">Período</label>
+                <input type="text" name="periodo" value="{{ periodo }}" placeholder="DD/MM/AAAA - DD/MM/AAAA"
+                       class="w-full rounded-2xl px-3 py-2.5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs font-bold text-slate-800 dark:text-white outline-none">
+            </div>
+
+            <div class="flex items-end gap-2">
+                <button type="submit" class="flex-1 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black uppercase tracking-wider transition-all active:scale-95 shadow-md shadow-emerald-600/20">
+                    Filtrar
+                </button>
+                <a href="{{ url_for('apr_gerenciamento') }}" class="px-3.5 py-2.5 rounded-2xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-600 dark:text-slate-300 text-xs font-bold transition-all" title="Limpar Filtros">
+                    <i class="fa-solid fa-rotate-left"></i>
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- ✅ TABELA DE APRS REALIZADAS -->
+    <div class="bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/60 dark:border-white/10 rounded-3xl overflow-hidden shadow-sm">
+        <div class="p-5 border-b border-slate-100 dark:border-white/5 flex items-center justify-between">
+            <h3 class="text-sm font-black text-slate-800 dark:text-white uppercase tracking-wider">
+                Registros de APR em Campo ({{ aprs|length }})
+            </h3>
+            <span class="text-[10px] text-slate-400">Ordenado por mais recentes</span>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="border-b border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.02] text-[10px] font-black uppercase tracking-wider text-slate-400">
+                        <th class="py-3 px-4">Protocolo / Data</th>
+                        <th class="py-3 px-4">Técnico Responsável</th>
+                        <th class="py-3 px-4">Serviço / Local</th>
+                        <th class="py-3 px-4">Status / SST</th>
+                        <th class="py-3 px-4 text-right">Ações</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 dark:divide-white/5 text-xs font-medium">
+                    {% for a in aprs %}
+                    <tr id="row-apr-{{ a.id }}" class="hover:bg-slate-50/80 dark:hover:bg-white/[0.02] transition-colors">
+                        <td class="py-3.5 px-4 whitespace-nowrap">
+                            <span class="font-mono font-bold text-slate-800 dark:text-white block">{{ a.protocol }}</span>
+                            <span class="text-[10px] text-slate-400">{{ a.created_at.strftime('%d/%m/%Y às %H:%M') }}</span>
+                        </td>
+                        <td class="py-3.5 px-4 whitespace-nowrap">
+                            <div class="flex items-center gap-2">
+                                <div class="w-7 h-7 rounded-full bg-emerald-500/10 flex items-center justify-center text-[10px] font-black text-emerald-600 dark:text-emerald-400">
+                                    {{ a.tech.display_name[:2].upper() if a.tech else 'TE' }}
+                                </div>
+                                <div>
+                                    <span class="font-bold text-slate-800 dark:text-white block">{{ a.tech.display_name if a.tech else 'N/A' }}</span>
+                                    <span class="text-[9px] text-slate-400">@{{ a.tech.username if a.tech else '-' }}</span>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="py-3.5 px-4">
+                            <span class="font-bold text-slate-800 dark:text-slate-200 block truncate max-w-xs">{{ a.activity_type }}</span>
+                            <span class="text-[10px] text-slate-400 block truncate max-w-xs">{{ a.local_description }}</span>
+                        </td>
+                        <td class="py-3.5 px-4 whitespace-nowrap">
+                            {% if a.status == 'liberada' %}
+                                {% if a.has_blocking_condition and a.emergency_measure_notes %}
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
+                                    <i class="fa-solid fa-triangle-exclamation"></i> Liberada c/ Medida
+                                </span>
+                                {% else %}
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                                    <i class="fa-solid fa-circle-check"></i> Liberada 100%
+                                </span>
+                                {% endif %}
+                            {% else %}
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20 animate-pulse">
+                                    <i class="fa-solid fa-ban"></i> Bloqueada
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3.5 px-4 text-right whitespace-nowrap">
+                            <div class="inline-flex items-center gap-1.5">
+                                <button onclick="abrirAuditoriaAPR({{ a.id }})"
+                                        class="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-emerald-500 hover:text-white text-slate-700 dark:text-slate-300 text-xs font-bold transition-all flex items-center gap-1.5" title="Auditar / Detalhes">
+                                    <i class="fa-solid fa-eye"></i>
+                                    <span>Auditar</span>
+                                </button>
+                                <a href="{{ url_for('apr_pdf', apr_id=a.id) }}" target="_blank"
+                                   class="p-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-blue-600 hover:text-white text-slate-500 dark:text-slate-400 text-xs font-bold transition-all" title="Baixar Laudo PDF">
+                                    <i class="fa-solid fa-file-pdf"></i>
+                                </a>
+                                <button onclick="excluirAPR({{ a.id }}, '{{ a.protocol }}')"
+                                        class="p-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-rose-600 hover:text-white text-slate-400 hover:text-white text-xs font-bold transition-all" title="Excluir APR">
+                                    <i class="fa-solid fa-trash-can"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    {% if not aprs %}
+                    <tr>
+                        <td colspan="5" class="py-8 text-center text-slate-400 text-xs">
+                            <i class="fa-solid fa-clipboard-check text-2xl mb-2 text-slate-300 dark:text-slate-600 block"></i>
+                            Nenhuma APR encontrada com os filtros selecionados.
+                        </td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<!-- ====================== MODAL DE AUDITORIA COMPLETA ====================== -->
+<div id="modal-auditoria-apr" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/80 backdrop-blur-md">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-3xl max-w-3xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-premium">
+        
+        <!-- MODAL HEADER -->
+        <div class="p-5 border-b border-slate-100 dark:border-white/5 flex items-center justify-between shrink-0">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 text-base">
+                    <i class="fa-solid fa-file-shield"></i>
+                </div>
+                <div>
+                    <h3 class="text-base font-black text-slate-800 dark:text-white" id="modal-apr-protocolo">APR-00000000-0000</h3>
+                    <p class="text-[10px] text-slate-400" id="modal-apr-subtitulo">Auditoria de Conformidade e Riscos de Campo</p>
+                </div>
+            </div>
+            <button onclick="fecharAuditoriaAPR()" class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-500 flex items-center justify-center text-xs">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <!-- MODAL BODY -->
+        <div class="p-5 sm:p-6 overflow-y-auto space-y-6 custom-scrollbar" id="modal-apr-content">
+            <div class="text-center py-8 text-slate-400">
+                <i class="fa-solid fa-circle-notch fa-spin text-2xl mb-2"></i>
+                <p class="text-xs">Carregando detalhes da APR...</p>
+            </div>
+        </div>
+
+        <!-- MODAL FOOTER -->
+        <div class="p-4 border-t border-slate-100 dark:border-white/5 bg-slate-50 dark:bg-slate-950/40 flex items-center justify-between shrink-0">
+            <div id="modal-apr-actions" class="flex items-center gap-2"></div>
+            <button onclick="fecharAuditoriaAPR()" class="px-5 py-2.5 rounded-xl bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 text-slate-700 dark:text-slate-300 text-xs font-bold transition-all">
+                Fechar
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+let modalMapInstance = null;
+
+async function abrirAuditoriaAPR(id) {
+    const modal = document.getElementById('modal-auditoria-apr');
+    const content = document.getElementById('modal-apr-content');
+    modal.classList.remove('hidden');
+
+    if (modalMapInstance) {
+        modalMapInstance.remove();
+        modalMapInstance = null;
+    }
+
+    content.innerHTML = `
+        <div class="text-center py-8 text-slate-400">
+            <i class="fa-solid fa-circle-notch fa-spin text-2xl mb-2 text-emerald-500"></i>
+            <p class="text-xs">Carregando avaliação de segurança...</p>
+        </div>
+    `;
+
+    try {
+        const resp = await fetch(`/api/apr/${id}`);
+        const data = await resp.json();
+
+        document.getElementById('modal-apr-protocolo').textContent = data.protocol;
+        document.getElementById('modal-apr-subtitulo').textContent = `${data.activity_type} • ${data.created_at}`;
+
+        let statusBadge = data.status === 'liberada' 
+            ? `<span class="px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">Liberada</span>`
+            : `<span class="px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20 animate-pulse">Bloqueada</span>`;
+
+        let respostasHtml = data.respostas.map(r => {
+            let ansColor = r.answer === 'sim' ? 'text-emerald-500 bg-emerald-500/10' : (r.answer === 'nao' ? 'text-red-500 bg-red-500/10' : 'text-slate-400 bg-slate-500/10');
+            return `
+                <div class="p-3.5 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 space-y-2">
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="space-y-0.5">
+                            <span class="text-[9px] font-black uppercase tracking-wider text-slate-400">[${r.category.toUpperCase()}]</span>
+                            <p class="text-xs font-bold text-slate-800 dark:text-slate-200">${r.question}</p>
+                            ${r.justification ? `<p class="text-[11px] text-amber-600 dark:text-amber-400 font-medium mt-1"><i class="fa-solid fa-triangle-exclamation mr-1"></i>${r.justification}</p>` : ''}
+                        </div>
+                        <span class="px-2.5 py-1 rounded-lg text-xs font-black uppercase tracking-wider shrink-0 ${ansColor}">
+                            ${r.answer.toUpperCase()}
+                        </span>
+                    </div>
+                    ${r.photo_url ? `
+                        <div class="pt-2 border-t border-slate-200/40 dark:border-white/5">
+                            <a href="${r.photo_url}" target="_blank" class="inline-flex items-center gap-2 text-xs font-bold text-blue-500 hover:underline">
+                                <i class="fa-solid fa-camera"></i> Ver Foto Comprobatória Anexada
+                            </a>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }).join('');
+
+        let emergHtml = '';
+        if (data.emergency_measure_notes) {
+            emergHtml = `
+                <div class="p-4 rounded-2xl bg-amber-500/10 border-2 border-amber-500/40 space-y-2">
+                    <div class="flex items-center gap-2 text-amber-700 dark:text-amber-300 font-black text-xs uppercase tracking-wider">
+                        <i class="fa-solid fa-triangle-exclamation"></i> Medida de Controle Emergencial Adotada:
+                    </div>
+                    <p class="text-xs text-slate-800 dark:text-slate-200">${data.emergency_measure_notes}</p>
+                    ${data.emergency_measure_photo_url ? `
+                        <div class="pt-2">
+                            <a href="${data.emergency_measure_photo_url}" target="_blank" class="inline-flex items-center gap-2 text-xs font-bold text-amber-600 dark:text-amber-400 hover:underline">
+                                <i class="fa-solid fa-image"></i> Ver Foto da Medida Preventiva
+                            </a>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        }
+
+        // Seção do Mapa com Alfinete (GPS)
+        let mapSectionHtml = '';
+        if (data.latitude && data.longitude) {
+            mapSectionHtml = `
+                <div class="space-y-2">
+                    <div class="flex items-center justify-between">
+                        <h4 class="text-xs font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                            <i class="fa-solid fa-location-dot text-red-500"></i> Localização Geográfica (Alfinete no Ponto Enviado)
+                        </h4>
+                        <div class="flex items-center gap-2">
+                            <a href="https://www.google.com/maps?q=${data.latitude},${data.longitude}" target="_blank"
+                               class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 text-[10px] font-bold border border-blue-500/20">
+                                <i class="fa-solid fa-arrow-up-right-from-square"></i> Google Maps
+                            </a>
+                            <a href="https://waze.com/ul?ll=${data.latitude},${data.longitude}&navigate=yes" target="_blank"
+                               class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 text-[10px] font-bold border border-cyan-500/20">
+                                <i class="fa-brands fa-waze"></i> Waze
+                            </a>
+                        </div>
+                    </div>
+
+                    <div class="p-3 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 space-y-2">
+                        <div class="flex items-center justify-between text-[11px]">
+                            <span class="font-mono text-slate-600 dark:text-slate-300">
+                                <strong>Coordenadas:</strong> ${data.latitude.toFixed(6)}, ${data.longitude.toFixed(6)}
+                            </span>
+                            <span class="text-slate-400">${data.local_description}</span>
+                        </div>
+                        <div id="modal-map-view" class="h-60 w-full rounded-xl overflow-hidden border border-slate-200 dark:border-white/10 z-0 shadow-inner"></div>
+                    </div>
+                </div>
+            `;
+        }
+
+        content.innerHTML = `
+            <!-- Resumo Topo -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5">
+                <div>
+                    <span class="text-[9px] font-black uppercase tracking-wider text-slate-400 block">Técnico Responsável</span>
+                    <span class="text-sm font-black text-slate-800 dark:text-white">${data.tech.name} (@${data.tech.username})</span>
+                </div>
+                <div>
+                    <span class="text-[9px] font-black uppercase tracking-wider text-slate-400 block">Status da Liberação</span>
+                    ${statusBadge}
+                </div>
+                <div class="sm:col-span-2">
+                    <span class="text-[9px] font-black uppercase tracking-wider text-slate-400 block">Localização / O.S.</span>
+                    <span class="text-xs font-medium text-slate-700 dark:text-slate-300">${data.local_description} ${data.os_number ? `(O.S. ${data.os_number})` : ''}</span>
+                </div>
+            </div>
+
+            <!-- Mapa com Alfinete se houver coordenadas -->
+            ${mapSectionHtml}
+
+            <!-- Medida Emergencial se houver -->
+            ${emergHtml}
+
+            <!-- Assinatura Digital Coletada do Técnico (com o Dedo) -->
+            ${data.signature_url ? `
+                <div class="p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <span class="text-[10px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                            <i class="fa-solid fa-signature text-emerald-500"></i> Assinatura Digital do Técnico (Coletada em Campo com o Dedo)
+                        </span>
+                        <span class="text-[10px] font-mono text-emerald-600 dark:text-emerald-400 font-bold">Assinatura Válida</span>
+                    </div>
+                    <div class="h-28 w-full max-w-sm rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 p-2 flex items-center justify-center overflow-hidden shadow-inner">
+                        <img src="${data.signature_url}" alt="Assinatura do Técnico" class="max-h-full max-w-full object-contain">
+                    </div>
+                    <p class="text-[10px] text-slate-500 dark:text-slate-400 font-mono">Assinado por: <strong>${data.tech.name}</strong> (@${data.tech.username})</p>
+                </div>
+            ` : ''}
+
+            <!-- Avaliações -->
+            <div class="space-y-3">
+                <h4 class="text-xs font-black uppercase tracking-wider text-slate-400">Respostas dos Itens Avaliados</h4>
+                <div class="space-y-2.5">${respostasHtml}</div>
+            </div>
+        `;
+
+        // Inicializa o mapa com o alfinete caso haja coordenadas
+        if (data.latitude && data.longitude) {
+            setTimeout(() => {
+                const mapEl = document.getElementById('modal-map-view');
+                if (mapEl) {
+                    modalMapInstance = L.map(mapEl).setView([data.latitude, data.longitude], 16);
+                    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                        attribution: '&copy; OpenStreetMap'
+                    }).addTo(modalMapInstance);
+
+                    // Alfinete Vermelho Marcador
+                    const pinIcon = L.divIcon({
+                        className: 'custom-pin-modal',
+                        html: '<div style="background-color: #dc2626; width: 32px; height: 32px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); display: flex; align-items: center; justify-content: center; border: 3px solid white; box-shadow: 0 4px 12px rgba(0,0,0,0.45);"><div style="width: 10px; height: 10px; background: white; border-radius: 50%;"></div></div>',
+                        iconSize: [32, 32],
+                        iconAnchor: [16, 32]
+                    });
+
+                    const marker = L.marker([data.latitude, data.longitude], { icon: pinIcon }).addTo(modalMapInstance);
+                    marker.bindPopup(`<b>${data.activity_type}</b><br>${data.local_description}`).openPopup();
+                    modalMapInstance.invalidateSize();
+                }
+            }, 250);
+        }
+
+        const actionsContainer = document.getElementById('modal-apr-actions');
+        if (actionsContainer) {
+            actionsContainer.innerHTML = `
+                <a href="/apr/${data.id}/pdf" target="_blank" class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black uppercase tracking-wider shadow-md shadow-blue-600/20 transition-all">
+                    <i class="fa-solid fa-file-pdf"></i> Baixar Laudo Oficial
+                </a>
+                <button onclick="excluirAPR(${data.id}, '${data.protocol}')" class="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-rose-50 hover:bg-rose-600 text-rose-600 hover:text-white dark:bg-rose-950/40 dark:text-rose-400 dark:hover:bg-rose-600 dark:hover:text-white border border-rose-200 dark:border-rose-900/40 text-xs font-bold uppercase tracking-wider transition-all">
+                    <i class="fa-solid fa-trash-can"></i> Excluir APR
+                </button>
+            `;
+        }
+    } catch (e) {
+        content.innerHTML = `<p class="text-center text-xs text-red-500 py-6">Erro ao carregar detalhes da APR: ${e}</p>`;
+    }
+}
+
+function fecharAuditoriaAPR() {
+    if (modalMapInstance) {
+        modalMapInstance.remove();
+        modalMapInstance = null;
+    }
+    document.getElementById('modal-auditoria-apr').classList.add('hidden');
+}
+
+async function excluirAPR(id, protocol) {
+    if (!confirm(`Deseja realmente excluir a APR ${protocol}?\n\nEsta ação excluirá o laudo permanentemente e deduzirá o total de APRs do técnico.`)) {
+        return;
+    }
+
+    try {
+        const res = await fetch(`/api/apr/${id}/delete`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+        const data = await res.json();
+
+        if (data && data.success) {
+            fecharAuditoriaAPR();
+            const row = document.getElementById(`row-apr-${id}`);
+            if (row) {
+                row.style.transition = 'all 0.3s ease';
+                row.style.opacity = '0';
+                row.style.transform = 'scale(0.95)';
+                setTimeout(() => row.remove(), 300);
+            }
+            if (typeof showToast === 'function') {
+                showToast(data.message || 'APR excluída com sucesso!', 'success');
+            } else {
+                alert(data.message || 'APR excluída com sucesso!');
+            }
+        } else {
+            alert(data.error || 'Erro ao excluir APR.');
+        }
+    } catch (e) {
+        alert('Erro ao comunicar com o servidor: ' + e);
+    }
+}
+</script>
+{% endblock %}

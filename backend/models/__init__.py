@@ -63,9 +63,9 @@ class User(UserMixin, db.Model):
             return True
         if self.role == "manutencao" and raw_perm == "manutencao_os":
             return True
-        if self.role == "tech" and raw_perm in ("checklist_mobile", "treinamentos_mobile", "meus_plantoes"):
+        if self.role == "tech" and raw_perm in ("checklist_mobile", "treinamentos_mobile", "meus_plantoes", "apr_mobile"):
             return True
-        if self.role == "supervisor" and raw_perm in ("frota", "meus_plantoes"):
+        if self.role == "supervisor" and raw_perm in ("frota", "meus_plantoes", "apr_mobile", "apr_gerenciamento", "config_apr"):
             return True
 
         if not self.permissions:
@@ -1142,3 +1142,101 @@ class MessageTemplate(db.Model):
     created_at = db.Column(db.DateTime, default=lambda: agora())
 
     creator = db.relationship("User", backref="message_templates")
+
+
+# ==========================================
+# 🛡️ MÓDULO: APR DIGITAL (ANÁLISE PRELIMINAR DE RISCOS)
+# ==========================================
+
+class APR(db.Model):
+    """Registro principal da Análise Preliminar de Riscos."""
+    __tablename__ = "apr"
+
+    id = db.Column(db.Integer, primary_key=True)
+    protocol = db.Column(db.String(50), unique=True, nullable=False, index=True)
+    tech_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    tech = db.relationship("User", foreign_keys=[tech_id], backref=db.backref("aprs_lead", lazy=True))
+    
+    activity_type = db.Column(db.String(100), nullable=False)  # Instalação, Manutenção de Rede, Lançamento/Reparo, etc.
+    local_description = db.Column(db.String(255), nullable=False)  # Endereço, Posto, Fachada, etc.
+    latitude = db.Column(db.Float, nullable=True)
+    longitude = db.Column(db.Float, nullable=True)
+    os_number = db.Column(db.String(80), nullable=True)  # Número de O.S. se houver
+    
+    # Status: 'liberada' (atividade autorizada), 'bloqueada' (condição impeditiva), 'concluida'
+    status = db.Column(db.String(30), default="liberada", nullable=False)
+    has_blocking_condition = db.Column(db.Boolean, default=False)
+    
+    # Tratativa emergencial se houver risco impeditivo (Opção B)
+    emergency_measure_notes = db.Column(db.Text, nullable=True)
+    emergency_measure_photo = db.Column(db.String(255), nullable=True)
+    
+    # Fatores de risco ativos no serviço (JSON: altura, eletrica, via_publica, espaco_confinado, clima)
+    risk_factors = db.Column(db.Text, nullable=True)
+    
+    signed_by_leader = db.Column(db.Boolean, default=True)
+    signature_image = db.Column(db.String(255), nullable=True)
+    general_notes = db.Column(db.Text, nullable=True)
+    
+    created_at = db.Column(db.DateTime, default=lambda: agora(), nullable=False)
+    updated_at = db.Column(db.DateTime, default=lambda: agora(), onupdate=lambda: agora())
+    completed_at = db.Column(db.DateTime, nullable=True)
+
+
+class APRMembro(db.Model):
+    """Membros técnicos participantes da equipe na atividade da APR."""
+    __tablename__ = "apr_membro"
+
+    id = db.Column(db.Integer, primary_key=True)
+    apr_id = db.Column(db.Integer, db.ForeignKey("apr.id", ondelete="CASCADE"), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    
+    confirmed = db.Column(db.Boolean, default=True)
+    confirmed_at = db.Column(db.DateTime, default=lambda: agora())
+    
+    apr = db.relationship("APR", backref=db.backref("membros", cascade="all, delete-orphan", lazy=True))
+    user = db.relationship("User", foreign_keys=[user_id])
+
+
+class APRItemConfig(db.Model):
+    """Itens e perguntas da APR parametrizadas pela Segurança do Trabalho."""
+    __tablename__ = "apr_item_config"
+
+    id = db.Column(db.Integer, primary_key=True)
+    category = db.Column(db.String(50), nullable=False, index=True)  # 'geral', 'altura_nr35', 'eletrica_nr10', 'sinalizacao_transito', 'clima_ambiente'
+    order = db.Column(db.Integer, default=0)
+    question_text = db.Column(db.String(255), nullable=False)
+    guidance = db.Column(db.Text, nullable=True)
+    is_blocking_if_negative = db.Column(db.Boolean, default=False)  # Se 'Não', aciona condição impeditiva
+    requires_photo = db.Column(db.Boolean, default=False)
+    is_active = db.Column(db.Boolean, default=True)
+
+
+class APRResposta(db.Model):
+    """Respostas detalhadas de cada item da APR."""
+    __tablename__ = "apr_resposta"
+
+    id = db.Column(db.Integer, primary_key=True)
+    apr_id = db.Column(db.Integer, db.ForeignKey("apr.id", ondelete="CASCADE"), nullable=False)
+    item_config_id = db.Column(db.Integer, db.ForeignKey("apr_item_config.id"), nullable=True)
+    
+    category = db.Column(db.String(50), nullable=False)
+    question_text = db.Column(db.String(255), nullable=False)
+    answer = db.Column(db.String(20), nullable=False)  # 'sim', 'nao', 'na'
+    is_blocking = db.Column(db.Boolean, default=False)
+    justification = db.Column(db.Text, nullable=True)
+    photo_filename = db.Column(db.String(255), nullable=True)
+
+    apr = db.relationship("APR", backref=db.backref("respostas", cascade="all, delete-orphan", lazy=True))
+    item_config = db.relationship("APRItemConfig")
+
+
+class APRActivityType(db.Model):
+    """Tipos de atividades e serviços configuráveis para a APR de campo."""
+    __tablename__ = "apr_activity_type"
+
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(150), unique=True, nullable=False)
+    order = db.Column(db.Integer, default=0)
+    is_active = db.Column(db.Boolean, default=True)
+    created_at = db.Column(db.DateTime, default=lambda: agora(), nullable=False)

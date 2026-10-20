@@ -528,6 +528,18 @@
                                 <span class="text-xs font-bold text-slate-700 dark:text-slate-200">Config. Ferramentas</span>
                                 <input type="checkbox" name="perm_config_ferramentas" value="on" {% if u.has_permission('config_ferramentas') %}checked{% endif %} class="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer">
                             </label>
+                            <label class="perm-card flex items-center justify-between p-2 rounded-xl bg-white dark:bg-slate-800/80 border border-slate-200/60 dark:border-white/5 hover:border-emerald-500/30 cursor-pointer transition-all">
+                                <span class="text-xs font-bold text-emerald-600 dark:text-emerald-400">APR Técnico (Mobile)</span>
+                                <input type="checkbox" name="perm_apr_mobile" value="on" {% if u.has_permission('apr_mobile') %}checked{% endif %} class="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer">
+                            </label>
+                            <label class="perm-card flex items-center justify-between p-2 rounded-xl bg-white dark:bg-slate-800/80 border border-slate-200/60 dark:border-white/5 hover:border-emerald-500/30 cursor-pointer transition-all">
+                                <span class="text-xs font-bold text-slate-700 dark:text-slate-200">Painel APRs (Gerenciamento)</span>
+                                <input type="checkbox" name="perm_apr_gerenciamento" value="on" {% if u.has_permission('apr_gerenciamento') %}checked{% endif %} class="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer">
+                            </label>
+                            <label class="perm-card flex items-center justify-between p-2 rounded-xl bg-white dark:bg-slate-800/80 border border-slate-200/60 dark:border-white/5 hover:border-emerald-500/30 cursor-pointer transition-all">
+                                <span class="text-xs font-bold text-slate-700 dark:text-slate-200">Configuração da APR</span>
+                                <input type="checkbox" name="perm_config_apr" value="on" {% if u.has_permission('config_apr') %}checked{% endif %} class="w-4 h-4 rounded text-emerald-600 focus:ring-emerald-500 cursor-pointer">
+                            </label>
                         </div>
                     </div>
 

@@ -16,7 +16,8 @@ from backend.models import (
     CloudflareConfig, TraccarConfig, MetabaseConfig,
     GPSDevice, GPSLog,
     DocCategory, TechnicalDocument, DocumentFile, DocumentHistory,
-    MessageTemplate
+    MessageTemplate,
+    APR, APRMembro, APRItemConfig, APRResposta, APRActivityType
 )
 
 app = create_app()

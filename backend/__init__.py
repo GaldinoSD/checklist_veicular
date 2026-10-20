@@ -444,6 +444,72 @@ def create_app():
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     created_by INTEGER REFERENCES "user"(id) ON DELETE SET NULL
                 )
+            '''),
+            text('''
+                CREATE TABLE IF NOT EXISTS apr (
+                    id SERIAL PRIMARY KEY,
+                    protocol VARCHAR(50) NOT NULL UNIQUE,
+                    tech_id INTEGER NOT NULL REFERENCES "user"(id),
+                    activity_type VARCHAR(100) NOT NULL,
+                    local_description VARCHAR(255) NOT NULL,
+                    os_number VARCHAR(80),
+                    status VARCHAR(30) DEFAULT 'liberada',
+                    has_blocking_condition BOOLEAN DEFAULT FALSE,
+                    emergency_measure_notes TEXT,
+                    emergency_measure_photo VARCHAR(255),
+                    risk_factors TEXT,
+                    signed_by_leader BOOLEAN DEFAULT TRUE,
+                    general_notes TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    completed_at TIMESTAMP
+                )
+            '''),
+            text('ALTER TABLE apr ADD COLUMN IF NOT EXISTS latitude FLOAT'),
+            text('ALTER TABLE apr ADD COLUMN IF NOT EXISTS longitude FLOAT'),
+            text('ALTER TABLE apr ADD COLUMN IF NOT EXISTS signature_image VARCHAR(255)'),
+            text('''
+                CREATE TABLE IF NOT EXISTS apr_membro (
+                    id SERIAL PRIMARY KEY,
+                    apr_id INTEGER NOT NULL REFERENCES apr(id) ON DELETE CASCADE,
+                    user_id INTEGER NOT NULL REFERENCES "user"(id),
+                    confirmed BOOLEAN DEFAULT TRUE,
+                    confirmed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            '''),
+            text('''
+                CREATE TABLE IF NOT EXISTS apr_item_config (
+                    id SERIAL PRIMARY KEY,
+                    category VARCHAR(50) NOT NULL,
+                    "order" INTEGER DEFAULT 0,
+                    question_text VARCHAR(255) NOT NULL,
+                    guidance TEXT,
+                    is_blocking_if_negative BOOLEAN DEFAULT FALSE,
+                    requires_photo BOOLEAN DEFAULT FALSE,
+                    is_active BOOLEAN DEFAULT TRUE
+                )
+            '''),
+            text('''
+                CREATE TABLE IF NOT EXISTS apr_resposta (
+                    id SERIAL PRIMARY KEY,
+                    apr_id INTEGER NOT NULL REFERENCES apr(id) ON DELETE CASCADE,
+                    item_config_id INTEGER REFERENCES apr_item_config(id),
+                    category VARCHAR(50) NOT NULL,
+                    question_text VARCHAR(255) NOT NULL,
+                    answer VARCHAR(20) NOT NULL,
+                    is_blocking BOOLEAN DEFAULT FALSE,
+                    justification TEXT,
+                    photo_filename VARCHAR(255)
+                )
+            '''),
+            text('''
+                CREATE TABLE IF NOT EXISTS apr_activity_type (
+                    id SERIAL PRIMARY KEY,
+                    name VARCHAR(150) NOT NULL UNIQUE,
+                    "order" INTEGER DEFAULT 0,
+                    is_active BOOLEAN DEFAULT TRUE,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
             ''')
         ]
         for stmt in stmts:
@@ -583,6 +649,63 @@ def create_app():
             Tool.query.update({Tool.is_active: True})
         except Exception as e:
             print("⚠️ Erro ao ativar ferramentas em seed_defaults:", e)
+
+        try:
+            from backend.models import APRItemConfig
+            if APRItemConfig.query.count() == 0:
+                default_apr_items = [
+                    # Geral & EPIs
+                    ("geral", 1, "Todos os integrantes da equipe estão utilizando os EPIs obrigatórios (capacete com jugular, óculos de proteção, luvas e botina de segurança)?", "NR-6 / PGR: Uso individual e intransferível de EPIs.", True, False),
+                    ("geral", 2, "As ferramentas e equipamentos de trabalho estão em perfeito estado de conservação e adequados para o serviço?", "Inspecionar cabos, isolamentos e integridade física das ferramentas.", True, False),
+                    ("geral", 3, "A equipe está ciente dos procedimentos de segurança, contatos de emergência e rota de fuga do local?", "Comunicação e alinhamento prévio da equipe de campo.", False, False),
+                    # Trabalho em Altura (NR-35)
+                    ("altura_nr35", 1, "A escada de fibra está em bom estado, com sapatas de borracha íntegras, catracas e corda operacionais?", "NR-35.4.5.1: Condição impeditiva. Proibido uso de escada danificada ou improvisada.", True, True),
+                    ("altura_nr35", 2, "O cinto tipo paraquedista, talabarte de posicionamento e trava-quedas foram inspecionados antes do uso?", "NR-35: Checar costuras, partes metálicas e data de validade.", True, False),
+                    ("altura_nr35", 3, "O ponto de ancoragem no poste/fachada é seguro e a escada foi devidamente amarrada no topo?", "NR-35: Amarração superior obrigatória antes de qualquer intervenção.", True, True),
+                    ("altura_nr35", 4, "Existe linha de vida ou corda guia instalada conforme procedimento técnico da operadora?", "Recomendado para movimentação e segurança adicional.", False, False),
+                    # Riscos Elétricos (NR-10)
+                    ("eletrica_nr10", 1, "Foi realizado o teste de detecção de tensão nas ferragens, mensageiro e partes metálicas antes do toque?", "NR-10: Obrigatória verificação com detector de tensão portátil.", True, False),
+                    ("eletrica_nr10", 2, "A distância de segurança das redes elétricas de baixa e média tensão da concessionária está preservada?", "NR-10: Respeitar a zona livre e distâncias mínimas de segurança.", True, False),
+                    ("eletrica_nr10", 3, "Ausência de fios caídos, ramais clandestinos ou faíscas visíveis no entorno do poste?", "Condição impeditiva: risco grave e iminente de choque elétrico.", True, False),
+                    # Sinalização de Vias & Trânsito
+                    ("sinalizacao_transito", 1, "A área de trabalho foi isolada e sinalizada com cones refletivos e fita zebrada delimitando o perímetro de segurança?", "NR-35.4.5.1 e CTB: Sinalizar o raio de queda e fluxo de pedestres/veículos.", True, True),
+                    ("sinalizacao_transito", 2, "O veículo operacional está estacionado em local permitido com pisca-alerta ou sinalizador acionado?", "Proteção contra colisões e atropelamentos.", False, False),
+                    ("sinalizacao_transito", 3, "A circulação de pedestres ou trânsito intenso está controlada sem colocar terceiros em perigo?", "Monitoramento ativo da passagem de pedestres sob o vão do cabo.", False, False),
+                    # Condições Climáticas & Ambientais
+                    ("clima_ambiente", 1, "As condições climáticas são seguras (sem chuva forte, descargas atmosféricas, pista escorregadia ou ventos severos)?", "NR-35.4.5.1: Condições meteorológicas adversas impedem trabalho em altura.", True, False),
+                    ("clima_ambiente", 2, "O poste ou estrutura física apresenta integridade e estabilidade (sem rachaduras profundas na base, cupim ou inclinação)?", "Condição impeditiva: proscrito subir em poste condenado pela concessionária.", True, False),
+                    ("clima_ambiente", 3, "O local está livre de colmeias de abelhas, vespeiros ou animais peçonhentos na rota de acesso?", "Verificação visual prévia de riscos biológicos.", True, False),
+                ]
+                for cat, ord_n, q_txt, guid, is_blk, req_p in default_apr_items:
+                    db.session.add(APRItemConfig(
+                        category=cat,
+                        order=ord_n,
+                        question_text=q_txt,
+                        guidance=guid,
+                        is_blocking_if_negative=is_blk,
+                        requires_photo=req_p,
+                        is_active=True
+                    ))
+        except Exception as e:
+            print("⚠️ Erro ao semear APRItemConfig:", e)
+
+        try:
+            from backend.models import APRActivityType
+            if APRActivityType.query.count() == 0:
+                default_activities = [
+                    ("Instalação Residencial FTTH", 1),
+                    ("Manutenção / Reparo de Rede Óptica", 2),
+                    ("Lançamento e Espinamento de Cabos", 3),
+                    ("Troca / Manobra de Splitter / CTO", 4),
+                    ("Intervenção em Fachada / Poste", 5),
+                    ("Atendimento Empresarial / Corporativo", 6),
+                    ("Manutenção de Infraestrutura / Gerador", 7),
+                    ("Outros Serviços de Campo", 8),
+                ]
+                for name, order in default_activities:
+                    db.session.add(APRActivityType(name=name, order=order, is_active=True))
+        except Exception as e:
+            print("⚠️ Erro ao semear APRActivityType:", e)
 
         db.session.commit()
  

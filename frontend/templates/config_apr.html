@@ -1,0 +1,516 @@
+{% extends 'layout.html' %}
+{% set page_title = "Configurações da APR - Segurança do Trabalho" %}
+
+{% block content %}
+<div class="space-y-6 max-w-7xl mx-auto px-3 sm:px-6 py-4 pb-16">
+
+    <!-- ✅ HEADER -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/70 dark:bg-slate-900/40 backdrop-blur-md border border-slate-200/50 dark:border-white/10 rounded-3xl p-6 shadow-sm">
+        <div class="flex items-center gap-4">
+            <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center text-white shadow-xl shadow-indigo-500/20 shrink-0">
+                <i class="fa-solid fa-shield-halved text-2xl"></i>
+            </div>
+            <div>
+                <nav class="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">
+                    <span>Configurações</span>
+                    <i class="fa-solid fa-chevron-right text-[8px] opacity-40"></i>
+                    <span class="text-indigo-500">APR Telecom</span>
+                </nav>
+                <h1 class="text-2xl font-black text-slate-800 dark:text-white tracking-tight">Parametrização da APR</h1>
+                <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                    Gerencie perguntas regulamentares, critérios impeditivos (bloqueantes) e exigência de fotos para cada grupo de risco.
+                </p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+            <button onclick="abrirModalNovaAtividade()" id="btn-nova-atividade"
+                    class="hidden inline-flex items-center gap-2 px-5 py-3 rounded-2xl font-bold text-xs bg-slate-900 hover:bg-slate-800 text-white shadow-lg transition-all active:scale-95">
+                <i class="fa-solid fa-plus"></i> Nova Atividade
+            </button>
+            <button onclick="abrirModalNovaPergunta()" id="btn-nova-pergunta"
+                    class="inline-flex items-center gap-2 px-5 py-3 rounded-2xl font-bold text-xs bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-600/20 transition-all active:scale-95">
+                <i class="fa-solid fa-plus"></i> Nova Pergunta
+            </button>
+        </div>
+    </div>
+
+    <!-- ✅ ABAS DE CATEGORIAS -->
+    <div class="bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/60 dark:border-white/10 rounded-3xl overflow-hidden shadow-sm">
+        <div class="flex border-b border-slate-200/60 dark:border-white/10 overflow-x-auto bg-slate-50/50 dark:bg-white/[0.02] p-2 gap-2">
+            <button onclick="switchCategory('geral')" id="tab-btn-geral"
+                    class="cat-tab-btn flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all bg-indigo-600 text-white shadow-sm">
+                <i class="fa-solid fa-hard-hat"></i> Geral & EPIs
+            </button>
+            <button onclick="switchCategory('altura_nr35')" id="tab-btn-altura_nr35"
+                    class="cat-tab-btn flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">
+                <i class="fa-solid fa-person-arrow-up-from-line"></i> Altura (NR-35)
+            </button>
+            <button onclick="switchCategory('eletrica_nr10')" id="tab-btn-eletrica_nr10"
+                    class="cat-tab-btn flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">
+                <i class="fa-solid fa-bolt"></i> Elétrica (NR-10)
+            </button>
+            <button onclick="switchCategory('sinalizacao_transito')" id="tab-btn-sinalizacao_transito"
+                    class="cat-tab-btn flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">
+                <i class="fa-solid fa-traffic-cone"></i> Vias & Trânsito
+            </button>
+            <button onclick="switchCategory('clima_ambiente')" id="tab-btn-clima_ambiente"
+                    class="cat-tab-btn flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">
+                <i class="fa-solid fa-cloud-sun"></i> Clima & Meio
+            </button>
+            <button onclick="switchCategory('atividades')" id="tab-btn-atividades"
+                    class="cat-tab-btn flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">
+                <i class="fa-solid fa-briefcase"></i> Tipos de Atividade
+            </button>
+        </div>
+
+        <!-- LISTAGEM POR CATEGORIA -->
+        {% for cat in categories %}
+        <div id="cat-table-{{ cat }}" class="cat-content-block {% if cat != 'geral' %}hidden{% endif %}">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="border-b border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.01] text-[10px] font-black uppercase tracking-wider text-slate-400">
+                            <th class="py-3 px-4 w-12 text-center">#</th>
+                            <th class="py-3 px-4">Pergunta & Orientação Técnica</th>
+                            <th class="py-3 px-4 w-44 text-center">Critério Impeditivo</th>
+                            <th class="py-3 px-4 w-32 text-center">Exige Foto</th>
+                            <th class="py-3 px-4 w-28 text-center">Status</th>
+                            <th class="py-3 px-4 w-28 text-right">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 dark:divide-white/5 text-xs font-medium">
+                        {% set cat_items = items | selectattr('category', 'equalto', cat) | list %}
+                        {% for it in cat_items %}
+                        <tr class="hover:bg-slate-50/60 dark:hover:bg-white/[0.02] transition-colors" id="row-item-{{ it.id }}">
+                            <td class="py-3.5 px-4 text-center font-mono font-bold text-slate-400">{{ it.order }}</td>
+                            <td class="py-3.5 px-4">
+                                <p class="font-bold text-slate-800 dark:text-white">{{ it.question_text }}</p>
+                                {% if it.guidance %}
+                                <p class="text-[10px] text-slate-400 mt-0.5"><i class="fa-solid fa-circle-info mr-1 text-slate-400"></i>{{ it.guidance }}</p>
+                                {% endif %}
+                            </td>
+                            <td class="py-3.5 px-4 text-center whitespace-nowrap">
+                                <button onclick="toggleField({{ it.id }}, 'is_blocking')" 
+                                        class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider transition-all {{ 'bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/30' if it.is_blocking_if_negative else 'bg-slate-100 dark:bg-slate-800 text-slate-400' }}">
+                                    {{ 'Sim (Impede)' if it.is_blocking_if_negative else 'Não' }}
+                                </button>
+                            </td>
+                            <td class="py-3.5 px-4 text-center whitespace-nowrap">
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold {{ 'bg-blue-500/10 text-blue-600 dark:text-blue-400' if it.requires_photo else 'text-slate-400' }}">
+                                    {{ 'Obrigatória' if it.requires_photo else 'Opcional' }}
+                                </span>
+                            </td>
+                            <td class="py-3.5 px-4 text-center whitespace-nowrap">
+                                <button onclick="toggleField({{ it.id }}, 'is_active')"
+                                        class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider transition-all {{ 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30' if it.is_active else 'bg-slate-200 dark:bg-slate-800 text-slate-400' }}">
+                                    {{ 'Ativa' if it.is_active else 'Inativa' }}
+                                </button>
+                            </td>
+                            <td class="py-3.5 px-4 text-right whitespace-nowrap">
+                                <div class="inline-flex items-center gap-1.5">
+                                    <button onclick="editarPergunta({{ it.id }}, '{{ it.category }}', '{{ it.question_text | escape }}', '{{ it.guidance or '' | escape }}', {{ it.order }}, {{ 'true' if it.is_blocking_if_negative else 'false' }}, {{ 'true' if it.requires_photo else 'false' }})"
+                                            class="p-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-indigo-600 hover:text-white text-slate-600 dark:text-slate-300 transition-all" title="Editar">
+                                        <i class="fa-solid fa-pen-to-square"></i>
+                                    </button>
+                                    <button onclick="excluirPergunta({{ it.id }})"
+                                            class="p-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-red-600 hover:text-white text-slate-600 dark:text-slate-300 transition-all" title="Excluir">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% if not cat_items %}
+                        <tr>
+                            <td colspan="6" class="py-8 text-center text-slate-400 text-xs">
+                                Nenhuma pergunta cadastrada para este grupo. Clique em "Nova Pergunta" para adicionar.
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endfor %}
+
+        <!-- LISTAGEM DE TIPOS DE ATIVIDADE -->
+        <div id="cat-table-atividades" class="cat-content-block hidden">
+            <div class="p-4 bg-slate-50/50 dark:bg-white/[0.02] border-b border-slate-100 dark:border-white/5 flex items-center justify-between">
+                <div>
+                    <h3 class="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-200">Tipos de Serviço / Atividade de Campo</h3>
+                    <p class="text-[11px] text-slate-400">Atividades disponíveis para o técnico selecionar ao iniciar uma nova APR.</p>
+                </div>
+                <button onclick="abrirModalNovaAtividade()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold shadow-sm">
+                    <i class="fa-solid fa-plus"></i> Adicionar Atividade
+                </button>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="border-b border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.01] text-[10px] font-black uppercase tracking-wider text-slate-400">
+                            <th class="py-3 px-4 w-16 text-center">Ordem</th>
+                            <th class="py-3 px-4">Nome da Atividade / Serviço</th>
+                            <th class="py-3 px-4 w-32 text-center">Status</th>
+                            <th class="py-3 px-4 w-28 text-right">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100 dark:divide-white/5 text-xs font-medium">
+                        {% for act in activity_types %}
+                        <tr class="hover:bg-slate-50/60 dark:hover:bg-white/[0.02] transition-colors" id="row-activity-{{ act.id }}">
+                            <td class="py-3.5 px-4 text-center font-mono font-bold text-slate-400">{{ act.order }}</td>
+                            <td class="py-3.5 px-4">
+                                <span class="font-bold text-slate-800 dark:text-white">{{ act.name }}</span>
+                            </td>
+                            <td class="py-3.5 px-4 text-center whitespace-nowrap">
+                                <button onclick="toggleAtividade({{ act.id }})"
+                                        class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider transition-all {{ 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30' if act.is_active else 'bg-slate-200 dark:bg-slate-800 text-slate-400' }}">
+                                    {{ 'Ativa' if act.is_active else 'Inativa' }}
+                                </button>
+                            </td>
+                            <td class="py-3.5 px-4 text-right whitespace-nowrap">
+                                <div class="inline-flex items-center gap-1.5">
+                                    <button onclick="editarAtividade({{ act.id }}, '{{ act.name | escape }}', {{ act.order }})"
+                                            class="p-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-indigo-600 hover:text-white text-slate-600 dark:text-slate-300 transition-all" title="Editar">
+                                        <i class="fa-solid fa-pen-to-square"></i>
+                                    </button>
+                                    <button onclick="excluirAtividade({{ act.id }})"
+                                            class="p-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-red-600 hover:text-white text-slate-600 dark:text-slate-300 transition-all" title="Excluir">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% if not activity_types %}
+                        <tr>
+                            <td colspan="4" class="py-8 text-center text-slate-400 text-xs">
+                                Nenhum tipo de atividade cadastrado. Clique em "Adicionar Atividade" para criar uma.
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ====================== MODAL DE NOVA / EDITAR PERGUNTA ====================== -->
+<div id="modal-pergunta" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-3xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-white/5">
+            <h3 class="text-base font-black text-slate-800 dark:text-white" id="modal-titulo">Nova Pergunta da APR</h3>
+            <button onclick="fecharModalPergunta()" class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 flex items-center justify-center text-xs">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <form id="form-pergunta" onsubmit="return salvarPergunta(event)" class="space-y-4">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="item_id" id="input_item_id">
+
+            <div class="space-y-1">
+                <label class="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Categoria de Risco *</label>
+                <select name="category" id="input_category" required
+                        class="w-full rounded-2xl px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs font-bold text-slate-800 dark:text-white outline-none">
+                    <option value="geral">Geral & EPIs Obrigatórios</option>
+                    <option value="altura_nr35">Trabalho em Altura (NR-35)</option>
+                    <option value="eletrica_nr10">Riscos Elétricos (NR-10)</option>
+                    <option value="sinalizacao_transito">Sinalização de Vias & Trânsito</option>
+                    <option value="clima_ambiente">Condições Climáticas & Meio Ambiente</option>
+                </select>
+            </div>
+
+            <div class="space-y-1">
+                <label class="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Texto da Pergunta *</label>
+                <textarea name="question_text" id="input_question_text" rows="3" required placeholder="Ex: A escada foi inspecionada e amarrada no topo?"
+                          class="w-full rounded-2xl p-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500"></textarea>
+            </div>
+
+            <div class="space-y-1">
+                <label class="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Orientação Técnica / Referência Normativa</label>
+                <input type="text" name="guidance" id="input_guidance" placeholder="Ex: NR-35.4.5.1: Amarração obrigatória no poste"
+                       class="w-full rounded-2xl px-4 py-2.5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs font-medium text-slate-800 dark:text-white outline-none">
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 pt-2">
+                <label class="flex items-center gap-2 p-3 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 cursor-pointer">
+                    <input type="checkbox" name="is_blocking_if_negative" id="input_is_blocking" class="w-4 h-4 rounded text-red-600 focus:ring-red-500">
+                    <div>
+                        <span class="text-xs font-bold text-red-600 dark:text-red-400 block">Critério Impeditivo</span>
+                        <span class="text-[9px] text-slate-400">Bloqueia se responder NÃO</span>
+                    </div>
+                </label>
+
+                <label class="flex items-center gap-2 p-3 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 cursor-pointer">
+                    <input type="checkbox" name="requires_photo" id="input_requires_photo" class="w-4 h-4 rounded text-blue-600 focus:ring-blue-500">
+                    <div>
+                        <span class="text-xs font-bold text-blue-600 dark:text-blue-400 block">Exige Foto</span>
+                        <span class="text-[9px] text-slate-400">Anexo comprobatório</span>
+                    </div>
+                </label>
+            </div>
+
+            <div class="pt-4 flex items-center justify-end gap-2 border-t border-slate-100 dark:border-white/5">
+                <button type="button" onclick="fecharModalPergunta()"
+                        class="px-5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-bold">
+                    Cancelar
+                </button>
+                <button type="submit"
+                        class="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black uppercase tracking-wider shadow-md">
+                    Salvar Pergunta
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ====================== MODAL DE NOVA / EDITAR ATIVIDADE ====================== -->
+<div id="modal-atividade" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-3xl max-w-md w-full p-6 shadow-2xl space-y-4">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-white/5">
+            <h3 class="text-base font-black text-slate-800 dark:text-white" id="modal-atividade-titulo">Nova Atividade da APR</h3>
+            <button onclick="fecharModalAtividade()" class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 flex items-center justify-center text-xs">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <form id="form-atividade" onsubmit="return salvarAtividade(event)" class="space-y-4">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="activity_id" id="input_activity_id">
+
+            <div class="space-y-1">
+                <label class="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Nome da Atividade / Serviço *</label>
+                <input type="text" name="name" id="input_activity_name" required placeholder="Ex: Instalação Residencial FTTH"
+                       class="w-full rounded-2xl px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500">
+            </div>
+
+            <div class="space-y-1">
+                <label class="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1">Ordem de Exibição</label>
+                <input type="number" name="order" id="input_activity_order" value="10" min="0"
+                       class="w-full rounded-2xl px-4 py-2.5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs font-medium text-slate-800 dark:text-white outline-none">
+                <p class="text-[10px] text-slate-400 ml-1">Menores números aparecem primeiro no seletor do técnico.</p>
+            </div>
+
+            <div class="pt-4 flex items-center justify-end gap-2 border-t border-slate-100 dark:border-white/5">
+                <button type="button" onclick="fecharModalAtividade()"
+                        class="px-5 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-bold">
+                    Cancelar
+                </button>
+                <button type="submit"
+                        class="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-black uppercase tracking-wider shadow-md">
+                    Salvar Atividade
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+let currentCategory = 'geral';
+
+function switchCategory(cat) {
+    currentCategory = cat;
+    document.querySelectorAll('.cat-content-block').forEach(b => b.classList.add('hidden'));
+    const targetTable = document.getElementById(`cat-table-${cat}`);
+    if (targetTable) {
+        targetTable.classList.remove('hidden');
+    }
+
+    document.querySelectorAll('.cat-tab-btn').forEach(btn => {
+        btn.className = 'cat-tab-btn flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white';
+    });
+    const activeBtn = document.getElementById(`tab-btn-${cat}`);
+    if (activeBtn) {
+        activeBtn.className = 'cat-tab-btn flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all bg-indigo-600 text-white shadow-sm';
+    }
+
+    // Alternar visibilidade dos botões do topo
+    const btnNovaPergunta = document.getElementById('btn-nova-pergunta');
+    const btnNovaAtividade = document.getElementById('btn-nova-atividade');
+    if (cat === 'atividades') {
+        if (btnNovaPergunta) btnNovaPergunta.classList.add('hidden');
+        if (btnNovaAtividade) btnNovaAtividade.classList.remove('hidden');
+    } else {
+        if (btnNovaPergunta) btnNovaPergunta.classList.remove('hidden');
+        if (btnNovaAtividade) btnNovaAtividade.classList.add('hidden');
+    }
+}
+
+function abrirModalNovaPergunta() {
+    document.getElementById('input_item_id').value = '';
+    document.getElementById('input_category').value = currentCategory === 'atividades' ? 'geral' : currentCategory;
+    document.getElementById('input_question_text').value = '';
+    document.getElementById('input_guidance').value = '';
+    document.getElementById('input_is_blocking').checked = false;
+    document.getElementById('input_requires_photo').checked = false;
+    document.getElementById('modal-titulo').textContent = 'Nova Pergunta da APR';
+    document.getElementById('modal-pergunta').classList.remove('hidden');
+}
+
+function editarPergunta(id, category, qText, guidance, order, isBlocking, reqPhoto) {
+    document.getElementById('input_item_id').value = id;
+    document.getElementById('input_category').value = category;
+    document.getElementById('input_question_text').value = qText;
+    document.getElementById('input_guidance').value = guidance;
+    document.getElementById('input_is_blocking').checked = isBlocking;
+    document.getElementById('input_requires_photo').checked = reqPhoto;
+    document.getElementById('modal-titulo').textContent = 'Editar Pergunta da APR';
+    document.getElementById('modal-pergunta').classList.remove('hidden');
+}
+
+function fecharModalPergunta() {
+    document.getElementById('modal-pergunta').classList.add('hidden');
+}
+
+async function salvarPergunta(e) {
+    e.preventDefault();
+    const form = document.getElementById('form-pergunta');
+    const formData = new FormData(form);
+
+    try {
+        const resp = await fetch('{{ url_for("api_apr_config_item_save") }}', {
+            method: 'POST',
+            body: formData
+        });
+        const data = await resp.json();
+        if (data.success) {
+            location.reload();
+        } else {
+            alert(data.message || 'Erro ao salvar pergunta.');
+        }
+    } catch (err) {
+        alert('Erro de conexão ao salvar pergunta: ' + err);
+    }
+    return false;
+}
+
+async function toggleField(itemId, field) {
+    try {
+        const resp = await fetch('{{ url_for("api_apr_config_toggle") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({ item_id: itemId, field: field })
+        });
+        const data = await resp.json();
+        if (data.success) {
+            location.reload();
+        }
+    } catch (err) {
+        alert('Erro ao alterar status: ' + err);
+    }
+}
+
+async function excluirPergunta(itemId) {
+    if (!confirm('Deseja realmente excluir esta pergunta da APR?')) return;
+
+    try {
+        const resp = await fetch(`/api/apr/config/delete/${itemId}`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}'
+            }
+        });
+        const data = await resp.json();
+        if (data.success) {
+            const row = document.getElementById(`row-item-${itemId}`);
+            if (row) row.remove();
+        } else {
+            alert(data.message || 'Erro ao excluir pergunta.');
+        }
+    } catch (err) {
+        alert('Erro ao excluir: ' + err);
+    }
+}
+
+// ====================== GESTÃO DE TIPOS DE ATIVIDADE ======================
+function abrirModalNovaAtividade() {
+    document.getElementById('input_activity_id').value = '';
+    document.getElementById('input_activity_name').value = '';
+    document.getElementById('input_activity_order').value = '10';
+    document.getElementById('modal-atividade-titulo').textContent = 'Nova Atividade da APR';
+    document.getElementById('modal-atividade').classList.remove('hidden');
+}
+
+function editarAtividade(id, name, order) {
+    document.getElementById('input_activity_id').value = id;
+    document.getElementById('input_activity_name').value = name;
+    document.getElementById('input_activity_order').value = order;
+    document.getElementById('modal-atividade-titulo').textContent = 'Editar Tipo de Atividade';
+    document.getElementById('modal-atividade').classList.remove('hidden');
+}
+
+function fecharModalAtividade() {
+    document.getElementById('modal-atividade').classList.add('hidden');
+}
+
+async function salvarAtividade(e) {
+    e.preventDefault();
+    const form = document.getElementById('form-atividade');
+    const formData = new FormData(form);
+
+    try {
+        const resp = await fetch('{{ url_for("api_apr_config_activity_save") }}', {
+            method: 'POST',
+            body: formData
+        });
+        const data = await resp.json();
+        if (data.success) {
+            location.reload();
+        } else {
+            alert(data.message || 'Erro ao salvar tipo de atividade.');
+        }
+    } catch (err) {
+        alert('Erro de conexão ao salvar atividade: ' + err);
+    }
+    return false;
+}
+
+async function toggleAtividade(actId) {
+    try {
+        const resp = await fetch('{{ url_for("api_apr_config_activity_toggle") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({ activity_id: actId })
+        });
+        const data = await resp.json();
+        if (data.success) {
+            location.reload();
+        } else {
+            alert(data.message || 'Erro ao alterar status da atividade.');
+        }
+    } catch (err) {
+        alert('Erro ao alterar status: ' + err);
+    }
+}
+
+async function excluirAtividade(actId) {
+    if (!confirm('Deseja realmente excluir este tipo de atividade?')) return;
+
+    try {
+        const resp = await fetch(`/api/apr/config/activity/delete/${actId}`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}'
+            }
+        });
+        const data = await resp.json();
+        if (data.success) {
+            const row = document.getElementById(`row-activity-${actId}`);
+            if (row) row.remove();
+        } else {
+            alert(data.message || 'Erro ao excluir atividade.');
+        }
+    } catch (err) {
+        alert('Erro ao excluir atividade: ' + err);
+    }
+}
+</script>
+{% endblock %}

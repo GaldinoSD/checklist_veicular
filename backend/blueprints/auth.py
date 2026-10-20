@@ -37,7 +37,7 @@ from backend.models import (
     RFO, Solicitacao, SupervisaoTecnica, RotaExata, Team, Task, Patio, Encerramento,
     Scale, Meeting, Note, Activity, SystemRule, Company, Contract, ExternalCollaborator,
     AvariaOS, Log, Vistoria, VistoriaFoto, SystemConfig, WhatsAppConfig,
-    GPSDevice, GPSLog
+    GPSDevice, GPSLog, APR
 )
 from backend.utils import (
     agora, haversine_distance, registrar_log, send_whatsapp_message, admin_required,
@@ -88,7 +88,7 @@ def login():
                 return redirect(url_for("dashboard"))
             if u.is_manutencao:
                 return redirect(url_for("manutencao_os"))
-            return redirect(url_for("checklist_mobile"))
+            return redirect(url_for("inicio_tecnico"))
 
         # Login falhou → registra tentativa
         _record_attempt(client_ip)
@@ -128,8 +128,125 @@ def index():
             return redirect(url_for("dashboard"))
         if current_user.is_manutencao:
             return redirect(url_for("manutencao_os"))
-        return redirect(url_for("checklist_mobile"))
+        return redirect(url_for("inicio_tecnico"))
     return redirect(url_for("login"))
+
+
+@auth_bp.route("/inicio")
+@login_required
+def inicio_tecnico():
+    """Página de Início simples, clara e direta para o Técnico Operacional."""
+    now = agora()
+    hour = now.hour
+    if hour < 12:
+        saudacao = "Bom dia"
+    elif hour < 18:
+        saudacao = "Boa tarde"
+    else:
+        saudacao = "Boa noite"
+
+    dias_semana = ["Segunda-feira", "Terça-feira", "Quarta-feira", "Quinta-feira", "Sexta-feira", "Sábado", "Domingo"]
+    meses = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"]
+    data_formatada = f"{dias_semana[now.weekday()]}, {now.day} de {meses[now.month - 1]} de {now.year}"
+
+    # 1. Quantidade total de APRs do técnico (geral e hoje)
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    total_aprs = APR.query.filter_by(tech_id=current_user.id).count()
+    total_aprs_hoje = APR.query.filter(
+        APR.tech_id == current_user.id,
+        APR.created_at >= today_start
+    ).count()
+
+    # 2. Checklist semanal (pelo menos 1 vez por semana - a partir de segunda-feira)
+    start_week = (now - timedelta(days=now.weekday())).replace(hour=0, minute=0, second=0, microsecond=0)
+    user_name_clean = (current_user.username or "").strip().lower()
+    checklist_semana = Checklist.query.filter(
+        db.func.lower(Checklist.technician) == user_name_clean,
+        Checklist.date >= start_week
+    ).order_by(Checklist.date.desc()).first()
+
+    # 3. Próximo Plantão do técnico
+    proximo_plantao = None
+    try:
+        user = current_user
+        today_dt = now.date()
+
+        user_team_ids = set()
+        all_teams = Team.query.all()
+        for t in all_teams:
+            if any(m.id == user.id for m in t.members):
+                user_team_ids.add(t.id)
+
+        scales = Scale.query.filter(
+            Scale.status == "ATIVO",
+            Scale.date >= today_dt
+        ).order_by(Scale.date.asc()).all()
+
+        for s in scales:
+            is_assigned = False
+            if s.technician_ids:
+                for part in str(s.technician_ids).split(","):
+                    p = part.strip()
+                    if p.isdigit() and int(p) == user.id:
+                        is_assigned = True
+                        break
+                    elif p.lower() == user.username.lower():
+                        is_assigned = True
+                        break
+
+            if not is_assigned and s.user_id == user.id:
+                is_assigned = True
+
+            if not is_assigned and user_team_ids:
+                s_teams = set()
+                if s.team_id:
+                    s_teams.add(s.team_id)
+                if s.team_ids:
+                    for tid_str in str(s.team_ids).split(","):
+                        p = tid_str.strip()
+                        if p.isdigit():
+                            s_teams.add(int(p))
+                if s_teams.intersection(user_team_ids):
+                    is_assigned = True
+
+            if is_assigned:
+                proximo_plantao = {
+                    "data": s.date.strftime("%d/%m/%Y"),
+                    "tipo": s.type or "Plantão",
+                    "obs": s.obs or ""
+                }
+                break
+    except Exception as e:
+        proximo_plantao = None
+
+    # 4. Status de Treinamentos do técnico
+    total_treinamentos_pendentes = 0
+    primeiro_treinamento_pendente = None
+    tem_treinamentos_concluidos = False
+    try:
+        assigns = TrainingAssignment.query.filter_by(user_id=current_user.id).all()
+        pendentes = [a for a in assigns if (a.status or "pendente") in ("pendente", "em_andamento") and a.course and a.course.is_published]
+        concluidos = [a for a in assigns if a.status == "aprovado"]
+        total_treinamentos_pendentes = len(pendentes)
+        if pendentes:
+            primeiro_treinamento_pendente = pendentes[0].course.title
+        elif concluidos:
+            tem_treinamentos_concluidos = True
+    except Exception as e:
+        pass
+
+    return render_template(
+        "inicio_tecnico.html",
+        saudacao=saudacao,
+        data_formatada=data_formatada,
+        total_aprs=total_aprs,
+        total_aprs_hoje=total_aprs_hoje,
+        checklist_semana=checklist_semana,
+        proximo_plantao=proximo_plantao,
+        total_treinamentos_pendentes=total_treinamentos_pendentes,
+        primeiro_treinamento_pendente=primeiro_treinamento_pendente,
+        tem_treinamentos_concluidos=tem_treinamentos_concluidos
+    )
 
 
 
@@ -1209,11 +1326,12 @@ def get_default_perms(role):
         "perm_gestao_encerramento", "perm_gestao_rfo", "perm_gestao_tarefas",
         "perm_gestao_geradores", "perm_gestao_rota_exata", "perm_gestao_supervisao",
         "perm_gestao_treinamentos", "perm_gestao_solicitacoes", "perm_gestao_relatorios",
-        "perm_whatsapp_evolution", "perm_whatsapp_conversas", "perm_integracoes", "perm_gestao_powerbi", "perm_avisos_historico"
+        "perm_whatsapp_evolution", "perm_whatsapp_conversas", "perm_integracoes", "perm_gestao_powerbi", "perm_avisos_historico",
+        "perm_apr_mobile", "perm_apr_gerenciamento", "perm_config_apr"
     ]
     perms = {}
     if role == "tech":
-        perms = {"perm_checklist_mobile": True, "perm_treinamentos_mobile": True}
+        perms = {"perm_checklist_mobile": True, "perm_treinamentos_mobile": True, "perm_apr_mobile": True}
     elif role == "manutencao":
         perms = {"perm_manutencao_os": True}
     elif role == "supervisor":

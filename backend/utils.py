@@ -524,10 +524,15 @@ def supervisor_allowed(view):
         if allowed:
             return view(*args, **kwargs)
 
+        if endpoint_name == "dashboard":
+            if current_user.is_manutencao:
+                return redirect(url_for("manutencao_os"))
+            return redirect(url_for("inicio_tecnico"))
+
         flash("Acesso restrito a supervisor ou administrador.", "error")
         if current_user.is_manutencao:
             return redirect(url_for("manutencao_os"))
-        return redirect(url_for("checklist_mobile"))
+        return redirect(url_for("inicio_tecnico"))
     return wrapper
 
 def manutencao_only(view):

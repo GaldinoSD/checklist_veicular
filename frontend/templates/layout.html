@@ -458,9 +458,9 @@
         
         <!-- TOP: LOGO -->
         <div class="px-4 flex items-center justify-between h-16 shrink-0 border-b border-slate-100 dark:border-slate-800/80">
-          <div class="flex items-center gap-3 overflow-hidden">
-            <img src="{% if sys_config and sys_config.sidebar_logo %}{{ url_for('static', filename='uploads/layout/' ~ sys_config.sidebar_logo, v='2') }}{% else %}{{ url_for('static', filename='imgsidebar.png', v='2') }}{% endif %}" class="w-auto max-w-[180px] object-contain" style="height: {{ sys_config.sidebar_logo_height or 36 }}px;" alt="Logo">
-          </div>
+          <a href="{{ url_for('index') }}" class="flex items-center gap-3 overflow-hidden cursor-pointer" title="Início">
+            <img src="{% if sys_config and sys_config.sidebar_logo %}{{ url_for('static', filename='uploads/layout/' ~ sys_config.sidebar_logo, v='2') }}{% else %}{{ url_for('static', filename='imgsidebar.png', v='2') }}{% endif %}" class="w-auto max-w-[180px] object-contain hover:opacity-90 transition-opacity" style="height: {{ sys_config.sidebar_logo_height or 36 }}px;" alt="Logo">
+          </a>
           <!-- Mobile Close Button inside sidebar -->
           <button onclick="window.closeMobileSidebar ? window.closeMobileSidebar() : document.getElementById('sidebar').classList.remove('mobile-open')" class="lg:hidden p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200" aria-label="Fechar menu">
             <i class="fa-solid fa-xmark text-sm"></i>
@@ -478,7 +478,8 @@
               ('Controle E/S', 'controle_veiculos', 'fa-right-left', 'controle_veiculos'),
               ('Relatórios', 'reports', 'fa-file-invoice', 'relatorios'),
               ('Avarias / O.S.', 'avarias_registro', 'fa-wrench', 'avarias'),
-              ('Controle Ferramentas', 'controle_ferramentas_atual', 'fa-toolbox', 'controle_ferramentas_atual')
+              ('Controle Ferramentas', 'controle_ferramentas_atual', 'fa-toolbox', 'controle_ferramentas_atual'),
+              ('APRs de Campo', 'apr_gerenciamento', 'fa-shield-halved', 'apr_gerenciamento')
             ] %}
             
             {% set ns_gerenc = namespace(has_any=false) %}
@@ -590,7 +591,7 @@
           {% endfor %}
 
           {% set is_admin_or_supervisor = current_user.is_admin or current_user.is_supervisor or (current_user.role in ['admin', 'supervisor']) %}
-          {% set has_tecnico_operational = (not is_admin_or_supervisor) and (current_user.has_permission('checklist_mobile') or current_user.has_permission('treinamentos_mobile') or current_user.has_permission('manutencao_os') or current_user.has_permission('controle_ferramentas') or current_user.has_permission('meus_plantoes')) %}
+          {% set has_tecnico_operational = (not is_admin_or_supervisor) and (current_user.has_permission('checklist_mobile') or current_user.has_permission('treinamentos_mobile') or current_user.has_permission('manutencao_os') or current_user.has_permission('controle_ferramentas') or current_user.has_permission('meus_plantoes') or current_user.has_permission('apr_mobile')) %}
 
           {% if has_tecnico_operational or ns.has_any_gestao %}
           <div class="px-3 pt-3 pb-1 text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
@@ -667,6 +668,20 @@
               <span id="badge-sidebar-plantoes" class="hidden px-2 py-0.5 rounded-full {% if request.endpoint == 'meus_plantoes' %}bg-sky-400/20 text-sky-200 dark:text-sky-900 border border-sky-400/30{% else %}bg-sky-500/10 text-sky-600 dark:text-sky-400 border border-sky-500/20{% endif %} text-[10px] font-black">0</span>
             </a>
             {% endif %}
+
+            {% if current_user.has_permission('apr_mobile') %}
+            <!-- ✅ LINK APR (TÉCNICO OPERACIONAL) -->
+            <a href="{{ url_for('apr_mobile') }}" 
+               class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] transition-colors group
+                      {% if request.endpoint == 'apr_mobile' %}
+                        bg-slate-900 text-white font-semibold shadow-sm dark:bg-white dark:text-slate-900
+                      {% else %}
+                        text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100 dark:hover:bg-slate-800/60 font-medium
+                      {% endif %}">
+              <i class="fa-solid fa-shield-halved w-4 text-center text-sm {% if request.endpoint == 'apr_mobile' %}text-white dark:text-slate-900{% else %}text-emerald-500 group-hover:scale-110{% endif %} transition-transform"></i>
+              <span class="truncate">APR - Análise de Risco</span>
+            </a>
+            {% endif %}
           {% endif %}
 
           {% if ns.has_any_gestao %}
@@ -702,14 +717,14 @@
           </div>
           {% endif %}
 
-          {% if current_user.has_permission('usuarios') or current_user.has_permission('avisos') or current_user.has_permission('config_checklist') or current_user.has_permission('logs') or current_user.has_permission('config_layout') or current_user.has_permission('config_ferramentas') %}
+          {% if current_user.has_permission('usuarios') or current_user.has_permission('avisos') or current_user.has_permission('config_checklist') or current_user.has_permission('logs') or current_user.has_permission('config_layout') or current_user.has_permission('config_ferramentas') or current_user.has_permission('config_apr') %}
           <!-- ✅ CONFIGURAÇÕES & ADMINISTRAÇÃO -->
           <div class="pt-2">
             <div class="px-3 pt-2 pb-1 text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
               Sistema
             </div>
             
-            {% set is_config_active = request.endpoint in ['config_layout', 'users', 'config_checklist', 'config_ferramentas', 'logs', 'avisos'] %}
+            {% set is_config_active = request.endpoint in ['config_layout', 'users', 'config_checklist', 'config_ferramentas', 'config_apr', 'logs', 'avisos'] %}
             <button onclick="toggleSubmenu('submenu-configuracoes', this)" 
                     class="w-full flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl text-[13px] transition-colors group
                            {% if is_config_active %}
@@ -758,6 +773,15 @@
                           {% if request.endpoint == 'config_ferramentas' %}bg-slate-200/70 dark:bg-slate-800 text-slate-900 dark:text-white font-semibold{% else %}text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/70 dark:hover:bg-slate-800/40 font-medium{% endif %}">
                   <i class="fa-solid fa-toolbox w-3.5 text-center text-[11px] opacity-70"></i>
                   <span>Config. Ferramentas</span>
+                </a>
+                {% endif %}
+
+                {% if current_user.has_permission('config_apr') %}
+                <a href="{{ url_for('config_apr') }}" 
+                   class="flex items-center gap-2.5 px-3 py-2 rounded-lg text-[12px] transition-colors
+                          {% if request.endpoint == 'config_apr' %}bg-slate-200/70 dark:bg-slate-800 text-slate-900 dark:text-white font-semibold{% else %}text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100/70 dark:hover:bg-slate-800/40 font-medium{% endif %}">
+                  <i class="fa-solid fa-shield-halved w-3.5 text-center text-[11px] opacity-70"></i>
+                  <span>Configuração APR</span>
                 </a>
                 {% endif %}
 

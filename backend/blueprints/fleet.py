@@ -28,7 +28,7 @@ from backend.config import (
     TZ, REV_INTERVAL, REV_ALERT_MARGIN, WEEKS_WINDOW, ALLOWED_EXT,
     VISTORIAS_UPLOAD_DIR, AVARIAS_UPLOAD_DIR, TREINAMENTOS_UPLOAD_DIR,
     UPLOAD_DIR, LOGO_PATH, LAYOUT_UPLOAD_DIR, INBOX_DIR, RELATORIOS_DIR,
-    BASE_DIR
+    BASE_DIR, APR_UPLOAD_DIR
 )
 from backend.models import (
     User, Vehicle, VehicleInfo, VehicleMov, Checklist, ChecklistItem,
@@ -38,7 +38,8 @@ from backend.models import (
     RFO, Solicitacao, SupervisaoTecnica, RotaExata, Team, Task, Patio, Encerramento,
     Scale, Meeting, Note, Activity, SystemRule, Company, Contract, ExternalCollaborator,
     AvariaOS, Log, Vistoria, VistoriaFoto, SystemConfig, WhatsAppConfig,
-    GPSDevice, GPSLog
+    GPSDevice, GPSLog,
+    APR, APRMembro, APRItemConfig, APRResposta, APRActivityType
 )
 from backend.utils import (
     agora, registrar_log, send_whatsapp_message, admin_required,
@@ -3527,3 +3528,662 @@ def vistorias_excluir(vistoria_id):
         registrar_log(f"Vistoria: ERRO AO EXCLUIR id={vistoria_id}: {str(e)}")
         flash(f"Erro ao excluir vistoria: {e}", "error")
     return redirect(url_for("vistorias_list"))
+
+
+# ==============================================================================
+# 🛡️ MÓDULO: APR DIGITAL (ANÁLISE PRELIMINAR DE RISCOS)
+# ==============================================================================
+
+@fleet_bp.route("/apr")
+@login_required
+def apr_mobile():
+    """Tela mobile para o técnico operacional preencher a APR de campo vinculada ao seu usuário."""
+    if not (current_user.has_permission("apr_mobile") or current_user.is_admin or current_user.is_supervisor or current_user.role in ("tech", "supervisor", "admin")):
+        flash("Acesso não autorizado ao módulo de APR.", "error")
+        return redirect(url_for("dashboard"))
+    
+    # Itens/Perguntas ativas
+    items = APRItemConfig.query.filter_by(is_active=True).order_by(APRItemConfig.category, APRItemConfig.order).all()
+    
+    # Categorias organizadas
+    categories = {
+        "geral": [i for i in items if i.category == "geral"],
+        "altura_nr35": [i for i in items if i.category == "altura_nr35"],
+        "eletrica_nr10": [i for i in items if i.category == "eletrica_nr10"],
+        "sinalizacao_transito": [i for i in items if i.category == "sinalizacao_transito"],
+        "clima_ambiente": [i for i in items if i.category == "clima_ambiente"]
+    }
+
+    # Tipos de atividade cadastrados e ativos
+    activity_types = APRActivityType.query.filter_by(is_active=True).order_by(APRActivityType.order, APRActivityType.name).all()
+    
+    return render_template(
+        "apr_mobile.html",
+        categories=categories,
+        activity_types=activity_types,
+        agora=agora()
+    )
+
+
+@fleet_bp.route("/api/apr/salvar", methods=["POST"])
+@login_required
+def api_apr_salvar():
+    """Processa e salva o registro da APR de campo preenchida pelo técnico conectado."""
+    if not (current_user.has_permission("apr_mobile") or current_user.is_admin or current_user.is_supervisor or current_user.role in ("tech", "supervisor", "admin")):
+        return jsonify({"success": False, "message": "Sem permissão para registrar APR."}), 403
+
+    try:
+        activity_type = request.form.get("activity_type", "").strip()
+        local_description = request.form.get("local_description", "").strip()
+        os_number = request.form.get("os_number", "").strip()
+        latitude = request.form.get("latitude", type=float)
+        longitude = request.form.get("longitude", type=float)
+        risk_factors_str = request.form.get("risk_factors", "[]")
+        emergency_notes = request.form.get("emergency_measure_notes", "").strip()
+        general_notes = request.form.get("general_notes", "").strip()
+
+        if not activity_type or not local_description:
+            return jsonify({"success": False, "message": "Tipo de atividade e local da execução são obrigatórios."}), 400
+
+        try:
+            risk_factors = json.loads(risk_factors_str) if isinstance(risk_factors_str, str) else risk_factors_str
+        except Exception:
+            risk_factors = []
+
+        # Diretório de uploads
+        APR_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+
+        # Foto emergencial se houver
+        emergency_photo_filename = None
+        if "emergency_measure_photo" in request.files:
+            file = request.files["emergency_measure_photo"]
+            if file and file.filename and allowed_file(file.filename):
+                ext = os.path.splitext(file.filename)[1].lower()
+                emergency_photo_filename = f"apr_emerg_{uuid.uuid4().hex[:10]}{ext}"
+                file.save(str(APR_UPLOAD_DIR / emergency_photo_filename))
+
+        # Gerar Protocolo único
+        now_dt = agora()
+        date_str = now_dt.strftime("%Y%m%d")
+        total_today = APR.query.filter(APR.protocol.like(f"APR-{date_str}-%")).count() + 1
+        protocol = f"APR-{date_str}-{total_today:04d}"
+
+        # Assinatura digital do técnico com o dedo
+        sig_data = request.form.get("signature_data")
+        sig_filename = None
+        if sig_data and "base64," in sig_data:
+            import base64
+            try:
+                header, encoded = sig_data.split(",", 1)
+                data = base64.b64decode(encoded)
+                sig_filename = f"apr_sig_{protocol}_{uuid.uuid4().hex[:8]}.png"
+                with open(APR_UPLOAD_DIR / sig_filename, "wb") as f:
+                    f.write(data)
+            except Exception as e:
+                print("⚠️ Erro ao salvar assinatura da APR:", e)
+
+        # Avaliar respostas e condições impeditivas
+        active_items = APRItemConfig.query.filter_by(is_active=True).all()
+        has_blocking_condition = False
+        saved_responses = []
+
+        cat_triggers = {
+            "altura_nr35": "altura",
+            "eletrica_nr10": "eletrica",
+            "sinalizacao_transito": "transito",
+            "clima_ambiente": "clima"
+        }
+
+        for item in active_items:
+            if item.category in cat_triggers and cat_triggers[item.category] not in risk_factors:
+                continue
+
+            ans = request.form.get(f"item_{item.id}", "sim").lower()
+            justif = request.form.get(f"justif_{item.id}", "").strip()
+
+            photo_fn = None
+            if f"foto_{item.id}" in request.files:
+                f_item = request.files[f"foto_{item.id}"]
+                if f_item and f_item.filename and allowed_file(f_item.filename):
+                    ext = os.path.splitext(f_item.filename)[1].lower()
+                    photo_fn = f"apr_{protocol}_{item.id}_{uuid.uuid4().hex[:6]}{ext}"
+                    f_item.save(str(APR_UPLOAD_DIR / photo_fn))
+
+            is_blocking = False
+            if item.is_blocking_if_negative and ans == "nao":
+                is_blocking = True
+                has_blocking_condition = True
+
+            saved_responses.append({
+                "item_id": item.id,
+                "category": item.category,
+                "question": item.question_text,
+                "answer": ans,
+                "is_blocking": is_blocking,
+                "justification": justif,
+                "photo_filename": photo_fn
+            })
+
+        if has_blocking_condition:
+            if emergency_notes:
+                apr_status = "liberada"
+            else:
+                apr_status = "bloqueada"
+        else:
+            apr_status = "liberada"
+
+        apr = APR(
+            protocol=protocol,
+            tech_id=current_user.id,
+            activity_type=activity_type,
+            local_description=local_description,
+            latitude=latitude,
+            longitude=longitude,
+            os_number=os_number if os_number else None,
+            status=apr_status,
+            has_blocking_condition=has_blocking_condition,
+            emergency_measure_notes=emergency_notes if emergency_notes else None,
+            emergency_measure_photo=emergency_photo_filename,
+            risk_factors=json.dumps(risk_factors),
+            signed_by_leader=True,
+            signature_image=sig_filename,
+            general_notes=general_notes if general_notes else None,
+            created_at=now_dt
+        )
+        db.session.add(apr)
+        db.session.flush()
+
+        # Adicionar respostas detalhadas
+        for resp in saved_responses:
+            r_obj = APRResposta(
+                apr_id=apr.id,
+                item_config_id=resp["item_id"],
+                category=resp["category"],
+                question_text=resp["question"],
+                answer=resp["answer"],
+                is_blocking=resp["is_blocking"],
+                justification=resp["justification"],
+                photo_filename=resp["photo_filename"]
+            )
+            db.session.add(r_obj)
+
+        db.session.commit()
+        registrar_log(f"APR Registrada: {apr.protocol} por {current_user.username} - Status: {apr.status.upper()}")
+
+        return jsonify({
+            "success": True,
+            "protocol": apr.protocol,
+            "status": apr.status,
+            "has_blocking": has_blocking_condition,
+            "message": f"APR {apr.protocol} salva com sucesso no nome de {current_user.display_name}! Status: {apr.status.upper()}."
+        })
+    except Exception as e:
+        db.session.rollback()
+        print("Erro salvando APR:", e)
+        return jsonify({"success": False, "message": f"Erro interno ao salvar APR: {str(e)}"}), 500
+
+
+@fleet_bp.route("/gerenciamento/aprs")
+@login_required
+def apr_gerenciamento():
+    """Painel de Gestão e Monitoramento de APRs para Segurança do Trabalho e Gestores."""
+    if not (current_user.has_permission("apr_gerenciamento") or current_user.is_admin or current_user.is_supervisor):
+        flash("Acesso restrito ao gerenciamento de APRs.", "error")
+        return redirect(url_for("dashboard"))
+
+    q = (request.args.get("q") or "").strip()
+    status_filter = (request.args.get("status") or "").strip()
+    activity_filter = (request.args.get("activity") or "").strip()
+    tech_filter = request.args.get("tech_id", type=int)
+    periodo = (request.args.get("periodo") or "").strip()
+
+    query = APR.query.order_by(APR.created_at.desc())
+
+    if q:
+        like = f"%{q}%"
+        query = query.filter(
+            db.or_(
+                APR.protocol.ilike(like),
+                APR.local_description.ilike(like),
+                APR.os_number.ilike(like),
+                APR.activity_type.ilike(like)
+            )
+        )
+
+    if status_filter:
+        query = query.filter(APR.status == status_filter)
+
+    if activity_filter:
+        query = query.filter(APR.activity_type == activity_filter)
+
+    if tech_filter:
+        query = query.filter(APR.tech_id == tech_filter)
+
+    # Filtro de período
+    if periodo:
+        try:
+            d_ini, d_fim = parse_periodo(periodo)
+            query = query.filter(APR.created_at >= d_ini, APR.created_at <= d_fim)
+        except Exception:
+            pass
+
+    aprs = query.limit(200).all()
+
+    # Métricas gerais
+    total_aprs = APR.query.count()
+    total_liberadas = APR.query.filter_by(status="liberada").count()
+    total_bloqueadas = APR.query.filter_by(status="bloqueada").count()
+    total_com_medida = APR.query.filter(APR.has_blocking_condition.is_(True), APR.emergency_measure_notes.isnot(None)).count()
+
+    tecnicos = User.query.filter(User.role == "tech").order_by(User.full_name, User.username).all()
+
+    return render_template(
+        "apr_gerenciamento.html",
+        aprs=aprs,
+        total_aprs=total_aprs,
+        total_liberadas=total_liberadas,
+        total_bloqueadas=total_bloqueadas,
+        total_com_medida=total_com_medida,
+        tecnicos=tecnicos,
+        q=q,
+        status_filter=status_filter,
+        activity_filter=activity_filter,
+        tech_filter=tech_filter,
+        periodo=periodo
+    )
+
+
+@fleet_bp.route("/api/apr/<int:apr_id>")
+@login_required
+def api_apr_detalhes(apr_id):
+    """Retorna detalhes completos de uma APR em formato JSON para o modal de auditoria."""
+    apr = APR.query.get_or_404(apr_id)
+
+    respostas_list = [{
+        "category": r.category,
+        "question": r.question_text,
+        "answer": r.answer,
+        "is_blocking": r.is_blocking,
+        "justification": r.justification,
+        "photo_url": url_for("static", filename=f"uploads/apr/{r.photo_filename}") if r.photo_filename else None
+    } for r in apr.respostas]
+
+    try:
+        risk_factors = json.loads(apr.risk_factors) if apr.risk_factors else []
+    except Exception:
+        risk_factors = []
+
+    data = {
+        "id": apr.id,
+        "protocol": apr.protocol,
+        "activity_type": apr.activity_type,
+        "local_description": apr.local_description,
+        "latitude": apr.latitude,
+        "longitude": apr.longitude,
+        "os_number": apr.os_number,
+        "status": apr.status,
+        "has_blocking_condition": apr.has_blocking_condition,
+        "emergency_measure_notes": apr.emergency_measure_notes,
+        "emergency_measure_photo_url": url_for("static", filename=f"uploads/apr/{apr.emergency_measure_photo}") if apr.emergency_measure_photo else None,
+        "signature_url": url_for("static", filename=f"uploads/apr/{apr.signature_image}") if apr.signature_image else None,
+        "risk_factors": risk_factors,
+        "general_notes": apr.general_notes,
+        "created_at": apr.created_at.strftime("%d/%m/%Y %H:%M"),
+        "tech": {
+            "id": apr.tech.id if apr.tech else None,
+            "name": apr.tech.display_name if apr.tech else "N/A",
+            "username": apr.tech.username if apr.tech else "N/A"
+        },
+        "respostas": respostas_list
+    }
+    return jsonify(data)
+
+
+@fleet_bp.route("/api/apr/<int:apr_id>/delete", methods=["POST"])
+@login_required
+def api_apr_delete(apr_id):
+    """Exclui uma APR do sistema (disponível para administradores e supervisores)."""
+    if not (current_user.has_permission("apr_gerenciamento") or current_user.is_admin or current_user.is_supervisor):
+        return jsonify({"success": False, "error": "Acesso não autorizado para excluir APR."}), 403
+
+    apr = APR.query.get_or_404(apr_id)
+    tech_id = apr.tech_id
+    protocol = apr.protocol
+
+    try:
+        # Remover arquivos de mídia associados da pasta APR_UPLOAD_DIR se existirem
+        if apr.emergency_measure_photo:
+            p = APR_UPLOAD_DIR / apr.emergency_measure_photo
+            if p.exists():
+                try:
+                    p.unlink()
+                except Exception:
+                    pass
+
+        if apr.signature_image:
+            p = APR_UPLOAD_DIR / apr.signature_image
+            if p.exists():
+                try:
+                    p.unlink()
+                except Exception:
+                    pass
+
+        for r in apr.respostas:
+            if r.photo_filename:
+                p = APR_UPLOAD_DIR / r.photo_filename
+                if p.exists():
+                    try:
+                        p.unlink()
+                    except Exception:
+                        pass
+
+        db.session.delete(apr)
+        db.session.commit()
+
+        novo_total_tecnico = APR.query.filter_by(tech_id=tech_id).count()
+
+        return jsonify({
+            "success": True,
+            "message": f"APR {protocol} excluída com sucesso.",
+            "tech_id": tech_id,
+            "novo_total_tecnico": novo_total_tecnico
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({"success": False, "error": f"Erro ao excluir APR: {str(e)}"}), 500
+
+
+@fleet_bp.route("/apr/<int:apr_id>/pdf")
+@login_required
+def apr_pdf(apr_id):
+    """Gera o laudo oficial em PDF da APR para arquivamento ou envio à Segurança do Trabalho."""
+    apr = APR.query.get_or_404(apr_id)
+
+    from io import BytesIO
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib import colors
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image as RLImage
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        rightMargin=15 * mm,
+        leftMargin=15 * mm,
+        topMargin=15 * mm,
+        bottomMargin=15 * mm
+    )
+
+    styles = getSampleStyleSheet()
+    title_style = ParagraphStyle('TitleStyle', parent=styles['Heading1'], fontSize=16, leading=20, textColor=colors.HexColor("#0f172a"), alignment=1)
+    subtitle_style = ParagraphStyle('SubTitleStyle', parent=styles['Normal'], fontSize=9, leading=12, textColor=colors.HexColor("#475569"), alignment=1)
+    section_style = ParagraphStyle('SecStyle', parent=styles['Heading2'], fontSize=11, leading=14, textColor=colors.HexColor("#1e293b"), spaceAfter=4)
+    cell_style = ParagraphStyle('CellStyle', parent=styles['Normal'], fontSize=8, leading=11, textColor=colors.HexColor("#334155"))
+    cell_bold = ParagraphStyle('CellBold', parent=styles['Normal'], fontSize=8, leading=11, fontName="Helvetica-Bold", textColor=colors.HexColor("#0f172a"))
+
+    story = []
+
+    # Cabeçalho
+    story.append(Paragraph("<b>ANÁLISE PRELIMINAR DE RISCOS (APR)</b>", title_style))
+    story.append(Paragraph("Sistema Digital de Prevenção e Segurança Operacional Telecom", subtitle_style))
+    story.append(Spacer(1, 4 * mm))
+
+    # Tabela de Identificação
+    status_color = "#16a34a" if apr.status == "liberada" else "#dc2626"
+    coords_txt = f"{apr.latitude:.5f}, {apr.longitude:.5f}" if apr.latitude and apr.longitude else "Não capturada"
+    info_data = [
+        [Paragraph("<b>PROTOCOLO:</b>", cell_bold), Paragraph(apr.protocol, cell_style), Paragraph("<b>STATUS:</b>", cell_bold), Paragraph(f"<font color='{status_color}'><b>{apr.status.upper()}</b></font>", cell_bold)],
+        [Paragraph("<b>DATA/HORA:</b>", cell_bold), Paragraph(apr.created_at.strftime("%d/%m/%Y %H:%M"), cell_style), Paragraph("<b>Nº O.S.:</b>", cell_bold), Paragraph(apr.os_number or "N/A", cell_style)],
+        [Paragraph("<b>TÉCNICO:</b>", cell_bold), Paragraph(apr.tech.display_name if apr.tech else "N/A", cell_style), Paragraph("<b>ATIVIDADE:</b>", cell_bold), Paragraph(apr.activity_type, cell_style)],
+        [Paragraph("<b>LOCAL:</b>", cell_bold), Paragraph(apr.local_description, cell_style), Paragraph("<b>GPS:</b>", cell_bold), Paragraph(coords_txt, cell_style)]
+    ]
+    t_info = Table(info_data, colWidths=[28 * mm, 62 * mm, 25 * mm, 65 * mm])
+    t_info.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor("#f8fafc")),
+        ('BOX', (0, 0), (-1, -1), 0.5, colors.HexColor("#cbd5e1")),
+        ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#e2e8f0")),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('TOPPADDING', (0, 0), (-1, -1), 4),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+    ]))
+    story.append(t_info)
+    story.append(Spacer(1, 5 * mm))
+
+    # Respostas das Avaliações
+    story.append(Paragraph("<b>AVALIAÇÃO DE PERIGOS E MEDIDAS DE CONTROLE</b>", section_style))
+    resp_data = [[Paragraph("<b>Categoria / Perigo</b>", cell_bold), Paragraph("<b>Avaliação</b>", cell_bold), Paragraph("<b>Medida / Justificativa</b>", cell_bold)]]
+    
+    for r in apr.respostas:
+        ans_color = "#16a34a" if r.answer == "sim" else ("#dc2626" if r.answer == "nao" else "#64748b")
+        ans_txt = f"<font color='{ans_color}'><b>{r.answer.upper()}</b></font>"
+        just_txt = r.justification or "-"
+        resp_data.append([
+            Paragraph(f"<b>[{r.category.upper()}]</b> {r.question_text}", cell_style),
+            Paragraph(ans_txt, cell_style),
+            Paragraph(just_txt, cell_style)
+        ])
+
+    t_resp = Table(resp_data, colWidths=[100 * mm, 25 * mm, 55 * mm])
+    t_resp.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#e2e8f0")),
+        ('BOX', (0, 0), (-1, -1), 0.5, colors.HexColor("#cbd5e1")),
+        ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#f1f5f9")),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('TOPPADDING', (0, 0), (-1, -1), 3),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+    ]))
+    story.append(t_resp)
+    story.append(Spacer(1, 5 * mm))
+
+    # Medidas Emergenciais se houver
+    if apr.emergency_measure_notes:
+        story.append(Paragraph("<b>MEDIDAS PREVENTIVAS / CONTROLE EMERGENCIAL ADOTADO</b>", section_style))
+        p_emerg = Paragraph(f"<b>Condição Impeditiva Detectada:</b> Sim<br/><b>Ação de Controle Adotada pelo Técnico:</b> {apr.emergency_measure_notes}", cell_style)
+        t_emerg = Table([[p_emerg]], colWidths=[180 * mm])
+        t_emerg.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor("#fef3c7")),
+            ('BOX', (0, 0), (-1, -1), 0.5, colors.HexColor("#f59e0b")),
+            ('PADDING', (0, 0), (-1, -1), 6),
+        ]))
+        story.append(t_emerg)
+        story.append(Spacer(1, 5 * mm))
+
+    # Declaração e Assinaturas
+    story.append(Paragraph("<b>TERMO DE CIÊNCIA E CONFORMIDADE</b>", section_style))
+    termo_text = "Declaro que inspecionei o local de trabalho, avaliei todos os fatores de risco e comprometo-me a cumprir integralmente todas as medidas preventivas descritas nesta Análise Preliminar de Riscos (NR-35, NR-10 e PGR)."
+    story.append(Paragraph(termo_text, cell_style))
+    story.append(Spacer(1, 4 * mm))
+
+    tech_sig_elements = []
+    if apr.signature_image and (APR_UPLOAD_DIR / apr.signature_image).exists():
+        try:
+            tech_sig_elements.append(RLImage(str(APR_UPLOAD_DIR / apr.signature_image), width=45 * mm, height=18 * mm))
+        except Exception:
+            pass
+    tech_sig_elements.append(Paragraph(f"______________________________________<br/><b>{apr.tech.display_name if apr.tech else 'Técnico Responsável'}</b><br/>Técnico Operacional", cell_style))
+
+    sig_data = [
+        [tech_sig_elements,
+         [Spacer(1, 15 * mm), Paragraph("______________________________________<br/><b>Segurança do Trabalho (TST)</b><br/>Auditoria de Conformidade", cell_style)]]
+    ]
+    t_sig = Table(sig_data, colWidths=[90 * mm, 90 * mm])
+    t_sig.setStyle(TableStyle([
+        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+        ('VALIGN', (0, 0), (-1, -1), 'BOTTOM'),
+    ]))
+    story.append(t_sig)
+
+    doc.build(story)
+    buffer.seek(0)
+
+    from flask import send_file
+    return send_file(
+        buffer,
+        as_attachment=False,
+        download_name=f"{apr.protocol}.pdf",
+        mimetype="application/pdf"
+    )
+
+
+@fleet_bp.route("/configuracao/apr")
+@login_required
+def config_apr():
+    """Tela de parametrização das perguntas e critérios impeditivos da APR."""
+    if not (current_user.has_permission("config_apr") or current_user.is_admin):
+        flash("Acesso não autorizado às configurações de APR.", "error")
+        return redirect(url_for("dashboard"))
+
+    items = APRItemConfig.query.order_by(APRItemConfig.category, APRItemConfig.order).all()
+    categories = ["geral", "altura_nr35", "eletrica_nr10", "sinalizacao_transito", "clima_ambiente"]
+    activity_types = APRActivityType.query.order_by(APRActivityType.order, APRActivityType.name).all()
+
+    return render_template(
+        "config_apr.html",
+        items=items,
+        categories=categories,
+        activity_types=activity_types
+    )
+
+
+@fleet_bp.route("/api/apr/config/item", methods=["POST"])
+@login_required
+def api_apr_config_item_save():
+    """Cria ou edita um item/pergunta da APR."""
+    if not (current_user.has_permission("config_apr") or current_user.is_admin):
+        return jsonify({"success": False, "message": "Sem permissão."}), 403
+
+    item_id = request.form.get("item_id", type=int)
+    category = request.form.get("category", "geral").strip()
+    question_text = request.form.get("question_text", "").strip()
+    guidance = request.form.get("guidance", "").strip()
+    order = request.form.get("order", 0, type=int)
+    is_blocking = request.form.get("is_blocking_if_negative") == "on"
+    requires_photo = request.form.get("requires_photo") == "on"
+
+    if not question_text:
+        return jsonify({"success": False, "message": "O texto da pergunta é obrigatório."}), 400
+
+    if item_id:
+        item = APRItemConfig.query.get_or_404(item_id)
+        item.category = category
+        item.question_text = question_text
+        item.guidance = guidance
+        item.order = order
+        item.is_blocking_if_negative = is_blocking
+        item.requires_photo = requires_photo
+    else:
+        item = APRItemConfig(
+            category=category,
+            question_text=question_text,
+            guidance=guidance,
+            order=order,
+            is_blocking_if_negative=is_blocking,
+            requires_photo=requires_photo,
+            is_active=True
+        )
+        db.session.add(item)
+
+    db.session.commit()
+    return jsonify({"success": True, "message": "Pergunta salva com sucesso!"})
+
+
+@fleet_bp.route("/api/apr/config/toggle", methods=["POST"])
+@login_required
+def api_apr_config_toggle():
+    """Ativa/Desativa ou altera criticidade de uma pergunta da APR."""
+    if not (current_user.has_permission("config_apr") or current_user.is_admin):
+        return jsonify({"success": False, "message": "Sem permissão."}), 403
+
+    data = request.get_json() or {}
+    item_id = data.get("item_id")
+    field = data.get("field")  # 'is_active' ou 'is_blocking'
+
+    item = APRItemConfig.query.get_or_404(item_id)
+    if field == "is_active":
+        item.is_active = not item.is_active
+    elif field == "is_blocking":
+        item.is_blocking_if_negative = not item.is_blocking_if_negative
+
+    db.session.commit()
+    return jsonify({"success": True, "is_active": item.is_active, "is_blocking": item.is_blocking_if_negative})
+
+
+@fleet_bp.route("/api/apr/config/delete/<int:item_id>", methods=["POST"])
+@login_required
+def api_apr_config_delete(item_id):
+    """Exclui uma pergunta da APR."""
+    if not (current_user.has_permission("config_apr") or current_user.is_admin):
+        return jsonify({"success": False, "message": "Sem permissão."}), 403
+
+    item = APRItemConfig.query.get_or_404(item_id)
+    db.session.delete(item)
+    db.session.commit()
+    return jsonify({"success": True, "message": "Pergunta excluída com sucesso."})
+
+
+@fleet_bp.route("/api/apr/config/activity", methods=["POST"])
+@login_required
+def api_apr_config_activity_save():
+    """Cria ou edita um tipo de atividade configurável da APR."""
+    if not (current_user.has_permission("config_apr") or current_user.is_admin):
+        return jsonify({"success": False, "message": "Sem permissão."}), 403
+
+    activity_id = request.form.get("activity_id", type=int)
+    name = request.form.get("name", "").strip()
+    order = request.form.get("order", 0, type=int)
+
+    if not name:
+        return jsonify({"success": False, "message": "O nome do tipo de atividade é obrigatório."}), 400
+
+    # Verifica duplicidade
+    existing = APRActivityType.query.filter(
+        db.func.lower(APRActivityType.name) == name.lower(),
+        APRActivityType.id != (activity_id or 0)
+    ).first()
+    if existing:
+        return jsonify({"success": False, "message": "Já existe uma atividade cadastrada com este nome."}), 400
+
+    if activity_id:
+        act = APRActivityType.query.get_or_404(activity_id)
+        act.name = name
+        act.order = order
+    else:
+        act = APRActivityType(
+            name=name,
+            order=order,
+            is_active=True
+        )
+        db.session.add(act)
+
+    db.session.commit()
+    return jsonify({"success": True, "message": "Tipo de atividade salvo com sucesso!"})
+
+
+@fleet_bp.route("/api/apr/config/activity/toggle", methods=["POST"])
+@login_required
+def api_apr_config_activity_toggle():
+    """Ativa ou inativa um tipo de atividade da APR."""
+    if not (current_user.has_permission("config_apr") or current_user.is_admin):
+        return jsonify({"success": False, "message": "Sem permissão."}), 403
+
+    data = request.get_json() or {}
+    activity_id = data.get("activity_id")
+    act = APRActivityType.query.get_or_404(activity_id)
+    act.is_active = not act.is_active
+    db.session.commit()
+    return jsonify({"success": True, "is_active": act.is_active})
+
+
+@fleet_bp.route("/api/apr/config/activity/delete/<int:activity_id>", methods=["POST"])
+@login_required
+def api_apr_config_activity_delete(activity_id):
+    """Exclui um tipo de atividade da APR."""
+    if not (current_user.has_permission("config_apr") or current_user.is_admin):
+        return jsonify({"success": False, "message": "Sem permissão."}), 403
+
+    act = APRActivityType.query.get_or_404(activity_id)
+    db.session.delete(act)
+    db.session.commit()
+    return jsonify({"success": True, "message": "Tipo de atividade excluído com sucesso."})
+

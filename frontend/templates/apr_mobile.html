@@ -1,0 +1,1157 @@
+{% extends 'layout.html' %}
+{% set page_title = "APR - Análise Preliminar de Riscos" %}
+
+{% block content %}
+<!-- Leaflet Map CSS & JS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<style>
+/* 🛡️ Previne zoom automático e expansão horizontal no celular ao focar inputs */
+@media screen and (max-width: 768px) {
+    input[type="text"],
+    input[type="number"],
+    input[type="search"],
+    select,
+    textarea {
+        font-size: 16px !important;
+    }
+}
+html, body {
+    overflow-x: hidden !important;
+    max-width: 100vw;
+}
+/* Canvas para assinatura fluida com o dedo */
+#apr-signature-canvas {
+    touch-action: none !important;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+}
+</style>
+
+<div class="max-w-4xl mx-auto pb-16 px-2 sm:px-4">
+
+    <!-- ✅ HEADER OPERACIONAL -->
+    <div class="mb-6">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200 dark:border-white/5">
+            <div class="flex items-center gap-4">
+                <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-xl shadow-emerald-500/20 shrink-0">
+                    <i class="fa-solid fa-shield-halved text-xl"></i>
+                </div>
+                <div>
+                    <nav class="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">
+                        <span>Operacional Telecom</span>
+                        <i class="fa-solid fa-chevron-right text-[8px] opacity-40"></i>
+                        <span class="text-emerald-500">Segurança do Trabalho</span>
+                    </nav>
+                    <h1 class="text-xl sm:text-2xl font-black text-slate-800 dark:text-white tracking-tight">Análise Preliminar de Riscos</h1>
+                    <p class="text-[11px] text-slate-400">Avaliação obrigatória de segurança antes do início das atividades de campo (NR-35 / NR-10).</p>
+                </div>
+            </div>
+
+            <!-- BADGE TÉCNICO VINCULADO -->
+            <div class="flex items-center gap-3 px-4 py-2.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/20">
+                <div class="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400 font-black text-xs">
+                    <i class="fa-solid fa-user-check"></i>
+                </div>
+                <div>
+                    <span class="text-[9px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400 block">Técnico Responsável</span>
+                    <span class="text-xs font-black text-slate-800 dark:text-white">{{ current_user.display_name }} (Conectado)</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====================== FORMULÁRIO PRINCIPAL ====================== -->
+    <form id="apr-form" onsubmit="return validarEEnviarAPR(event)" enctype="multipart/form-data" class="space-y-6">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="signature_data" id="signature_data">
+
+        <!-- 1. DADOS DA ATIVIDADE E LOCAL -->
+        <div class="bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/60 dark:border-white/10 rounded-3xl p-5 sm:p-6 shadow-sm space-y-4">
+            <div class="flex items-center gap-3 pb-3 border-b border-slate-100 dark:border-white/5">
+                <div class="w-8 h-8 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500 text-sm">
+                    <i class="fa-solid fa-location-dot"></i>
+                </div>
+                <div>
+                    <h2 class="text-sm font-black text-slate-800 dark:text-white uppercase tracking-wider">1. Dados da Atividade e Localização</h2>
+                    <p class="text-[10px] text-slate-400">Defina a frente de trabalho, O.S. e capture o ponto exato da intervenção.</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="space-y-1.5">
+                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Tipo de Serviço *</label>
+                    <select name="activity_type" id="activity_type"
+                            class="w-full rounded-2xl px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 text-slate-800 dark:text-white text-xs font-bold outline-none focus:ring-2 focus:ring-emerald-500 transition-all cursor-pointer">
+                        <option value="">Selecione a atividade...</option>
+                        {% if activity_types %}
+                            {% for act in activity_types %}
+                            <option value="{{ act.name }}">{{ act.name }}</option>
+                            {% endfor %}
+                        {% else %}
+                            <option value="Instalação Residencial FTTH">Instalação Residencial FTTH</option>
+                            <option value="Manutenção / Reparo de Rede Óptica">Manutenção / Reparo de Rede Óptica</option>
+                            <option value="Lançamento e Espinamento de Cabos">Lançamento e Espinamento de Cabos</option>
+                            <option value="Troca / Manobra de Splitter / CTO">Troca / Manobra de Splitter / CTO</option>
+                            <option value="Intervenção em Fachada / Poste">Intervenção em Fachada / Poste</option>
+                            <option value="Atendimento Empresarial / Corporativo">Atendimento Empresarial / Corporativo</option>
+                            <option value="Manutenção de Infraestrutura / Gerador">Manutenção de Infraestrutura / Gerador</option>
+                            <option value="Outros Serviços de Campo">Outros Serviços de Campo</option>
+                        {% endif %}
+                    </select>
+                </div>
+
+                <div class="space-y-1.5">
+                    <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Ordem de Serviço (O.S.)</label>
+                    <input type="text" name="os_number" placeholder="Ex: OS-98432 ou chamado"
+                           class="w-full rounded-2xl px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 text-slate-800 dark:text-white text-xs font-bold outline-none focus:ring-2 focus:ring-emerald-500 transition-all">
+                </div>
+
+                <div class="sm:col-span-2 space-y-2">
+                    <div class="flex items-center justify-between">
+                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Endereço / Ponto de Referência *</label>
+                        <button type="button" id="btn-gps" onclick="capturarLocalizacaoGPS()"
+                                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 text-xs font-black transition-all border border-blue-500/20 cursor-pointer">
+                            <i class="fa-solid fa-location-crosshairs text-xs"></i>
+                            <span id="btn-gps-text">Obter Localização GPS</span>
+                        </button>
+                    </div>
+                    <input type="text" name="local_description" id="local_description" placeholder="Ex: Rua das Flores, 120 - Poste CTO-04 (Bairro Centro)"
+                           class="w-full rounded-2xl px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 text-slate-800 dark:text-white text-xs font-bold outline-none focus:ring-2 focus:ring-emerald-500 transition-all">
+                    
+                    <input type="hidden" name="latitude" id="latitude">
+                    <input type="hidden" name="longitude" id="longitude">
+
+                    <!-- GPS Feedback Card & Pin Preview -->
+                    <div id="gps-preview-card" class="hidden p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 space-y-2.5">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2">
+                                <div class="w-7 h-7 rounded-lg bg-emerald-500 text-white flex items-center justify-center text-xs shadow-md shadow-emerald-500/30">
+                                    <i class="fa-solid fa-location-dot"></i>
+                                </div>
+                                <div>
+                                    <span class="text-xs font-black text-emerald-700 dark:text-emerald-300 block">Ponto GPS Capturado (Alfinete no Mapa)</span>
+                                    <span class="text-[10px] font-mono text-emerald-600 dark:text-emerald-400" id="gps-coords-display">Lat: 0.000000, Lng: 0.000000</span>
+                                </div>
+                            </div>
+                            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300">
+                                <i class="fa-solid fa-check"></i> Pronto para Salvar
+                            </span>
+                        </div>
+                        <!-- Mini Mapa com Alfinete -->
+                        <div id="gps-mini-map" class="h-40 w-full rounded-xl overflow-hidden border border-emerald-500/20 z-0 shadow-inner"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. GATILHOS DE RISCO (AVALIAÇÃO CONDICIONAL) -->
+        <div class="bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/60 dark:border-white/10 rounded-3xl p-5 sm:p-6 shadow-sm space-y-4">
+            <div class="flex items-center gap-3 pb-3 border-b border-slate-100 dark:border-white/5">
+                <div class="w-8 h-8 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500 text-sm">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                </div>
+                <div>
+                    <h2 class="text-sm font-black text-slate-800 dark:text-white uppercase tracking-wider">2. Fatores de Perigo Presentes</h2>
+                    <p class="text-[10px] text-slate-400">Marque apenas os perigos reais identificados neste local para abrir as perguntas específicas.</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <!-- Gatilho Altura -->
+                <label class="trigger-card p-4 rounded-2xl border-2 border-slate-200/80 dark:border-white/10 bg-slate-50/50 dark:bg-white/[0.02] flex flex-col items-center text-center cursor-pointer transition-all hover:scale-[1.02]">
+                    <input type="checkbox" id="trigger-altura" onchange="toggleRiskCategory('altura', this.checked)" class="sr-only">
+                    <i class="fa-solid fa-person-arrow-up-from-line text-2xl text-slate-400 mb-2 icon-indicator"></i>
+                    <span class="text-xs font-black text-slate-700 dark:text-slate-300">Trabalho em Altura</span>
+                    <span class="text-[9px] text-slate-400 font-bold mt-0.5">NR-35 (Escada / Poste)</span>
+                </label>
+
+                <!-- Gatilho Elétrica -->
+                <label class="trigger-card p-4 rounded-2xl border-2 border-slate-200/80 dark:border-white/10 bg-slate-50/50 dark:bg-white/[0.02] flex flex-col items-center text-center cursor-pointer transition-all hover:scale-[1.02]">
+                    <input type="checkbox" id="trigger-eletrica" onchange="toggleRiskCategory('eletrica', this.checked)" class="sr-only">
+                    <i class="fa-solid fa-bolt text-2xl text-slate-400 mb-2 icon-indicator"></i>
+                    <span class="text-xs font-black text-slate-700 dark:text-slate-300">Rede Elétrica</span>
+                    <span class="text-[9px] text-slate-400 font-bold mt-0.5">NR-10 (Baixa/Média)</span>
+                </label>
+
+                <!-- Gatilho Trânsito/Vias -->
+                <label class="trigger-card p-4 rounded-2xl border-2 border-slate-200/80 dark:border-white/10 bg-slate-50/50 dark:bg-white/[0.02] flex flex-col items-center text-center cursor-pointer transition-all hover:scale-[1.02]">
+                    <input type="checkbox" id="trigger-transito" onchange="toggleRiskCategory('transito', this.checked)" class="sr-only">
+                    <i class="fa-solid fa-traffic-cone text-2xl text-slate-400 mb-2 icon-indicator"></i>
+                    <span class="text-xs font-black text-slate-700 dark:text-slate-300">Via Pública</span>
+                    <span class="text-[9px] text-slate-400 font-bold mt-0.5">Trânsito / Calçada</span>
+                </label>
+
+                <!-- Gatilho Clima/Ambiente -->
+                <label class="trigger-card p-4 rounded-2xl border-2 border-slate-200/80 dark:border-white/10 bg-slate-50/50 dark:bg-white/[0.02] flex flex-col items-center text-center cursor-pointer transition-all hover:scale-[1.02]">
+                    <input type="checkbox" id="trigger-clima" onchange="toggleRiskCategory('clima', this.checked)" class="sr-only">
+                    <i class="fa-solid fa-cloud-sun text-2xl text-slate-400 mb-2 icon-indicator"></i>
+                    <span class="text-xs font-black text-slate-700 dark:text-slate-300">Clima & Meio</span>
+                    <span class="text-[9px] text-slate-400 font-bold mt-0.5">Vento / Chuva / Poste</span>
+                </label>
+            </div>
+        </div>
+
+        <!-- 4. BLOCOS DE PERGUNTAS E AVALIAÇÕES -->
+        <div class="space-y-6">
+
+            <!-- BLOCO A: GERAL & EPIS (SEMPRE ATIVO) -->
+            <div class="bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/60 dark:border-white/10 rounded-3xl p-5 sm:p-6 shadow-sm space-y-4">
+                <div class="flex items-center gap-3 pb-3 border-b border-slate-100 dark:border-white/5">
+                    <div class="w-8 h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500 text-sm">
+                        <i class="fa-solid fa-hard-hat"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-black text-slate-800 dark:text-white uppercase tracking-wider">Verificação Geral & EPIs Obrigatórios</h3>
+                        <p class="text-[10px] text-slate-400">Itens essenciais para qualquer tipo de atendimento operacional.</p>
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    {% for item in categories.geral %}
+                    <div class="question-row p-4 rounded-2xl bg-slate-50/70 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 space-y-3"
+                         data-item-id="{{ item.id }}" data-blocking="{{ 'true' if item.is_blocking_if_negative else 'false' }}">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div class="space-y-0.5">
+                                <div class="flex items-center gap-2">
+                                    {% if item.is_blocking_if_negative %}
+                                    <span class="px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20">
+                                        Critério Impeditivo
+                                    </span>
+                                    {% endif %}
+                                    {% if item.requires_photo %}
+                                    <span class="px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                                        Exige Foto
+                                    </span>
+                                    {% endif %}
+                                </div>
+                                <p class="text-xs font-bold text-slate-800 dark:text-slate-200">{{ item.question_text }}</p>
+                                {% if item.guidance %}
+                                <p class="text-[10px] text-slate-400 font-medium"><i class="fa-solid fa-circle-info mr-1 text-slate-400"></i>{{ item.guidance }}</p>
+                                {% endif %}
+                            </div>
+
+                            <!-- BOTÕES SIM / NÃO / N/A -->
+                            <div class="inline-flex rounded-xl p-1 bg-slate-200/80 dark:bg-slate-800 shrink-0 self-start sm:self-center">
+                                <label class="ans-btn px-4 py-1.5 rounded-lg text-xs font-black cursor-pointer transition-all active-ans bg-emerald-500 text-white shadow-sm">
+                                    <input type="radio" name="item_{{ item.id }}" value="sim" checked onchange="handleAnswerChange({{ item.id }})" class="sr-only">
+                                    SIM
+                                </label>
+                                <label class="ans-btn px-4 py-1.5 rounded-lg text-xs font-black text-slate-600 dark:text-slate-400 hover:text-slate-900 cursor-pointer transition-all">
+                                    <input type="radio" name="item_{{ item.id }}" value="nao" onchange="handleAnswerChange({{ item.id }})" class="sr-only">
+                                    NÃO
+                                </label>
+                                <label class="ans-btn px-4 py-1.5 rounded-lg text-xs font-black text-slate-600 dark:text-slate-400 hover:text-slate-900 cursor-pointer transition-all">
+                                    <input type="radio" name="item_{{ item.id }}" value="na" onchange="handleAnswerChange({{ item.id }})" class="sr-only">
+                                    N/A
+                                </label>
+                            </div>
+                        </div>
+
+                        <div id="extra-box-{{ item.id }}" class="{% if not item.requires_photo %}hidden{% endif %} pt-2 border-t border-slate-200/40 dark:border-white/5 space-y-2">
+                            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                                <input type="text" name="justif_{{ item.id }}" placeholder="Descreva observação ou justificativa..."
+                                       class="flex-1 rounded-xl px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-[11px] font-medium outline-none">
+                                
+                                <label class="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-slate-200/80 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold hover:bg-slate-300 dark:hover:bg-slate-700 cursor-pointer transition-all">
+                                    <i class="fa-solid fa-camera text-slate-500"></i>
+                                    <span id="photo-label-{{ item.id }}">Foto</span>
+                                    <input type="file" name="foto_{{ item.id }}" accept="image/*" capture="environment" onchange="previewQuestionPhoto(this, {{ item.id }})" class="sr-only">
+                                </label>
+                                <div id="preview-photo-{{ item.id }}" class="hidden w-8 h-8 rounded-lg border border-slate-300 overflow-hidden shrink-0"></div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- BLOCO B: TRABALHO EM ALTURA (NR-35) - CONDICIONAL -->
+            <div id="section-altura" class="hidden bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl border-2 border-amber-500/40 rounded-3xl p-5 sm:p-6 shadow-sm space-y-4 transition-all">
+                <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-white/5">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500 text-sm">
+                            <i class="fa-solid fa-person-arrow-up-from-line"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-black text-slate-800 dark:text-white uppercase tracking-wider">Trabalho em Altura (NR-35)</h3>
+                            <p class="text-[10px] text-slate-400">Verificações de escadas, cinto tipo paraquedista e ancoragens.</p>
+                        </div>
+                    </div>
+                    <span class="text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                        NR-35 Ativa
+                    </span>
+                </div>
+
+                <div class="space-y-4">
+                    {% for item in categories.altura_nr35 %}
+                    <div class="question-row p-4 rounded-2xl bg-slate-50/70 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 space-y-3"
+                         data-item-id="{{ item.id }}" data-blocking="{{ 'true' if item.is_blocking_if_negative else 'false' }}">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div class="space-y-0.5">
+                                <div class="flex items-center gap-2">
+                                    {% if item.is_blocking_if_negative %}
+                                    <span class="px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20">
+                                        Critério Impeditivo
+                                    </span>
+                                    {% endif %}
+                                    {% if item.requires_photo %}
+                                    <span class="px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                                        Exige Foto
+                                    </span>
+                                    {% endif %}
+                                </div>
+                                <p class="text-xs font-bold text-slate-800 dark:text-slate-200">{{ item.question_text }}</p>
+                                {% if item.guidance %}
+                                <p class="text-[10px] text-slate-400 font-medium"><i class="fa-solid fa-circle-info mr-1 text-slate-400"></i>{{ item.guidance }}</p>
+                                {% endif %}
+                            </div>
+
+                            <div class="inline-flex rounded-xl p-1 bg-slate-200/80 dark:bg-slate-800 shrink-0 self-start sm:self-center">
+                                <label class="ans-btn px-4 py-1.5 rounded-lg text-xs font-black cursor-pointer transition-all active-ans bg-emerald-500 text-white shadow-sm">
+                                    <input type="radio" name="item_{{ item.id }}" value="sim" checked onchange="handleAnswerChange({{ item.id }})" class="sr-only">
+                                    SIM
+                                </label>
+                                <label class="ans-btn px-4 py-1.5 rounded-lg text-xs font-black text-slate-600 dark:text-slate-400 hover:text-slate-900 cursor-pointer transition-all">
+                                    <input type="radio" name="item_{{ item.id }}" value="nao" onchange="handleAnswerChange({{ item.id }})" class="sr-only">
+                                    NÃO
+                                </label>
+                                <label class="ans-btn px-4 py-1.5 rounded-lg text-xs font-black text-slate-600 dark:text-slate-400 hover:text-slate-900 cursor-pointer transition-all">
+                                    <input type="radio" name="item_{{ item.id }}" value="na" onchange="handleAnswerChange({{ item.id }})" class="sr-only">
+                                    N/A
+                                </label>
+                            </div>
+                        </div>
+
+                        <div id="extra-box-{{ item.id }}" class="{% if not item.requires_photo %}hidden{% endif %} pt-2 border-t border-slate-200/40 dark:border-white/5 space-y-2">
+                            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                                <input type="text" name="justif_{{ item.id }}" placeholder="Descreva observação ou justificativa..."
+                                       class="flex-1 rounded-xl px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-[11px] font-medium outline-none">
+                                
+                                <label class="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-slate-200/80 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold hover:bg-slate-300 dark:hover:bg-slate-700 cursor-pointer transition-all">
+                                    <i class="fa-solid fa-camera text-slate-500"></i>
+                                    <span id="photo-label-{{ item.id }}">Foto</span>
+                                    <input type="file" name="foto_{{ item.id }}" accept="image/*" capture="environment" onchange="previewQuestionPhoto(this, {{ item.id }})" class="sr-only">
+                                </label>
+                                <div id="preview-photo-{{ item.id }}" class="hidden w-8 h-8 rounded-lg border border-slate-300 overflow-hidden shrink-0"></div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- BLOCO C: RISCOS ELÉTRICOS (NR-10) - CONDICIONAL -->
+            <div id="section-eletrica" class="hidden bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl border-2 border-red-500/40 rounded-3xl p-5 sm:p-6 shadow-sm space-y-4 transition-all">
+                <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-white/5">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-xl bg-red-500/10 flex items-center justify-center text-red-500 text-sm">
+                            <i class="fa-solid fa-bolt"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-black text-slate-800 dark:text-white uppercase tracking-wider">Riscos Elétricos & Proximidade (NR-10)</h3>
+                            <p class="text-[10px] text-slate-400">Detecção de tensão, distâncias regulamentares e fios soltos.</p>
+                        </div>
+                    </div>
+                    <span class="text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full bg-red-500/10 text-red-600 dark:text-red-400">
+                        NR-10 Ativa
+                    </span>
+                </div>
+
+                <div class="space-y-4">
+                    {% for item in categories.eletrica_nr10 %}
+                    <div class="question-row p-4 rounded-2xl bg-slate-50/70 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 space-y-3"
+                         data-item-id="{{ item.id }}" data-blocking="{{ 'true' if item.is_blocking_if_negative else 'false' }}">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div class="space-y-0.5">
+                                <div class="flex items-center gap-2">
+                                    {% if item.is_blocking_if_negative %}
+                                    <span class="px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20">
+                                        Critério Impeditivo
+                                    </span>
+                                    {% endif %}
+                                    {% if item.requires_photo %}
+                                    <span class="px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                                        Exige Foto
+                                    </span>
+                                    {% endif %}
+                                </div>
+                                <p class="text-xs font-bold text-slate-800 dark:text-slate-200">{{ item.question_text }}</p>
+                                {% if item.guidance %}
+                                <p class="text-[10px] text-slate-400 font-medium"><i class="fa-solid fa-circle-info mr-1 text-slate-400"></i>{{ item.guidance }}</p>
+                                {% endif %}
+                            </div>
+
+                            <div class="inline-flex rounded-xl p-1 bg-slate-200/80 dark:bg-slate-800 shrink-0 self-start sm:self-center">
+                                <label class="ans-btn px-4 py-1.5 rounded-lg text-xs font-black cursor-pointer transition-all active-ans bg-emerald-500 text-white shadow-sm">
+                                    <input type="radio" name="item_{{ item.id }}" value="sim" checked onchange="handleAnswerChange({{ item.id }})" class="sr-only">
+                                    SIM
+                                </label>
+                                <label class="ans-btn px-4 py-1.5 rounded-lg text-xs font-black text-slate-600 dark:text-slate-400 hover:text-slate-900 cursor-pointer transition-all">
+                                    <input type="radio" name="item_{{ item.id }}" value="nao" onchange="handleAnswerChange({{ item.id }})" class="sr-only">
+                                    NÃO
+                                </label>
+                                <label class="ans-btn px-4 py-1.5 rounded-lg text-xs font-black text-slate-600 dark:text-slate-400 hover:text-slate-900 cursor-pointer transition-all">
+                                    <input type="radio" name="item_{{ item.id }}" value="na" onchange="handleAnswerChange({{ item.id }})" class="sr-only">
+                                    N/A
+                                </label>
+                            </div>
+                        </div>
+
+                        <div id="extra-box-{{ item.id }}" class="{% if not item.requires_photo %}hidden{% endif %} pt-2 border-t border-slate-200/40 dark:border-white/5 space-y-2">
+                            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                                <input type="text" name="justif_{{ item.id }}" placeholder="Descreva observação ou justificativa..."
+                                       class="flex-1 rounded-xl px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-[11px] font-medium outline-none">
+                                
+                                <label class="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-slate-200/80 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold hover:bg-slate-300 dark:hover:bg-slate-700 cursor-pointer transition-all">
+                                    <i class="fa-solid fa-camera text-slate-500"></i>
+                                    <span id="photo-label-{{ item.id }}">Foto</span>
+                                    <input type="file" name="foto_{{ item.id }}" accept="image/*" capture="environment" onchange="previewQuestionPhoto(this, {{ item.id }})" class="sr-only">
+                                </label>
+                                <div id="preview-photo-{{ item.id }}" class="hidden w-8 h-8 rounded-lg border border-slate-300 overflow-hidden shrink-0"></div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- BLOCO D: SINALIZAÇÃO DE VIAS & TRÂNSITO - CONDICIONAL -->
+            <div id="section-transito" class="hidden bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl border-2 border-orange-500/40 rounded-3xl p-5 sm:p-6 shadow-sm space-y-4 transition-all">
+                <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-white/5">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-xl bg-orange-500/10 flex items-center justify-center text-orange-500 text-sm">
+                            <i class="fa-solid fa-traffic-cone"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-black text-slate-800 dark:text-white uppercase tracking-wider">Isolamento & Sinalização de Vias</h3>
+                            <p class="text-[10px] text-slate-400">Proteção de terceiros, cones refletivos e perímetro de queda.</p>
+                        </div>
+                    </div>
+                    <span class="text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full bg-orange-500/10 text-orange-600 dark:text-orange-400">
+                        Via Ativa
+                    </span>
+                </div>
+
+                <div class="space-y-4">
+                    {% for item in categories.sinalizacao_transito %}
+                    <div class="question-row p-4 rounded-2xl bg-slate-50/70 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 space-y-3"
+                         data-item-id="{{ item.id }}" data-blocking="{{ 'true' if item.is_blocking_if_negative else 'false' }}">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div class="space-y-0.5">
+                                <div class="flex items-center gap-2">
+                                    {% if item.is_blocking_if_negative %}
+                                    <span class="px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20">
+                                        Critério Impeditivo
+                                    </span>
+                                    {% endif %}
+                                    {% if item.requires_photo %}
+                                    <span class="px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                                        Exige Foto
+                                    </span>
+                                    {% endif %}
+                                </div>
+                                <p class="text-xs font-bold text-slate-800 dark:text-slate-200">{{ item.question_text }}</p>
+                                {% if item.guidance %}
+                                <p class="text-[10px] text-slate-400 font-medium"><i class="fa-solid fa-circle-info mr-1 text-slate-400"></i>{{ item.guidance }}</p>
+                                {% endif %}
+                            </div>
+
+                            <div class="inline-flex rounded-xl p-1 bg-slate-200/80 dark:bg-slate-800 shrink-0 self-start sm:self-center">
+                                <label class="ans-btn px-4 py-1.5 rounded-lg text-xs font-black cursor-pointer transition-all active-ans bg-emerald-500 text-white shadow-sm">
+                                    <input type="radio" name="item_{{ item.id }}" value="sim" checked onchange="handleAnswerChange({{ item.id }})" class="sr-only">
+                                    SIM
+                                </label>
+                                <label class="ans-btn px-4 py-1.5 rounded-lg text-xs font-black text-slate-600 dark:text-slate-400 hover:text-slate-900 cursor-pointer transition-all">
+                                    <input type="radio" name="item_{{ item.id }}" value="nao" onchange="handleAnswerChange({{ item.id }})" class="sr-only">
+                                    NÃO
+                                </label>
+                                <label class="ans-btn px-4 py-1.5 rounded-lg text-xs font-black text-slate-600 dark:text-slate-400 hover:text-slate-900 cursor-pointer transition-all">
+                                    <input type="radio" name="item_{{ item.id }}" value="na" onchange="handleAnswerChange({{ item.id }})" class="sr-only">
+                                    N/A
+                                </label>
+                            </div>
+                        </div>
+
+                        <div id="extra-box-{{ item.id }}" class="{% if not item.requires_photo %}hidden{% endif %} pt-2 border-t border-slate-200/40 dark:border-white/5 space-y-2">
+                            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                                <input type="text" name="justif_{{ item.id }}" placeholder="Descreva observação ou justificativa..."
+                                       class="flex-1 rounded-xl px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-[11px] font-medium outline-none">
+                                
+                                <label class="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-slate-200/80 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold hover:bg-slate-300 dark:hover:bg-slate-700 cursor-pointer transition-all">
+                                    <i class="fa-solid fa-camera text-slate-500"></i>
+                                    <span id="photo-label-{{ item.id }}">Foto</span>
+                                    <input type="file" name="foto_{{ item.id }}" accept="image/*" capture="environment" onchange="previewQuestionPhoto(this, {{ item.id }})" class="sr-only">
+                                </label>
+                                <div id="preview-photo-{{ item.id }}" class="hidden w-8 h-8 rounded-lg border border-slate-300 overflow-hidden shrink-0"></div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- BLOCO E: CLIMA & AMBIENTE - CONDICIONAL -->
+            <div id="section-clima" class="hidden bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl border-2 border-sky-500/40 rounded-3xl p-5 sm:p-6 shadow-sm space-y-4 transition-all">
+                <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-white/5">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-xl bg-sky-500/10 flex items-center justify-center text-sky-500 text-sm">
+                            <i class="fa-solid fa-cloud-sun"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-sm font-black text-slate-800 dark:text-white uppercase tracking-wider">Condições Meteorológicas & Estruturais</h3>
+                            <p class="text-[10px] text-slate-400">Ventos fortes, chuvas, estabilidade do poste e fauna perigosa.</p>
+                        </div>
+                    </div>
+                    <span class="text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full bg-sky-500/10 text-sky-600 dark:text-sky-400">
+                        Clima Ativo
+                    </span>
+                </div>
+
+                <div class="space-y-4">
+                    {% for item in categories.clima_ambiente %}
+                    <div class="question-row p-4 rounded-2xl bg-slate-50/70 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 space-y-3"
+                         data-item-id="{{ item.id }}" data-blocking="{{ 'true' if item.is_blocking_if_negative else 'false' }}">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div class="space-y-0.5">
+                                <div class="flex items-center gap-2">
+                                    {% if item.is_blocking_if_negative %}
+                                    <span class="px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20">
+                                        Critério Impeditivo
+                                    </span>
+                                    {% endif %}
+                                    {% if item.requires_photo %}
+                                    <span class="px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                                        Exige Foto
+                                    </span>
+                                    {% endif %}
+                                </div>
+                                <p class="text-xs font-bold text-slate-800 dark:text-slate-200">{{ item.question_text }}</p>
+                                {% if item.guidance %}
+                                <p class="text-[10px] text-slate-400 font-medium"><i class="fa-solid fa-circle-info mr-1 text-slate-400"></i>{{ item.guidance }}</p>
+                                {% endif %}
+                            </div>
+
+                            <div class="inline-flex rounded-xl p-1 bg-slate-200/80 dark:bg-slate-800 shrink-0 self-start sm:self-center">
+                                <label class="ans-btn px-4 py-1.5 rounded-lg text-xs font-black cursor-pointer transition-all active-ans bg-emerald-500 text-white shadow-sm">
+                                    <input type="radio" name="item_{{ item.id }}" value="sim" checked onchange="handleAnswerChange({{ item.id }})" class="sr-only">
+                                    SIM
+                                </label>
+                                <label class="ans-btn px-4 py-1.5 rounded-lg text-xs font-black text-slate-600 dark:text-slate-400 hover:text-slate-900 cursor-pointer transition-all">
+                                    <input type="radio" name="item_{{ item.id }}" value="nao" onchange="handleAnswerChange({{ item.id }})" class="sr-only">
+                                    NÃO
+                                </label>
+                                <label class="ans-btn px-4 py-1.5 rounded-lg text-xs font-black text-slate-600 dark:text-slate-400 hover:text-slate-900 cursor-pointer transition-all">
+                                    <input type="radio" name="item_{{ item.id }}" value="na" onchange="handleAnswerChange({{ item.id }})" class="sr-only">
+                                    N/A
+                                </label>
+                            </div>
+                        </div>
+
+                        <div id="extra-box-{{ item.id }}" class="{% if not item.requires_photo %}hidden{% endif %} pt-2 border-t border-slate-200/40 dark:border-white/5 space-y-2">
+                            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                                <input type="text" name="justif_{{ item.id }}" placeholder="Descreva observação ou justificativa..."
+                                       class="flex-1 rounded-xl px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-[11px] font-medium outline-none">
+                                
+                                <label class="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-slate-200/80 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold hover:bg-slate-300 dark:hover:bg-slate-700 cursor-pointer transition-all">
+                                    <i class="fa-solid fa-camera text-slate-500"></i>
+                                    <span id="photo-label-{{ item.id }}">Foto</span>
+                                    <input type="file" name="foto_{{ item.id }}" accept="image/*" capture="environment" onchange="previewQuestionPhoto(this, {{ item.id }})" class="sr-only">
+                                </label>
+                                <div id="preview-photo-{{ item.id }}" class="hidden w-8 h-8 rounded-lg border border-slate-300 overflow-hidden shrink-0"></div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+        </div>
+
+        <!-- 5. PAINEL DE CONDIÇÃO IMPEDITIVA & TRATATIVA EMERGENCIAL (OPÇÃO B ACORDADA) -->
+        <div id="blocking-alert-box" class="hidden bg-amber-500/10 dark:bg-amber-500/15 border-2 border-amber-500/50 rounded-3xl p-5 sm:p-6 space-y-4">
+            <div class="flex items-start gap-3">
+                <div class="w-10 h-10 rounded-2xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-lg shadow-amber-500/30">
+                    <i class="fa-solid fa-triangle-exclamation text-lg"></i>
+                </div>
+                <div>
+                    <h4 class="text-sm font-black text-amber-800 dark:text-amber-300 uppercase tracking-wider">Condição Impeditiva Detectada</h4>
+                    <p class="text-xs text-amber-700 dark:text-amber-400 mt-0.5">
+                        Você marcou "NÃO" em um item crítico de segurança. Conforme a norma, a atividade só poderá ser liberada se for adotada uma <b>Medida de Controle Emergencial / Preventiva</b> devidamente justificada e fotografada.
+                    </p>
+                </div>
+            </div>
+
+            <div class="space-y-3 pt-2">
+                <div>
+                    <label class="text-[10px] font-black text-amber-800 dark:text-amber-300 uppercase tracking-widest block mb-1">
+                        Descreva a Medida de Controle Adotada para Liberar o Trabalho: *
+                    </label>
+                    <textarea name="emergency_measure_notes" id="emergency_measure_notes" rows="3" placeholder="Ex: A escada não pôde ser amarrada no poste devido a galho, então foi feito o isolamento e realizada poda prévia segura com dupla de apoio..."
+                              class="w-full rounded-2xl p-4 bg-white dark:bg-slate-900 border border-amber-500/40 text-slate-800 dark:text-white text-xs font-medium outline-none focus:ring-2 focus:ring-amber-500"></textarea>
+                </div>
+
+                <div>
+                    <label class="text-[10px] font-black text-amber-800 dark:text-amber-300 uppercase tracking-widest block mb-1">
+                        Foto Comprobatória da Medida de Controle (Opcional, porém recomendada)
+                    </label>
+                    <div class="flex items-center gap-3">
+                        <label class="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-2xl border-2 border-dashed border-amber-500/50 bg-white/50 dark:bg-slate-900/50 hover:bg-amber-500/10 cursor-pointer transition-all">
+                            <i class="fa-solid fa-camera text-amber-600 dark:text-amber-400"></i>
+                            <span class="text-xs font-bold text-amber-700 dark:text-amber-300" id="emerg-photo-label">Tirar Foto ou Anexar</span>
+                            <input type="file" name="emergency_measure_photo" accept="image/*" capture="environment" onchange="previewEmergencyPhoto(this)" class="sr-only">
+                        </label>
+                        <div id="emerg-photo-preview" class="hidden w-12 h-12 rounded-xl border border-amber-500 overflow-hidden shrink-0"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 6. OBSERVAÇÕES GERAIS -->
+        <div class="bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/60 dark:border-white/10 rounded-3xl p-5 sm:p-6 shadow-sm space-y-2">
+            <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Observações Gerais / Anotações de Campo (Opcional)</label>
+            <textarea name="general_notes" rows="2" placeholder="Informações adicionais sobre o ambiente, clientes, interferências ou infraestrutura..."
+                      class="w-full rounded-2xl p-4 bg-slate-50 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 text-slate-800 dark:text-white text-xs font-medium outline-none focus:ring-2 focus:ring-emerald-500"></textarea>
+        </div>
+
+        <!-- 7. ASSINATURA DIGITAL E FINALIZAÇÃO (SIMPLES & CLARO) -->
+        <div class="bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/60 dark:border-white/10 rounded-3xl p-5 sm:p-6 shadow-sm space-y-4">
+            <div class="flex items-center gap-3 pb-3 border-b border-slate-100 dark:border-white/5">
+                <div class="w-10 h-10 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400 text-base shrink-0">
+                    <i class="fa-solid fa-signature"></i>
+                </div>
+                <div>
+                    <h3 class="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider">Finalização & Assinatura Digital</h3>
+                    <p class="text-[11px] text-slate-500 dark:text-slate-400">
+                        Declaro que avaliei os riscos presentes e adotei as medidas de segurança como <strong>{{ current_user.display_name }}</strong>.
+                    </p>
+                </div>
+            </div>
+
+            <!-- Alerta Dinâmico de Validação de Campos -->
+            <div id="validation-alert" class="hidden p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-800 dark:text-amber-300 text-xs font-bold flex items-center gap-2.5">
+                <i class="fa-solid fa-triangle-exclamation text-base shrink-0 text-amber-500"></i>
+                <span id="validation-alert-msg"></span>
+            </div>
+
+            <!-- Botão de Finalização em Verde Sólido -->
+            <button type="submit" id="btn-submit-apr"
+                    class="w-full py-4 rounded-2xl font-black text-sm uppercase tracking-wider text-white bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] shadow-lg shadow-emerald-600/25 transition-all flex items-center justify-center gap-2.5 cursor-pointer">
+                <i class="fa-solid fa-paper-plane text-base"></i>
+                <span id="btn-submit-text">Finalizar e Assinar APR</span>
+            </button>
+        </div>
+
+    </form>
+</div>
+
+<!-- ====================== MODAL DE ASSINATURA COM O DEDO ====================== -->
+<div id="modal-assinatura-apr" class="hidden fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/80 backdrop-blur-md">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-3xl max-w-lg w-full flex flex-col shadow-2xl overflow-hidden animate-premium">
+        
+        <!-- Header do Modal -->
+        <div class="p-5 border-b border-slate-100 dark:border-white/5 flex items-center justify-between shrink-0">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-2xl bg-emerald-500/10 flex items-center justify-center text-emerald-600 dark:text-emerald-400 text-base">
+                    <i class="fa-solid fa-signature"></i>
+                </div>
+                <div>
+                    <h3 class="text-sm sm:text-base font-black text-slate-800 dark:text-white">Assinatura do Técnico</h3>
+                    <p class="text-[10px] text-slate-400">Assine com o <strong>dedo</strong> no quadro abaixo</p>
+                </div>
+            </div>
+            <button type="button" onclick="fecharModalAssinatura()" class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-500 flex items-center justify-center text-xs">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <!-- Corpo do Modal -->
+        <div class="p-4 sm:p-6 space-y-3">
+            <div class="flex items-center justify-between text-xs">
+                <span class="text-[11px] font-bold text-slate-600 dark:text-slate-300">
+                    <i class="fa-solid fa-hand-pointer text-emerald-500 mr-1"></i> Desenhe sua assinatura com o dedo:
+                </span>
+                <button type="button" onclick="limparCanvasAssinatura()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-black transition-all">
+                    <i class="fa-solid fa-rotate-left text-[10px]"></i> Limpar
+                </button>
+            </div>
+
+            <div class="relative w-full h-52 sm:h-56 bg-slate-50 dark:bg-slate-950/60 border-2 border-dashed border-slate-300 dark:border-white/15 rounded-2xl overflow-hidden flex items-center justify-center touch-none">
+                <canvas id="apr-signature-canvas" class="w-full h-full block cursor-crosshair"></canvas>
+                <!-- Linha guia para assinatura -->
+                <div class="absolute bottom-8 left-6 right-6 border-b border-slate-300/60 dark:border-white/10 pointer-events-none flex justify-between">
+                    <span class="text-[9px] text-slate-400 font-mono tracking-wider">X ________________________________________</span>
+                    <span class="text-[9px] text-slate-400 font-mono tracking-wider">Assinatura Digital</span>
+                </div>
+            </div>
+
+            <p class="text-[10px] text-slate-400 text-center">
+                Ao confirmar, esta assinatura será vinculada permanentemente ao laudo da APR com seu usuário <strong>{{ current_user.display_name }}</strong>.
+            </p>
+
+            <div id="sig-warning-alert" class="hidden p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-xs font-bold text-center">
+                <i class="fa-solid fa-triangle-exclamation mr-1"></i> Por favor, desenhe sua assinatura no campo antes de confirmar.
+            </div>
+        </div>
+
+        <!-- Rodapé do Modal -->
+        <div class="p-4 border-t border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-slate-950/40 flex items-center gap-3 shrink-0">
+            <button type="button" onclick="fecharModalAssinatura()" class="w-1/3 py-3 rounded-xl bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 text-slate-700 dark:text-slate-300 text-xs font-black uppercase tracking-wider transition-all">
+                Cancelar
+            </button>
+            <button type="button" onclick="confirmarAssinaturaEEnviar()" id="btn-confirm-sig" class="flex-1 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black uppercase tracking-wider shadow-lg shadow-emerald-600/25 transition-all flex items-center justify-center gap-2">
+                <i class="fa-solid fa-check-circle"></i>
+                <span>Confirmar e Enviar APR</span>
+            </button>
+        </div>
+
+    </div>
+</div>
+
+<!-- ====================== JAVASCRIPT DINÂMICO ====================== -->
+<script>
+const activeRiskFactors = new Set();
+
+function toggleRiskCategory(cat, isChecked) {
+    const card = document.getElementById(`trigger-${cat}`).closest('.trigger-card');
+    const section = document.getElementById(`section-${cat}`);
+    const icon = card.querySelector('.icon-indicator');
+
+    if (isChecked) {
+        activeRiskFactors.add(cat);
+        card.classList.add('border-emerald-500', 'bg-emerald-500/10');
+        card.classList.remove('border-slate-200/80', 'dark:border-white/10');
+        icon.classList.remove('text-slate-400');
+        icon.classList.add('text-emerald-500');
+        if (section) section.classList.remove('hidden');
+    } else {
+        activeRiskFactors.delete(cat);
+        card.classList.remove('border-emerald-500', 'bg-emerald-500/10');
+        card.classList.add('border-slate-200/80', 'dark:border-white/10');
+        icon.classList.add('text-slate-400');
+        icon.classList.remove('text-emerald-500');
+        if (section) section.classList.add('hidden');
+    }
+
+    checkAllBlockingConditions();
+}
+
+function handleAnswerChange(itemId) {
+    const row = document.querySelector(`.question-row[data-item-id="${itemId}"]`);
+    if (!row) return;
+
+    const radios = row.querySelectorAll('input[type="radio"]');
+    let selectedVal = 'sim';
+    radios.forEach(r => {
+        const lbl = r.closest('.ans-btn');
+        if (r.checked) {
+            selectedVal = r.value;
+            lbl.classList.add('active-ans');
+            if (r.value === 'sim') {
+                lbl.className = 'ans-btn px-4 py-1.5 rounded-lg text-xs font-black cursor-pointer transition-all active-ans bg-emerald-500 text-white shadow-sm';
+            } else if (r.value === 'nao') {
+                lbl.className = 'ans-btn px-4 py-1.5 rounded-lg text-xs font-black cursor-pointer transition-all active-ans bg-red-500 text-white shadow-sm';
+            } else {
+                lbl.className = 'ans-btn px-4 py-1.5 rounded-lg text-xs font-black cursor-pointer transition-all active-ans bg-slate-600 text-white shadow-sm';
+            }
+        } else {
+            lbl.className = 'ans-btn px-4 py-1.5 rounded-lg text-xs font-black text-slate-600 dark:text-slate-400 hover:text-slate-900 cursor-pointer transition-all';
+        }
+    });
+
+    const extraBox = document.getElementById(`extra-box-${itemId}`);
+    if (extraBox) {
+        if (selectedVal === 'nao') {
+            extraBox.classList.remove('hidden');
+        } else {
+            const isReqPhoto = row.querySelector('.border-blue-500\\/20') !== null;
+            if (!isReqPhoto) {
+                extraBox.classList.add('hidden');
+            }
+        }
+    }
+
+    checkAllBlockingConditions();
+}
+
+function checkAllBlockingConditions() {
+    let hasBlocking = false;
+    const rows = document.querySelectorAll('.question-row');
+
+    rows.forEach(row => {
+        const parentSection = row.closest('[id^="section-"]');
+        if (parentSection && parentSection.classList.contains('hidden')) {
+            return;
+        }
+
+        const isBlockingRule = row.getAttribute('data-blocking') === 'true';
+        const checkedRadio = row.querySelector('input[type="radio"]:checked');
+        if (isBlockingRule && checkedRadio && checkedRadio.value === 'nao') {
+            hasBlocking = true;
+        }
+    });
+
+    const alertBox = document.getElementById('blocking-alert-box');
+    if (hasBlocking) {
+        alertBox.classList.remove('hidden');
+    } else {
+        alertBox.classList.add('hidden');
+    }
+}
+
+let gpsMapInstance = null;
+let gpsMarkerInstance = null;
+
+function capturarLocalizacaoGPS() {
+    const btnText = document.getElementById('btn-gps-text');
+    const btn = document.getElementById('btn-gps');
+    if (!navigator.geolocation) {
+        alert('Geolocalização não é suportada pelo seu navegador.');
+        return;
+    }
+    btn.disabled = true;
+    btnText.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i> Obtendo GPS...';
+
+    navigator.geolocation.getCurrentPosition(
+        async (position) => {
+            const lat = position.coords.latitude;
+            const lng = position.coords.longitude;
+            document.getElementById('latitude').value = lat;
+            document.getElementById('longitude').value = lng;
+            document.getElementById('gps-coords-display').textContent = `Lat: ${lat.toFixed(6)}, Lng: ${lng.toFixed(6)} (Precisão: ±${Math.round(position.coords.accuracy)}m)`;
+            document.getElementById('gps-preview-card').classList.remove('hidden');
+
+            const localInput = document.getElementById('local_description');
+            if (!localInput.value.trim()) {
+                try {
+                    const geoRes = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`);
+                    const geoData = await geoRes.json();
+                    if (geoData && geoData.display_name) {
+                        const parts = geoData.display_name.split(',');
+                        localInput.value = parts.slice(0, 4).join(',').trim();
+                    }
+                } catch (e) {
+                    // Reverse geocode opcional
+                }
+            }
+
+            setTimeout(() => {
+                const mapEl = document.getElementById('gps-mini-map');
+                if (mapEl) {
+                    if (!gpsMapInstance) {
+                        gpsMapInstance = L.map('gps-mini-map', { zoomControl: false }).setView([lat, lng], 16);
+                        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                            attribution: ''
+                        }).addTo(gpsMapInstance);
+                        
+                        const pinIcon = L.divIcon({
+                            className: 'custom-pin',
+                            html: '<div style="background-color: #ef4444; width: 28px; height: 28px; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); display: flex; align-items: center; justify-content: center; border: 2px solid white; box-shadow: 0 4px 10px rgba(0,0,0,0.35);"><div style="width: 8px; height: 8px; background: white; border-radius: 50%;"></div></div>',
+                            iconSize: [28, 28],
+                            iconAnchor: [14, 28]
+                        });
+                        gpsMarkerInstance = L.marker([lat, lng], { icon: pinIcon }).addTo(gpsMapInstance);
+                    } else {
+                        gpsMapInstance.setView([lat, lng], 16);
+                        gpsMarkerInstance.setLatLng([lat, lng]);
+                        gpsMapInstance.invalidateSize();
+                    }
+                }
+            }, 250);
+
+            btn.disabled = false;
+            btnText.innerHTML = '<i class="fa-solid fa-check text-emerald-500"></i> GPS Atualizado';
+        },
+        (error) => {
+            btn.disabled = false;
+            btnText.innerHTML = 'Obter Localização GPS';
+            let msg = 'Não foi possível capturar o GPS.';
+            if (error.code === error.PERMISSION_DENIED) {
+                msg = 'Permissão de localização negada pelo navegador. Permita o acesso ao GPS.';
+            } else if (error.code === error.TIMEOUT) {
+                msg = 'Tempo limite esgotado ao buscar sinal GPS. Tente novamente.';
+            }
+            alert(msg);
+        },
+        { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
+    );
+}
+
+function previewEmergencyPhoto(input) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const prev = document.getElementById('emerg-photo-preview');
+            prev.innerHTML = `<img src="${e.target.result}" class="w-full h-full object-cover">`;
+            prev.classList.remove('hidden');
+            document.getElementById('emerg-photo-label').textContent = 'Foto Selecionada';
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+function previewQuestionPhoto(input, itemId) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const prev = document.getElementById(`preview-photo-${itemId}`);
+            prev.innerHTML = `<img src="${e.target.result}" class="w-full h-full object-cover">`;
+            prev.classList.remove('hidden');
+            document.getElementById(`photo-label-${itemId}`).textContent = 'OK';
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+function mostrarAlertaValidacao(mensagem) {
+    const alertBox = document.getElementById('validation-alert');
+    const alertMsg = document.getElementById('validation-alert-msg');
+    alertMsg.innerHTML = mensagem;
+    alertBox.classList.remove('hidden');
+    alertBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function fecharAlertaValidacao() {
+    const alertBox = document.getElementById('validation-alert');
+    if (alertBox) alertBox.classList.add('hidden');
+}
+
+// ====================== ASSINATURA COM O DEDO (TOUCH CANVAS) ======================
+let sigCanvas = null;
+let sigCtx = null;
+let isDrawingSig = false;
+let hasDrawnSignature = false;
+
+function initSignatureCanvas() {
+    sigCanvas = document.getElementById('apr-signature-canvas');
+    if (!sigCanvas) return;
+    
+    // Configura resolução com devicePixelRatio para traço limpo e sem distorção
+    const rect = sigCanvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    
+    sigCanvas.width = rect.width * dpr;
+    sigCanvas.height = rect.height * dpr;
+    
+    sigCtx = sigCanvas.getContext('2d');
+    sigCtx.scale(dpr, dpr);
+    sigCtx.lineWidth = 2.8;
+    sigCtx.lineCap = 'round';
+    sigCtx.lineJoin = 'round';
+    sigCtx.strokeStyle = '#065f46'; // Verde escuro profissional de segurança
+
+    function getCoords(e) {
+        const r = sigCanvas.getBoundingClientRect();
+        if (e.touches && e.touches.length > 0) {
+            return {
+                x: e.touches[0].clientX - r.left,
+                y: e.touches[0].clientY - r.top
+            };
+        }
+        return {
+            x: e.clientX - r.left,
+            y: e.clientY - r.top
+        };
+    }
+
+    function startDraw(e) {
+        e.preventDefault();
+        isDrawingSig = true;
+        const coords = getCoords(e);
+        sigCtx.beginPath();
+        sigCtx.moveTo(coords.x, coords.y);
+        const warn = document.getElementById('sig-warning-alert');
+        if (warn) warn.classList.add('hidden');
+    }
+
+    function moveDraw(e) {
+        if (!isDrawingSig) return;
+        e.preventDefault();
+        const coords = getCoords(e);
+        sigCtx.lineTo(coords.x, coords.y);
+        sigCtx.stroke();
+        hasDrawnSignature = true;
+    }
+
+    function endDraw(e) {
+        if (isDrawingSig) {
+            isDrawingSig = false;
+        }
+    }
+
+    // Touch events (Mobile com dedo / stylus)
+    sigCanvas.addEventListener('touchstart', startDraw, { passive: false });
+    sigCanvas.addEventListener('touchmove', moveDraw, { passive: false });
+    sigCanvas.addEventListener('touchend', endDraw, { passive: false });
+    sigCanvas.addEventListener('touchcancel', endDraw, { passive: false });
+
+    // Mouse events (Desktop)
+    sigCanvas.addEventListener('mousedown', startDraw);
+    sigCanvas.addEventListener('mousemove', moveDraw);
+    sigCanvas.addEventListener('mouseup', endDraw);
+    sigCanvas.addEventListener('mouseleave', endDraw);
+}
+
+function abrirModalAssinatura() {
+    const modal = document.getElementById('modal-assinatura-apr');
+    modal.classList.remove('hidden');
+    const warn = document.getElementById('sig-warning-alert');
+    if (warn) warn.classList.add('hidden');
+
+    setTimeout(() => {
+        initSignatureCanvas();
+        limparCanvasAssinatura();
+    }, 120);
+}
+
+function fecharModalAssinatura() {
+    const modal = document.getElementById('modal-assinatura-apr');
+    if (modal) modal.classList.add('hidden');
+}
+
+function limparCanvasAssinatura() {
+    if (!sigCanvas || !sigCtx) return;
+    sigCtx.save();
+    sigCtx.setTransform(1, 0, 0, 1, 0, 0);
+    sigCtx.clearRect(0, 0, sigCanvas.width, sigCanvas.height);
+    sigCtx.restore();
+    hasDrawnSignature = false;
+    const warn = document.getElementById('sig-warning-alert');
+    if (warn) warn.classList.add('hidden');
+}
+
+function confirmarAssinaturaEEnviar() {
+    if (!hasDrawnSignature) {
+        const warn = document.getElementById('sig-warning-alert');
+        if (warn) warn.classList.remove('hidden');
+        return;
+    }
+
+    try {
+        const dataUrl = sigCanvas.toDataURL('image/png');
+        document.getElementById('signature_data').value = dataUrl;
+    } catch (e) {
+        console.error('Erro ao converter assinatura do canvas:', e);
+    }
+
+    fecharModalAssinatura();
+    enviarAPR();
+}
+
+function validarEEnviarAPR(event) {
+    if (event) event.preventDefault();
+    fecharAlertaValidacao();
+
+    const activityEl = document.getElementById('activity_type');
+    if (!activityEl.value) {
+        activityEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        activityEl.focus();
+        activityEl.classList.add('ring-2', 'ring-red-500');
+        setTimeout(() => activityEl.classList.remove('ring-2', 'ring-red-500'), 3000);
+        mostrarAlertaValidacao('Por favor, selecione o <strong>Tipo de Serviço</strong> antes de finalizar.');
+        return false;
+    }
+
+    const localEl = document.getElementById('local_description');
+    if (!localEl.value.trim()) {
+        localEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        localEl.focus();
+        localEl.classList.add('ring-2', 'ring-red-500');
+        setTimeout(() => localEl.classList.remove('ring-2', 'ring-red-500'), 3000);
+        mostrarAlertaValidacao('Por favor, informe o <strong>Endereço / Ponto de Referência</strong> (ou capture pelo botão de GPS).');
+        return false;
+    }
+
+    const blockingBox = document.getElementById('blocking-alert-box');
+    if (blockingBox && !blockingBox.classList.contains('hidden')) {
+        const emergInput = document.getElementById('emergency_measure_notes');
+        if (!emergInput.value.trim()) {
+            emergInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            emergInput.focus();
+            emergInput.classList.add('ring-2', 'ring-red-500');
+            setTimeout(() => emergInput.classList.remove('ring-2', 'ring-red-500'), 3000);
+            mostrarAlertaValidacao('Condição impeditiva identificada! É obrigatório preencher a <strong>Medida de Controle Adotada</strong>.');
+            return false;
+        }
+    }
+
+    // Abre o quadro de assinatura com o dedo
+    abrirModalAssinatura();
+    return false;
+}
+
+async function enviarAPR() {
+    const btn = document.getElementById('btn-submit-apr');
+    const btnText = document.getElementById('btn-submit-text');
+    btn.disabled = true;
+    btn.classList.add('opacity-75', 'cursor-not-allowed');
+    btnText.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin mr-2"></i> Processando APR...';
+
+    const form = document.getElementById('apr-form');
+    const formData = new FormData(form);
+
+    formData.append('risk_factors', JSON.stringify(Array.from(activeRiskFactors)));
+
+    const csrfToken = document.querySelector('input[name="csrf_token"]')?.value || document.querySelector('meta[name="csrf-token"]')?.content || '';
+
+    try {
+        const response = await fetch('/api/apr/salvar', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrfToken
+            },
+            body: formData
+        });
+
+        const data = await response.json().catch(() => null);
+
+        if (response.ok && data && data.success) {
+            let statusIcon = data.status === 'liberada' ? 'fa-circle-check text-emerald-500' : 'fa-triangle-exclamation text-red-500';
+            let statusTitle = data.status === 'liberada' ? 'APR Liberada com Sucesso!' : 'APR Bloqueada por Condição Impeditiva!';
+            
+            const modalHtml = `
+                <div id="modal-apr-result" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md animate-fade-in">
+                    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-3xl p-6 sm:p-8 max-w-md w-full text-center space-y-4 shadow-2xl">
+                        <div class="w-16 h-16 rounded-3xl bg-slate-100 dark:bg-white/5 flex items-center justify-center mx-auto text-3xl">
+                            <i class="fa-solid ${statusIcon}"></i>
+                        </div>
+                        <h3 class="text-xl font-black text-slate-800 dark:text-white">${statusTitle}</h3>
+                        <p class="text-xs text-slate-500 dark:text-slate-400">
+                            Protocolo: <span class="font-mono font-bold text-slate-800 dark:text-white">${data.protocol}</span>
+                        </p>
+                        <p class="text-xs text-slate-600 dark:text-slate-300">${data.message}</p>
+                        <div class="pt-4 flex flex-col gap-2">
+                            <a href="/apr" class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-widest rounded-xl transition-all shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-plus-circle"></i>
+                                <span>Preencher Nova APR</span>
+                            </a>
+                            <a href="/inicio" class="w-full py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 font-bold text-xs uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-house"></i>
+                                <span>Voltar ao Início</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.insertAdjacentHTML('beforeend', modalHtml);
+        } else {
+            const errorMsg = (data && data.message) ? data.message : `Erro ao salvar APR (Status ${response.status}).`;
+            mostrarAlertaValidacao(errorMsg);
+            btn.disabled = false;
+            btn.classList.remove('opacity-75', 'cursor-not-allowed');
+            btnText.textContent = 'Finalizar e Assinar APR';
+        }
+    } catch (err) {
+        console.error('Erro na requisição APR:', err);
+        mostrarAlertaValidacao('Erro de conexão ao salvar a APR. Verifique sua conexão e tente novamente.');
+        btn.disabled = false;
+        btn.classList.remove('opacity-75', 'cursor-not-allowed');
+        btnText.textContent = 'Finalizar e Assinar APR';
+    }
+
+    return false;
+}
+</script>
+{% endblock %}
