@@ -210,32 +210,27 @@ class TestAPRModule(unittest.TestCase):
         self.assertIsNone(APRItemConfig.query.get(item.id))
 
     def test_inicio_tecnico_page(self):
-        """Valida que o técnico acessa a página de início personalizada e os redirecionamentos corretos."""
+        """Valida que o técnico é redirecionado diretamente para o checklist mobile ao acessar o sistema."""
         # Login como técnico
         self.client.post("/login", data={
             "username": self.tech_user.username,
             "password": "senha123"
         })
 
-        # Acessa /inicio diretamente
+        # Acessa /inicio diretamente -> redireciona para /checklist
         resp = self.client.get("/inicio")
-        self.assertEqual(resp.status_code, 200)
-        html = resp.get_data(as_text=True)
-        self.assertIn("Análise Preliminar de Risco", html)
-        self.assertIn("Checklist Veicular Semanal", html)
-        self.assertIn("Treinamentos", html)
-        self.assertIn("Próximo Plantão", html)
-        self.assertIn(self.tech_user.display_name, html)
+        self.assertEqual(resp.status_code, 302)
+        self.assertTrue(resp.headers["Location"].endswith("/checklist"))
 
-        # Acessa /dashboard como técnico -> deve redirecionar para /inicio
+        # Acessa /dashboard como técnico -> deve redirecionar para /checklist
         dash_resp = self.client.get("/dashboard")
         self.assertEqual(dash_resp.status_code, 302)
-        self.assertTrue(dash_resp.headers["Location"].endswith("/inicio"))
+        self.assertTrue(dash_resp.headers["Location"].endswith("/checklist"))
 
-        # Acessa / (index) como técnico -> deve redirecionar para /inicio
+        # Acessa / (index) como técnico -> deve redirecionar para /checklist
         index_resp = self.client.get("/")
         self.assertEqual(index_resp.status_code, 302)
-        self.assertTrue(index_resp.headers["Location"].endswith("/inicio"))
+        self.assertTrue(index_resp.headers["Location"].endswith("/checklist"))
 
     def test_admin_delete_apr_and_deduct_tech_total(self):
         """Valida que a exclusão de uma APR pelo admin deduz automaticamente da contagem do técnico."""
@@ -250,13 +245,11 @@ class TestAPRModule(unittest.TestCase):
         db.session.add(apr)
         db.session.commit()
 
-        # 2. Confirma que a contagem do técnico na tela de início reflete 1 APR
-        self.client.post("/login", data={"username": self.tech_user.username, "password": "senha123"})
-        resp = self.client.get("/inicio")
-        self.assertEqual(resp.status_code, 200)
-        self.assertIn("1", resp.get_data(as_text=True))
+        # 2. Confirma que o técnico possui 1 APR no banco
+        self.assertEqual(APR.query.filter_by(tech_id=self.tech_user.id).count(), 1)
 
         # 3. Técnico comum tenta excluir a APR -> deve ser bloqueado com 403
+        self.client.post("/login", data={"username": self.tech_user.username, "password": "senha123"})
         del_tech_resp = self.client.post(f"/api/apr/{apr.id}/delete")
         self.assertEqual(del_tech_resp.status_code, 403)
 
@@ -271,11 +264,8 @@ class TestAPRModule(unittest.TestCase):
         # 5. Verifica que o registro não existe mais no banco
         self.assertIsNone(db.session.get(APR, apr.id))
 
-        # 6. Login novamente como técnico -> tela de início agora exibe 0 APRs
-        self.client.post("/login", data={"username": self.tech_user.username, "password": "senha123"})
-        resp_after = self.client.get("/inicio")
-        self.assertEqual(resp_after.status_code, 200)
-        self.assertIn("0", resp_after.get_data(as_text=True))
+        # 6. Confirma que a contagem do técnico no banco agora é 0 APRs
+        self.assertEqual(APR.query.filter_by(tech_id=self.tech_user.id).count(), 0)
 
     def test_config_activity_types(self):
         """Testa o gerenciamento completo de tipos de atividade (criar, editar, duplicidade, toggle, exclusão e exibição na APR)."""
@@ -338,6 +328,130 @@ class TestAPRModule(unittest.TestCase):
         resp_del = self.client.post(f"/api/apr/config/activity/delete/{act.id}")
         self.assertEqual(resp_del.status_code, 200)
         self.assertIsNone(APRActivityType.query.get(act.id))
+
+    def test_fator_pessoal_evaluation_and_blocking(self):
+        """Valida a seção de Fator Pessoal de Segurança, justificativa e bloqueio caso 'SIM'."""
+        item_pessoal = APRItemConfig.query.filter_by(category="fator_pessoal").first()
+        if not item_pessoal:
+            item_pessoal = APRItemConfig(
+                category="fator_pessoal",
+                order=1,
+                question_text="Existe algum fator físico ou psicológico que possa comprometer a segurança da atividade?",
+                guidance="Avaliação psicofísica.",
+                is_blocking_if_negative=True,
+                is_active=True
+            )
+            db.session.add(item_pessoal)
+            db.session.commit()
+
+        # 1. Deve aparecer na tela mobile /apr
+        self.client.post("/login", data={"username": self.tech_user.username, "password": "senha123"})
+        apr_page = self.client.get("/apr")
+        self.assertEqual(apr_page.status_code, 200)
+        self.assertIn("Fator Pessoal de Segurança", apr_page.get_data(as_text=True))
+        self.assertIn("fator físico ou psicológico", apr_page.get_data(as_text=True))
+
+        # 2. Deve aparecer na tela de configuração
+        self.client.post("/login", data={"username": self.admin_user.username, "password": "senha123"})
+        cfg_page = self.client.get("/configuracao/apr")
+        self.assertEqual(cfg_page.status_code, 200)
+        self.assertIn("Fator Pessoal", cfg_page.get_data(as_text=True))
+
+        # 3. Enviar APR com Fator Pessoal = SIM -> Deve bloquear por critério impeditivo
+        with self.client.session_transaction() as sess:
+            sess["_user_id"] = str(self.tech_user.id)
+            sess["csrf_token"] = "test_token"
+
+        payload_sim = {
+            "csrf_token": "test_token",
+            "activity_type": "Instalação Residencial FTTH",
+            "local_description": "Rua Teste, 100",
+            f"item_{item_pessoal.id}": "sim",
+            f"justif_{item_pessoal.id}": "Técnico relatando tontura e mal-estar."
+        }
+        resp_sim = self.client.post("/api/apr/salvar", data=payload_sim)
+        self.assertEqual(resp_sim.status_code, 200)
+        data_sim = resp_sim.get_json()
+        self.assertTrue(data_sim["success"])
+        self.assertEqual(data_sim["status"], "bloqueada")
+        self.assertTrue(data_sim["has_blocking"])
+
+        # 4. Enviar APR com Fator Pessoal = NÃO -> Deve liberar
+        payload_nao = {
+            "csrf_token": "test_token",
+            "activity_type": "Instalação Residencial FTTH",
+            "local_description": "Rua Teste, 100",
+            f"item_{item_pessoal.id}": "nao"
+        }
+        resp_nao = self.client.post("/api/apr/salvar", data=payload_nao)
+        self.assertEqual(resp_nao.status_code, 200)
+        data_nao = resp_nao.get_json()
+        self.assertTrue(data_nao["success"])
+        self.assertEqual(data_nao["status"], "liberada")
+        self.assertFalse(data_nao["has_blocking"])
+
+    def test_apr_auxiliary_technician_flow(self):
+        """Testa o fluxo completo com técnico auxiliar: seleção, obrigatoriedade de assinatura e laudo PDF."""
+        # 1. Login como técnico líder
+        self.client.post("/login", data={"username": self.tech_user.username, "password": "senha123"})
+
+        # Simulação de base64 de assinatura PNG válida de 1x1 pixel
+        dummy_sig = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+
+        # 2. Tenta salvar com técnico auxiliar MAS sem a assinatura dele -> Deve retornar 400
+        payload_sem_aux_sig = {
+            "csrf_token": "test_token",
+            "activity_type": "Instalação Residencial FTTH",
+            "local_description": "Rua das Palmeiras, 45",
+            "signature_data": dummy_sig,
+            "auxiliary_tech_id": self.helper_tech.id
+        }
+        resp_fail = self.client.post("/api/apr/salvar", data=payload_sem_aux_sig)
+        self.assertEqual(resp_fail.status_code, 400)
+        self.assertIn("A assinatura do técnico auxiliar é obrigatória", resp_fail.get_json()["message"])
+
+        # 3. Salva com técnico auxiliar E ambas as assinaturas
+        payload_completo = {
+            "csrf_token": "test_token",
+            "activity_type": "Instalação Residencial FTTH",
+            "local_description": "Rua das Palmeiras, 45",
+            "signature_data": dummy_sig,
+            "auxiliary_tech_id": self.helper_tech.id,
+            "auxiliary_signature_data": dummy_sig
+        }
+        resp_ok = self.client.post("/api/apr/salvar", data=payload_completo)
+        self.assertEqual(resp_ok.status_code, 200)
+        data_ok = resp_ok.get_json()
+        self.assertTrue(data_ok["success"])
+
+        # 4. Verifica no banco que a APR gravou o auxiliary_tech_id e o membro de equipe
+        apr = APR.query.filter_by(protocol=data_ok["protocol"]).first()
+        self.assertIsNotNone(apr)
+        self.assertEqual(apr.auxiliary_tech_id, self.helper_tech.id)
+        self.assertIsNotNone(apr.signature_image)
+        self.assertIsNotNone(apr.auxiliary_signature_image)
+        
+        # 5. Membro da equipe registrado
+        self.assertTrue(any(m.user_id == self.helper_tech.id for m in apr.membros))
+
+        # 6. Gera o PDF da APR para verificar que renderiza sem erros com técnico auxiliar
+        pdf_resp = self.client.get(f"/apr/{apr.id}/pdf")
+        self.assertEqual(pdf_resp.status_code, 200)
+        self.assertEqual(pdf_resp.headers["Content-Type"], "application/pdf")
+
+        # 7. Salva APR individual (sem auxiliar) e valida que o PDF também gera perfeitamente
+        payload_solo = {
+            "csrf_token": "test_token",
+            "activity_type": "Instalação Residencial FTTH",
+            "local_description": "Rua das Palmeiras, 45",
+            "signature_data": dummy_sig
+        }
+        resp_solo = self.client.post("/api/apr/salvar", data=payload_solo)
+        self.assertEqual(resp_solo.status_code, 200)
+        apr_solo = APR.query.filter_by(protocol=resp_solo.get_json()["protocol"]).first()
+        pdf_solo_resp = self.client.get(f"/apr/{apr_solo.id}/pdf")
+        self.assertEqual(pdf_solo_resp.status_code, 200)
+        self.assertEqual(pdf_solo_resp.headers["Content-Type"], "application/pdf")
 
 if __name__ == "__main__":
     unittest.main()

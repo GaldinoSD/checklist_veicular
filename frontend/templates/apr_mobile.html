@@ -67,6 +67,7 @@ html, body {
     <form id="apr-form" onsubmit="return validarEEnviarAPR(event)" enctype="multipart/form-data" class="space-y-6">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <input type="hidden" name="signature_data" id="signature_data">
+        <input type="hidden" name="auxiliary_signature_data" id="auxiliary_signature_data">
 
         <!-- 1. DADOS DA ATIVIDADE E LOCAL -->
         <div class="bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/60 dark:border-white/10 rounded-3xl p-5 sm:p-6 shadow-sm space-y-4">
@@ -107,6 +108,27 @@ html, body {
                     <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Ordem de Serviço (O.S.)</label>
                     <input type="text" name="os_number" placeholder="Ex: OS-98432 ou chamado"
                            class="w-full rounded-2xl px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 text-slate-800 dark:text-white text-xs font-bold outline-none focus:ring-2 focus:ring-emerald-500 transition-all">
+                </div>
+
+                <!-- TÉCNICO AUXILIAR / ACOMPANHANTE (OPCIONAL) -->
+                <div class="sm:col-span-2 space-y-1.5">
+                    <div class="flex items-center justify-between">
+                        <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-1.5">
+                            <i class="fa-solid fa-user-group text-emerald-500"></i> Técnico Auxiliar / Acompanhante na Atividade
+                        </label>
+                        <span class="text-[9px] font-bold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-white/5 px-2.5 py-0.5 rounded-full">Opcional</span>
+                    </div>
+                    <div class="relative">
+                        <select name="auxiliary_tech_id" id="auxiliary_tech_id"
+                                class="w-full rounded-2xl px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 text-slate-800 dark:text-white text-xs font-bold outline-none focus:ring-2 focus:ring-emerald-500 transition-all cursor-pointer appearance-none pr-10">
+                            <option value="">Atividade individual (sem técnico auxiliar)</option>
+                            {% for t in tecnicos %}
+                            <option value="{{ t.id }}" data-name="{{ t.display_name }}">{{ t.display_name }} ({{ t.username }})</option>
+                            {% endfor %}
+                        </select>
+                        <i class="fa-solid fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
+                    </div>
+                    <p class="text-[10px] text-slate-400 ml-1">Caso outro técnico esteja acompanhando ou auxiliando nesta atividade, selecione-o aqui para que ambos assinem a APR.</p>
                 </div>
 
                 <div class="sm:col-span-2 space-y-2">
@@ -254,6 +276,78 @@ html, body {
                             <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                                 <input type="text" name="justif_{{ item.id }}" placeholder="Descreva observação ou justificativa..."
                                        class="flex-1 rounded-xl px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-[11px] font-medium outline-none">
+                                
+                                <label class="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-slate-200/80 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold hover:bg-slate-300 dark:hover:bg-slate-700 cursor-pointer transition-all">
+                                    <i class="fa-solid fa-camera text-slate-500"></i>
+                                    <span id="photo-label-{{ item.id }}">Foto</span>
+                                    <input type="file" name="foto_{{ item.id }}" accept="image/*" capture="environment" onchange="previewQuestionPhoto(this, {{ item.id }})" class="sr-only">
+                                </label>
+                                <div id="preview-photo-{{ item.id }}" class="hidden w-8 h-8 rounded-lg border border-slate-300 overflow-hidden shrink-0"></div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- BLOCO: FATOR PESSOAL DE SEGURANÇA (SEMPRE ATIVO) -->
+            <div class="bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/60 dark:border-white/10 rounded-3xl p-5 sm:p-6 shadow-sm space-y-4">
+                <div class="flex items-center gap-3 pb-3 border-b border-slate-100 dark:border-white/5">
+                    <div class="w-8 h-8 rounded-xl bg-rose-500/10 flex items-center justify-center text-rose-500 text-sm">
+                        <i class="fa-solid fa-heart-pulse"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-black text-slate-800 dark:text-white uppercase tracking-wider">Fator Pessoal de Segurança</h3>
+                        <p class="text-[10px] text-slate-400">Avaliação psicofísica e aptidão individual para o início dos trabalhos.</p>
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    {% for item in categories.fator_pessoal %}
+                    <div class="question-row p-4 rounded-2xl bg-slate-50/70 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 space-y-3"
+                         data-item-id="{{ item.id }}" data-category="fator_pessoal" data-blocking="{{ 'true' if item.is_blocking_if_negative else 'false' }}">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div class="space-y-0.5">
+                                <div class="flex items-center gap-2">
+                                    {% if item.is_blocking_if_negative %}
+                                    <span class="px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20">
+                                        Critério Impeditivo se SIM
+                                    </span>
+                                    {% endif %}
+                                    {% if item.requires_photo %}
+                                    <span class="px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                                        Exige Foto
+                                    </span>
+                                    {% endif %}
+                                </div>
+                                <p class="text-xs font-bold text-slate-800 dark:text-slate-200">{{ item.question_text }}</p>
+                                {% if item.guidance %}
+                                <p class="text-[10px] text-slate-400 font-medium"><i class="fa-solid fa-circle-info mr-1 text-slate-400"></i>{{ item.guidance }}</p>
+                                {% endif %}
+                            </div>
+
+                            <!-- BOTÕES SIM / NÃO / N/A (PADRÃO PARA FATOR PESSOAL: NÃO É SEGURO / APTO) -->
+                            <div class="inline-flex rounded-xl p-1 bg-slate-200/80 dark:bg-slate-800 shrink-0 self-start sm:self-center">
+                                <label class="ans-btn px-4 py-1.5 rounded-lg text-xs font-black text-slate-600 dark:text-slate-400 hover:text-slate-900 cursor-pointer transition-all">
+                                    <input type="radio" name="item_{{ item.id }}" value="sim" onchange="handleAnswerChange({{ item.id }})" class="sr-only">
+                                    SIM
+                                </label>
+                                <label class="ans-btn px-4 py-1.5 rounded-lg text-xs font-black cursor-pointer transition-all active-ans bg-emerald-500 text-white shadow-sm">
+                                    <input type="radio" name="item_{{ item.id }}" value="nao" checked onchange="handleAnswerChange({{ item.id }})" class="sr-only">
+                                    NÃO
+                                </label>
+                                <label class="ans-btn px-4 py-1.5 rounded-lg text-xs font-black text-slate-600 dark:text-slate-400 hover:text-slate-900 cursor-pointer transition-all">
+                                    <input type="radio" name="item_{{ item.id }}" value="na" onchange="handleAnswerChange({{ item.id }})" class="sr-only">
+                                    N/A
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- SE SIM: JUSTIFIQUE OBRIGATORIAMENTE -->
+                        <div id="extra-box-{{ item.id }}" class="hidden pt-2 border-t border-slate-200/40 dark:border-white/5 space-y-2">
+                            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                                <input type="text" name="justif_{{ item.id }}" id="justif_input_{{ item.id }}" placeholder="Descreva obrigatoriamente o fator físico ou psicológico que compromete a segurança..."
+                                       class="flex-1 rounded-xl px-3 py-2 bg-white dark:bg-slate-900 border border-red-300 dark:border-red-500/40 text-[11px] font-medium outline-none focus:ring-2 focus:ring-red-500">
                                 
                                 <label class="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-slate-200/80 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold hover:bg-slate-300 dark:hover:bg-slate-700 cursor-pointer transition-all">
                                     <i class="fa-solid fa-camera text-slate-500"></i>
@@ -658,8 +752,11 @@ html, body {
                     <i class="fa-solid fa-signature"></i>
                 </div>
                 <div>
-                    <h3 class="text-sm sm:text-base font-black text-slate-800 dark:text-white">Assinatura do Técnico</h3>
-                    <p class="text-[10px] text-slate-400">Assine com o <strong>dedo</strong> no quadro abaixo</p>
+                    <div class="flex items-center gap-2">
+                        <h3 id="sig-modal-title" class="text-sm sm:text-base font-black text-slate-800 dark:text-white">Assinatura do Técnico</h3>
+                        <span id="sig-step-badge" class="hidden px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">Etapa 1 de 2</span>
+                    </div>
+                    <p id="sig-modal-subtitle" class="text-[10px] text-slate-400">Assine com o <strong>dedo</strong> no quadro abaixo</p>
                 </div>
             </div>
             <button type="button" onclick="fecharModalAssinatura()" class="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-500 flex items-center justify-center text-xs">
@@ -670,7 +767,7 @@ html, body {
         <!-- Corpo do Modal -->
         <div class="p-4 sm:p-6 space-y-3">
             <div class="flex items-center justify-between text-xs">
-                <span class="text-[11px] font-bold text-slate-600 dark:text-slate-300">
+                <span id="sig-canvas-label" class="text-[11px] font-bold text-slate-600 dark:text-slate-300">
                     <i class="fa-solid fa-hand-pointer text-emerald-500 mr-1"></i> Desenhe sua assinatura com o dedo:
                 </span>
                 <button type="button" onclick="limparCanvasAssinatura()" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-xs font-black transition-all">
@@ -683,16 +780,16 @@ html, body {
                 <!-- Linha guia para assinatura -->
                 <div class="absolute bottom-8 left-6 right-6 border-b border-slate-300/60 dark:border-white/10 pointer-events-none flex justify-between">
                     <span class="text-[9px] text-slate-400 font-mono tracking-wider">X ________________________________________</span>
-                    <span class="text-[9px] text-slate-400 font-mono tracking-wider">Assinatura Digital</span>
+                    <span id="sig-line-label" class="text-[9px] text-slate-400 font-mono tracking-wider">Assinatura Digital</span>
                 </div>
             </div>
 
-            <p class="text-[10px] text-slate-400 text-center">
+            <p id="sig-legal-text" class="text-[10px] text-slate-400 text-center">
                 Ao confirmar, esta assinatura será vinculada permanentemente ao laudo da APR com seu usuário <strong>{{ current_user.display_name }}</strong>.
             </p>
 
             <div id="sig-warning-alert" class="hidden p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-700 dark:text-amber-300 text-xs font-bold text-center">
-                <i class="fa-solid fa-triangle-exclamation mr-1"></i> Por favor, desenhe sua assinatura no campo antes de confirmar.
+                <i class="fa-solid fa-triangle-exclamation mr-1"></i> <span id="sig-warning-msg">Por favor, desenhe sua assinatura no campo antes de confirmar.</span>
             </div>
         </div>
 
@@ -701,9 +798,9 @@ html, body {
             <button type="button" onclick="fecharModalAssinatura()" class="w-1/3 py-3 rounded-xl bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 text-slate-700 dark:text-slate-300 text-xs font-black uppercase tracking-wider transition-all">
                 Cancelar
             </button>
-            <button type="button" onclick="confirmarAssinaturaEEnviar()" id="btn-confirm-sig" class="flex-1 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black uppercase tracking-wider shadow-lg shadow-emerald-600/25 transition-all flex items-center justify-center gap-2">
-                <i class="fa-solid fa-check-circle"></i>
-                <span>Confirmar e Enviar APR</span>
+            <button type="button" onclick="confirmarAssinaturaEEnviar()" id="btn-confirm-sig" class="flex-1 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black uppercase tracking-wider shadow-lg shadow-emerald-600/25 transition-all flex items-center justify-center gap-2 cursor-pointer">
+                <i id="btn-confirm-sig-icon" class="fa-solid fa-arrow-right"></i>
+                <span id="btn-confirm-sig-text">Confirmar Assinatura</span>
             </button>
         </div>
 
@@ -742,19 +839,30 @@ function handleAnswerChange(itemId) {
     const row = document.querySelector(`.question-row[data-item-id="${itemId}"]`);
     if (!row) return;
 
+    const isFatorPessoal = row.getAttribute('data-category') === 'fator_pessoal';
     const radios = row.querySelectorAll('input[type="radio"]');
-    let selectedVal = 'sim';
+    let selectedVal = isFatorPessoal ? 'nao' : 'sim';
     radios.forEach(r => {
         const lbl = r.closest('.ans-btn');
         if (r.checked) {
             selectedVal = r.value;
             lbl.classList.add('active-ans');
-            if (r.value === 'sim') {
-                lbl.className = 'ans-btn px-4 py-1.5 rounded-lg text-xs font-black cursor-pointer transition-all active-ans bg-emerald-500 text-white shadow-sm';
-            } else if (r.value === 'nao') {
-                lbl.className = 'ans-btn px-4 py-1.5 rounded-lg text-xs font-black cursor-pointer transition-all active-ans bg-red-500 text-white shadow-sm';
+            if (isFatorPessoal) {
+                if (r.value === 'nao') {
+                    lbl.className = 'ans-btn px-4 py-1.5 rounded-lg text-xs font-black cursor-pointer transition-all active-ans bg-emerald-500 text-white shadow-sm';
+                } else if (r.value === 'sim') {
+                    lbl.className = 'ans-btn px-4 py-1.5 rounded-lg text-xs font-black cursor-pointer transition-all active-ans bg-red-500 text-white shadow-sm';
+                } else {
+                    lbl.className = 'ans-btn px-4 py-1.5 rounded-lg text-xs font-black cursor-pointer transition-all active-ans bg-slate-600 text-white shadow-sm';
+                }
             } else {
-                lbl.className = 'ans-btn px-4 py-1.5 rounded-lg text-xs font-black cursor-pointer transition-all active-ans bg-slate-600 text-white shadow-sm';
+                if (r.value === 'sim') {
+                    lbl.className = 'ans-btn px-4 py-1.5 rounded-lg text-xs font-black cursor-pointer transition-all active-ans bg-emerald-500 text-white shadow-sm';
+                } else if (r.value === 'nao') {
+                    lbl.className = 'ans-btn px-4 py-1.5 rounded-lg text-xs font-black cursor-pointer transition-all active-ans bg-red-500 text-white shadow-sm';
+                } else {
+                    lbl.className = 'ans-btn px-4 py-1.5 rounded-lg text-xs font-black cursor-pointer transition-all active-ans bg-slate-600 text-white shadow-sm';
+                }
             }
         } else {
             lbl.className = 'ans-btn px-4 py-1.5 rounded-lg text-xs font-black text-slate-600 dark:text-slate-400 hover:text-slate-900 cursor-pointer transition-all';
@@ -763,12 +871,27 @@ function handleAnswerChange(itemId) {
 
     const extraBox = document.getElementById(`extra-box-${itemId}`);
     if (extraBox) {
-        if (selectedVal === 'nao') {
-            extraBox.classList.remove('hidden');
-        } else {
-            const isReqPhoto = row.querySelector('.border-blue-500\\/20') !== null;
-            if (!isReqPhoto) {
+        if (isFatorPessoal) {
+            if (selectedVal === 'sim') {
+                extraBox.classList.remove('hidden');
+                const justifInput = extraBox.querySelector('input[type="text"]');
+                if (justifInput) justifInput.required = true;
+            } else {
                 extraBox.classList.add('hidden');
+                const justifInput = extraBox.querySelector('input[type="text"]');
+                if (justifInput) {
+                    justifInput.required = false;
+                    justifInput.value = '';
+                }
+            }
+        } else {
+            if (selectedVal === 'nao') {
+                extraBox.classList.remove('hidden');
+            } else {
+                const isReqPhoto = row.querySelector('.border-blue-500\\/20') !== null;
+                if (!isReqPhoto) {
+                    extraBox.classList.add('hidden');
+                }
             }
         }
     }
@@ -787,9 +910,14 @@ function checkAllBlockingConditions() {
         }
 
         const isBlockingRule = row.getAttribute('data-blocking') === 'true';
+        const isFatorPessoal = row.getAttribute('data-category') === 'fator_pessoal';
         const checkedRadio = row.querySelector('input[type="radio"]:checked');
-        if (isBlockingRule && checkedRadio && checkedRadio.value === 'nao') {
-            hasBlocking = true;
+        if (isBlockingRule && checkedRadio) {
+            if (isFatorPessoal && checkedRadio.value === 'sim') {
+                hasBlocking = true;
+            } else if (!isFatorPessoal && checkedRadio.value === 'nao') {
+                hasBlocking = true;
+            }
         }
     });
 
@@ -994,11 +1122,71 @@ function initSignatureCanvas() {
     sigCanvas.addEventListener('mouseleave', endDraw);
 }
 
+let currentSigStep = 1; // 1 = Responsável, 2 = Auxiliar
+let leadSignatureData = '';
+let auxSignatureData = '';
+
+function atualizarUIModalAssinatura() {
+    const auxSelect = document.getElementById('auxiliary_tech_id');
+    const hasAux = auxSelect && auxSelect.value !== '';
+    const selectedOption = hasAux ? auxSelect.options[auxSelect.selectedIndex] : null;
+    const auxName = selectedOption ? (selectedOption.dataset.name || selectedOption.text) : 'Técnico Auxiliar';
+
+    const titleEl = document.getElementById('sig-modal-title');
+    const subtitleEl = document.getElementById('sig-modal-subtitle');
+    const badgeEl = document.getElementById('sig-step-badge');
+    const canvasLabelEl = document.getElementById('sig-canvas-label');
+    const legalEl = document.getElementById('sig-legal-text');
+    const btnTextEl = document.getElementById('btn-confirm-sig-text');
+    const btnIconEl = document.getElementById('btn-confirm-sig-icon');
+    const lineLabelEl = document.getElementById('sig-line-label');
+    const warn = document.getElementById('sig-warning-alert');
+    if (warn) warn.classList.add('hidden');
+
+    if (hasAux) {
+        if (badgeEl) badgeEl.classList.remove('hidden');
+        if (currentSigStep === 1) {
+            if (badgeEl) badgeEl.textContent = 'Etapa 1 de 2: Responsável';
+            if (titleEl) titleEl.textContent = 'Assinatura do Técnico Responsável';
+            if (subtitleEl) subtitleEl.innerHTML = `Técnico Líder: <strong>{{ current_user.display_name }}</strong>`;
+            if (canvasLabelEl) canvasLabelEl.innerHTML = `<i class="fa-solid fa-hand-pointer text-emerald-500 mr-1"></i> Assinatura do Líder (<strong>{{ current_user.display_name }}</strong>):`;
+            if (legalEl) legalEl.innerHTML = `Ao confirmar, esta assinatura será vinculada como Responsável Técnico pelo usuário <strong>{{ current_user.display_name }}</strong>.`;
+            if (btnTextEl) btnTextEl.textContent = 'Avançar para Assinatura do Auxiliar';
+            if (btnIconEl) btnIconEl.className = 'fa-solid fa-arrow-right';
+            if (lineLabelEl) lineLabelEl.textContent = 'Técnico Responsável';
+        } else {
+            if (badgeEl) badgeEl.textContent = 'Etapa 2 de 2: Auxiliar';
+            if (titleEl) titleEl.textContent = 'Assinatura do Técnico Auxiliar';
+            if (subtitleEl) subtitleEl.innerHTML = `Técnico Acompanhante: <strong>${auxName}</strong>`;
+            if (canvasLabelEl) canvasLabelEl.innerHTML = `<i class="fa-solid fa-hand-pointer text-emerald-500 mr-1"></i> Assinatura do Auxiliar (<strong>${auxName}</strong>):`;
+            if (legalEl) legalEl.innerHTML = `O técnico auxiliar <strong>${auxName}</strong> declara ciência e concordância com todas as diretrizes de segurança desta APR.`;
+            if (btnTextEl) btnTextEl.textContent = 'Finalizar e Enviar APR';
+            if (btnIconEl) btnIconEl.className = 'fa-solid fa-paper-plane';
+            if (lineLabelEl) lineLabelEl.textContent = 'Técnico Auxiliar';
+        }
+    } else {
+        if (badgeEl) badgeEl.classList.add('hidden');
+        if (titleEl) titleEl.textContent = 'Assinatura do Técnico';
+        if (subtitleEl) subtitleEl.innerHTML = `Técnico Operacional: <strong>{{ current_user.display_name }}</strong>`;
+        if (canvasLabelEl) canvasLabelEl.innerHTML = `<i class="fa-solid fa-hand-pointer text-emerald-500 mr-1"></i> Desenhe sua assinatura com o dedo:`;
+        if (legalEl) legalEl.innerHTML = `Ao confirmar, esta assinatura será vinculada permanentemente ao laudo da APR com seu usuário <strong>{{ current_user.display_name }}</strong>.`;
+        if (btnTextEl) btnTextEl.textContent = 'Confirmar Assinatura e Enviar';
+        if (btnIconEl) btnIconEl.className = 'fa-solid fa-paper-plane';
+        if (lineLabelEl) lineLabelEl.textContent = 'Assinatura Digital';
+    }
+}
+
 function abrirModalAssinatura() {
     const modal = document.getElementById('modal-assinatura-apr');
     modal.classList.remove('hidden');
-    const warn = document.getElementById('sig-warning-alert');
-    if (warn) warn.classList.add('hidden');
+
+    currentSigStep = 1;
+    leadSignatureData = '';
+    auxSignatureData = '';
+    document.getElementById('signature_data').value = '';
+    document.getElementById('auxiliary_signature_data').value = '';
+
+    atualizarUIModalAssinatura();
 
     setTimeout(() => {
         initSignatureCanvas();
@@ -1009,6 +1197,7 @@ function abrirModalAssinatura() {
 function fecharModalAssinatura() {
     const modal = document.getElementById('modal-assinatura-apr');
     if (modal) modal.classList.add('hidden');
+    currentSigStep = 1;
 }
 
 function limparCanvasAssinatura() {
@@ -1025,13 +1214,44 @@ function limparCanvasAssinatura() {
 function confirmarAssinaturaEEnviar() {
     if (!hasDrawnSignature) {
         const warn = document.getElementById('sig-warning-alert');
+        const warnMsg = document.getElementById('sig-warning-msg');
+        if (warnMsg) {
+            warnMsg.textContent = currentSigStep === 1
+                ? 'Por favor, o técnico responsável deve assinar no quadro antes de continuar.'
+                : 'Por favor, o técnico auxiliar deve assinar no quadro antes de finalizar.';
+        }
         if (warn) warn.classList.remove('hidden');
         return;
     }
 
+    const auxSelect = document.getElementById('auxiliary_tech_id');
+    const hasAux = auxSelect && auxSelect.value !== '';
+
+    if (hasAux && currentSigStep === 1) {
+        // Grava assinatura 1 (Líder)
+        try {
+            leadSignatureData = sigCanvas.toDataURL('image/png');
+        } catch (e) {
+            console.error('Erro ao converter assinatura do canvas:', e);
+        }
+        // Avança para etapa 2 (Auxiliar)
+        currentSigStep = 2;
+        atualizarUIModalAssinatura();
+        limparCanvasAssinatura();
+        return;
+    }
+
+    // Grava assinatura final
     try {
-        const dataUrl = sigCanvas.toDataURL('image/png');
-        document.getElementById('signature_data').value = dataUrl;
+        if (hasAux) {
+            auxSignatureData = sigCanvas.toDataURL('image/png');
+            document.getElementById('signature_data').value = leadSignatureData;
+            document.getElementById('auxiliary_signature_data').value = auxSignatureData;
+        } else {
+            leadSignatureData = sigCanvas.toDataURL('image/png');
+            document.getElementById('signature_data').value = leadSignatureData;
+            document.getElementById('auxiliary_signature_data').value = '';
+        }
     } catch (e) {
         console.error('Erro ao converter assinatura do canvas:', e);
     }
@@ -1074,6 +1294,24 @@ function validarEEnviarAPR(event) {
             setTimeout(() => emergInput.classList.remove('ring-2', 'ring-red-500'), 3000);
             mostrarAlertaValidacao('Condição impeditiva identificada! É obrigatório preencher a <strong>Medida de Controle Adotada</strong>.');
             return false;
+        }
+    }
+
+    // Validação de justificativa obrigatória para Fator Pessoal quando SIM
+    const fatorPessoalRows = document.querySelectorAll('.question-row[data-category="fator_pessoal"]');
+    for (const row of fatorPessoalRows) {
+        const itemId = row.getAttribute('data-item-id');
+        const checked = row.querySelector('input[type="radio"]:checked');
+        if (checked && checked.value === 'sim') {
+            const justifInput = document.getElementById(`justif_input_${itemId}`) || document.querySelector(`input[name="justif_${itemId}"]`);
+            if (justifInput && !justifInput.value.trim()) {
+                justifInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                justifInput.focus();
+                justifInput.classList.add('ring-2', 'ring-red-500');
+                setTimeout(() => justifInput.classList.remove('ring-2', 'ring-red-500'), 3000);
+                mostrarAlertaValidacao('Você indicou um <strong>Fator Pessoal de Segurança</strong>. É obrigatório descrever a justificativa!');
+                return false;
+            }
         }
     }
 
@@ -1127,9 +1365,9 @@ async function enviarAPR() {
                                 <i class="fa-solid fa-plus-circle"></i>
                                 <span>Preencher Nova APR</span>
                             </a>
-                            <a href="/inicio" class="w-full py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 font-bold text-xs uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-2">
-                                <i class="fa-solid fa-house"></i>
-                                <span>Voltar ao Início</span>
+                            <a href="/checklist" class="w-full py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 font-bold text-xs uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-clipboard-check"></i>
+                                <span>Voltar ao Checklist</span>
                             </a>
                         </div>
                     </div>

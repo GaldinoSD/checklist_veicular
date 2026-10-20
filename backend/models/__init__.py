@@ -1157,6 +1157,10 @@ class APR(db.Model):
     tech_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
     tech = db.relationship("User", foreign_keys=[tech_id], backref=db.backref("aprs_lead", lazy=True))
     
+    auxiliary_tech_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
+    auxiliary_tech = db.relationship("User", foreign_keys=[auxiliary_tech_id], backref=db.backref("aprs_aux", lazy=True))
+    auxiliary_signature_image = db.Column(db.String(255), nullable=True)
+    
     activity_type = db.Column(db.String(100), nullable=False)  # Instalação, Manutenção de Rede, Lançamento/Reparo, etc.
     local_description = db.Column(db.String(255), nullable=False)  # Endereço, Posto, Fachada, etc.
     latitude = db.Column(db.Float, nullable=True)

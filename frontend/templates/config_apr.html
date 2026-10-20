@@ -42,6 +42,10 @@
                     class="cat-tab-btn flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all bg-indigo-600 text-white shadow-sm">
                 <i class="fa-solid fa-hard-hat"></i> Geral & EPIs
             </button>
+            <button onclick="switchCategory('fator_pessoal')" id="tab-btn-fator_pessoal"
+                    class="cat-tab-btn flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">
+                <i class="fa-solid fa-heart-pulse"></i> Fator Pessoal
+            </button>
             <button onclick="switchCategory('altura_nr35')" id="tab-btn-altura_nr35"
                     class="cat-tab-btn flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white">
                 <i class="fa-solid fa-person-arrow-up-from-line"></i> Altura (NR-35)
@@ -91,7 +95,7 @@
                                 {% endif %}
                             </td>
                             <td class="py-3.5 px-4 text-center whitespace-nowrap">
-                                <button onclick="toggleField({{ it.id }}, 'is_blocking')" 
+                                <button onclick="toggleField({{ it.id }}, 'is_blocking', this)" 
                                         class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider transition-all {{ 'bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/30' if it.is_blocking_if_negative else 'bg-slate-100 dark:bg-slate-800 text-slate-400' }}">
                                     {{ 'Sim (Impede)' if it.is_blocking_if_negative else 'Não' }}
                                 </button>
@@ -102,7 +106,7 @@
                                 </span>
                             </td>
                             <td class="py-3.5 px-4 text-center whitespace-nowrap">
-                                <button onclick="toggleField({{ it.id }}, 'is_active')"
+                                <button onclick="toggleField({{ it.id }}, 'is_active', this)"
                                         class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider transition-all {{ 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30' if it.is_active else 'bg-slate-200 dark:bg-slate-800 text-slate-400' }}">
                                     {{ 'Ativa' if it.is_active else 'Inativa' }}
                                 </button>
@@ -163,7 +167,7 @@
                                 <span class="font-bold text-slate-800 dark:text-white">{{ act.name }}</span>
                             </td>
                             <td class="py-3.5 px-4 text-center whitespace-nowrap">
-                                <button onclick="toggleAtividade({{ act.id }})"
+                                <button onclick="toggleAtividade({{ act.id }}, this)"
                                         class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider transition-all {{ 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30' if act.is_active else 'bg-slate-200 dark:bg-slate-800 text-slate-400' }}">
                                     {{ 'Ativa' if act.is_active else 'Inativa' }}
                                 </button>
@@ -215,6 +219,7 @@
                 <select name="category" id="input_category" required
                         class="w-full rounded-2xl px-4 py-3 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs font-bold text-slate-800 dark:text-white outline-none">
                     <option value="geral">Geral & EPIs Obrigatórios</option>
+                    <option value="fator_pessoal">Fator Pessoal de Segurança</option>
                     <option value="altura_nr35">Trabalho em Altura (NR-35)</option>
                     <option value="eletrica_nr10">Riscos Elétricos (NR-10)</option>
                     <option value="sinalizacao_transito">Sinalização de Vias & Trânsito</option>
@@ -312,6 +317,10 @@ let currentCategory = 'geral';
 
 function switchCategory(cat) {
     currentCategory = cat;
+    try {
+        localStorage.setItem('apr_config_active_tab', cat);
+    } catch (e) {}
+
     document.querySelectorAll('.cat-content-block').forEach(b => b.classList.add('hidden'));
     const targetTable = document.getElementById(`cat-table-${cat}`);
     if (targetTable) {
@@ -337,6 +346,15 @@ function switchCategory(cat) {
         if (btnNovaAtividade) btnNovaAtividade.classList.add('hidden');
     }
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+    try {
+        const savedTab = localStorage.getItem('apr_config_active_tab');
+        if (savedTab && document.getElementById(`tab-btn-${savedTab}`)) {
+            switchCategory(savedTab);
+        }
+    } catch (e) {}
+});
 
 function abrirModalNovaPergunta() {
     document.getElementById('input_item_id').value = '';
@@ -368,6 +386,10 @@ async function salvarPergunta(e) {
     e.preventDefault();
     const form = document.getElementById('form-pergunta');
     const formData = new FormData(form);
+    const cat = formData.get('category');
+    if (cat) {
+        try { localStorage.setItem('apr_config_active_tab', cat); } catch (e) {}
+    }
 
     try {
         const resp = await fetch('{{ url_for("api_apr_config_item_save") }}', {
@@ -386,7 +408,18 @@ async function salvarPergunta(e) {
     return false;
 }
 
-async function toggleField(itemId, field) {
+async function toggleField(itemId, field, btn = null) {
+    if (!btn) {
+        const row = document.getElementById(`row-item-${itemId}`);
+        if (row) {
+            btn = row.querySelector(`button[onclick*="'${field}'"]`);
+        }
+    }
+    if (btn) {
+        btn.disabled = true;
+        btn.style.opacity = '0.6';
+    }
+
     try {
         const resp = await fetch('{{ url_for("api_apr_config_toggle") }}', {
             method: 'POST',
@@ -398,10 +431,35 @@ async function toggleField(itemId, field) {
         });
         const data = await resp.json();
         if (data.success) {
-            location.reload();
+            if (btn) {
+                if (field === 'is_blocking') {
+                    if (data.is_blocking) {
+                        btn.className = "px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider transition-all bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/30";
+                        btn.textContent = "Sim (Impede)";
+                    } else {
+                        btn.className = "px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider transition-all bg-slate-100 dark:bg-slate-800 text-slate-400";
+                        btn.textContent = "Não";
+                    }
+                } else if (field === 'is_active') {
+                    if (data.is_active) {
+                        btn.className = "px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider transition-all bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30";
+                        btn.textContent = "Ativa";
+                    } else {
+                        btn.className = "px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider transition-all bg-slate-200 dark:bg-slate-800 text-slate-400";
+                        btn.textContent = "Inativa";
+                    }
+                }
+            }
+        } else {
+            alert(data.message || 'Erro ao alterar status.');
         }
     } catch (err) {
         alert('Erro ao alterar status: ' + err);
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.style.opacity = '1';
+        }
     }
 }
 
@@ -452,6 +510,7 @@ async function salvarAtividade(e) {
     e.preventDefault();
     const form = document.getElementById('form-atividade');
     const formData = new FormData(form);
+    try { localStorage.setItem('apr_config_active_tab', 'atividades'); } catch (e) {}
 
     try {
         const resp = await fetch('{{ url_for("api_apr_config_activity_save") }}', {
@@ -470,7 +529,18 @@ async function salvarAtividade(e) {
     return false;
 }
 
-async function toggleAtividade(actId) {
+async function toggleAtividade(actId, btn = null) {
+    if (!btn) {
+        const row = document.getElementById(`row-activity-${actId}`);
+        if (row) {
+            btn = row.querySelector(`button[onclick*="toggleAtividade"]`);
+        }
+    }
+    if (btn) {
+        btn.disabled = true;
+        btn.style.opacity = '0.6';
+    }
+
     try {
         const resp = await fetch('{{ url_for("api_apr_config_activity_toggle") }}', {
             method: 'POST',
@@ -482,12 +552,25 @@ async function toggleAtividade(actId) {
         });
         const data = await resp.json();
         if (data.success) {
-            location.reload();
+            if (btn) {
+                if (data.is_active) {
+                    btn.className = "px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider transition-all bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30";
+                    btn.textContent = "Ativa";
+                } else {
+                    btn.className = "px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider transition-all bg-slate-200 dark:bg-slate-800 text-slate-400";
+                    btn.textContent = "Inativa";
+                }
+            }
         } else {
             alert(data.message || 'Erro ao alterar status da atividade.');
         }
     } catch (err) {
         alert('Erro ao alterar status: ' + err);
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.style.opacity = '1';
+        }
     }
 }
 

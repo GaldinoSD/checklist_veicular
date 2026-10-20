@@ -173,6 +173,11 @@
                                 <div>
                                     <span class="font-bold text-slate-800 dark:text-white block">{{ a.tech.display_name if a.tech else 'N/A' }}</span>
                                     <span class="text-[9px] text-slate-400">@{{ a.tech.username if a.tech else '-' }}</span>
+                                    {% if a.auxiliary_tech %}
+                                    <span class="inline-flex items-center gap-1 text-[9px] font-semibold text-emerald-600 dark:text-emerald-400 mt-0.5">
+                                        <i class="fa-solid fa-user-group text-[8px]"></i> Aux: {{ a.auxiliary_tech.display_name }}
+                                    </span>
+                                    {% endif %}
                                 </div>
                             </div>
                         </td>

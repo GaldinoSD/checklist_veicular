@@ -3548,6 +3548,7 @@ def apr_mobile():
     # Categorias organizadas
     categories = {
         "geral": [i for i in items if i.category == "geral"],
+        "fator_pessoal": [i for i in items if i.category == "fator_pessoal"],
         "altura_nr35": [i for i in items if i.category == "altura_nr35"],
         "eletrica_nr10": [i for i in items if i.category == "eletrica_nr10"],
         "sinalizacao_transito": [i for i in items if i.category == "sinalizacao_transito"],
@@ -3557,10 +3558,14 @@ def apr_mobile():
     # Tipos de atividade cadastrados e ativos
     activity_types = APRActivityType.query.filter_by(is_active=True).order_by(APRActivityType.order, APRActivityType.name).all()
     
+    # Técnicos ativos cadastrados para opção de técnico auxiliar (excluindo o usuário logado)
+    tecnicos = User.query.filter(User.role == "tech", User.id != current_user.id).order_by(User.full_name.asc(), User.username.asc()).all()
+
     return render_template(
         "apr_mobile.html",
         categories=categories,
         activity_types=activity_types,
+        tecnicos=tecnicos,
         agora=agora()
     )
 
@@ -3608,7 +3613,7 @@ def api_apr_salvar():
         total_today = APR.query.filter(APR.protocol.like(f"APR-{date_str}-%")).count() + 1
         protocol = f"APR-{date_str}-{total_today:04d}"
 
-        # Assinatura digital do técnico com o dedo
+        # Assinatura digital do técnico líder com o dedo
         sig_data = request.form.get("signature_data")
         sig_filename = None
         if sig_data and "base64," in sig_data:
@@ -3621,6 +3626,29 @@ def api_apr_salvar():
                     f.write(data)
             except Exception as e:
                 print("⚠️ Erro ao salvar assinatura da APR:", e)
+
+        # Técnico auxiliar (opcional) e respectiva assinatura digital com o dedo
+        auxiliary_tech_id = request.form.get("auxiliary_tech_id", type=int)
+        aux_sig_filename = None
+        if auxiliary_tech_id:
+            aux_user = db.session.get(User, auxiliary_tech_id)
+            if not aux_user:
+                return jsonify({"success": False, "message": "Técnico auxiliar selecionado é inválido."}), 400
+
+            aux_sig_data = request.form.get("auxiliary_signature_data")
+            if not aux_sig_data or "base64," not in aux_sig_data:
+                return jsonify({"success": False, "message": "A assinatura do técnico auxiliar é obrigatória quando selecionado."}), 400
+
+            import base64
+            try:
+                header_aux, encoded_aux = aux_sig_data.split(",", 1)
+                data_aux = base64.b64decode(encoded_aux)
+                aux_sig_filename = f"apr_sig_aux_{protocol}_{uuid.uuid4().hex[:8]}.png"
+                with open(APR_UPLOAD_DIR / aux_sig_filename, "wb") as f:
+                    f.write(data_aux)
+            except Exception as e:
+                print("⚠️ Erro ao salvar assinatura do técnico auxiliar:", e)
+                return jsonify({"success": False, "message": "Falha ao processar assinatura do técnico auxiliar."}), 400
 
         # Avaliar respostas e condições impeditivas
         active_items = APRItemConfig.query.filter_by(is_active=True).all()
@@ -3638,7 +3666,8 @@ def api_apr_salvar():
             if item.category in cat_triggers and cat_triggers[item.category] not in risk_factors:
                 continue
 
-            ans = request.form.get(f"item_{item.id}", "sim").lower()
+            default_ans = "nao" if item.category == "fator_pessoal" else "sim"
+            ans = request.form.get(f"item_{item.id}", default_ans).lower()
             justif = request.form.get(f"justif_{item.id}", "").strip()
 
             photo_fn = None
@@ -3650,9 +3679,14 @@ def api_apr_salvar():
                     f_item.save(str(APR_UPLOAD_DIR / photo_fn))
 
             is_blocking = False
-            if item.is_blocking_if_negative and ans == "nao":
-                is_blocking = True
-                has_blocking_condition = True
+            if item.category == "fator_pessoal":
+                if item.is_blocking_if_negative and ans == "sim":
+                    is_blocking = True
+                    has_blocking_condition = True
+            else:
+                if item.is_blocking_if_negative and ans == "nao":
+                    is_blocking = True
+                    has_blocking_condition = True
 
             saved_responses.append({
                 "item_id": item.id,
@@ -3675,6 +3709,8 @@ def api_apr_salvar():
         apr = APR(
             protocol=protocol,
             tech_id=current_user.id,
+            auxiliary_tech_id=auxiliary_tech_id if auxiliary_tech_id else None,
+            auxiliary_signature_image=aux_sig_filename,
             activity_type=activity_type,
             local_description=local_description,
             latitude=latitude,
@@ -3692,6 +3728,16 @@ def api_apr_salvar():
         )
         db.session.add(apr)
         db.session.flush()
+
+        # Vincula membro da equipe se houver auxiliar
+        if auxiliary_tech_id:
+            membro = APRMembro(
+                apr_id=apr.id,
+                user_id=auxiliary_tech_id,
+                confirmed=True,
+                confirmed_at=now_dt
+            )
+            db.session.add(membro)
 
         # Adicionar respostas detalhadas
         for resp in saved_responses:
@@ -3896,125 +3942,273 @@ def api_apr_delete(apr_id):
 @fleet_bp.route("/apr/<int:apr_id>/pdf")
 @login_required
 def apr_pdf(apr_id):
-    """Gera o laudo oficial em PDF da APR para arquivamento ou envio à Segurança do Trabalho."""
+    """Gera o laudo oficial em PDF da APR seguindo o padrão visual institucional do Checklist Veicular."""
     apr = APR.query.get_or_404(apr_id)
 
     from io import BytesIO
     from reportlab.lib.pagesizes import A4
+    from reportlab.lib.units import mm
     from reportlab.lib import colors
     from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, Image as RLImage
     from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    import datetime
+
+    # Timezone Brasil
+    try:
+        from zoneinfo import ZoneInfo
+        BRT = ZoneInfo("America/Sao_Paulo")
+    except Exception:
+        from datetime import timezone, timedelta
+        BRT = timezone(timedelta(hours=-3))
+
+    dt_brt = apr.created_at.astimezone(BRT) if apr.created_at.tzinfo is not None else apr.created_at
+    now_brt_str = datetime.datetime.now(BRT).strftime("%d/%m/%Y %H:%M")
+
+    # Cores e Linhas Padrão Institucional
+    AZUL = colors.Color(25/255, 60/255, 120/255)
+    CINZA_TEXTO = colors.HexColor("#4D4D4D")
+
+    RODAPE_LINHAS = [
+        "ADAPT LINK SERVIÇOS EM COMUNICAÇÃO MULTIMÍDIA EIRELI",
+        "CNPJ: 08.980.148/0001-41       Inscr. Est.: 78.342.480",
+        "Rua Waldir Pedro de Medeiros, 253 – São Miguel – Seropédica – RJ",
+        "CEP: 23.893-725",
+        "Tel.: (21) 3812-5900 / (21) 2682-7822",
+        "WWW.ADAPTLINK.COM.BR",
+    ]
+
+    # Configuração dinâmica de layout via SystemConfig
+    config = SystemConfig.query.first()
+    logo_path_custom = None
+    if config and config.pdf_logo:
+        custom_p = LAYOUT_UPLOAD_DIR / config.pdf_logo
+        if custom_p.exists():
+            logo_path_custom = str(custom_p)
+    pdf_logo_path = logo_path_custom if logo_path_custom else (str(LOGO_PATH) if LOGO_PATH.exists() else None)
+
+    custom_rodape_linhas = None
+    if config and config.pdf_footer:
+        custom_rodape_linhas = [linha.strip() for linha in config.pdf_footer.splitlines() if linha.strip()]
+    pdf_rodape_linhas = custom_rodape_linhas if custom_rodape_linhas is not None else RODAPE_LINHAS
+
+    # Fábrica do Cabeçalho e Rodapé Idêntica ao Checklist Veicular
+    def header_footer_factory(titulo: str, subtitulo: str):
+        def _on_page(c, doc):
+            width, height = A4
+            if pdf_logo_path:
+                try:
+                    pdf_h = (config.pdf_logo_height if config else 30) or 30
+                    pdf_w = pdf_h * 2.36
+                    c.drawImage(pdf_logo_path, 15*mm, height - 13*mm - pdf_h, pdf_w, pdf_h,
+                                preserveAspectRatio=True, mask="auto")
+                except Exception:
+                    pass
+            c.setStrokeColor(AZUL)
+            c.setLineWidth(1.0)
+            c.line(12*mm, height - 27*mm, width - 12*mm, height - 27*mm)
+            c.setFont("Helvetica-Bold", 12)
+            c.setFillColor(AZUL)
+            c.drawCentredString(width/2, height - 14*mm, titulo)
+            c.setFont("Helvetica", 9)
+            c.setFillColor(colors.black)
+            c.drawCentredString(width/2, height - 20*mm, subtitulo)
+            c.setFont("Helvetica", 7)
+            c.setFillColor(CINZA_TEXTO)
+            c.drawString(12*mm, height - 31*mm, f"Emitido em: {now_brt_str}")
+
+            footer_line_y = 20*mm
+            c.setStrokeColor(colors.HexColor("#BBBBBB"))
+            c.setLineWidth(0.8)
+            c.line(12*mm, footer_line_y, width - 12*mm, footer_line_y)
+            c.setFont("Helvetica", 6.5)
+            c.setFillColor(colors.HexColor("#6E6E6E"))
+            y = 16*mm
+            for linha in pdf_rodape_linhas:
+                c.drawCentredString(width/2, y, linha)
+                y -= 2.6*mm
+            c.setFont("Helvetica-Oblique", 6.5)
+            c.drawRightString(width - 12*mm, 5*mm, f"Página {c.getPageNumber()}")
+        return _on_page
 
     buffer = BytesIO()
     doc = SimpleDocTemplate(
         buffer,
         pagesize=A4,
-        rightMargin=15 * mm,
-        leftMargin=15 * mm,
-        topMargin=15 * mm,
-        bottomMargin=15 * mm
+        rightMargin=12 * mm,
+        leftMargin=12 * mm,
+        topMargin=34 * mm,
+        bottomMargin=23 * mm
     )
 
     styles = getSampleStyleSheet()
-    title_style = ParagraphStyle('TitleStyle', parent=styles['Heading1'], fontSize=16, leading=20, textColor=colors.HexColor("#0f172a"), alignment=1)
-    subtitle_style = ParagraphStyle('SubTitleStyle', parent=styles['Normal'], fontSize=9, leading=12, textColor=colors.HexColor("#475569"), alignment=1)
-    section_style = ParagraphStyle('SecStyle', parent=styles['Heading2'], fontSize=11, leading=14, textColor=colors.HexColor("#1e293b"), spaceAfter=4)
-    cell_style = ParagraphStyle('CellStyle', parent=styles['Normal'], fontSize=8, leading=11, textColor=colors.HexColor("#334155"))
-    cell_bold = ParagraphStyle('CellBold', parent=styles['Normal'], fontSize=8, leading=11, fontName="Helvetica-Bold", textColor=colors.HexColor("#0f172a"))
+    styles.add(ParagraphStyle(name="BodyJustify", parent=styles["Normal"], fontSize=7, leading=9))
+    styles.add(ParagraphStyle(name="BodyJustifyBold", parent=styles["Normal"], fontSize=7, leading=9, fontName="Helvetica-Bold"))
+    styles.add(ParagraphStyle(name="SectionTitle", parent=styles["Heading3"], spaceBefore=6, spaceAfter=2,
+                              textColor=colors.HexColor("#1F3C78"), fontSize=9, leading=11))
 
     story = []
 
-    # Cabeçalho
-    story.append(Paragraph("<b>ANÁLISE PRELIMINAR DE RISCOS (APR)</b>", title_style))
-    story.append(Paragraph("Sistema Digital de Prevenção e Segurança Operacional Telecom", subtitle_style))
-    story.append(Spacer(1, 4 * mm))
-
-    # Tabela de Identificação
-    status_color = "#16a34a" if apr.status == "liberada" else "#dc2626"
+    # 1. Informações Gerais da APR
+    story.append(Paragraph("<b>Informações Gerais da APR</b>", styles["SectionTitle"]))
+    status_txt = f"<font color='{'#16a34a' if apr.status == 'liberada' else '#dc2626'}'><b>{apr.status.upper()}</b></font>"
     coords_txt = f"{apr.latitude:.5f}, {apr.longitude:.5f}" if apr.latitude and apr.longitude else "Não capturada"
-    info_data = [
-        [Paragraph("<b>PROTOCOLO:</b>", cell_bold), Paragraph(apr.protocol, cell_style), Paragraph("<b>STATUS:</b>", cell_bold), Paragraph(f"<font color='{status_color}'><b>{apr.status.upper()}</b></font>", cell_bold)],
-        [Paragraph("<b>DATA/HORA:</b>", cell_bold), Paragraph(apr.created_at.strftime("%d/%m/%Y %H:%M"), cell_style), Paragraph("<b>Nº O.S.:</b>", cell_bold), Paragraph(apr.os_number or "N/A", cell_style)],
-        [Paragraph("<b>TÉCNICO:</b>", cell_bold), Paragraph(apr.tech.display_name if apr.tech else "N/A", cell_style), Paragraph("<b>ATIVIDADE:</b>", cell_bold), Paragraph(apr.activity_type, cell_style)],
-        [Paragraph("<b>LOCAL:</b>", cell_bold), Paragraph(apr.local_description, cell_style), Paragraph("<b>GPS:</b>", cell_bold), Paragraph(coords_txt, cell_style)]
-    ]
-    t_info = Table(info_data, colWidths=[28 * mm, 62 * mm, 25 * mm, 65 * mm])
-    t_info.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor("#f8fafc")),
-        ('BOX', (0, 0), (-1, -1), 0.5, colors.HexColor("#cbd5e1")),
-        ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#e2e8f0")),
-        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ('TOPPADDING', (0, 0), (-1, -1), 4),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
-    ]))
-    story.append(t_info)
-    story.append(Spacer(1, 5 * mm))
 
-    # Respostas das Avaliações
-    story.append(Paragraph("<b>AVALIAÇÃO DE PERIGOS E MEDIDAS DE CONTROLE</b>", section_style))
-    resp_data = [[Paragraph("<b>Categoria / Perigo</b>", cell_bold), Paragraph("<b>Avaliação</b>", cell_bold), Paragraph("<b>Medida / Justificativa</b>", cell_bold)]]
-    
+    if apr.auxiliary_tech:
+        meta_data = [
+            [Paragraph("<b>PROTOCOLO:</b>", styles["BodyJustifyBold"]), Paragraph(apr.protocol, styles["BodyJustify"]),
+             Paragraph("<b>STATUS:</b>", styles["BodyJustifyBold"]), Paragraph(status_txt, styles["BodyJustifyBold"])],
+            [Paragraph("<b>DATA/HORA:</b>", styles["BodyJustifyBold"]), Paragraph(dt_brt.strftime("%d/%m/%Y %H:%M"), styles["BodyJustify"]),
+             Paragraph("<b>Nº O.S.:</b>", styles["BodyJustifyBold"]), Paragraph(apr.os_number or "N/A", styles["BodyJustify"])],
+            [Paragraph("<b>TÉCNICO RESP.:</b>", styles["BodyJustifyBold"]), Paragraph((apr.tech.display_name if apr.tech else "N/A").upper(), styles["BodyJustify"]),
+             Paragraph("<b>ATIVIDADE:</b>", styles["BodyJustifyBold"]), Paragraph(apr.activity_type, styles["BodyJustify"])],
+            [Paragraph("<b>TÉCNICO AUX.:</b>", styles["BodyJustifyBold"]), Paragraph(apr.auxiliary_tech.display_name.upper(), styles["BodyJustify"]),
+             Paragraph("<b>GPS:</b>", styles["BodyJustifyBold"]), Paragraph(coords_txt, styles["BodyJustify"])],
+            [Paragraph("<b>LOCAL:</b>", styles["BodyJustifyBold"]), Paragraph(apr.local_description, styles["BodyJustify"]), "", ""],
+        ]
+        t_meta = Table(meta_data, colWidths=[24 * mm, 69 * mm, 24 * mm, 69 * mm])
+        t_meta.setStyle(TableStyle([
+            ("SPAN", (1, 4), (3, 4)),
+            ("BOX", (0, 0), (-1, -1), 0.8, colors.HexColor("#707070")),
+            ("GRID", (0, 0), (-1, -1), 0.6, colors.HexColor("#707070")),
+            ("FONTSIZE", (0, 0), (-1, -1), 7.5),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("TOPPADDING", (0, 0), (-1, -1), 1.2),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 1.2),
+            ("BACKGROUND", (0, 0), (0, -1), colors.HexColor("#F4F4F4")),
+            ("BACKGROUND", (2, 0), (2, -1), colors.HexColor("#F4F4F4")),
+        ]))
+    else:
+        meta_data = [
+            [Paragraph("<b>PROTOCOLO:</b>", styles["BodyJustifyBold"]), Paragraph(apr.protocol, styles["BodyJustify"]),
+             Paragraph("<b>STATUS:</b>", styles["BodyJustifyBold"]), Paragraph(status_txt, styles["BodyJustifyBold"])],
+            [Paragraph("<b>DATA/HORA:</b>", styles["BodyJustifyBold"]), Paragraph(dt_brt.strftime("%d/%m/%Y %H:%M"), styles["BodyJustify"]),
+             Paragraph("<b>Nº O.S.:</b>", styles["BodyJustifyBold"]), Paragraph(apr.os_number or "N/A", styles["BodyJustify"])],
+            [Paragraph("<b>TÉCNICO:</b>", styles["BodyJustifyBold"]), Paragraph((apr.tech.display_name if apr.tech else "N/A").upper(), styles["BodyJustify"]),
+             Paragraph("<b>ATIVIDADE:</b>", styles["BodyJustifyBold"]), Paragraph(apr.activity_type, styles["BodyJustify"])],
+            [Paragraph("<b>LOCAL:</b>", styles["BodyJustifyBold"]), Paragraph(apr.local_description, styles["BodyJustify"]),
+             Paragraph("<b>GPS:</b>", styles["BodyJustifyBold"]), Paragraph(coords_txt, styles["BodyJustify"])],
+        ]
+        t_meta = Table(meta_data, colWidths=[24 * mm, 69 * mm, 24 * mm, 69 * mm])
+        t_meta.setStyle(TableStyle([
+            ("BOX", (0, 0), (-1, -1), 0.8, colors.HexColor("#707070")),
+            ("GRID", (0, 0), (-1, -1), 0.6, colors.HexColor("#707070")),
+            ("FONTSIZE", (0, 0), (-1, -1), 7.5),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("TOPPADDING", (0, 0), (-1, -1), 1.2),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 1.2),
+            ("BACKGROUND", (0, 0), (0, -1), colors.HexColor("#F4F4F4")),
+            ("BACKGROUND", (2, 0), (2, -1), colors.HexColor("#F4F4F4")),
+        ]))
+    story.append(t_meta)
+    story.append(Spacer(1, 2))
+
+    # 2. Avaliação de Perigos e Medidas de Controle
+    story.append(Paragraph("<b>Avaliação de Perigos e Medidas de Controle</b>", styles["SectionTitle"]))
+    resp_data = [["Categoria / Perigo Inspecionado", "Avaliação", "Medida / Justificativa"]]
+
     for r in apr.respostas:
         ans_color = "#16a34a" if r.answer == "sim" else ("#dc2626" if r.answer == "nao" else "#64748b")
         ans_txt = f"<font color='{ans_color}'><b>{r.answer.upper()}</b></font>"
         just_txt = r.justification or "-"
+        cat_tag = r.category.upper().replace("_", " ")
         resp_data.append([
-            Paragraph(f"<b>[{r.category.upper()}]</b> {r.question_text}", cell_style),
-            Paragraph(ans_txt, cell_style),
-            Paragraph(just_txt, cell_style)
+            Paragraph(f"<b>[{cat_tag}]</b> {r.question_text}", styles["BodyJustify"]),
+            Paragraph(ans_txt, styles["BodyJustify"]),
+            Paragraph(just_txt, styles["BodyJustify"])
         ])
 
-    t_resp = Table(resp_data, colWidths=[100 * mm, 25 * mm, 55 * mm])
+    t_resp = Table(resp_data, colWidths=[105 * mm, 25 * mm, 56 * mm])
     t_resp.setStyle(TableStyle([
-        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#e2e8f0")),
-        ('BOX', (0, 0), (-1, -1), 0.5, colors.HexColor("#cbd5e1")),
-        ('INNERGRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#f1f5f9")),
-        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-        ('TOPPADDING', (0, 0), (-1, -1), 3),
-        ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#D9E2F3")),
+        ("TEXTCOLOR", (0, 0), (-1, 0), colors.black),
+        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+        ("GRID", (0, 0), (-1, -1), 0.6, colors.HexColor("#707070")),
+        ("FONTSIZE", (0, 0), (-1, -1), 7),
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("TOPPADDING", (0, 0), (-1, -1), 1.0),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 1.0),
+        ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.white, colors.HexColor("#F5F5F5")]),
     ]))
     story.append(t_resp)
-    story.append(Spacer(1, 5 * mm))
+    story.append(Spacer(1, 2))
 
-    # Medidas Emergenciais se houver
+    # 3. Medidas Emergenciais se houver
     if apr.emergency_measure_notes:
-        story.append(Paragraph("<b>MEDIDAS PREVENTIVAS / CONTROLE EMERGENCIAL ADOTADO</b>", section_style))
-        p_emerg = Paragraph(f"<b>Condição Impeditiva Detectada:</b> Sim<br/><b>Ação de Controle Adotada pelo Técnico:</b> {apr.emergency_measure_notes}", cell_style)
-        t_emerg = Table([[p_emerg]], colWidths=[180 * mm])
+        story.append(Paragraph("<b>Medidas Preventivas / Controle Emergencial Adotado</b>", styles["SectionTitle"]))
+        p_emerg = Paragraph(
+            f"<b>Condição Impeditiva Detectada:</b> Sim<br/><b>Ação de Controle Adotada pelo Técnico:</b> {apr.emergency_measure_notes}",
+            styles["BodyJustify"]
+        )
+        t_emerg = Table([[p_emerg]], colWidths=[186 * mm])
         t_emerg.setStyle(TableStyle([
-            ('BACKGROUND', (0, 0), (-1, -1), colors.HexColor("#fef3c7")),
-            ('BOX', (0, 0), (-1, -1), 0.5, colors.HexColor("#f59e0b")),
-            ('PADDING', (0, 0), (-1, -1), 6),
+            ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#FEF3C7")),
+            ("BOX", (0, 0), (-1, -1), 0.8, colors.HexColor("#F59E0B")),
+            ("GRID", (0, 0), (-1, -1), 0.6, colors.HexColor("#F59E0B")),
+            ("PADDING", (0, 0), (-1, -1), 4),
         ]))
         story.append(t_emerg)
-        story.append(Spacer(1, 5 * mm))
+        story.append(Spacer(1, 2))
 
-    # Declaração e Assinaturas
-    story.append(Paragraph("<b>TERMO DE CIÊNCIA E CONFORMIDADE</b>", section_style))
+    # 4. Termo de Ciência e Assinaturas
+    story.append(Paragraph("<b>Termo de Ciência e Assinaturas</b>", styles["SectionTitle"]))
     termo_text = "Declaro que inspecionei o local de trabalho, avaliei todos os fatores de risco e comprometo-me a cumprir integralmente todas as medidas preventivas descritas nesta Análise Preliminar de Riscos (NR-35, NR-10 e PGR)."
-    story.append(Paragraph(termo_text, cell_style))
-    story.append(Spacer(1, 4 * mm))
+    story.append(Paragraph(termo_text, styles["BodyJustify"]))
+    story.append(Spacer(1, 3))
 
     tech_sig_elements = []
     if apr.signature_image and (APR_UPLOAD_DIR / apr.signature_image).exists():
         try:
-            tech_sig_elements.append(RLImage(str(APR_UPLOAD_DIR / apr.signature_image), width=45 * mm, height=18 * mm))
+            sig_img = RLImage(str(APR_UPLOAD_DIR / apr.signature_image), width=48 * mm, height=14 * mm)
+            sig_img.hAlign = 'LEFT'
+            tech_sig_elements.append(sig_img)
         except Exception:
             pass
-    tech_sig_elements.append(Paragraph(f"______________________________________<br/><b>{apr.tech.display_name if apr.tech else 'Técnico Responsável'}</b><br/>Técnico Operacional", cell_style))
+    tech_sig_elements.append(Paragraph("____________________________________________", styles["BodyJustify"]))
+    tech_sig_elements.append(Paragraph(f"<b>Técnico Responsável:</b> {apr.tech.display_name if apr.tech else '-'}", styles["BodyJustify"]))
+    tech_sig_elements.append(Paragraph(f"<b>Data/Hora:</b> {dt_brt.strftime('%d/%m/%Y %H:%M')}", styles["BodyJustify"]))
 
-    sig_data = [
-        [tech_sig_elements,
-         [Spacer(1, 15 * mm), Paragraph("______________________________________<br/><b>Segurança do Trabalho (TST)</b><br/>Auditoria de Conformidade", cell_style)]]
-    ]
-    t_sig = Table(sig_data, colWidths=[90 * mm, 90 * mm])
-    t_sig.setStyle(TableStyle([
-        ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-        ('VALIGN', (0, 0), (-1, -1), 'BOTTOM'),
-    ]))
+    if apr.auxiliary_tech:
+        aux_sig_elements = []
+        if apr.auxiliary_signature_image and (APR_UPLOAD_DIR / apr.auxiliary_signature_image).exists():
+            try:
+                aux_img = RLImage(str(APR_UPLOAD_DIR / apr.auxiliary_signature_image), width=48 * mm, height=14 * mm)
+                aux_img.hAlign = 'LEFT'
+                aux_sig_elements.append(aux_img)
+            except Exception:
+                pass
+        aux_sig_elements.append(Paragraph("____________________________________________", styles["BodyJustify"]))
+        aux_sig_elements.append(Paragraph(f"<b>Técnico Auxiliar:</b> {apr.auxiliary_tech.display_name}", styles["BodyJustify"]))
+        aux_sig_elements.append(Paragraph(f"<b>Data/Hora:</b> {dt_brt.strftime('%d/%m/%Y %H:%M')}", styles["BodyJustify"]))
+
+        sig_data = [[tech_sig_elements, aux_sig_elements]]
+        t_sig = Table(sig_data, colWidths=[93 * mm, 93 * mm])
+        t_sig.setStyle(TableStyle([
+            ("ALIGN", (0, 0), (-1, -1), "LEFT"),
+            ("VALIGN", (0, 0), (-1, -1), "BOTTOM"),
+            ("LEFTPADDING", (0, 0), (-1, -1), 2),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 2),
+            ("TOPPADDING", (0, 0), (-1, -1), 0.5),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 0.5),
+        ]))
+    else:
+        sig_data = [[tech_sig_elements]]
+        t_sig = Table(sig_data, colWidths=[186 * mm])
+        t_sig.setStyle(TableStyle([
+            ("ALIGN", (0, 0), (-1, -1), "LEFT"),
+            ("VALIGN", (0, 0), (-1, -1), "BOTTOM"),
+            ("LEFTPADDING", (0, 0), (-1, -1), 2),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 2),
+            ("TOPPADDING", (0, 0), (-1, -1), 0.5),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 0.5),
+        ]))
     story.append(t_sig)
 
-    doc.build(story)
+    sub_header = f"Protocolo: {apr.protocol}  |  Técnico: {apr.tech.display_name if apr.tech else '-'}"
+    doc.build(
+        story,
+        onFirstPage=header_footer_factory("ANÁLISE PRELIMINAR DE RISCOS (APR)", sub_header),
+        onLaterPages=header_footer_factory("ANÁLISE PRELIMINAR DE RISCOS (APR)", sub_header)
+    )
     buffer.seek(0)
 
     from flask import send_file
@@ -4035,7 +4229,7 @@ def config_apr():
         return redirect(url_for("dashboard"))
 
     items = APRItemConfig.query.order_by(APRItemConfig.category, APRItemConfig.order).all()
-    categories = ["geral", "altura_nr35", "eletrica_nr10", "sinalizacao_transito", "clima_ambiente"]
+    categories = ["geral", "fator_pessoal", "altura_nr35", "eletrica_nr10", "sinalizacao_transito", "clima_ambiente"]
     activity_types = APRActivityType.query.order_by(APRActivityType.order, APRActivityType.name).all()
 
     return render_template(

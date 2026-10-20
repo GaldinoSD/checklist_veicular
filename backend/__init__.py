@@ -468,6 +468,8 @@ def create_app():
             text('ALTER TABLE apr ADD COLUMN IF NOT EXISTS latitude FLOAT'),
             text('ALTER TABLE apr ADD COLUMN IF NOT EXISTS longitude FLOAT'),
             text('ALTER TABLE apr ADD COLUMN IF NOT EXISTS signature_image VARCHAR(255)'),
+            text('ALTER TABLE apr ADD COLUMN IF NOT EXISTS auxiliary_tech_id INTEGER REFERENCES "user"(id)'),
+            text('ALTER TABLE apr ADD COLUMN IF NOT EXISTS auxiliary_signature_image VARCHAR(255)'),
             text('''
                 CREATE TABLE IF NOT EXISTS apr_membro (
                     id SERIAL PRIMARY KEY,
@@ -658,6 +660,8 @@ def create_app():
                     ("geral", 1, "Todos os integrantes da equipe estão utilizando os EPIs obrigatórios (capacete com jugular, óculos de proteção, luvas e botina de segurança)?", "NR-6 / PGR: Uso individual e intransferível de EPIs.", True, False),
                     ("geral", 2, "As ferramentas e equipamentos de trabalho estão em perfeito estado de conservação e adequados para o serviço?", "Inspecionar cabos, isolamentos e integridade física das ferramentas.", True, False),
                     ("geral", 3, "A equipe está ciente dos procedimentos de segurança, contatos de emergência e rota de fuga do local?", "Comunicação e alinhamento prévio da equipe de campo.", False, False),
+                    # Fator Pessoal de Segurança
+                    ("fator_pessoal", 1, "Existe algum fator físico ou psicológico que possa comprometer a segurança da atividade?", "NR-35 / NR-10: Avaliação psicofísica (tontura, mal-estar, estresse, cansaço extremo ou medicamentos que causem sonolência). Se SIM, justifique obrigatoriamente.", True, False),
                     # Trabalho em Altura (NR-35)
                     ("altura_nr35", 1, "A escada de fibra está em bom estado, com sapatas de borracha íntegras, catracas e corda operacionais?", "NR-35.4.5.1: Condição impeditiva. Proibido uso de escada danificada ou improvisada.", True, True),
                     ("altura_nr35", 2, "O cinto tipo paraquedista, talabarte de posicionamento e trava-quedas foram inspecionados antes do uso?", "NR-35: Checar costuras, partes metálicas e data de validade.", True, False),
