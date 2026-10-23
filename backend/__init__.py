@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import os
 import sys
+import json
 import secrets
 from flask import Flask, session, request, abort, redirect, url_for, flash, jsonify
 from flask_sqlalchemy import SQLAlchemy
@@ -512,6 +513,19 @@ def create_app():
                     is_active BOOLEAN DEFAULT TRUE,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
+            '''),
+            text(f'''
+                CREATE TABLE IF NOT EXISTS access_profile (
+                    id {'INTEGER PRIMARY KEY AUTOINCREMENT' if db.engine.name == 'sqlite' else 'SERIAL PRIMARY KEY'},
+                    slug VARCHAR(50) NOT NULL UNIQUE,
+                    name VARCHAR(100) NOT NULL,
+                    description VARCHAR(255),
+                    color VARCHAR(30) DEFAULT 'emerald',
+                    is_system BOOLEAN DEFAULT FALSE,
+                    permissions TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
             ''')
         ]
         for stmt in stmts:
@@ -710,6 +724,28 @@ def create_app():
                     db.session.add(APRActivityType(name=name, order=order, is_active=True))
         except Exception as e:
             print("⚠️ Erro ao semear APRActivityType:", e)
+
+        try:
+            from backend.models import AccessProfile
+            from backend.blueprints.auth import get_default_perms
+            if AccessProfile.query.count() == 0:
+                defaults = [
+                    ("admin", "Administrador", "Acesso irrestrito a todos os módulos, configurações e relatórios do sistema", "amber", True, get_default_perms("admin")),
+                    ("supervisor", "Supervisor de Equipes", "Gestão de equipes, escalas, frota, vistorias e relatórios operacionais", "sky", False, get_default_perms("supervisor")),
+                    ("tech", "Técnico Operacional", "Acesso aos checklists diários, APR de campo e treinamentos no mobile", "emerald", False, get_default_perms("tech")),
+                    ("manutencao", "Oficina / Manutenção", "Abertura, triagem e controle de Ordens de Serviço (O.S.) e avarias de veículos", "indigo", False, get_default_perms("manutencao")),
+                ]
+                for slug, name, desc, col, is_sys, p_dict in defaults:
+                    db.session.add(AccessProfile(
+                        slug=slug,
+                        name=name,
+                        description=desc,
+                        color=col,
+                        is_system=is_sys,
+                        permissions=json.dumps(p_dict)
+                    ))
+        except Exception as e:
+            print("⚠️ Erro ao semear AccessProfile:", e)
 
         db.session.commit()
  

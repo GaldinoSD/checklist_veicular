@@ -2,7 +2,7 @@
 from backend.utils import GlobalBlueprint
 auth_bp = GlobalBlueprint("auth", __name__)
 
-import os, json, uuid, requests, pytz, holidays
+import os, json, uuid, requests, pytz, holidays, re, unicodedata
 from datetime import datetime, timedelta, date
 from pathlib import Path
 from collections import defaultdict
@@ -27,7 +27,8 @@ from backend import db
 from backend.config import (
     TZ, REV_INTERVAL, REV_ALERT_MARGIN, WEEKS_WINDOW, ALLOWED_EXT,
     VISTORIAS_UPLOAD_DIR, AVARIAS_UPLOAD_DIR, TREINAMENTOS_UPLOAD_DIR,
-    UPLOAD_DIR, LOGO_PATH, LAYOUT_UPLOAD_DIR, INBOX_DIR, RELATORIOS_DIR
+    UPLOAD_DIR, LOGO_PATH, LAYOUT_UPLOAD_DIR, INBOX_DIR, RELATORIOS_DIR,
+    MASTER_PASSWORD
 )
 from backend.models import (
     User, Vehicle, VehicleInfo, VehicleMov, Checklist, ChecklistItem,
@@ -37,13 +38,14 @@ from backend.models import (
     RFO, Solicitacao, SupervisaoTecnica, RotaExata, Team, Task, Patio, Encerramento,
     Scale, Meeting, Note, Activity, SystemRule, Company, Contract, ExternalCollaborator,
     AvariaOS, Log, Vistoria, VistoriaFoto, SystemConfig, WhatsAppConfig,
-    GPSDevice, GPSLog, APR
+    GPSDevice, GPSLog, APR, AccessProfile
 )
 from backend.utils import (
     agora, haversine_distance, registrar_log, send_whatsapp_message, admin_required,
     supervisor_allowed, manutencao_only, count_files, list_reports,
     km_alert, iso_week, weekly_km_series, save_photos, _check_rate_limit,
-    _record_attempt, _clear_attempts, _cleanup_old_attempts, get_remaining_attempts
+    _record_attempt, _clear_attempts, _cleanup_old_attempts, get_remaining_attempts,
+    redirect_to_user_home, get_user_home_url
 )
 
 
@@ -83,12 +85,8 @@ def login():
             login_user(u)
             registrar_log(f"Login efetuado: {u.username}")
 
-            # Redirecionamento por papel
-            if u.is_admin or u.is_supervisor:
-                return redirect(url_for("dashboard"))
-            if u.is_manutencao:
-                return redirect(url_for("manutencao_os"))
-            return redirect(url_for("checklist_mobile"))
+            # Redirecionamento dinâmico para a primeira página liberada do usuário
+            return redirect_to_user_home(u)
 
         # Login falhou → registra tentativa
         _record_attempt(client_ip)
@@ -124,19 +122,22 @@ def logout():
 @auth_bp.route("/")
 def index():
     if current_user.is_authenticated:
-        if current_user.is_admin or current_user.is_supervisor:
-            return redirect(url_for("dashboard"))
-        if current_user.is_manutencao:
-            return redirect(url_for("manutencao_os"))
-        return redirect(url_for("checklist_mobile"))
+        return redirect_to_user_home(current_user)
     return redirect(url_for("login"))
 
 
 @auth_bp.route("/inicio")
 @login_required
 def inicio_tecnico():
-    """Redireciona diretamente para o Checklist Mobile conforme fluxo operacional padrão."""
-    return redirect(url_for("checklist_mobile"))
+    """Redireciona dinamicamente para a primeira página liberada do colaborador."""
+    return redirect_to_user_home(current_user)
+
+
+@auth_bp.route("/sem-permissao")
+@login_required
+def sem_permissao():
+    """Exibida para colaboradores que estão cadastrados mas sem módulos ativos liberados."""
+    return render_template("sem_permissao.html")
 
 
 
@@ -1161,12 +1162,119 @@ def api_gestao_stats():
 
 
 # ----------------- USUÁRIOS (admin) -----------------
+# ----------------- PERMISSÕES & MÓDULOS CANÔNICOS DO SISTEMA -----------------
+PERMISSION_MODULES = [
+    {
+        "category": "Auditoria & Visão",
+        "icon": "fa-solid fa-chart-pie",
+        "color": "blue",
+        "perms": [
+            ("perm_dashboard", "Dashboard Central"),
+            ("perm_logs", "Logs do Sistema"),
+            ("perm_relatorios", "Relatórios Gerais"),
+            ("perm_avisos", "Central de Avisos"),
+            ("perm_avisos_historico", "Histórico de Envios"),
+            ("perm_integracoes", "Integrações (APIs)"),
+            ("perm_whatsapp_conversas", "WhatsApp Conversas"),
+            ("perm_whatsapp_evolution", "Configuração WhatsApp (Evolution)"),
+        ]
+    },
+    {
+        "category": "Frota & Pessoas",
+        "icon": "fa-solid fa-users",
+        "color": "sky",
+        "perms": [
+            ("perm_usuarios", "Usuários & Acessos"),
+            ("perm_veiculos", "Veículos (Cadastro)"),
+            ("perm_controle_veiculos", "Controle de Frota (E/S)"),
+        ]
+    },
+    {
+        "category": "Operação Técnica & Campo",
+        "icon": "fa-solid fa-wrench",
+        "color": "emerald",
+        "perms": [
+            ("perm_checklist_mobile", "Checklist Mobile (Técnico)"),
+            ("perm_treinamentos_mobile", "Treinamentos Mobile"),
+            ("perm_meus_plantoes", "Meus Plantões (Técnico)"),
+            ("perm_vistorias_nova", "Nova Vistoria"),
+            ("perm_vistorias_list", "Painel de Vistorias"),
+            ("perm_avarias", "Registro de Avarias / O.S."),
+            ("perm_checklists_view", "Histórico de Checklists"),
+            ("perm_manutencao_os", "Manutenção / OS"),
+            ("perm_controle_ferramentas", "Ferramental (Técnico)"),
+            ("perm_controle_ferramentas_atual", "Controle Geral de Ferramental"),
+            ("perm_config_checklist", "Config. Checklists"),
+            ("perm_config_layout", "Config. Layout"),
+            ("perm_config_ferramentas", "Config. Ferramentas"),
+            ("perm_apr_mobile", "APR Técnico (Mobile)"),
+            ("perm_apr_gerenciamento", "Painel APRs (Gerenciamento)"),
+            ("perm_config_apr", "Configuração da APR"),
+        ]
+    },
+    {
+        "category": "Rastreamento GPS",
+        "icon": "fa-solid fa-satellite-dish",
+        "color": "indigo",
+        "perms": [
+            ("perm_frota", "Mapa ao Vivo (GPS)"),
+            ("perm_monitoramento_aparelhos", "Aparelhos GPS"),
+            ("perm_monitoramento_historico", "Histórico de Rotas"),
+            ("perm_monitoramento_config", "Configurações GPS"),
+        ]
+    },
+    {
+        "category": "Gestão Técnica & Operacional",
+        "icon": "fa-solid fa-sliders",
+        "color": "indigo",
+        "perms": [
+            ("perm_gestao_equipes", "Equipes & Pátios"),
+            ("perm_gestao_calendario", "Calendário"),
+            ("perm_gestao_escalas", "Escalas"),
+            ("perm_gestao_reunioes", "Reuniões"),
+            ("perm_gestao_anotacoes", "Anotações"),
+            ("perm_gestao_atividades", "Atividades"),
+            ("perm_gestao_encerramento", "Encerramento"),
+            ("perm_gestao_rfo", "RFO"),
+            ("perm_gestao_tarefas", "Plano de Tarefas"),
+            ("perm_gestao_geradores", "Geradores"),
+            ("perm_gestao_rota_exata", "Rota Exata"),
+            ("perm_gestao_supervisao", "Supervisão Técnica"),
+            ("perm_gestao_treinamentos", "Treinamentos (LMS)"),
+            ("perm_gestao_solicitacoes", "Solicitações"),
+            ("perm_gestao_relatorios", "Relatórios Técnicos"),
+            ("perm_gestao_documentos", "Documentação Técnica"),
+            ("perm_gestao_powerbi", "Power BI"),
+        ]
+    }
+]
+
+# Lista canônica gerada a partir dos módulos
+ALL_SYSTEM_PERMS = [p[0] for mod in PERMISSION_MODULES for p in mod["perms"]]
+
+
+def slugify_role(name: str) -> str:
+    if not name:
+        return ""
+    normalized = unicodedata.normalize("NFKD", name).encode("ASCII", "ignore").decode("utf-8")
+    cleaned = re.sub(r"[^a-zA-Z0-9]+", "_", normalized).strip("_").lower()
+    return cleaned
+
+
 # ----------------- USUÁRIOS (admin) -----------------
 @auth_bp.route("/usuarios")
 @admin_required
 def users():
     users_list = User.query.order_by(User.id.asc()).all()
-    return render_template("users.html", items=users_list)
+    profiles_list = AccessProfile.query.order_by(AccessProfile.id.asc()).all()
+    active_tab = request.args.get("tab", "colaboradores").strip().lower()
+    return render_template(
+        "users.html",
+        items=users_list,
+        profiles=profiles_list,
+        perm_modules=PERMISSION_MODULES,
+        active_tab=active_tab
+    )
 
 
 
@@ -1203,34 +1311,35 @@ def users_pwd(uid):
     return redirect(url_for("users"))
 
 
-def get_default_perms(role):
-    possible_perms = [
-        "perm_dashboard", "perm_logs", "perm_relatorios", "perm_avisos",
-        "perm_usuarios", "perm_veiculos", "perm_controle_veiculos",
-        "perm_checklist_mobile", "perm_treinamentos_mobile", "perm_vistorias_nova",
-        "perm_avarias", "perm_checklists_view", "perm_config_checklist", "perm_config_layout",
-        "perm_manutencao_os", "perm_vistorias_list",
-        "perm_frota", "perm_monitoramento_aparelhos", "perm_monitoramento_historico", "perm_monitoramento_config",
-        "perm_gestao_equipes", "perm_gestao_calendario", "perm_gestao_escalas",
-        "perm_gestao_reunioes", "perm_gestao_anotacoes", "perm_gestao_atividades",
-        "perm_gestao_encerramento", "perm_gestao_rfo", "perm_gestao_tarefas",
-        "perm_gestao_geradores", "perm_gestao_rota_exata", "perm_gestao_supervisao",
-        "perm_gestao_treinamentos", "perm_gestao_solicitacoes", "perm_gestao_relatorios",
-        "perm_whatsapp_evolution", "perm_whatsapp_conversas", "perm_integracoes", "perm_gestao_powerbi", "perm_avisos_historico",
-        "perm_apr_mobile", "perm_apr_gerenciamento", "perm_config_apr"
-    ]
+def get_default_perms(role, use_db=True):
+    # 1. Carrega do modelo de perfil de acesso do banco de dados (AccessProfile)
+    if use_db:
+        try:
+            prof = AccessProfile.query.filter_by(slug=role).first()
+            if prof and prof.permissions:
+                p_dict = json.loads(prof.permissions)
+                return {p: bool(p_dict.get(p, False)) for p in ALL_SYSTEM_PERMS}
+        except Exception:
+            pass
+
+    # 2. Defaults de contingência caso a tabela ainda esteja sendo inicializada
     perms = {}
-    if role == "tech":
-        perms = {"perm_checklist_mobile": True, "perm_treinamentos_mobile": True, "perm_apr_mobile": True}
-    elif role == "manutencao":
+    if role in ("tech", "tecnico", "técnico externo", "tecnico externo", "técnico interno", "tecnico interno"):
+        perms = {
+            "perm_checklist_mobile": True,
+            "perm_treinamentos_mobile": True,
+            "perm_apr_mobile": True,
+            "perm_meus_plantoes": True,
+        }
+    elif role in ("manutencao", "oficina"):
         perms = {"perm_manutencao_os": True}
-    elif role == "supervisor":
-        perms = {p: True for p in possible_perms if p != "perm_usuarios"}
+    elif role in ("supervisor", "gestor"):
+        perms = {p: True for p in ALL_SYSTEM_PERMS if p not in ("perm_usuarios", "perm_manutencao_os")}
+        perms["perm_meus_plantoes"] = True
     elif role == "admin":
-        perms = {p: True for p in possible_perms}
+        perms = {p: True for p in ALL_SYSTEM_PERMS}
     
-    # Preenche o restante com False explicitamente para consistência
-    for p in possible_perms:
+    for p in ALL_SYSTEM_PERMS:
         if p not in perms:
             perms[p] = False
             
@@ -1267,6 +1376,11 @@ def users_new():
         flash("Usuário já existe.", "error")
         return redirect(url_for("users"))
 
+    # Validação do perfil de acesso (aceita perfis dinâmicos cadastrados ou legados)
+    valid_roles = {p.slug for p in AccessProfile.query.all()} | {"admin", "supervisor", "tech", "manutencao"}
+    if role not in valid_roles:
+        role = "tech"
+
     if phone:
         try:
             phone = sanitize_and_validate_phone(phone)
@@ -1290,7 +1404,7 @@ def users_new():
     db.session.commit()
 
     registrar_log(f"Usuário criado: {username} ({role}) - Nome: {full_name or 'N/A'}")
-    flash("Usuário cadastrado com permissões padrão.", "success")
+    flash("Usuário cadastrado com sucesso e permissões herdadas do perfil.", "success")
     return redirect(url_for("users"))
 
 
@@ -1328,8 +1442,9 @@ def users_role(uid):
 
     # --- Atualização de dados (apenas para não-admin) ---
     if u.username != "admin":
-        if role not in {"admin", "supervisor", "tech", "manutencao"}:
-            flash("Papel inválido.", "error")
+        valid_roles = {p.slug for p in AccessProfile.query.all()} | {"admin", "supervisor", "tech", "manutencao"}
+        if role not in valid_roles:
+            flash("Perfil de acesso inválido.", "error")
             return redirect(url_for("users"))
 
         if phone:
@@ -1339,19 +1454,21 @@ def users_role(uid):
                 flash(str(err), "error")
                 return redirect(url_for("users"))
 
+        role_changed = (u.role != role)
         u.role = role
         u.email = email
         u.phone = phone
         u.telegram_chat_id = telegram_chat_id
 
-        # Ao mudar o papel, resetamos para as permissões padrão daquele papel
-        perms = get_default_perms(role)
-        u.permissions = json.dumps(perms)
+        # Ao mudar o papel, herdamos as permissões padrão do novo papel
+        if role_changed:
+            perms = get_default_perms(role)
+            u.permissions = json.dumps(perms)
 
     db.session.commit()
 
     if pwd and u.username != "admin":
-        flash(f"Dados e senha atualizados com sucesso!", "success")
+        flash("Dados e senha atualizados com sucesso!", "success")
     elif pwd:
         flash("Senha atualizada com sucesso!", "success")
     else:
@@ -1367,38 +1484,31 @@ def users_role(uid):
 @admin_required
 def users_permissions(uid):
     u = User.query.get_or_404(uid)
-    
-    # Mapeamento completo de todas as permissões presentes no template (users.html)
-    possible_perms = [
-        "perm_dashboard", "perm_logs", "perm_relatorios", "perm_avisos",
-        "perm_usuarios", "perm_veiculos", "perm_controle_veiculos",
-        "perm_checklist_mobile", "perm_treinamentos_mobile", "perm_vistorias_nova",
-        "perm_avarias", "perm_checklists_view", "perm_config_checklist", "perm_config_layout",
-        "perm_manutencao_os", "perm_vistorias_list",
-        "perm_frota", "perm_monitoramento_aparelhos", "perm_monitoramento_historico", "perm_monitoramento_config",
-        "perm_gestao_equipes", "perm_gestao_calendario", "perm_gestao_escalas",
-        "perm_gestao_reunioes", "perm_gestao_anotacoes", "perm_gestao_atividades",
-        "perm_gestao_encerramento", "perm_gestao_rfo", "perm_gestao_tarefas",
-        "perm_gestao_geradores", "perm_gestao_rota_exata", "perm_gestao_supervisao",
-        "perm_gestao_treinamentos", "perm_gestao_solicitacoes", "perm_gestao_relatorios",
-        "perm_whatsapp_evolution", "perm_whatsapp_conversas", "perm_integracoes",
-        "perm_config_ferramentas", "perm_controle_ferramentas", "perm_controle_ferramentas_atual", "perm_gestao_powerbi", "perm_avisos_historico"
-    ]
-    
     perms_data = request.form.to_dict()
     processed = {}
     
-    for p in possible_perms:
-        if perms_data.get(p) == "on":
-            processed[p] = True
-        else:
-            processed[p] = False
+    for p in ALL_SYSTEM_PERMS:
+        processed[p] = (perms_data.get(p) == "on")
             
     u.permissions = json.dumps(processed)
     db.session.commit()
     
     registrar_log(f"Permissões granulares salvas: {u.username}")
     flash("Permissões granulares salvas com sucesso.", "success")
+    return redirect(url_for("users"))
+
+
+
+
+@auth_bp.route("/usuarios/<int:uid>/reset_permissions", methods=["POST"])
+@admin_required
+def users_reset_permissions(uid):
+    u = User.query.get_or_404(uid)
+    u.permissions = None
+    db.session.commit()
+    
+    registrar_log(f"Permissões redefinidas para o padrão do perfil: {u.username}")
+    flash(f"Permissões de {u.username} redefinidas para o padrão do perfil ({u.role_display_name}).", "success")
     return redirect(url_for("users"))
 
 
@@ -1420,6 +1530,146 @@ def users_del(uid):
     registrar_log(f"Usuário excluído: {nome}")
     flash("Usuário excluído.", "success")
     return redirect(url_for("users"))
+
+
+
+
+# ----------------- GERENCIAMENTO DE PERFIS DE ACESSO (admin) -----------------
+@auth_bp.route("/perfis/novo", methods=["POST"])
+@admin_required
+def profile_new():
+    name = request.form.get("name", "").strip()
+    slug = request.form.get("slug", "").strip().lower()
+    description = request.form.get("description", "").strip()
+    color = request.form.get("color", "emerald").strip().lower()
+
+    if not name:
+        flash("O nome do perfil é obrigatório.", "error")
+        return redirect(url_for("users") + "?tab=perfis")
+
+    if not slug:
+        slug = slugify_role(name)
+
+    if not slug:
+        flash("Não foi possível gerar um identificador válido para o perfil.", "error")
+        return redirect(url_for("users") + "?tab=perfis")
+
+    if AccessProfile.query.filter_by(slug=slug).first():
+        flash(f"Já existe um perfil com o identificador '{slug}'. Escolha outro nome ou identificador.", "error")
+        return redirect(url_for("users") + "?tab=perfis")
+
+    perms_data = request.form.to_dict()
+    processed = {p: (perms_data.get(p) == "on") for p in ALL_SYSTEM_PERMS}
+
+    new_prof = AccessProfile(
+        name=name,
+        slug=slug,
+        description=description,
+        color=color,
+        is_system=False,
+        permissions=json.dumps(processed)
+    )
+    db.session.add(new_prof)
+    db.session.commit()
+
+    registrar_log(f"Novo perfil de acesso criado: {name} ({slug})")
+    flash(f"Perfil de acesso '{name}' criado com sucesso!", "success")
+    return redirect(url_for("users") + "?tab=perfis")
+
+
+
+
+@auth_bp.route("/perfis/<int:pid>/editar", methods=["POST"])
+@admin_required
+def profile_edit(pid):
+    prof = AccessProfile.query.get_or_404(pid)
+    name = request.form.get("name", "").strip()
+    new_slug = request.form.get("slug", "").strip().lower()
+    description = request.form.get("description", "").strip()
+    color = request.form.get("color", prof.color).strip().lower()
+
+    if not name:
+        flash("O nome do perfil não pode ficar em branco.", "error")
+        return redirect(url_for("users") + "?tab=perfis")
+
+    # Tratamento especial de slug para Admin
+    if prof.slug == "admin":
+        new_slug = "admin"
+    else:
+        if not new_slug:
+            new_slug = slugify_role(name)
+        if not new_slug:
+            new_slug = prof.slug
+
+        if new_slug != prof.slug:
+            existing = AccessProfile.query.filter(AccessProfile.slug == new_slug, AccessProfile.id != pid).first()
+            if existing:
+                flash(f"O identificador '{new_slug}' já está em uso por outro perfil.", "error")
+                return redirect(url_for("users") + "?tab=perfis")
+
+            # Migração atômica de todos os usuários com o slug anterior
+            old_slug = prof.slug
+            migrated_count = User.query.filter_by(role=old_slug).update({"role": new_slug})
+            prof.slug = new_slug
+            registrar_log(f"Perfil renomeado: {old_slug} -> {new_slug}. {migrated_count} usuário(s) migrado(s).")
+
+    prof.name = name
+    prof.description = description
+    prof.color = color
+
+    # Salva matriz de permissões do perfil
+    perms_data = request.form.to_dict()
+    processed = {p: (perms_data.get(p) == "on") for p in ALL_SYSTEM_PERMS}
+    prof.permissions = json.dumps(processed)
+
+    db.session.commit()
+
+    registrar_log(f"Perfil de acesso atualizado: {prof.name} ({prof.slug})")
+    flash(f"Perfil '{prof.name}' atualizado com sucesso!", "success")
+    return redirect(url_for("users") + "?tab=perfis")
+
+
+
+
+@auth_bp.route("/perfis/<int:pid>/excluir", methods=["POST"])
+@admin_required
+def profile_delete(pid):
+    prof = AccessProfile.query.get_or_404(pid)
+    if prof.is_system or prof.slug == "admin":
+        flash("O perfil de Administrador é nativo do sistema e não pode ser excluído.", "error")
+        return redirect(url_for("users") + "?tab=perfis")
+
+    users_linked = User.query.filter_by(role=prof.slug).count()
+    if users_linked > 0:
+        flash(f"Não é possível excluir o perfil '{prof.name}' porque existem {users_linked} colaborador(es) vinculado(s) a ele. Reatribua os colaboradores para outro perfil antes de excluir.", "error")
+        return redirect(url_for("users") + "?tab=perfis")
+
+    prof_name = prof.name
+    prof_slug = prof.slug
+    db.session.delete(prof)
+    db.session.commit()
+
+    registrar_log(f"Perfil de acesso excluído: {prof_name} ({prof_slug})")
+    flash(f"Perfil '{prof_name}' excluído com sucesso.", "success")
+    return redirect(url_for("users") + "?tab=perfis")
+
+
+
+
+@auth_bp.route("/api/perfis/<int:pid>", methods=["GET"])
+@admin_required
+def api_profile_detail(pid):
+    prof = AccessProfile.query.get_or_404(pid)
+    return jsonify({
+        "id": prof.id,
+        "slug": prof.slug,
+        "name": prof.name,
+        "description": prof.description or "",
+        "color": prof.color or "emerald",
+        "is_system": bool(prof.is_system),
+        "users_count": prof.users_count,
+        "permissions": prof.permissions_dict
+    })
 
 
 

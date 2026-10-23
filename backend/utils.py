@@ -338,6 +338,101 @@ def send_email_notification(to_email, subject, body_message, rule_slug=None, use
     threading.Thread(target=worker, daemon=True).start()
 
 
+# ----------------- RESOLUÇÃO DINÂMICA DE PÁGINA INICIAL / LANDING PAGE -----------------
+def get_user_home_url(user):
+    """
+    Retorna a URL da primeira página que o usuário possui permissão de acessar.
+    A ordem segue uma hierarquia inteligente de prioridades operacionais.
+    """
+    if not user or not getattr(user, "is_authenticated", False):
+        return url_for("login")
+        
+    if getattr(user, "is_admin", False):
+        return url_for("dashboard")
+
+    # Mapeamento ordenado (endpoint, kwargs, permissão)
+    CANDIDATE_ROUTES = [
+        # 1. Visão Geral / Dashboard Central
+        ("dashboard", {}, "dashboard"),
+        
+        # 2. Operação Técnica de Campo / Mobile
+        ("checklist_mobile", {}, "checklist_mobile"),
+        ("meus_plantoes", {}, "meus_plantoes"),
+        ("treinamentos_mobile", {}, "treinamentos_mobile"),
+        ("apr_mobile", {}, "apr_mobile"),
+        ("controle_ferramentas", {}, "controle_ferramentas"),
+        
+        # 3. Painéis Operacionais & Frota
+        ("vistorias_list", {}, "vistorias_list"),
+        ("vistorias_nova", {}, "vistorias_nova"),
+        ("checklists", {}, "checklists_view"),
+        ("controle_veiculos", {}, "controle_veiculos"),
+        ("vehicles", {}, "veiculos"),
+        ("manutencao_os", {}, "manutencao_os"),
+        ("controle_ferramentas_atual", {}, "controle_ferramentas_atual"),
+        ("avarias_registro", {}, "avarias"),
+        ("apr_gerenciamento", {}, "apr_gerenciamento"),
+        
+        # 4. Rastreamento GPS
+        ("tracking", {}, "frota"),
+        ("monitoramento_aparelhos", {}, "monitoramento_aparelhos"),
+        ("monitoramento_historico", {}, "monitoramento_historico"),
+        ("monitoramento_config", {}, "monitoramento_config"),
+        
+        # 5. Gestão Técnica & Supervisão Operacional
+        ("gestao_tecnica", {"tab": "supervisao"}, "gestao_supervisao"),
+        ("gestao_tecnica", {"tab": "equipes"}, "gestao_equipes"),
+        ("gestao_tecnica", {"tab": "escalas"}, "gestao_escalas"),
+        ("gestao_tecnica", {"tab": "calendario"}, "gestao_calendario"),
+        ("gestao_tecnica", {"tab": "tarefas"}, "gestao_tarefas"),
+        ("gestao_tecnica", {"tab": "atividades"}, "gestao_atividades"),
+        ("gestao_tecnica", {"tab": "treinamentos"}, "gestao_treinamentos"),
+        ("gestao_tecnica", {"tab": "documentos"}, "gestao_documentos"),
+        ("gestao_tecnica", {"tab": "powerbi"}, "gestao_powerbi"),
+        ("gestao_tecnica", {"tab": "reunioes"}, "gestao_reunioes"),
+        ("gestao_tecnica", {"tab": "anotacoes"}, "gestao_anotacoes"),
+        ("gestao_tecnica", {"tab": "encerramento"}, "gestao_encerramento"),
+        ("gestao_tecnica", {"tab": "rfo"}, "gestao_rfo"),
+        ("gestao_tecnica", {"tab": "geradores"}, "gestao_geradores"),
+        ("gestao_tecnica", {"tab": "rota_exata"}, "gestao_rota_exata"),
+        ("gestao_tecnica", {"tab": "solicitacoes"}, "gestao_solicitacoes"),
+        ("gestao_tecnica", {"tab": "relatorios"}, "gestao_relatorios"),
+
+        # 6. Auditoria & Comunicação
+        ("reports", {}, "relatorios"),
+        ("logs", {}, "logs"),
+        ("avisos", {}, "avisos"),
+        ("whatsapp_conversas", {}, "whatsapp_conversas"),
+        ("integracoes", {}, "integracoes"),
+        
+        # 7. Configurações & Administração
+        ("users", {}, "usuarios"),
+        ("config_checklist", {}, "config_checklist"),
+        ("config_ferramentas", {}, "config_ferramentas"),
+        ("config_layout", {}, "config_layout"),
+        ("config_apr", {}, "config_apr"),
+        ("whatsapp_config", {}, "whatsapp_evolution"),
+    ]
+
+    for endpoint, kwargs, perm in CANDIDATE_ROUTES:
+        if user.has_permission(perm):
+            try:
+                return url_for(endpoint, **kwargs)
+            except Exception:
+                continue
+
+    # Se o usuário não tiver permissão para nenhuma rota conhecida:
+    try:
+        return url_for("sem_permissao")
+    except Exception:
+        return "/sem-permissao"
+
+
+def redirect_to_user_home(user):
+    """Redireciona o usuário para a sua primeira página liberada."""
+    return redirect(get_user_home_url(user))
+
+
 # ----------------- HELPERS DE PERMISSÃO -----------------
 def admin_required(view):
     """Garante que apenas admins ou colaboradores com permissão específica para o endpoint possam acessar."""
@@ -384,11 +479,7 @@ def admin_required(view):
             return view(*args, **kwargs)
             
         flash("Acesso restrito ao administrador.", "error")
-        if current_user.is_supervisor:
-            return redirect(url_for("dashboard"))
-        if current_user.is_manutencao:
-            return redirect(url_for("manutencao_os"))
-        return redirect(url_for("checklist_mobile"))
+        return redirect_to_user_home(current_user)
     return wrapper
 
 def supervisor_allowed(view):
@@ -525,14 +616,10 @@ def supervisor_allowed(view):
             return view(*args, **kwargs)
 
         if endpoint_name == "dashboard":
-            if current_user.is_manutencao:
-                return redirect(url_for("manutencao_os"))
-            return redirect(url_for("checklist_mobile"))
+            return redirect_to_user_home(current_user)
 
-        flash("Acesso restrito a supervisor ou administrador.", "error")
-        if current_user.is_manutencao:
-            return redirect(url_for("manutencao_os"))
-        return redirect(url_for("checklist_mobile"))
+        flash("Acesso não autorizado para esta funcionalidade.", "error")
+        return redirect_to_user_home(current_user)
     return wrapper
 
 def manutencao_only(view):
@@ -544,9 +631,7 @@ def manutencao_only(view):
         if current_user.is_admin or current_user.is_manutencao or current_user.has_permission("manutencao_os"):
             return view(*args, **kwargs)
         flash("Página exclusiva da equipe de manutenção.", "info")
-        if current_user.is_admin or current_user.is_supervisor:
-            return redirect(url_for("dashboard"))
-        return redirect(url_for("checklist_mobile"))
+        return redirect_to_user_home(current_user)
     return wrapper
 
 def count_files(directory: Path):

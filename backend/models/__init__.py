@@ -51,53 +51,130 @@ class User(UserMixin, db.Model):
             return True
         return bool(self.is_admin_legacy)
 
+    @property
+    def profile_obj(self):
+        if not self.role:
+            return None
+        return AccessProfile.query.filter_by(slug=self.role).first()
+
+    @property
+    def role_display_name(self):
+        if self.username == "ADMIN" or self.username == "admin" or self.role == "admin":
+            return "Administrador"
+        prof = self.profile_obj
+        if prof and prof.name:
+            return prof.name
+        return (self.role or "Técnico").capitalize()
+
+    @property
+    def role_color(self):
+        if self.username == "ADMIN" or self.username == "admin" or self.role == "admin":
+            return "amber"
+        prof = self.profile_obj
+        if prof and prof.color:
+            return prof.color
+        if self.role in ("supervisor", "gestor"):
+            return "sky"
+        if self.role in ("manutencao", "oficina"):
+            return "indigo"
+        return "emerald"
+
     def has_permission(self, perm):
         if self.is_admin:
             return True
             
-        # Normalização do nome da permissão para simplificar checagem de role-based defaults
         raw_perm = perm[5:] if perm.startswith("perm_") else perm
+        full_perm = f"perm_{raw_perm}"
 
-        # Role-based defaults (garante que as abas básicas apareçam por perfil mesmo se permissions estiver vazio)
-        if raw_perm in ("treinamentos_mobile", "perm_treinamentos_mobile", "meus_plantoes", "perm_meus_plantoes"):
-            return True
-        if self.role == "manutencao" and raw_perm == "manutencao_os":
-            return True
-        if self.role == "tech" and raw_perm in ("checklist_mobile", "treinamentos_mobile", "meus_plantoes", "apr_mobile"):
-            return True
-        if self.role == "supervisor" and raw_perm in ("frota", "meus_plantoes", "apr_mobile", "apr_gerenciamento", "config_apr"):
-            return True
+        # Normalização de equivalência de permissões
+        if raw_perm == "comunicados":
+            raw_perm = "avisos"
+            full_perm = "perm_avisos"
 
-        if not self.permissions:
-            return False
-        try:
-            p = json.loads(self.permissions)
-            # Tenta com o nome exato (ex: 'perm_dashboard' ou 'dashboard')
-            if p.get(perm, False):
-                return True
-            # Tenta com o prefixo 'perm_' se não foi passado com ele
-            if not perm.startswith("perm_"):
-                if p.get(f"perm_{perm}", False):
+        # 1. Permissões granulares específicas do usuário (respeita marcar E desmarcar individual)
+        if self.permissions:
+            try:
+                p = json.loads(self.permissions)
+                if isinstance(p, dict):
+                    for key in (full_perm, raw_perm, perm):
+                        if key in p and p[key] is not None:
+                            return bool(p[key])
+            except Exception:
+                pass
+
+        # 2. Permissões herdadas do Perfil de Acesso do banco de dados (Sincronização Dinâmica)
+        if self.role:
+            prof = AccessProfile.query.filter_by(slug=self.role).first()
+            if prof:
+                if prof.has_permission(full_perm) or prof.has_permission(raw_perm) or prof.has_permission(perm):
                     return True
             else:
-                # Tenta sem o prefixo 'perm_' se foi passado com ele
-                if p.get(raw_perm, False):
+                # Fallback de segurança para regras padrão se o perfil não estiver no banco
+                if raw_perm in ("treinamentos_mobile", "perm_treinamentos_mobile", "meus_plantoes", "perm_meus_plantoes"):
                     return True
-            return False
-        except Exception:
-            return False
+                if self.role in ("manutencao", "oficina") and raw_perm == "manutencao_os":
+                    return True
+                if self.role in ("tech", "tecnico") and raw_perm in ("checklist_mobile", "treinamentos_mobile", "meus_plantoes", "apr_mobile"):
+                    return True
+                if self.role in ("supervisor", "gestor") and raw_perm in ("frota", "meus_plantoes", "apr_mobile", "apr_gerenciamento", "config_apr"):
+                    return True
+
+        return False
 
     @property
     def is_supervisor(self):
-        return self.role == "supervisor"
+        if self.role in ("supervisor", "gestor"):
+            return True
+        return self.has_permission("gestao_supervisao") or self.has_permission("frota")
 
     @property
     def is_tech(self):
-        return self.role == "tech"
+        if self.role in ("tech", "tecnico"):
+            return True
+        return self.has_permission("checklist_mobile")
 
     @property
     def is_manutencao(self):
-        return self.role == "manutencao"
+        if self.role in ("manutencao", "oficina"):
+            return True
+        return self.has_permission("manutencao_os")
+
+
+# ----------------- MODELO DE PERFIL DE ACESSO (DINÂMICO) -----------------
+class AccessProfile(db.Model):
+    __tablename__ = "access_profile"
+
+    id = db.Column(db.Integer, primary_key=True)
+    slug = db.Column(db.String(50), unique=True, nullable=False)
+    name = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.String(255), nullable=True)
+    color = db.Column(db.String(30), default="emerald")  # amber, sky, emerald, indigo, teal, blue, slate
+    is_system = db.Column(db.Boolean, default=False)
+    permissions = db.Column(db.Text)  # JSON string
+    created_at = db.Column(db.DateTime, default=agora)
+    updated_at = db.Column(db.DateTime, default=agora, onupdate=agora)
+
+    @property
+    def permissions_dict(self):
+        if not self.permissions:
+            return {}
+        try:
+            return json.loads(self.permissions)
+        except Exception:
+            return {}
+
+    def has_permission(self, perm):
+        if self.slug == "admin":
+            return True
+        p = self.permissions_dict
+        raw_perm = perm[5:] if perm.startswith("perm_") else perm
+        full_perm = f"perm_{raw_perm}"
+        return bool(p.get(full_perm, False) or p.get(raw_perm, False) or p.get(perm, False))
+
+    @property
+    def users_count(self):
+        return User.query.filter_by(role=self.slug).count()
+
 
 
 @db.event.listens_for(User, "before_insert")

@@ -46,7 +46,7 @@ from backend.utils import (
     supervisor_allowed, manutencao_only, count_files, list_reports,
     km_alert, iso_week, weekly_km_series, save_photos, _check_rate_limit,
     _record_attempt, _clear_attempts, _cleanup_old_attempts, parse_periodo,
-    make_premium_pdf, allowed_file, br_datetime
+    make_premium_pdf, allowed_file, br_datetime, redirect_to_user_home
 )
 
 
@@ -2887,6 +2887,10 @@ def api_vehicle_type(vid):
 @fleet_bp.route("/checklist", methods=["GET", "POST"])
 @login_required
 def checklist_mobile():
+    if not (current_user.is_admin or current_user.has_permission("checklist_mobile")):
+        flash("Acesso não autorizado ao módulo de Checklist.", "error")
+        return redirect_to_user_home(current_user)
+
     vehicles = Vehicle.query.order_by(Vehicle.plate.asc()).all()
     # Carrega itens de todos os tipos para o template (o JS filtra na tela)
     items_by_type = {
@@ -3538,9 +3542,9 @@ def vistorias_excluir(vistoria_id):
 @login_required
 def apr_mobile():
     """Tela mobile para o técnico operacional preencher a APR de campo vinculada ao seu usuário."""
-    if not (current_user.has_permission("apr_mobile") or current_user.is_admin or current_user.is_supervisor or current_user.role in ("tech", "supervisor", "admin")):
+    if not (current_user.is_admin or current_user.has_permission("apr_mobile")):
         flash("Acesso não autorizado ao módulo de APR.", "error")
-        return redirect(url_for("dashboard"))
+        return redirect_to_user_home(current_user)
     
     # Itens/Perguntas ativas
     items = APRItemConfig.query.filter_by(is_active=True).order_by(APRItemConfig.category, APRItemConfig.order).all()

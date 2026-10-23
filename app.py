@@ -17,7 +17,8 @@ from backend.models import (
     GPSDevice, GPSLog,
     DocCategory, TechnicalDocument, DocumentFile, DocumentHistory,
     MessageTemplate,
-    APR, APRMembro, APRItemConfig, APRResposta, APRActivityType
+    APR, APRMembro, APRItemConfig, APRResposta, APRActivityType,
+    AccessProfile
 )
 
 app = create_app()

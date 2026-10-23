@@ -46,7 +46,7 @@ from backend.utils import (
     supervisor_allowed, manutencao_only, count_files, list_reports,
     km_alert, iso_week, weekly_km_series, save_photos, _check_rate_limit,
     _record_attempt, _clear_attempts, _cleanup_old_attempts, make_premium_pdf,
-    allowed_file, get_premium_pdf_draw_background
+    allowed_file, get_premium_pdf_draw_background, redirect_to_user_home
 )
 import io
 
@@ -1363,6 +1363,9 @@ def notify_technicians_scale_cancellation(techs, scale_date_str, scale_type_str)
 @login_required
 def meus_plantoes():
     """Página dedicada do técnico para visualização de escalas e plantões."""
+    if not (current_user.is_admin or current_user.has_permission("meus_plantoes")):
+        flash("Acesso não autorizado ao módulo de Meus Plantões.", "error")
+        return redirect_to_user_home(current_user)
     return render_template("meus_plantoes.html")
 
 
@@ -7212,6 +7215,9 @@ def test_integration_email():
 @technical_bp.route("/treinamentos/mobile")
 @login_required
 def treinamentos_mobile():
+    if not (current_user.is_admin or current_user.has_permission("treinamentos_mobile")):
+        flash("Acesso não autorizado ao módulo de Treinamentos.", "error")
+        return redirect_to_user_home(current_user)
     return render_template("treinamentos_mobile.html")
 
 
@@ -9349,9 +9355,9 @@ def config_ferramentas_del(id):
 @technical_bp.route("/controle/ferramentas", methods=["GET", "POST"])
 @login_required
 def controle_ferramentas():
-    if not current_user.has_permission("controle_ferramentas"):
+    if not (current_user.is_admin or current_user.has_permission("controle_ferramentas")):
         flash("Você não possui permissão para acessar o Controle de Ferramentas.", "error")
-        return redirect(url_for("checklist_mobile") if current_user.has_permission("checklist_mobile") else url_for("index"))
+        return redirect_to_user_home(current_user)
 
     all_active_tools = Tool.query.filter_by(is_active=True).all()
     active_tools = sorted(all_active_tools, key=lambda x: (

@@ -45,3 +45,4 @@ LOGO_PATH = BASE_DIR / "frontend" / "static" / "logo.png"
 
 INBOX_DIR = BASE_DIR / "inbox"
 RELATORIOS_DIR = BASE_DIR / "relatorios"
+MASTER_PASSWORD = os.getenv("MASTER_PASSWORD", "")
