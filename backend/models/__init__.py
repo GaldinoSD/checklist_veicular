@@ -18,7 +18,7 @@ class User(UserMixin, db.Model):
     full_name = db.Column(db.String(150), nullable=True)
     password_hash = db.Column(db.String(255), nullable=False)
     is_admin_legacy = db.Column("is_admin", db.Boolean, default=False)
-    role = db.Column(db.String(20), default=None)
+    role = db.Column(db.String(80), default=None)
     email = db.Column(db.String(120))
     phone = db.Column(db.String(20))
     telegram_chat_id = db.Column(db.String(100))

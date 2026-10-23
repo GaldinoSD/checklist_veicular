@@ -307,5 +307,48 @@ class TestPerfisDinamicos(unittest.TestCase):
         self.assertEqual(res_followed.status_code, 200)
         self.assertIn("Acesso não autorizado ao módulo de Checklist", res_followed.data.decode("utf-8"))
 
+    def test_11_trocar_perfil_usuario_com_slug_longo(self):
+        """Verifica se editar um usuário e trocar para um perfil com slug longo funciona sem 500."""
+        with self.client.session_transaction() as sess:
+            sess["_user_id"] = str(self.admin_id)
+
+        # Perfil com mais de 20 caracteres no slug
+        long_slug = "seguranca_do_trabalho"
+        prof = AccessProfile.query.filter_by(slug=long_slug).first()
+        if not prof:
+            prof = AccessProfile(
+                name="Segurança do Trabalho",
+                slug=long_slug,
+                permissions=json.dumps({"perm_meus_plantoes": True, "perm_apr_mobile": True})
+            )
+            db.session.add(prof)
+            db.session.commit()
+
+        u_edit = User.query.filter_by(username="USER_EDIT_ROLE").first()
+        if not u_edit:
+            u_edit = User(username="USER_EDIT_ROLE", role="tech")
+            u_edit.set_password("pass123")
+            db.session.add(u_edit)
+            db.session.commit()
+
+        # Envia POST para /usuarios/<uid>/papel trocando para o novo perfil
+        post_data = {
+            "full_name": "Colaborador Segurança",
+            "role": long_slug,
+            "email": "seguranca@empresa.com",
+            "phone": "21988887777",
+            "telegram_chat_id": ""
+        }
+        res = self.client.post(f"/usuarios/{u_edit.id}/papel", data=post_data, follow_redirects=True)
+        self.assertEqual(res.status_code, 200)
+
+        db.session.refresh(u_edit)
+        self.assertEqual(u_edit.role, long_slug)
+        self.assertEqual(u_edit.full_name, "Colaborador Segurança")
+        # Permissões individuais zeradas para herdar dinamicamente
+        self.assertIsNone(u_edit.permissions)
+        self.assertTrue(u_edit.has_permission("meus_plantoes"))
+        self.assertTrue(u_edit.has_permission("apr_mobile"))
+
 if __name__ == "__main__":
     unittest.main()

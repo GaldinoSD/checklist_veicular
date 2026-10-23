@@ -1460,12 +1460,17 @@ def users_role(uid):
         u.phone = phone
         u.telegram_chat_id = telegram_chat_id
 
-        # Ao mudar o papel, herdamos as permissões padrão do novo papel
+        # Ao mudar o papel, limpa sobreposições granulares para herdar dinamicamente do novo perfil
         if role_changed:
-            perms = get_default_perms(role)
-            u.permissions = json.dumps(perms)
+            u.permissions = None
 
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        registrar_log(f"Erro ao atualizar colaborador {u.username}: {e}")
+        flash(f"Erro ao salvar alterações do colaborador: {str(e)}", "error")
+        return redirect(url_for("users"))
 
     if pwd and u.username != "admin":
         flash("Dados e senha atualizados com sucesso!", "success")
@@ -1547,7 +1552,9 @@ def profile_new():
         flash("O nome do perfil é obrigatório.", "error")
         return redirect(url_for("users") + "?tab=perfis")
 
-    if not slug:
+    if slug:
+        slug = slugify_role(slug)
+    else:
         slug = slugify_role(name)
 
     if not slug:
@@ -1570,7 +1577,12 @@ def profile_new():
         permissions=json.dumps(processed)
     )
     db.session.add(new_prof)
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Erro ao salvar novo perfil: {str(e)}", "error")
+        return redirect(url_for("users") + "?tab=perfis")
 
     registrar_log(f"Novo perfil de acesso criado: {name} ({slug})")
     flash(f"Perfil de acesso '{name}' criado com sucesso!", "success")
@@ -1596,7 +1608,9 @@ def profile_edit(pid):
     if prof.slug == "admin":
         new_slug = "admin"
     else:
-        if not new_slug:
+        if new_slug:
+            new_slug = slugify_role(new_slug)
+        else:
             new_slug = slugify_role(name)
         if not new_slug:
             new_slug = prof.slug
@@ -1622,7 +1636,12 @@ def profile_edit(pid):
     processed = {p: (perms_data.get(p) == "on") for p in ALL_SYSTEM_PERMS}
     prof.permissions = json.dumps(processed)
 
-    db.session.commit()
+    try:
+        db.session.commit()
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Erro ao salvar alterações do perfil: {str(e)}", "error")
+        return redirect(url_for("users") + "?tab=perfis")
 
     registrar_log(f"Perfil de acesso atualizado: {prof.name} ({prof.slug})")
     flash(f"Perfil '{prof.name}' atualizado com sucesso!", "success")
