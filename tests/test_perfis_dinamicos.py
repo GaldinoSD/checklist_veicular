@@ -350,5 +350,80 @@ class TestPerfisDinamicos(unittest.TestCase):
         self.assertTrue(u_edit.has_permission("meus_plantoes"))
         self.assertTrue(u_edit.has_permission("apr_mobile"))
 
+    def test_12_notificacoes_filtradas_por_permissao(self):
+        """Verifica se notificações são estritamente filtradas conforme as permissões de módulo do usuário."""
+        from backend.blueprints.technical import dispatch_system_rule_alert, cleanup_old_announcements
+        from backend.models import Announcement
+
+        # Cria perfil com apenas APR liberada
+        prof_apr = AccessProfile.query.filter_by(slug="apenas_apr").first()
+        if not prof_apr:
+            prof_apr = AccessProfile(
+                name="Apenas APR",
+                slug="apenas_apr",
+                permissions=json.dumps({"perm_apr_mobile": True, "perm_apr_gerenciamento": True})
+            )
+            db.session.add(prof_apr)
+            db.session.commit()
+
+        u_apr = User.query.filter_by(username="USER_TEST_APR_NOTIF").first()
+        if not u_apr:
+            u_apr = User(username="USER_TEST_APR_NOTIF", role="apenas_apr")
+            u_apr.set_password("pass123")
+            db.session.add(u_apr)
+            db.session.commit()
+
+        # Garante que não tem checklist liberado
+        self.assertFalse(u_apr.has_permission("checklist_mobile"))
+        self.assertTrue(u_apr.has_permission("apr_mobile"))
+
+        # 1. Cria anúncio direcionado de Checklist e anúncio de APR
+        Announcement.query.filter_by(user_id=u_apr.id).delete()
+        db.session.commit()
+
+        ann_check = Announcement(
+            title="⚠️ Lembrete: Checklist não realizado há +7 dias",
+            content="Você não realiza checklist veicular há 7 dias.",
+            user_id=u_apr.id
+        )
+        ann_apr = Announcement(
+            title="📋 Análise Preliminar de Risco: Nova APR Disponível",
+            content="Uma nova APR foi submetida para avaliação.",
+            user_id=u_apr.id
+        )
+        db.session.add_all([ann_check, ann_apr])
+        db.session.commit()
+
+        # 2. Chama /api/comunicados/recent como USER_TEST_APR_NOTIF
+        with self.client.session_transaction() as sess:
+            sess["_user_id"] = str(u_apr.id)
+
+        res = self.client.get("/api/comunicados/recent")
+        self.assertEqual(res.status_code, 200)
+        data = res.get_json()
+
+        titles = [n["title"] for n in data["notifications"]]
+        # O anúncio de checklist NÃO deve chegar/aparecer para o usuário sem permissão de checklist
+        self.assertNotIn("⚠️ Lembrete: Checklist não realizado há +7 dias", titles)
+        # O anúncio de APR DEVE aparecer normalmente
+        self.assertIn("📋 Análise Preliminar de Risco: Nova APR Disponível", titles)
+
+        # 3. Teste do dispatch_system_rule_alert: bloqueio preventivo de disparo
+        disp_result = dispatch_system_rule_alert(
+            "inactive_tech_alert",
+            u_apr,
+            "⚠️ Lembrete: Checklist não realizado há +7 dias",
+            "Conteúdo checklist",
+            bypass_silence=True
+        )
+        self.assertEqual(disp_result, 0)
+
+        # 4. Limpeza automática de comunicados incompatíveis
+        cleanup_old_announcements()
+        remaining = Announcement.query.filter_by(user_id=u_apr.id).all()
+        remaining_titles = [a.title for a in remaining]
+        self.assertNotIn("⚠️ Lembrete: Checklist não realizado há +7 dias", remaining_titles)
+        self.assertIn("📋 Análise Preliminar de Risco: Nova APR Disponível", remaining_titles)
+
 if __name__ == "__main__":
     unittest.main()

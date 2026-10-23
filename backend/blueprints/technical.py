@@ -46,7 +46,8 @@ from backend.utils import (
     supervisor_allowed, manutencao_only, count_files, list_reports,
     km_alert, iso_week, weekly_km_series, save_photos, _check_rate_limit,
     _record_attempt, _clear_attempts, _cleanup_old_attempts, make_premium_pdf,
-    allowed_file, get_premium_pdf_draw_background, redirect_to_user_home
+    allowed_file, get_premium_pdf_draw_background, redirect_to_user_home,
+    user_can_receive_announcement
 )
 import io
 
@@ -5053,6 +5054,14 @@ def cleanup_old_announcements():
             if not matched:
                 AnnouncementRead.query.filter_by(announcement_id=ann.id).delete()
                 db.session.delete(ann)
+
+        # Limpa comunicados direcionados a colaboradores cujas permissões atuais não contemplam o módulo
+        targeted_anns = Announcement.query.filter(Announcement.user_id.isnot(None)).all()
+        for t_ann in targeted_anns:
+            u_target = User.query.get(t_ann.user_id)
+            if u_target and not user_can_receive_announcement(u_target, t_ann):
+                AnnouncementRead.query.filter_by(announcement_id=t_ann.id).delete()
+                db.session.delete(t_ann)
                 
         db.session.commit()
     except Exception as e:
@@ -5636,6 +5645,16 @@ def dispatch_system_rule_alert(rule_slug, user_target=None, title_default="", co
             
     title_to_check = unique_check_title or sys_title
     system_sent = False
+
+    # Se há um usuário alvo e o alerta não é compatível com suas permissões/páginas ativas, não despacha
+    if user_target:
+        class _TempRuleAnn:
+            def __init__(self, t, c, cat):
+                self.title = t
+                self.content = c
+                self.category = cat or ""
+        if not user_can_receive_announcement(user_target, _TempRuleAnn(sys_title, sys_content, rule_slug)):
+            return 0
     
     # 1. Sistema
     if "system" in channels:
@@ -6027,13 +6046,15 @@ def api_comunicados_recent():
                 )
             )
         )
-    ).order_by(Announcement.created_at.desc()).limit(10).all()
+    ).order_by(Announcement.created_at.desc()).limit(30).all()
         
     read_ids = {r.announcement_id for r in AnnouncementRead.query.filter_by(user_id=current_user.id).all()}
     
     unread_count = 0
     results = []
     for a in avisos_list:
+        if not user_can_receive_announcement(current_user, a):
+            continue
         is_read = a.id in read_ids
         if not is_read:
             unread_count += 1
@@ -6046,6 +6067,8 @@ def api_comunicados_recent():
             "is_read": is_read,
             "sender": User.query.get(a.created_by).username if a.created_by else "Sistema"
         })
+        if len(results) >= 10:
+            break
         
     return jsonify({
         "unread_count": unread_count,
@@ -6746,7 +6769,7 @@ def execute_system_audit():
                 
             for uid in tech_ids:
                 u = User.query.get(uid)
-                if u:
+                if u and u.has_permission("checklist_mobile"):
                     checklist_done = Checklist.query.filter(
                         Checklist.technician == u.username,
                         db.func.date(Checklist.date) == today_dt
@@ -6801,7 +6824,7 @@ def execute_system_audit():
     rule_inactive = regras_dict.get("inactive_tech_alert")
     if "inactive_tech_alert" in enabled_rules and rule_inactive:
         trigger_days = rule_inactive.trigger_days if rule_inactive.trigger_days is not None else 7
-        techs = User.query.filter_by(role="tech").all()
+        techs = [u for u in User.query.all() if u.has_permission("checklist_mobile")]
         inactive_limit = now_dt - timedelta(days=trigger_days)
         
         for tech in techs:
@@ -6931,7 +6954,7 @@ def execute_system_audit():
     if "tool_inspection_alert" in enabled_rules and rule_tool:
         trigger_days = rule_tool.trigger_days if rule_tool.trigger_days is not None else 30
         tool_limit = now_dt - timedelta(days=trigger_days)
-        tech_users = User.query.filter_by(role="tech").all()
+        tech_users = [u for u in User.query.all() if u.has_permission("controle_ferramentas") or u.has_permission("controle_ferramentas_atual")]
         for tu in tech_users:
             t_insp = UserToolInspection.query.filter_by(user_id=tu.id).first()
             is_overdue = False

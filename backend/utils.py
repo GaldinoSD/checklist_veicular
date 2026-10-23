@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import os
+import re
 import uuid
 import threading
 import requests
@@ -1242,3 +1243,80 @@ def allowed_file(filename: str) -> bool:
         return False
     ext = os.path.splitext(filename.lower())[1]
     return ext in ALLOWED_EXT
+
+
+def user_can_receive_announcement(user, announcement) -> bool:
+    """
+    Verifica se o usuário possui permissão de acesso para o módulo referente à notificação.
+    Se o usuário não tem a página/módulo liberado, ele NÃO deve receber nem visualizar o alerta.
+    """
+    if not user:
+        return False
+    if hasattr(user, "is_authenticated") and not user.is_authenticated:
+        return False
+        
+    # Administradores têm visão e auditoria de tudo
+    if getattr(user, "is_admin", False):
+        return True
+
+    title = (getattr(announcement, "title", "") or "").lower()
+    content = (getattr(announcement, "content", "") or getattr(announcement, "message", "") or "").lower()
+    category = (getattr(announcement, "category", "") or "").lower()
+    text = f"{title} {content} {category}"
+
+    # 1. Checklist Veicular (mobile, view, config)
+    if "checklist" in text:
+        if not (user.has_permission("checklist_mobile") or user.has_permission("checklists_view") or user.has_permission("config_checklist")):
+            return False
+
+    # 2. APR (Análise Preliminar de Risco)
+    if re.search(r'\bapr\b', text) or "análise de risco" in text or "analise de risco" in text or "análise preliminar" in text or "analise preliminar" in text:
+        if not (user.has_permission("apr_mobile") or user.has_permission("apr_gerenciamento") or user.has_permission("config_apr")):
+            return False
+
+    # 3. Plantão / Escalas
+    if re.search(r'\bplant[aã]o\b', text) or re.search(r'\bplant[oõ]es\b', text) or "escala" in text:
+        if not (user.has_permission("meus_plantoes") or user.has_permission("gestao_escalas") or user.has_permission("gestao_calendario")):
+            return False
+
+    # 4. Treinamentos LMS
+    if "treinamento" in text or "capacitação" in text or "capacitacao" in text or re.search(r'\blms\b', text):
+        if not (user.has_permission("treinamentos_mobile") or user.has_permission("gestao_treinamentos")):
+            return False
+
+    # 5. Manutenção / Ordem de Serviço (O.S.) / Avarias
+    if "ordem de serviço" in text or "ordem de servico" in text or re.search(r'\bo\.?s\.?\b', text) or "avaria" in text or "oficina" in text:
+        if not (user.has_permission("manutencao_os") or user.has_permission("avarias")):
+            return False
+
+    # 6. Controle de Ferramentas / Ferramental
+    if "ferramenta" in text or "ferramental" in text:
+        if not (user.has_permission("controle_ferramentas") or user.has_permission("controle_ferramentas_atual") or user.has_permission("config_ferramentas")):
+            return False
+
+    # 7. Vistorias
+    if "vistoria" in text:
+        if not (user.has_permission("vistorias_list") or user.has_permission("vistorias_nova")):
+            return False
+
+    # 8. Reuniões
+    if "reunião" in text or "reuniao" in text:
+        if not (user.has_permission("gestao_reunioes")):
+            return False
+
+    # 9. Tarefas
+    if "tarefa" in text:
+        if not (user.has_permission("gestao_tarefas")):
+            return False
+
+    # 10. Documentos Técnicos
+    if "documento" in text or "contrato" in text:
+        if not (user.has_permission("gestao_documentos")):
+            return False
+
+    # 11. Frota / GPS / Monitoramento / Revisão KM / CNH
+    if "rastreamento" in text or re.search(r'\bcnh\b', text) or "revisão preventiva" in text or "revisao preventiva" in text:
+        if not (user.has_permission("frota") or user.has_permission("veiculos") or user.has_permission("controle_veiculos") or user.has_permission("monitoramento_aparelhos") or user.has_permission("checklist_mobile")):
+            return False
+
+    return True
