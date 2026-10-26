@@ -2155,9 +2155,12 @@ def generate_checklist_pdf(checklist_obj: Checklist, raw: dict) -> str:
     sig_cell = []
     if checklist_obj.signature:
         sig_path = BASE_DIR / "static" / "assinaturas" / checklist_obj.signature
+        if not sig_path.exists():
+            sig_path = BASE_DIR / "frontend" / "static" / "assinaturas" / checklist_obj.signature
         if sig_path.exists():
             try:
-                sig_img = RLImage(str(sig_path), width=50 * mm, height=14 * mm)
+                from backend.utils import normalize_signature_image
+                sig_img = RLImage(normalize_signature_image(sig_path), width=50 * mm, height=14 * mm)
                 sig_img.hAlign = 'LEFT'
                 sig_cell.append(sig_img)
             except Exception as e:
@@ -3035,12 +3038,14 @@ def checklist_mobile():
             try:
                 header, encoded = sig_data.split(",", 1)
                 data = base64.b64decode(encoded)
+                from backend.utils import normalize_signature_image
+                norm_data = normalize_signature_image(data).getvalue()
                 sig_dir = Path("/var/www/checklist_veicular/static/assinaturas")
                 sig_dir.mkdir(parents=True, exist_ok=True)
                 from uuid import uuid4
                 sig_filename = f"sig_veiculo_{tech}_{uuid4().hex[:8]}.png"
                 with open(sig_dir / sig_filename, "wb") as f:
-                    f.write(data)
+                    f.write(norm_data)
             except Exception as e:
                 print("Erro ao salvar assinatura de veículo:", e)
 
@@ -3625,9 +3630,11 @@ def api_apr_salvar():
             try:
                 header, encoded = sig_data.split(",", 1)
                 data = base64.b64decode(encoded)
+                from backend.utils import normalize_signature_image
+                norm_data = normalize_signature_image(data).getvalue()
                 sig_filename = f"apr_sig_{protocol}_{uuid.uuid4().hex[:8]}.png"
                 with open(APR_UPLOAD_DIR / sig_filename, "wb") as f:
-                    f.write(data)
+                    f.write(norm_data)
             except Exception as e:
                 print("⚠️ Erro ao salvar assinatura da APR:", e)
 
@@ -3647,9 +3654,11 @@ def api_apr_salvar():
             try:
                 header_aux, encoded_aux = aux_sig_data.split(",", 1)
                 data_aux = base64.b64decode(encoded_aux)
+                from backend.utils import normalize_signature_image
+                norm_data_aux = normalize_signature_image(data_aux).getvalue()
                 aux_sig_filename = f"apr_sig_aux_{protocol}_{uuid.uuid4().hex[:8]}.png"
                 with open(APR_UPLOAD_DIR / aux_sig_filename, "wb") as f:
-                    f.write(data_aux)
+                    f.write(norm_data_aux)
             except Exception as e:
                 print("⚠️ Erro ao salvar assinatura do técnico auxiliar:", e)
                 return jsonify({"success": False, "message": "Falha ao processar assinatura do técnico auxiliar."}), 400
@@ -4162,7 +4171,8 @@ def apr_pdf(apr_id):
     tech_sig_elements = []
     if apr.signature_image and (APR_UPLOAD_DIR / apr.signature_image).exists():
         try:
-            sig_img = RLImage(str(APR_UPLOAD_DIR / apr.signature_image), width=48 * mm, height=14 * mm)
+            from backend.utils import normalize_signature_image
+            sig_img = RLImage(normalize_signature_image(APR_UPLOAD_DIR / apr.signature_image), width=48 * mm, height=14 * mm)
             sig_img.hAlign = 'LEFT'
             tech_sig_elements.append(sig_img)
         except Exception:
@@ -4175,7 +4185,8 @@ def apr_pdf(apr_id):
         aux_sig_elements = []
         if apr.auxiliary_signature_image and (APR_UPLOAD_DIR / apr.auxiliary_signature_image).exists():
             try:
-                aux_img = RLImage(str(APR_UPLOAD_DIR / apr.auxiliary_signature_image), width=48 * mm, height=14 * mm)
+                from backend.utils import normalize_signature_image
+                aux_img = RLImage(normalize_signature_image(APR_UPLOAD_DIR / apr.auxiliary_signature_image), width=48 * mm, height=14 * mm)
                 aux_img.hAlign = 'LEFT'
                 aux_sig_elements.append(aux_img)
             except Exception:

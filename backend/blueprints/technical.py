@@ -2996,7 +2996,8 @@ def make_premium_pdf(buffer, title, metadata, content_table_data, image_paths=No
         story.append(Paragraph("<b>Assinatura Digital de Validação</b>", styles["Heading3"]))
         story.append(Spacer(1, 3*mm))
         try:
-            sig_img = RLImage(signature_path, width=60*mm, height=18*mm)
+            from backend.utils import normalize_signature_image
+            sig_img = RLImage(normalize_signature_image(signature_path), width=60*mm, height=18*mm)
             sig_img.hAlign = 'LEFT'
             
             tech_name = metadata.get("Técnico Responsável") or metadata.get("Técnico") or "N/A"
@@ -5056,6 +5057,7 @@ def cleanup_old_announcements():
                 db.session.delete(ann)
 
         # Limpa comunicados direcionados a colaboradores cujas permissões atuais não contemplam o módulo
+        # ou comunicados de pendência operacional atribuídos indevidamente a administradores ou supervisores
         targeted_anns = Announcement.query.filter(Announcement.user_id.isnot(None)).all()
         for t_ann in targeted_anns:
             u_target = User.query.get(t_ann.user_id)
@@ -6769,7 +6771,12 @@ def execute_system_audit():
                 
             for uid in tech_ids:
                 u = User.query.get(uid)
-                if u and u.has_permission("checklist_mobile"):
+                if not u:
+                    continue
+                # Supervisores e administradores gerenciam a operação e não devem ser notificados como executores de checklist
+                if getattr(u, "is_supervisor_or_admin", False) or u.is_admin or u.is_supervisor or (u.role and u.role.lower() in ("admin", "supervisor", "gestor")) or u.has_permission("gestao_supervisao"):
+                    continue
+                if u.has_permission("checklist_mobile"):
                     checklist_done = Checklist.query.filter(
                         Checklist.technician == u.username,
                         db.func.date(Checklist.date) == today_dt
@@ -6824,7 +6831,14 @@ def execute_system_audit():
     rule_inactive = regras_dict.get("inactive_tech_alert")
     if "inactive_tech_alert" in enabled_rules and rule_inactive:
         trigger_days = rule_inactive.trigger_days if rule_inactive.trigger_days is not None else 7
-        techs = [u for u in User.query.all() if u.has_permission("checklist_mobile")]
+        techs = [
+            u for u in User.query.all() 
+            if u.has_permission("checklist_mobile") and not (
+                getattr(u, "is_supervisor_or_admin", False) or u.is_admin or u.is_supervisor or 
+                (u.role and u.role.lower() in ("admin", "supervisor", "gestor")) or 
+                u.has_permission("gestao_supervisao")
+            )
+        ]
         inactive_limit = now_dt - timedelta(days=trigger_days)
         
         for tech in techs:
@@ -6953,8 +6967,14 @@ def execute_system_audit():
     rule_tool = regras_dict.get("tool_inspection_alert")
     if "tool_inspection_alert" in enabled_rules and rule_tool:
         trigger_days = rule_tool.trigger_days if rule_tool.trigger_days is not None else 30
-        tool_limit = now_dt - timedelta(days=trigger_days)
-        tech_users = [u for u in User.query.all() if u.has_permission("controle_ferramentas") or u.has_permission("controle_ferramentas_atual")]
+        tech_users = [
+            u for u in User.query.all() 
+            if (u.has_permission("controle_ferramentas") or u.has_permission("controle_ferramentas_atual")) and not (
+                getattr(u, "is_supervisor_or_admin", False) or u.is_admin or u.is_supervisor or 
+                (u.role and u.role.lower() in ("admin", "supervisor", "gestor")) or 
+                u.has_permission("gestao_supervisao")
+            )
+        ]
         for tu in tech_users:
             t_insp = UserToolInspection.query.filter_by(user_id=tu.id).first()
             is_overdue = False
@@ -9418,12 +9438,14 @@ def controle_ferramentas():
             try:
                 header, encoded = sig_data.split(",", 1)
                 data = base64.b64decode(encoded)
+                from backend.utils import normalize_signature_image
+                norm_data = normalize_signature_image(data).getvalue()
                 sig_dir = Path("/var/www/checklist_veicular/static/assinaturas")
                 sig_dir.mkdir(parents=True, exist_ok=True)
                 from uuid import uuid4
                 sig_filename = f"sig_ferramentas_{current_user.username}_{uuid4().hex[:8]}.png"
                 with open(sig_dir / sig_filename, "wb") as f:
-                    f.write(data)
+                    f.write(norm_data)
             except Exception as e:
                 print("Erro ao salvar assinatura de ferramentas:", e)
         
@@ -10183,7 +10205,8 @@ def controle_ferramentas_relatorio_pdf(user_id):
             
     if sig_path:
         try:
-            img = RLImage(sig_path, width=45*mm, height=18*mm)
+            from backend.utils import normalize_signature_image
+            img = RLImage(normalize_signature_image(sig_path), width=45*mm, height=18*mm)
             img.hAlign = "CENTER"
             sig_elements.append(img)
         except Exception:

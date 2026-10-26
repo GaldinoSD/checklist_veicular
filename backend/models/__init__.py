@@ -128,10 +128,20 @@ class User(UserMixin, db.Model):
         return self.has_permission("gestao_supervisao") or self.has_permission("frota")
 
     @property
+    def is_supervisor_or_admin(self):
+        if self.is_admin:
+            return True
+        if self.role in ("admin", "supervisor", "gestor"):
+            return True
+        return self.is_supervisor or self.has_permission("gestao_supervisao")
+
+    @property
     def is_tech(self):
+        if self.is_admin or (self.role and str(self.role).lower() in ("admin", "supervisor", "gestor")):
+            return False
         if self.role in ("tech", "tecnico"):
             return True
-        return self.has_permission("checklist_mobile")
+        return self.has_permission("checklist_mobile") and not (self.is_supervisor or self.has_permission("gestao_supervisao"))
 
     @property
     def is_manutencao(self):

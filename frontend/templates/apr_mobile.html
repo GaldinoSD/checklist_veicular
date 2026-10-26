@@ -1065,10 +1065,10 @@ function initSignatureCanvas() {
     
     sigCtx = sigCanvas.getContext('2d');
     sigCtx.scale(dpr, dpr);
-    sigCtx.lineWidth = 2.8;
+    sigCtx.lineWidth = 3.2;
     sigCtx.lineCap = 'round';
     sigCtx.lineJoin = 'round';
-    sigCtx.strokeStyle = '#065f46'; // Verde escuro profissional de segurança
+    sigCtx.strokeStyle = '#000000'; // Traço preto sólido para destacar no PDF
 
     function getCoords(e) {
         const r = sigCanvas.getBoundingClientRect();

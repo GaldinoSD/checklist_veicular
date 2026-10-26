@@ -368,8 +368,8 @@
                 </div>
 
                 <!-- Quadro de Desenho (Canvas) -->
-                <div class="border-2 border-dashed border-slate-900/10 dark:border-white/10 rounded-3xl overflow-hidden bg-slate-50 dark:bg-slate-950/40 relative">
-                    <canvas id="signature-canvas" class="w-full h-48 block touch-none cursor-crosshair"></canvas>
+                <div class="border-2 border-slate-300 dark:border-slate-600 rounded-3xl overflow-hidden bg-white relative shadow-inner">
+                    <canvas id="signature-canvas" class="w-full h-48 block touch-none cursor-crosshair bg-white"></canvas>
                 </div>
             </div>
 
@@ -456,11 +456,8 @@ function openSignatureModal(formElement) {
     canvas.width = rect.width;
     canvas.height = rect.height;
     
-    ctx.strokeStyle = '#0f172a';
-    if (document.documentElement.classList.contains('dark')) {
-        ctx.strokeStyle = '#f8fafc';
-    }
-    ctx.lineWidth = 3;
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 3.5;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     

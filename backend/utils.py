@@ -1214,7 +1214,7 @@ def make_premium_pdf(buffer, title, metadata, content_table_data, image_paths=No
         story.append(Paragraph("<b>Assinatura do Responsável Técnico</b>", heading_style))
         story.append(Spacer(1, 2.5*mm))
         try:
-            sig_img = RLImage(str(signature_path), width=65*mm, height=25*mm)
+            sig_img = RLImage(normalize_signature_image(signature_path), width=65*mm, height=25*mm)
             sig_img.hAlign = 'LEFT'
             date_time_str = metadata.get("Última Atualização") or metadata.get("Data") or metadata.get("Data/Hora") or agora().strftime("%d/%m/%Y %H:%M")
             
@@ -1255,13 +1255,42 @@ def user_can_receive_announcement(user, announcement) -> bool:
     if hasattr(user, "is_authenticated") and not user.is_authenticated:
         return False
         
-    # Administradores têm visão e auditoria de tudo
-    if getattr(user, "is_admin", False):
-        return True
-
     title = (getattr(announcement, "title", "") or "").lower()
     content = (getattr(announcement, "content", "") or getattr(announcement, "message", "") or "").lower()
     category = (getattr(announcement, "category", "") or "").lower()
+
+    # Identifica se o usuário possui papel/privilégio de supervisão ou administração
+    is_sup_or_admin = (
+        getattr(user, "is_supervisor_or_admin", False) or
+        getattr(user, "is_admin", False) or
+        getattr(user, "is_supervisor", False) or
+        (getattr(user, "role", None) and str(user.role).lower() in ("admin", "supervisor", "gestor")) or
+        (hasattr(user, "has_permission") and user.has_permission("gestao_supervisao"))
+    )
+
+    # Supervisores e administradores NÃO devem receber alertas de atividades operacionais pendentes
+    # referentes à execução de checklist veicular e inspeção de ferramental de campo.
+    if is_sup_or_admin:
+        is_operational_pending = (
+            category in ("late_checklist", "inactive_tech_alert", "tool_inspection_alert") or
+            "checklist diário pendente" in title or "checklist diario pendente" in title or
+            "checklist não realizado" in title or "checklist nao realizado" in title or
+            "inspeção de ferramental atrasada" in title or "inspecao de ferramental atrasada" in title or
+            "você está de plantão hoje e ainda não enviou o checklist" in content or
+            "você está de plantão hoje e ainda não preencheu o checklist" in content or
+            "voce esta de plantao hoje e ainda nao" in content or
+            "não realiza nenhuma vistoria ou checklist veicular" in content or
+            "nao realiza nenhuma vistoria ou checklist" in content or
+            "assinatura de kit de ferramentas está pendente" in content or
+            "assinatura de kit de ferramentas esta pendente" in content
+        )
+        if is_operational_pending:
+            return False
+
+    # Administradores têm visão e auditoria de todo o restante
+    if getattr(user, "is_admin", False):
+        return True
+
     text = f"{title} {content} {category}"
 
     # 1. Checklist Veicular (mobile, view, config)
@@ -1295,7 +1324,7 @@ def user_can_receive_announcement(user, announcement) -> bool:
             return False
 
     # 7. Vistorias
-    if "vistoria" in text:
+    if "vistoria" in text and "checklist" not in text:
         if not (user.has_permission("vistorias_list") or user.has_permission("vistorias_nova")):
             return False
 
@@ -1320,3 +1349,84 @@ def user_can_receive_announcement(user, announcement) -> bool:
             return False
 
     return True
+
+
+def normalize_signature_image(img_path_or_bytes):
+    """
+    Normaliza imagens de assinaturas digitais para exibição perfeita em PDFs:
+    - Converte qualquer traço (seja claro, branco vindo do modo escuro, esverdeado ou cinza)
+      para preto sólido e puro (#000000).
+    - Eleva e reforça a opacidade para que a assinatura nunca saia transparente ou fraca no PDF.
+    - Suporta caminho de arquivo (str ou Path), bytes ou io.BytesIO.
+    Retorna io.BytesIO contendo a imagem PNG otimizada.
+    """
+    from PIL import Image
+    import io
+
+    try:
+        if isinstance(img_path_or_bytes, (bytes, bytearray)):
+            im = Image.open(io.BytesIO(img_path_or_bytes))
+        elif isinstance(img_path_or_bytes, io.BytesIO):
+            im = Image.open(img_path_or_bytes)
+        else:
+            im = Image.open(str(img_path_or_bytes))
+
+        im = im.convert("RGBA")
+        w, h = im.size
+        pixels = im.load()
+
+        # Amostragem para verificar se há transparência no arquivo
+        sample_step = max(1, min(w, h) // 20)
+        has_transparency = any(pixels[x, y][3] < 250 for y in range(0, h, sample_step) for x in range(0, w, sample_step))
+
+        if has_transparency:
+            for y in range(h):
+                for x in range(w):
+                    r, g, b, a = pixels[x, y]
+                    if a > 20:
+                        # Qualquer traço desenhado (mesmo se for branco #f8fafc de tema escuro ou colorido)
+                        # torna-se preto nítido com opacidade reforçada
+                        new_a = min(255, int(a * 1.6))
+                        pixels[x, y] = (0, 0, 0, new_a)
+                    else:
+                        pixels[x, y] = (0, 0, 0, 0)
+        else:
+            # Caso a imagem seja opaca (fundo preenchido)
+            corners = [pixels[0, 0], pixels[w - 1, 0], pixels[0, h - 1], pixels[w - 1, h - 1]]
+            corner_lum = sum(0.299 * c[0] + 0.587 * c[1] + 0.114 * c[2] for c in corners) / len(corners)
+            is_dark_bg = corner_lum < 128
+
+            for y in range(h):
+                for x in range(w):
+                    r, g, b, a = pixels[x, y]
+                    lum = 0.299 * r + 0.587 * g + 0.114 * b
+                    if is_dark_bg:
+                        # Fundo escuro com traço claro -> traço preto nítido em fundo transparente
+                        if lum > 60:
+                            alpha = min(255, int(lum * 1.4))
+                            pixels[x, y] = (0, 0, 0, alpha)
+                        else:
+                            pixels[x, y] = (0, 0, 0, 0)
+                    else:
+                        # Fundo claro com traço escuro -> traço preto nítido em fundo transparente
+                        if lum < 225:
+                            alpha = min(255, int((255 - lum) * 1.4))
+                            pixels[x, y] = (0, 0, 0, alpha)
+                        else:
+                            pixels[x, y] = (0, 0, 0, 0)
+
+        out = io.BytesIO()
+        im.save(out, format="PNG")
+        out.seek(0)
+        return out
+    except Exception as err:
+        print("⚠️ Erro ao normalizar assinatura digital:", err)
+        if isinstance(img_path_or_bytes, (bytes, bytearray)):
+            return io.BytesIO(img_path_or_bytes)
+        elif isinstance(img_path_or_bytes, io.BytesIO):
+            img_path_or_bytes.seek(0)
+            return img_path_or_bytes
+        else:
+            with open(str(img_path_or_bytes), "rb") as f:
+                return io.BytesIO(f.read())
+

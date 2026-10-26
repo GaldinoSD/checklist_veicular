@@ -120,7 +120,7 @@
       </div>
 
       <!-- FORMULÁRIO -->
-      <form method="post" {% if is_preview %}onsubmit="event.preventDefault(); alert('Modo Pré-visualização: a autenticação foi desativada temporariamente.'); return false;"{% else %}onsubmit="sessionStorage.setItem('session_active', 'true');"{% endif %} class="space-y-5 my-6">
+      <form method="post" autocomplete="off" {% if is_preview %}onsubmit="event.preventDefault(); alert('Modo Pré-visualização: a autenticação foi desativada temporariamente.'); return false;"{% else %}onsubmit="sessionStorage.setItem('session_active', 'true');"{% endif %} class="space-y-5 my-6">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
 
         <!-- CAMPO USUÁRIO -->
@@ -130,9 +130,9 @@
           </label>
           <div class="flex items-center bg-slate-100/90 border border-slate-200 rounded-xl px-4 py-3 shadow-sm transition-all custom-login-focus">
             <i class="fa-solid fa-user text-slate-400 text-sm mr-3"></i>
-            <input id="username" name="username" type="text"
+            <input id="username" name="username" type="text" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false"
               class="bg-transparent w-full text-slate-800 text-sm placeholder-slate-400 focus:outline-none font-medium"
-              placeholder="{{ sys_config.login_username_placeholder or 'Digite seu usuário' }}" required autofocus>
+              placeholder="{{ sys_config.login_username_placeholder or 'Digite seu usuário' }}" required>
           </div>
         </div>
 
@@ -149,7 +149,7 @@
           </div>
           <div class="flex items-center bg-slate-100/90 border border-slate-200 rounded-xl px-4 py-3 shadow-sm transition-all custom-login-focus">
             <i class="fa-solid fa-lock text-slate-400 text-sm mr-3"></i>
-            <input id="password" name="password" type="password"
+            <input id="password" name="password" type="password" autocomplete="new-password"
               class="bg-transparent w-full text-slate-800 text-sm placeholder-slate-400 focus:outline-none font-medium"
               placeholder="{{ sys_config.login_password_placeholder or 'Digite sua senha' }}" required>
             <button type="button" onclick="togglePasswordVisibility()" class="text-slate-400 hover:text-slate-600 focus:outline-none ml-2 transition-colors" title="Mostrar/Ocultar Senha">
