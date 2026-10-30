@@ -175,24 +175,31 @@
                             <span class="text-[10px] text-slate-400 block truncate max-w-xs">{{ a.local_description }}</span>
                         </td>
                         <td class="py-3.5 px-4 whitespace-nowrap">
-                            {% if a.status == 'liberada' %}
-                                {% if a.has_blocking_condition and a.emergency_measure_notes %}
-                                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20">
-                                    <i class="fa-solid fa-triangle-exclamation"></i> Liberada c/ Medida
-                                </span>
-                                {% else %}
+                            {% if a.completed_at %}
                                 <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                                    <i class="fa-solid fa-circle-check"></i> Liberada 100%
+                                    <i class="fa-solid fa-circle-check"></i> Finalizada
                                 </span>
-                                {% endif %}
+                                <span class="text-[9px] text-slate-400 block mt-0.5">Término: {{ a.completed_at.strftime('%d/%m %H:%M') }}</span>
+                            {% elif a.status == 'liberada' %}
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 animate-pulse">
+                                    <i class="fa-solid fa-clock"></i> Em Andamento
+                                </span>
+                                <span class="text-[9px] text-slate-400 block mt-0.5">Início: {{ a.created_at.strftime('%d/%m %H:%M') }}</span>
                             {% else %}
-                                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20 animate-pulse">
+                                <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20">
                                     <i class="fa-solid fa-ban"></i> Bloqueada
                                 </span>
                             {% endif %}
                         </td>
                         <td class="py-3.5 px-4 text-right whitespace-nowrap">
                             <div class="inline-flex items-center gap-1.5">
+                                {% if not a.completed_at and a.status == 'liberada' %}
+                                <button onclick="finalizarAtividadeGerencial({{ a.id }}, '{{ a.protocol }}')"
+                                        class="px-2.5 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500 hover:text-white text-amber-600 dark:text-amber-400 text-xs font-bold transition-all flex items-center gap-1" title="Marcar Atividade como Finalizada">
+                                    <i class="fa-solid fa-flag-checkered text-[11px]"></i>
+                                    <span class="hidden sm:inline">Finalizar</span>
+                                </button>
+                                {% endif %}
                                 <button onclick="abrirAuditoriaAPR({{ a.id }})"
                                         class="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-emerald-500 hover:text-white text-slate-700 dark:text-slate-300 text-xs font-bold transition-all flex items-center gap-1.5" title="Auditar / Detalhes">
                                     <i class="fa-solid fa-eye"></i>
@@ -295,7 +302,9 @@ async function abrirAuditoriaAPR(id) {
             : `<span class="px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-red-500/10 text-red-600 dark:text-red-400 border border-red-500/20 animate-pulse">Bloqueada</span>`;
 
         let respostasHtml = data.respostas.map(r => {
-            let ansColor = r.answer === 'sim' ? 'text-emerald-500 bg-emerald-500/10' : (r.answer === 'nao' ? 'text-red-500 bg-red-500/10' : 'text-slate-400 bg-slate-500/10');
+            let ansColor = r.answer === 'na' 
+                ? 'text-slate-400 bg-slate-500/10' 
+                : (r.is_positive ? 'text-emerald-500 bg-emerald-500/10' : 'text-red-500 bg-red-500/10');
             return `
                 <div class="p-3.5 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 space-y-2">
                     <div class="flex items-start justify-between gap-3">
@@ -303,6 +312,8 @@ async function abrirAuditoriaAPR(id) {
                             <span class="text-[9px] font-black uppercase tracking-wider text-slate-400">[${r.category.toUpperCase()}]</span>
                             <p class="text-xs font-bold text-slate-800 dark:text-slate-200">${r.question}</p>
                             ${r.justification ? `<p class="text-[11px] text-amber-600 dark:text-amber-400 font-medium mt-1"><i class="fa-solid fa-triangle-exclamation mr-1"></i>${r.justification}</p>` : ''}
+                            ${r.maneuver_action === 'sim' ? `<p class="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold mt-1"><i class="fa-solid fa-shield-halved mr-1"></i>Ação de Manobra: ${r.maneuver_notes || 'Adotada pelo técnico'}</p>` : ''}
+                            ${r.maneuver_action === 'nao' ? `<p class="text-[11px] text-red-600 dark:text-red-400 font-bold mt-1"><i class="fa-solid fa-ban mr-1"></i>Fator Impeditivo Confirmado (Sem Manobra de Segurança)</p>` : ''}
                         </div>
                         <span class="px-2.5 py-1 rounded-lg text-xs font-black uppercase tracking-wider shrink-0 ${ansColor}">
                             ${r.answer.toUpperCase()}
@@ -320,11 +331,20 @@ async function abrirAuditoriaAPR(id) {
         }).join('');
 
         let emergHtml = '';
-        if (data.emergency_measure_notes) {
+        if (data.status === 'bloqueada') {
+            emergHtml = `
+                <div class="p-4 rounded-2xl bg-red-500/10 border-2 border-red-500/40 space-y-2">
+                    <div class="flex items-center gap-2 text-red-700 dark:text-red-400 font-black text-xs uppercase tracking-wider">
+                        <i class="fa-solid fa-ban text-sm"></i> Fator Impeditivo - Atividade Bloqueada
+                    </div>
+                    <p class="text-xs text-slate-800 dark:text-slate-200">${data.emergency_measure_notes || 'Constatado fator impeditivo sem possibilidade técnica de manobra segura. Atividade não liberada.'}</p>
+                </div>
+            `;
+        } else if (data.emergency_measure_notes) {
             emergHtml = `
                 <div class="p-4 rounded-2xl bg-amber-500/10 border-2 border-amber-500/40 space-y-2">
                     <div class="flex items-center gap-2 text-amber-700 dark:text-amber-300 font-black text-xs uppercase tracking-wider">
-                        <i class="fa-solid fa-triangle-exclamation"></i> Medida de Controle Emergencial Adotada:
+                        <i class="fa-solid fa-shield-halved"></i> Ações de Manobra / Medidas Preventivas Adotadas:
                     </div>
                     <p class="text-xs text-slate-800 dark:text-slate-200">${data.emergency_measure_notes}</p>
                     ${data.emergency_measure_photo_url ? `
@@ -372,16 +392,32 @@ async function abrirAuditoriaAPR(id) {
             `;
         }
 
+        let auxTechHtml = data.auxiliary_tech 
+            ? `<span class="text-sm font-black text-slate-800 dark:text-white">${data.auxiliary_tech.name} (@${data.auxiliary_tech.username})</span>`
+            : `<span class="text-xs text-slate-400 italic">Individual (sem dupla)</span>`;
+
+        let fimAtividadeHtml = data.completed_at
+            ? `<span class="text-xs font-bold text-emerald-600 dark:text-emerald-400">${data.completed_at} (Finalizada)</span>`
+            : `<span class="text-xs font-bold text-amber-500 animate-pulse"><i class="fa-solid fa-clock mr-1"></i>Em Andamento (Pendente)</span>`;
+
         content.innerHTML = `
             <!-- Resumo Topo -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 p-4 rounded-2xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5">
                 <div>
                     <span class="text-[9px] font-black uppercase tracking-wider text-slate-400 block">Técnico Responsável</span>
                     <span class="text-sm font-black text-slate-800 dark:text-white">${data.tech.name} (@${data.tech.username})</span>
                 </div>
                 <div>
-                    <span class="text-[9px] font-black uppercase tracking-wider text-slate-400 block">Status da Liberação</span>
-                    ${statusBadge}
+                    <span class="text-[9px] font-black uppercase tracking-wider text-slate-400 block">Técnico Auxiliar / Dupla</span>
+                    ${auxTechHtml}
+                </div>
+                <div>
+                    <span class="text-[9px] font-black uppercase tracking-wider text-slate-400 block">Início da Atividade</span>
+                    <span class="text-xs font-bold text-slate-700 dark:text-slate-300">${data.created_at}</span>
+                </div>
+                <div>
+                    <span class="text-[9px] font-black uppercase tracking-wider text-slate-400 block">Término da Atividade</span>
+                    ${fimAtividadeHtml}
                 </div>
                 <div class="sm:col-span-2">
                     <span class="text-[9px] font-black uppercase tracking-wider text-slate-400 block">Localização / O.S.</span>
@@ -502,5 +538,33 @@ async function excluirAPR(id, protocol) {
         alert('Erro ao comunicar com o servidor: ' + e);
     }
 }
+
+async function finalizarAtividadeGerencial(id, protocol) {
+    if (!confirm(`Deseja encerrar e marcar como finalizada a atividade da APR ${protocol}?\n\nIsso registrará a data e o horário atual como término da atividade no laudo e liberará o técnico.`)) {
+        return;
+    }
+
+    try {
+        const csrfToken = document.querySelector('input[name="csrf_token"]') ? document.querySelector('input[name="csrf_token"]').value : '';
+        const formData = new FormData();
+        if (csrfToken) formData.append('csrf_token', csrfToken);
+
+        const res = await fetch(`/api/apr/${id}/finalizar`, {
+            method: 'POST',
+            body: formData
+        });
+        const data = await res.json();
+        if (data && data.success) {
+            alert(`✅ ${data.message || 'Atividade finalizada com sucesso!'}`);
+            window.location.reload();
+        } else {
+            alert(`⚠️ ${(data && data.message) ? data.message : 'Erro ao finalizar atividade.'}`);
+        }
+    } catch (e) {
+        console.error('Erro ao finalizar APR:', e);
+        alert('Erro ao comunicar com o servidor.');
+    }
+}
+
 </script>
 {% endblock %}

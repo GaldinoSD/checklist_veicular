@@ -77,10 +77,11 @@
                         <tr class="border-b border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-white/[0.01] text-[10px] font-black uppercase tracking-wider text-slate-400">
                             <th class="py-3 px-4 w-12 text-center">#</th>
                             <th class="py-3 px-4">Pergunta & Orientação Técnica</th>
-                            <th class="py-3 px-4 w-44 text-center">Critério Impeditivo</th>
-                            <th class="py-3 px-4 w-32 text-center">Exige Foto</th>
-                            <th class="py-3 px-4 w-28 text-center">Status</th>
-                            <th class="py-3 px-4 w-28 text-right">Ações</th>
+                            <th class="py-3 px-4 w-36 text-center">Resposta Segura</th>
+                            <th class="py-3 px-4 w-40 text-center">Critério Impeditivo</th>
+                            <th class="py-3 px-4 w-28 text-center">Exige Foto</th>
+                            <th class="py-3 px-4 w-24 text-center">Status</th>
+                            <th class="py-3 px-4 w-24 text-right">Ações</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100 dark:divide-white/5 text-xs font-medium">
@@ -92,6 +93,18 @@
                                 <p class="font-bold text-slate-800 dark:text-white">{{ it.question_text }}</p>
                                 {% if it.guidance %}
                                 <p class="text-[10px] text-slate-400 mt-0.5"><i class="fa-solid fa-circle-info mr-1 text-slate-400"></i>{{ it.guidance }}</p>
+                                {% endif %}
+                            </td>
+                            <td class="py-3.5 px-4 text-center whitespace-nowrap">
+                                {% set is_nao_bom = (it.positive_answer == 'nao' or (not it.positive_answer and it.category == 'fator_pessoal')) %}
+                                {% if is_nao_bom %}
+                                <span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 inline-flex items-center gap-1">
+                                    <i class="fa-solid fa-circle-check text-[9px]"></i> NÃO é Bom
+                                </span>
+                                {% else %}
+                                <span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 inline-flex items-center gap-1">
+                                    <i class="fa-solid fa-circle-check text-[9px]"></i> SIM é Bom
+                                </span>
                                 {% endif %}
                             </td>
                             <td class="py-3.5 px-4 text-center whitespace-nowrap">
@@ -113,7 +126,7 @@
                             </td>
                             <td class="py-3.5 px-4 text-right whitespace-nowrap">
                                 <div class="inline-flex items-center gap-1.5">
-                                    <button onclick="editarPergunta({{ it.id }}, '{{ it.category }}', '{{ it.question_text | escape }}', '{{ it.guidance or '' | escape }}', {{ it.order }}, {{ 'true' if it.is_blocking_if_negative else 'false' }}, {{ 'true' if it.requires_photo else 'false' }})"
+                                    <button onclick="editarPergunta({{ it.id }}, '{{ it.category }}', '{{ it.question_text | escape }}', '{{ it.guidance or '' | escape }}', {{ it.order }}, {{ 'true' if it.is_blocking_if_negative else 'false' }}, {{ 'true' if it.requires_photo else 'false' }}, '{{ it.positive_answer or ('nao' if it.category == 'fator_pessoal' else 'sim') }}')"
                                             class="p-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-indigo-600 hover:text-white text-slate-600 dark:text-slate-300 transition-all" title="Editar">
                                         <i class="fa-solid fa-pen-to-square"></i>
                                     </button>
@@ -239,6 +252,34 @@
                        class="w-full rounded-2xl px-4 py-2.5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-xs font-medium text-slate-800 dark:text-white outline-none">
             </div>
 
+            <!-- DEFINIÇÃO SE SIM OU NÃO É BOM / SEGURO -->
+            <div class="space-y-1.5 pt-1">
+                <label class="text-[10px] font-black uppercase tracking-widest text-slate-400 ml-1 flex items-center gap-1.5">
+                    <i class="fa-solid fa-sliders text-indigo-500"></i> Qual resposta representa a Condição Segura (Verde no Laudo)? *
+                </label>
+                <div class="grid grid-cols-2 gap-3">
+                    <label class="flex items-center gap-2.5 p-3 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 cursor-pointer hover:border-emerald-500 transition-all">
+                        <input type="radio" name="positive_answer" id="pos_ans_sim" value="sim" checked class="w-4 h-4 text-emerald-600 focus:ring-emerald-500">
+                        <div>
+                            <span class="text-xs font-bold text-slate-800 dark:text-white flex items-center gap-1.5">
+                                <span class="w-2 h-2 rounded-full bg-emerald-500"></span> SIM é Bom / Seguro
+                            </span>
+                            <span class="text-[9px] text-slate-400 block">NÃO indica Risco (Vermelho)</span>
+                        </div>
+                    </label>
+
+                    <label class="flex items-center gap-2.5 p-3 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 cursor-pointer hover:border-emerald-500 transition-all">
+                        <input type="radio" name="positive_answer" id="pos_ans_nao" value="nao" class="w-4 h-4 text-emerald-600 focus:ring-emerald-500">
+                        <div>
+                            <span class="text-xs font-bold text-slate-800 dark:text-white flex items-center gap-1.5">
+                                <span class="w-2 h-2 rounded-full bg-emerald-500"></span> NÃO é Bom / Seguro
+                            </span>
+                            <span class="text-[9px] text-slate-400 block">SIM indica Risco (Vermelho)</span>
+                        </div>
+                    </label>
+                </div>
+            </div>
+
             <div class="grid grid-cols-2 gap-3 pt-2">
                 <label class="flex items-center gap-2 p-3 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 cursor-pointer">
                     <input type="checkbox" name="is_blocking_if_negative" id="input_is_blocking" class="w-4 h-4 rounded text-red-600 focus:ring-red-500">
@@ -358,22 +399,39 @@ document.addEventListener('DOMContentLoaded', () => {
 
 function abrirModalNovaPergunta() {
     document.getElementById('input_item_id').value = '';
-    document.getElementById('input_category').value = currentCategory === 'atividades' ? 'geral' : currentCategory;
+    const cat = currentCategory === 'atividades' ? 'geral' : currentCategory;
+    document.getElementById('input_category').value = cat;
     document.getElementById('input_question_text').value = '';
     document.getElementById('input_guidance').value = '';
     document.getElementById('input_is_blocking').checked = false;
     document.getElementById('input_requires_photo').checked = false;
+    
+    // Sugestão padrão: fator pessoal = NÃO é bom, outros = SIM é bom
+    if (cat === 'fator_pessoal') {
+        document.getElementById('pos_ans_nao').checked = true;
+    } else {
+        document.getElementById('pos_ans_sim').checked = true;
+    }
+
     document.getElementById('modal-titulo').textContent = 'Nova Pergunta da APR';
     document.getElementById('modal-pergunta').classList.remove('hidden');
 }
 
-function editarPergunta(id, category, qText, guidance, order, isBlocking, reqPhoto) {
+function editarPergunta(id, category, qText, guidance, order, isBlocking, reqPhoto, positiveAnswer) {
     document.getElementById('input_item_id').value = id;
     document.getElementById('input_category').value = category;
     document.getElementById('input_question_text').value = qText;
     document.getElementById('input_guidance').value = guidance;
     document.getElementById('input_is_blocking').checked = isBlocking;
     document.getElementById('input_requires_photo').checked = reqPhoto;
+
+    const pos = (positiveAnswer || (category === 'fator_pessoal' ? 'nao' : 'sim')).toLowerCase();
+    if (pos === 'nao') {
+        document.getElementById('pos_ans_nao').checked = true;
+    } else {
+        document.getElementById('pos_ans_sim').checked = true;
+    }
+
     document.getElementById('modal-titulo').textContent = 'Editar Pergunta da APR';
     document.getElementById('modal-pergunta').classList.remove('hidden');
 }

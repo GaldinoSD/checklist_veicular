@@ -3567,14 +3567,24 @@ def apr_mobile():
     # Tipos de atividade cadastrados e ativos
     activity_types = APRActivityType.query.filter_by(is_active=True).order_by(APRActivityType.order, APRActivityType.name).all()
     
-    # Técnicos ativos cadastrados para opção de técnico auxiliar (excluindo o usuário logado)
-    tecnicos = User.query.filter(User.role == "tech", User.id != current_user.id).order_by(User.full_name.asc(), User.username.asc()).all()
+    # Usuários ativos cadastrados no sistema que possuem permissão para realizar APR (excluindo o usuário conectado)
+    all_users = User.query.filter(User.id != current_user.id).all()
+    tecnicos = [u for u in all_users if u.has_permission("apr_mobile")]
+    tecnicos.sort(key=lambda u: (u.display_name or u.username).upper())
+
+    # Busca se o usuário conectado possui alguma APR em andamento (não finalizada)
+    active_apr = APR.query.filter(
+        APR.tech_id == current_user.id,
+        APR.completed_at.is_(None),
+        APR.status == "liberada"
+    ).order_by(APR.created_at.desc()).first()
 
     return render_template(
         "apr_mobile.html",
         categories=categories,
         activity_types=activity_types,
         tecnicos=tecnicos,
+        active_apr=active_apr,
         agora=agora()
     )
 
@@ -3598,6 +3608,18 @@ def api_apr_salvar():
 
         if not activity_type or not local_description:
             return jsonify({"success": False, "message": "Tipo de atividade e local da execução são obrigatórios."}), 400
+
+        # Bloqueia criação de nova APR se já houver uma APR ativa em andamento para o técnico
+        existing_active = APR.query.filter(
+            APR.tech_id == current_user.id,
+            APR.completed_at.is_(None),
+            APR.status == "liberada"
+        ).first()
+        if existing_active:
+            return jsonify({
+                "success": False,
+                "message": f"Você já possui a atividade {existing_active.protocol} em andamento. Finalize a atividade atual antes de iniciar uma nova APR."
+            }), 400
 
         try:
             risk_factors = json.loads(risk_factors_str) if isinstance(risk_factors_str, str) else risk_factors_str
@@ -3663,9 +3685,12 @@ def api_apr_salvar():
                 print("⚠️ Erro ao salvar assinatura do técnico auxiliar:", e)
                 return jsonify({"success": False, "message": "Falha ao processar assinatura do técnico auxiliar."}), 400
 
-        # Avaliar respostas e condições impeditivas
+        # Avaliar respostas e condições impeditivas com tratativa de manobras
         active_items = APRItemConfig.query.filter_by(is_active=True).all()
         has_blocking_condition = False
+        has_unresolved_impediment = False
+        maneuver_notes_list = []
+        impediment_notes_list = []
         saved_responses = []
 
         cat_triggers = {
@@ -3679,9 +3704,13 @@ def api_apr_salvar():
             if item.category in cat_triggers and cat_triggers[item.category] not in risk_factors:
                 continue
 
-            default_ans = "nao" if item.category == "fator_pessoal" else "sim"
+            pos_ans = getattr(item, "positive_answer", None) or ("nao" if item.category == "fator_pessoal" else "sim")
+            pos_ans = pos_ans.strip().lower()
+            default_ans = pos_ans
             ans = request.form.get(f"item_{item.id}", default_ans).lower()
             justif = request.form.get(f"justif_{item.id}", "").strip()
+            maneuver_action = request.form.get(f"maneuver_action_{item.id}", "").strip().lower()
+            maneuver_notes = request.form.get(f"maneuver_notes_{item.id}", "").strip()
 
             photo_fn = None
             if f"foto_{item.id}" in request.files:
@@ -3692,32 +3721,59 @@ def api_apr_salvar():
                     f_item.save(str(APR_UPLOAD_DIR / photo_fn))
 
             is_blocking = False
-            if item.category == "fator_pessoal":
-                if item.is_blocking_if_negative and ans == "sim":
-                    is_blocking = True
-                    has_blocking_condition = True
-            else:
-                if item.is_blocking_if_negative and ans == "nao":
-                    is_blocking = True
-                    has_blocking_condition = True
+            item_maneuver_action = None
+            item_maneuver_notes = None
+
+            if item.is_blocking_if_negative and ans != "na" and ans != pos_ans:
+                is_blocking = True
+                has_blocking_condition = True
+                item_maneuver_action = maneuver_action or ("sim" if emergency_notes else "nao")
+                item_maneuver_notes = maneuver_notes
+
+                if item_maneuver_action == "sim":
+                    # Houve ação para manobrar a alteração e conseguir executar a atividade
+                    if item_maneuver_notes:
+                        maneuver_notes_list.append(f"[{item.question_text}]: {item_maneuver_notes}")
+                else:
+                    # Não houve ação ou não foi possível manobrar -> É FATOR IMPEDITIVO!
+                    has_unresolved_impediment = True
+                    impediment_notes_list.append(f"[{item.question_text}]: Fator Impeditivo sem manobra viável")
 
             saved_responses.append({
                 "item_id": item.id,
                 "category": item.category,
                 "question": item.question_text,
                 "answer": ans,
+                "positive_answer": pos_ans,
                 "is_blocking": is_blocking,
                 "justification": justif,
-                "photo_filename": photo_fn
+                "photo_filename": photo_fn,
+                "maneuver_action": item_maneuver_action,
+                "maneuver_notes": item_maneuver_notes
             })
 
-        if has_blocking_condition:
-            if emergency_notes:
+        # Regra de Bloqueio da APR:
+        # Se teve critério impeditivo e NÃO teve ação para manobrar (ou foi declarado impeditivo), a APR fica BLOQUEADA.
+        # Se todas as alterações foram manobradas com segurança (ou se emergency_notes foi preenchido), fica LIBERADA.
+        if has_unresolved_impediment:
+            apr_status = "bloqueada"
+        elif has_blocking_condition:
+            if emergency_notes or maneuver_notes_list:
                 apr_status = "liberada"
             else:
                 apr_status = "bloqueada"
         else:
             apr_status = "liberada"
+
+        consolidated_measures = []
+        if emergency_notes:
+            consolidated_measures.append(emergency_notes)
+        if maneuver_notes_list:
+            consolidated_measures.extend(maneuver_notes_list)
+        elif impediment_notes_list:
+            consolidated_measures.extend(impediment_notes_list)
+
+        final_emergency_notes = "\n".join(consolidated_measures) if consolidated_measures else None
 
         apr = APR(
             protocol=protocol,
@@ -3731,7 +3787,7 @@ def api_apr_salvar():
             os_number=os_number if os_number else None,
             status=apr_status,
             has_blocking_condition=has_blocking_condition,
-            emergency_measure_notes=emergency_notes if emergency_notes else None,
+            emergency_measure_notes=final_emergency_notes,
             emergency_measure_photo=emergency_photo_filename,
             risk_factors=json.dumps(risk_factors),
             signed_by_leader=True,
@@ -3760,9 +3816,12 @@ def api_apr_salvar():
                 category=resp["category"],
                 question_text=resp["question"],
                 answer=resp["answer"],
+                positive_answer=resp.get("positive_answer", "sim"),
                 is_blocking=resp["is_blocking"],
                 justification=resp["justification"],
-                photo_filename=resp["photo_filename"]
+                photo_filename=resp["photo_filename"],
+                maneuver_action=resp.get("maneuver_action"),
+                maneuver_notes=resp.get("maneuver_notes")
             )
             db.session.add(r_obj)
 
@@ -3771,6 +3830,7 @@ def api_apr_salvar():
 
         return jsonify({
             "success": True,
+            "apr_id": apr.id,
             "protocol": apr.protocol,
             "status": apr.status,
             "has_blocking": has_blocking_condition,
@@ -3780,6 +3840,47 @@ def api_apr_salvar():
         db.session.rollback()
         print("Erro salvando APR:", e)
         return jsonify({"success": False, "message": f"Erro interno ao salvar APR: {str(e)}"}), 500
+
+
+@fleet_bp.route("/api/apr/<int:apr_id>/finalizar", methods=["POST"])
+@login_required
+def api_apr_finalizar(apr_id):
+    """Marca a atividade da APR como finalizada, registrando a data/hora de conclusão e liberando o técnico."""
+    apr = db.session.get(APR, apr_id)
+    if not apr:
+        return jsonify({"success": False, "message": "APR não encontrada."}), 404
+
+    is_authorized = (
+        current_user.is_admin or
+        current_user.is_supervisor or
+        current_user.has_permission("apr_gerenciamento") or
+        apr.tech_id == current_user.id or
+        apr.auxiliary_tech_id == current_user.id
+    )
+    if not is_authorized:
+        return jsonify({"success": False, "message": "Sem permissão para finalizar esta APR."}), 403
+
+    if apr.completed_at is not None:
+        return jsonify({
+            "success": True,
+            "message": "Esta atividade já foi finalizada anteriormente.",
+            "protocol": apr.protocol,
+            "completed_at": apr.completed_at.strftime("%d/%m/%Y às %H:%M")
+        })
+
+    now_dt = agora()
+    apr.completed_at = now_dt
+    apr.status = "concluida"
+    db.session.commit()
+
+    registrar_log(f"Atividade da APR {apr.protocol} finalizada por {current_user.username} às {now_dt.strftime('%d/%m/%Y %H:%M')}.")
+
+    return jsonify({
+        "success": True,
+        "message": f"Atividade da APR {apr.protocol} finalizada com sucesso! Técnico liberado para novas APRs.",
+        "protocol": apr.protocol,
+        "completed_at": now_dt.strftime("%d/%m/%Y às %H:%M")
+    })
 
 
 @fleet_bp.route("/gerenciamento/aprs")
@@ -3858,14 +3959,25 @@ def api_apr_detalhes(apr_id):
     """Retorna detalhes completos de uma APR em formato JSON para o modal de auditoria."""
     apr = APR.query.get_or_404(apr_id)
 
-    respostas_list = [{
-        "category": r.category,
-        "question": r.question_text,
-        "answer": r.answer,
-        "is_blocking": r.is_blocking,
-        "justification": r.justification,
-        "photo_url": url_for("static", filename=f"uploads/apr/{r.photo_filename}") if r.photo_filename else None
-    } for r in apr.respostas]
+    respostas_list = []
+    for r in apr.respostas:
+        pos_ans = getattr(r, "positive_answer", None)
+        if not pos_ans and r.item_config:
+            pos_ans = getattr(r.item_config, "positive_answer", None)
+        if not pos_ans:
+            pos_ans = "nao" if r.category == "fator_pessoal" else "sim"
+        is_pos = (r.answer == pos_ans) if r.answer != "na" else None
+
+        respostas_list.append({
+            "category": r.category,
+            "question": r.question_text,
+            "answer": r.answer,
+            "positive_answer": pos_ans,
+            "is_positive": is_pos,
+            "is_blocking": r.is_blocking,
+            "justification": r.justification,
+            "photo_url": url_for("static", filename=f"uploads/apr/{r.photo_filename}") if r.photo_filename else None
+        })
 
     try:
         risk_factors = json.loads(apr.risk_factors) if apr.risk_factors else []
@@ -3888,11 +4000,19 @@ def api_apr_detalhes(apr_id):
         "risk_factors": risk_factors,
         "general_notes": apr.general_notes,
         "created_at": apr.created_at.strftime("%d/%m/%Y %H:%M"),
+        "completed_at": apr.completed_at.strftime("%d/%m/%Y %H:%M") if apr.completed_at else None,
+        "is_completed": apr.completed_at is not None,
         "tech": {
             "id": apr.tech.id if apr.tech else None,
             "name": apr.tech.display_name if apr.tech else "N/A",
             "username": apr.tech.username if apr.tech else "N/A"
         },
+        "auxiliary_tech": {
+            "id": apr.auxiliary_tech.id,
+            "name": apr.auxiliary_tech.display_name,
+            "username": apr.auxiliary_tech.username
+        } if apr.auxiliary_tech else None,
+        "auxiliary_signature_url": url_for("static", filename=f"uploads/apr/{apr.auxiliary_signature_image}") if apr.auxiliary_signature_image else None,
         "respostas": respostas_list
     }
     return jsonify(data)
@@ -4063,24 +4183,47 @@ def apr_pdf(apr_id):
 
     # 1. Informações Gerais da APR
     story.append(Paragraph("<b>Informações Gerais da APR</b>", styles["SectionTitle"]))
-    status_txt = f"<font color='{'#16a34a' if apr.status == 'liberada' else '#dc2626'}'><b>{apr.status.upper()}</b></font>"
     coords_txt = f"{apr.latitude:.5f}, {apr.longitude:.5f}" if apr.latitude and apr.longitude else "Não capturada"
+
+    dt_inicio_brt = apr.created_at.astimezone(BRT) if apr.created_at.tzinfo is not None else apr.created_at
+    inicio_str = dt_inicio_brt.strftime("%d/%m/%Y %H:%M")
+
+    if apr.completed_at:
+        dt_fim_brt = apr.completed_at.astimezone(BRT) if apr.completed_at.tzinfo is not None else apr.completed_at
+        fim_str = dt_fim_brt.strftime("%d/%m/%Y %H:%M")
+        diff_s = (dt_fim_brt - dt_inicio_brt).total_seconds()
+        if diff_s > 0:
+            hrs = int(diff_s // 3600)
+            mins = int((diff_s % 3600) // 60)
+            duracao_str = f"{hrs}h {mins:02d}min" if hrs > 0 else f"{mins} min"
+        else:
+            duracao_str = "Menos de 1 min"
+        status_txt = "<font color='#16a34a'><b>CONCLUÍDA</b></font>"
+    else:
+        fim_str = "Em Andamento (Pendente)"
+        duracao_str = "Em Execução"
+        if apr.status == "bloqueada":
+            status_txt = "<font color='#dc2626'><b>BLOQUEADA</b></font>"
+        else:
+            status_txt = "<font color='#d97706'><b>LIBERADA (EM ANDAMENTO)</b></font>"
 
     if apr.auxiliary_tech:
         meta_data = [
             [Paragraph("<b>PROTOCOLO:</b>", styles["BodyJustifyBold"]), Paragraph(apr.protocol, styles["BodyJustify"]),
              Paragraph("<b>STATUS:</b>", styles["BodyJustifyBold"]), Paragraph(status_txt, styles["BodyJustifyBold"])],
-            [Paragraph("<b>DATA/HORA:</b>", styles["BodyJustifyBold"]), Paragraph(dt_brt.strftime("%d/%m/%Y %H:%M"), styles["BodyJustify"]),
-             Paragraph("<b>Nº O.S.:</b>", styles["BodyJustifyBold"]), Paragraph(apr.os_number or "N/A", styles["BodyJustify"])],
+            [Paragraph("<b>INÍCIO ATIVIDADE:</b>", styles["BodyJustifyBold"]), Paragraph(inicio_str, styles["BodyJustify"]),
+             Paragraph("<b>FIM ATIVIDADE:</b>", styles["BodyJustifyBold"]), Paragraph(fim_str, styles["BodyJustify"])],
             [Paragraph("<b>TÉCNICO RESP.:</b>", styles["BodyJustifyBold"]), Paragraph((apr.tech.display_name if apr.tech else "N/A").upper(), styles["BodyJustify"]),
-             Paragraph("<b>ATIVIDADE:</b>", styles["BodyJustifyBold"]), Paragraph(apr.activity_type, styles["BodyJustify"])],
+             Paragraph("<b>DURAÇÃO TOTAL:</b>", styles["BodyJustifyBold"]), Paragraph(duracao_str, styles["BodyJustify"])],
             [Paragraph("<b>TÉCNICO AUX.:</b>", styles["BodyJustifyBold"]), Paragraph(apr.auxiliary_tech.display_name.upper(), styles["BodyJustify"]),
+             Paragraph("<b>Nº O.S.:</b>", styles["BodyJustifyBold"]), Paragraph(apr.os_number or "N/A", styles["BodyJustify"])],
+            [Paragraph("<b>ATIVIDADE:</b>", styles["BodyJustifyBold"]), Paragraph(apr.activity_type, styles["BodyJustify"]),
              Paragraph("<b>GPS:</b>", styles["BodyJustifyBold"]), Paragraph(coords_txt, styles["BodyJustify"])],
             [Paragraph("<b>LOCAL:</b>", styles["BodyJustifyBold"]), Paragraph(apr.local_description, styles["BodyJustify"]), "", ""],
         ]
-        t_meta = Table(meta_data, colWidths=[24 * mm, 69 * mm, 24 * mm, 69 * mm])
+        t_meta = Table(meta_data, colWidths=[26 * mm, 67 * mm, 26 * mm, 67 * mm])
         t_meta.setStyle(TableStyle([
-            ("SPAN", (1, 4), (3, 4)),
+            ("SPAN", (1, 5), (3, 5)),
             ("BOX", (0, 0), (-1, -1), 0.8, colors.HexColor("#707070")),
             ("GRID", (0, 0), (-1, -1), 0.6, colors.HexColor("#707070")),
             ("FONTSIZE", (0, 0), (-1, -1), 7.5),
@@ -4094,14 +4237,16 @@ def apr_pdf(apr_id):
         meta_data = [
             [Paragraph("<b>PROTOCOLO:</b>", styles["BodyJustifyBold"]), Paragraph(apr.protocol, styles["BodyJustify"]),
              Paragraph("<b>STATUS:</b>", styles["BodyJustifyBold"]), Paragraph(status_txt, styles["BodyJustifyBold"])],
-            [Paragraph("<b>DATA/HORA:</b>", styles["BodyJustifyBold"]), Paragraph(dt_brt.strftime("%d/%m/%Y %H:%M"), styles["BodyJustify"]),
-             Paragraph("<b>Nº O.S.:</b>", styles["BodyJustifyBold"]), Paragraph(apr.os_number or "N/A", styles["BodyJustify"])],
+            [Paragraph("<b>INÍCIO ATIVIDADE:</b>", styles["BodyJustifyBold"]), Paragraph(inicio_str, styles["BodyJustify"]),
+             Paragraph("<b>FIM ATIVIDADE:</b>", styles["BodyJustifyBold"]), Paragraph(fim_str, styles["BodyJustify"])],
             [Paragraph("<b>TÉCNICO:</b>", styles["BodyJustifyBold"]), Paragraph((apr.tech.display_name if apr.tech else "N/A").upper(), styles["BodyJustify"]),
-             Paragraph("<b>ATIVIDADE:</b>", styles["BodyJustifyBold"]), Paragraph(apr.activity_type, styles["BodyJustify"])],
+             Paragraph("<b>DURAÇÃO TOTAL:</b>", styles["BodyJustifyBold"]), Paragraph(duracao_str, styles["BodyJustify"])],
+            [Paragraph("<b>ATIVIDADE:</b>", styles["BodyJustifyBold"]), Paragraph(apr.activity_type, styles["BodyJustify"]),
+             Paragraph("<b>Nº O.S.:</b>", styles["BodyJustifyBold"]), Paragraph(apr.os_number or "N/A", styles["BodyJustify"])],
             [Paragraph("<b>LOCAL:</b>", styles["BodyJustifyBold"]), Paragraph(apr.local_description, styles["BodyJustify"]),
              Paragraph("<b>GPS:</b>", styles["BodyJustifyBold"]), Paragraph(coords_txt, styles["BodyJustify"])],
         ]
-        t_meta = Table(meta_data, colWidths=[24 * mm, 69 * mm, 24 * mm, 69 * mm])
+        t_meta = Table(meta_data, colWidths=[26 * mm, 67 * mm, 26 * mm, 67 * mm])
         t_meta.setStyle(TableStyle([
             ("BOX", (0, 0), (-1, -1), 0.8, colors.HexColor("#707070")),
             ("GRID", (0, 0), (-1, -1), 0.6, colors.HexColor("#707070")),
@@ -4120,7 +4265,20 @@ def apr_pdf(apr_id):
     resp_data = [["Categoria / Perigo Inspecionado", "Avaliação", "Medida / Justificativa"]]
 
     for r in apr.respostas:
-        ans_color = "#16a34a" if r.answer == "sim" else ("#dc2626" if r.answer == "nao" else "#64748b")
+        pos_ans = getattr(r, "positive_answer", None)
+        if not pos_ans and r.item_config:
+            pos_ans = getattr(r.item_config, "positive_answer", None)
+        if not pos_ans:
+            pos_ans = "nao" if r.category == "fator_pessoal" else "sim"
+        pos_ans = pos_ans.strip().lower()
+
+        if r.answer == "na":
+            ans_color = "#64748b"  # Cinza / Não se aplica
+        elif r.answer.lower() == pos_ans:
+            ans_color = "#16a34a"  # Verde / Conforme / Positivo
+        else:
+            ans_color = "#dc2626"  # Vermelho / Não Conforme / Risco
+
         ans_txt = f"<font color='{ans_color}'><b>{r.answer.upper()}</b></font>"
         just_txt = r.justification or "-"
         cat_tag = r.category.upper().replace("_", " ")
@@ -4145,11 +4303,30 @@ def apr_pdf(apr_id):
     story.append(t_resp)
     story.append(Spacer(1, 2))
 
-    # 3. Medidas Emergenciais se houver
-    if apr.emergency_measure_notes:
-        story.append(Paragraph("<b>Medidas Preventivas / Controle Emergencial Adotado</b>", styles["SectionTitle"]))
+    # 3. Medidas Emergenciais ou Registro de Fator Impeditivo
+    if apr.status == "bloqueada":
+        story.append(Paragraph("<b>Registro de Condição Impeditiva (Atividade Bloqueada)</b>", styles["SectionTitle"]))
         p_emerg = Paragraph(
-            f"<b>Condição Impeditiva Detectada:</b> Sim<br/><b>Ação de Controle Adotada pelo Técnico:</b> {apr.emergency_measure_notes}",
+            f"<b>STATUS DE SEGURANÇA:</b> <font color='#DC2626'><b>ATIVIDADE NÃO AUTORIZADA / BLOQUEADA</b></font><br/>"
+            f"<b>Condição Impeditiva Detectada:</b> Constatou-se critério impeditivo no local sem possibilidade técnica de manobra segura.<br/>"
+            f"<b>Anotações do Impedimento:</b> {apr.emergency_measure_notes or 'Fator impeditivo intransponível de segurança identificado no local. Serviço paralisado conforme NR-35/NR-10.'}<br/>"
+            f"<i>Conforme diretrizes de SMS e PGR, o trabalho foi paralisado/não iniciado para preservar a integridade física da equipe.</i>",
+            styles["BodyJustify"]
+        )
+        t_emerg = Table([[p_emerg]], colWidths=[186 * mm])
+        t_emerg.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, -1), colors.HexColor("#FEE2E2")),
+            ("BOX", (0, 0), (-1, -1), 0.8, colors.HexColor("#DC2626")),
+            ("GRID", (0, 0), (-1, -1), 0.6, colors.HexColor("#DC2626")),
+            ("PADDING", (0, 0), (-1, -1), 4),
+        ]))
+        story.append(t_emerg)
+        story.append(Spacer(1, 2))
+    elif apr.emergency_measure_notes:
+        story.append(Paragraph("<b>Medidas Preventivas / Ação de Manobra Adotada</b>", styles["SectionTitle"]))
+        p_emerg = Paragraph(
+            f"<b>Alteração Impeditiva Detectada:</b> Sim, manobrada com segurança.<br/>"
+            f"<b>Ação de Manobra Adotada pelo Técnico:</b> {apr.emergency_measure_notes}",
             styles["BodyJustify"]
         )
         t_emerg = Table([[p_emerg]], colWidths=[186 * mm])
@@ -4179,7 +4356,9 @@ def apr_pdf(apr_id):
             pass
     tech_sig_elements.append(Paragraph("____________________________________________", styles["BodyJustify"]))
     tech_sig_elements.append(Paragraph(f"<b>Técnico Responsável:</b> {apr.tech.display_name if apr.tech else '-'}", styles["BodyJustify"]))
-    tech_sig_elements.append(Paragraph(f"<b>Data/Hora:</b> {dt_brt.strftime('%d/%m/%Y %H:%M')}", styles["BodyJustify"]))
+    tech_sig_elements.append(Paragraph(f"<b>Início da Atividade:</b> {inicio_str}", styles["BodyJustify"]))
+    if apr.completed_at:
+        tech_sig_elements.append(Paragraph(f"<b>Término da Atividade:</b> {fim_str}", styles["BodyJustify"]))
 
     if apr.auxiliary_tech:
         aux_sig_elements = []
@@ -4193,7 +4372,9 @@ def apr_pdf(apr_id):
                 pass
         aux_sig_elements.append(Paragraph("____________________________________________", styles["BodyJustify"]))
         aux_sig_elements.append(Paragraph(f"<b>Técnico Auxiliar:</b> {apr.auxiliary_tech.display_name}", styles["BodyJustify"]))
-        aux_sig_elements.append(Paragraph(f"<b>Data/Hora:</b> {dt_brt.strftime('%d/%m/%Y %H:%M')}", styles["BodyJustify"]))
+        aux_sig_elements.append(Paragraph(f"<b>Início da Atividade:</b> {inicio_str}", styles["BodyJustify"]))
+        if apr.completed_at:
+            aux_sig_elements.append(Paragraph(f"<b>Término da Atividade:</b> {fim_str}", styles["BodyJustify"]))
 
         sig_data = [[tech_sig_elements, aux_sig_elements]]
         t_sig = Table(sig_data, colWidths=[93 * mm, 93 * mm])
@@ -4269,6 +4450,9 @@ def api_apr_config_item_save():
     order = request.form.get("order", 0, type=int)
     is_blocking = request.form.get("is_blocking_if_negative") == "on"
     requires_photo = request.form.get("requires_photo") == "on"
+    positive_answer = request.form.get("positive_answer", "sim").strip().lower()
+    if positive_answer not in ("sim", "nao"):
+        positive_answer = "sim"
 
     if not question_text:
         return jsonify({"success": False, "message": "O texto da pergunta é obrigatório."}), 400
@@ -4279,6 +4463,7 @@ def api_apr_config_item_save():
         item.question_text = question_text
         item.guidance = guidance
         item.order = order
+        item.positive_answer = positive_answer
         item.is_blocking_if_negative = is_blocking
         item.requires_photo = requires_photo
     else:
@@ -4287,6 +4472,7 @@ def api_apr_config_item_save():
             question_text=question_text,
             guidance=guidance,
             order=order,
+            positive_answer=positive_answer,
             is_blocking_if_negative=is_blocking,
             requires_photo=requires_photo,
             is_active=True

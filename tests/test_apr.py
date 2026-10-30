@@ -338,10 +338,14 @@ class TestAPRModule(unittest.TestCase):
                 order=1,
                 question_text="Existe algum fator físico ou psicológico que possa comprometer a segurança da atividade?",
                 guidance="Avaliação psicofísica.",
+                positive_answer="nao",
                 is_blocking_if_negative=True,
                 is_active=True
             )
             db.session.add(item_pessoal)
+            db.session.commit()
+        else:
+            item_pessoal.positive_answer = "nao"
             db.session.commit()
 
         # 1. Deve aparecer na tela mobile /apr
@@ -439,6 +443,11 @@ class TestAPRModule(unittest.TestCase):
         self.assertEqual(pdf_resp.status_code, 200)
         self.assertEqual(pdf_resp.headers["Content-Type"], "application/pdf")
 
+        # 6.1 Finaliza a APR com auxiliar para liberar abertura da próxima
+        fin_resp = self.client.post(f"/api/apr/{apr.id}/finalizar")
+        self.assertEqual(fin_resp.status_code, 200)
+        self.assertTrue(fin_resp.get_json()["success"])
+
         # 7. Salva APR individual (sem auxiliar) e valida que o PDF também gera perfeitamente
         payload_solo = {
             "csrf_token": "test_token",
@@ -452,6 +461,225 @@ class TestAPRModule(unittest.TestCase):
         pdf_solo_resp = self.client.get(f"/apr/{apr_solo.id}/pdf")
         self.assertEqual(pdf_solo_resp.status_code, 200)
         self.assertEqual(pdf_solo_resp.headers["Content-Type"], "application/pdf")
+
+
+    def test_block_new_apr_when_active_pending_and_finalize_flow(self):
+        """Valida que o técnico não pode abrir nova APR se já houver uma ativa, e que a finalização libera nova APR."""
+        with self.client.session_transaction() as sess:
+            sess["_user_id"] = str(self.tech_user.id)
+            sess["csrf_token"] = "test_token"
+
+        # Limpa qualquer APR prévia do tech_user
+        APR.query.filter_by(tech_id=self.tech_user.id).delete()
+        db.session.commit()
+
+        # 1. Cria primeira APR
+        payload1 = {
+            "csrf_token": "test_token",
+            "activity_type": "Instalação Residencial FTTH",
+            "local_description": "Rua Central, 10",
+            "signature_data": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+        }
+        resp1 = self.client.post("/api/apr/salvar", data=payload1)
+        self.assertEqual(resp1.status_code, 200)
+        apr_id1 = resp1.get_json().get("apr_id")
+        protocol1 = resp1.get_json()["protocol"]
+
+        # 2. Tenta criar segunda APR enquanto a primeira está em andamento -> deve retornar 400
+        resp2 = self.client.post("/api/apr/salvar", data=payload1)
+        self.assertEqual(resp2.status_code, 400)
+        self.assertFalse(resp2.get_json()["success"])
+        self.assertIn("em andamento", resp2.get_json()["message"])
+
+        # 3. Finaliza a primeira APR via endpoint /api/apr/<id>/finalizar
+        apr1 = APR.query.filter_by(protocol=protocol1).first()
+        fin_resp = self.client.post(f"/api/apr/{apr1.id}/finalizar")
+        self.assertEqual(fin_resp.status_code, 200)
+        fin_data = fin_resp.get_json()
+        self.assertTrue(fin_data["success"])
+        self.assertIn("finalizada com sucesso", fin_data["message"])
+
+        # 4. Verifica no banco que completed_at está preenchido e status é concluida
+        db.session.refresh(apr1)
+        self.assertIsNotNone(apr1.completed_at)
+        self.assertEqual(apr1.status, "concluida")
+
+        # 5. Agora deve permitir criar uma nova APR com sucesso
+        payload2 = {
+            "csrf_token": "test_token",
+            "activity_type": "Manutenção de Rede",
+            "local_description": "Rua Nova, 20",
+            "signature_data": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+        }
+        resp3 = self.client.post("/api/apr/salvar", data=payload2)
+        self.assertEqual(resp3.status_code, 200)
+        self.assertTrue(resp3.get_json()["success"])
+
+    def test_tecnicos_dupla_list_includes_users_with_apr_mobile_permission(self):
+        """Valida que técnicos e usuários com permissão apr_mobile aparecem na listagem de duplas."""
+        # Cria um usuário com perfil customizado que possui apr_mobile
+        import uuid
+        uid = uuid.uuid4().hex[:6].upper()
+        custom_user = User(
+            username=f"TST_WELTON_{uid}",
+            full_name="Welton Técnico de Segurança",
+            role="seguranca_do_trabalho",
+            permissions=json.dumps({"perm_apr_mobile": True})
+        )
+        custom_user.set_password("senha123")
+        db.session.add(custom_user)
+        db.session.commit()
+
+        # Login com o tech_user
+        self.client.post("/login", data={"username": self.tech_user.username, "password": "senha123"})
+        resp = self.client.get("/apr")
+        self.assertEqual(resp.status_code, 200)
+        html = resp.get_data(as_text=True)
+
+        # O usuário customizado deve aparecer no select de técnico auxiliar
+        self.assertIn(f"{custom_user.display_name} ({custom_user.username})", html)
+
+
+    def test_positive_answer_configuration_and_evaluation(self):
+        """Valida configuração de positivo como 'NÃO' ou 'SIM', bloqueio correto e persistência."""
+        # 1. Login como admin e cria pergunta onde NÃO é a resposta boa/segura
+        self.client.post("/login", data={"username": self.admin_user.username, "password": "senha123"})
+        payload_create = {
+            "csrf_token": "test_token",
+            "category": "eletrica_nr10",
+            "question_text": "Existe fiação elétrica desencapada em contato com a rede?",
+            "guidance": "Risco de choque iminente",
+            "order": 10,
+            "positive_answer": "nao",
+            "is_blocking_if_negative": "on",
+            "requires_photo": "on"
+        }
+        resp = self.client.post("/api/apr/config/item", data=payload_create)
+        self.assertEqual(resp.status_code, 200)
+
+        item = APRItemConfig.query.filter_by(question_text="Existe fiação elétrica desencapada em contato com a rede?").first()
+        self.assertIsNotNone(item)
+        self.assertEqual(item.positive_answer, "nao")
+        self.assertTrue(item.is_blocking_if_negative)
+
+        # 2. Login como técnico e responde NÃO (que é a resposta BOA/SEGURA) -> Não deve bloquear
+        self.client.post("/login", data={"username": self.tech_user.username, "password": "senha123"})
+        APR.query.filter_by(tech_id=self.tech_user.id).delete()
+        db.session.commit()
+
+        payload_apr_ok = {
+            "csrf_token": "test_token",
+            "activity_type": "Manutenção",
+            "local_description": "Posto 5",
+            "risk_factors": json.dumps(["eletrica"]),
+            f"item_{item.id}": "nao",  # Resposta CONFORME (já que positive_answer = nao)
+            "signature_data": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+        }
+        resp_apr = self.client.post("/api/apr/salvar", data=payload_apr_ok)
+        self.assertEqual(resp_apr.status_code, 200)
+        data_apr = resp_apr.get_json()
+        self.assertEqual(data_apr["status"], "liberada")
+        self.assertFalse(data_apr["has_blocking"])
+
+        # Valida PDF
+        apr_obj = APR.query.filter_by(protocol=data_apr["protocol"]).first()
+        pdf_resp = self.client.get(f"/apr/{apr_obj.id}/pdf")
+        self.assertEqual(pdf_resp.status_code, 200)
+
+        # 3. Finaliza a APR anterior e testa cenário com resposta de RISCO (SIM)
+        self.client.post(f"/api/apr/{apr_obj.id}/finalizar")
+        
+        payload_apr_risco = {
+            "csrf_token": "test_token",
+            "activity_type": "Manutenção",
+            "local_description": "Posto 6",
+            "risk_factors": json.dumps(["eletrica"]),
+            f"item_{item.id}": "sim",  # Resposta de RISCO! (positive_answer = nao)
+            "signature_data": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+        }
+        resp_risco = self.client.post("/api/apr/salvar", data=payload_apr_risco)
+        self.assertEqual(resp_risco.status_code, 200)
+        data_risco = resp_risco.get_json()
+        self.assertEqual(data_risco["status"], "bloqueada")
+        self.assertTrue(data_risco["has_blocking"])
+
+
+    def test_blocking_condition_with_maneuver_action_sim(self):
+        """Critério impeditivo com alteração, porém técnico declarou ação de manobra -> status liberada."""
+        with self.client.session_transaction() as sess:
+            sess["_user_id"] = str(self.tech_user.id)
+            sess["csrf_token"] = "test_token"
+
+        APR.query.filter_by(tech_id=self.tech_user.id).delete()
+        db.session.commit()
+
+        payload = {
+            "csrf_token": "test_token",
+            "activity_type": "Trabalho em Altura",
+            "local_description": "Rua das Palmeiras, 120",
+            "risk_factors": json.dumps(["altura"]),
+            f"item_{self.item_altura.id}": "nao",
+            f"maneuver_action_{self.item_altura.id}": "sim",
+            f"maneuver_notes_{self.item_altura.id}": "Realizado travamento alternativo com fita tubular e trava-quedas",
+            "signature_data": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+        }
+
+        resp = self.client.post("/api/apr/salvar", data=payload)
+        self.assertEqual(resp.status_code, 200)
+        data = resp.get_json()
+        self.assertTrue(data["success"])
+        self.assertEqual(data["status"], "liberada")
+        self.assertTrue(data["has_blocking"])
+
+        apr = APR.query.filter_by(protocol=data["protocol"]).first()
+        self.assertIsNotNone(apr)
+        self.assertEqual(apr.status, "liberada")
+        self.assertIn("Realizado travamento alternativo", apr.emergency_measure_notes)
+
+        resp_item = APRResposta.query.filter_by(apr_id=apr.id, item_config_id=self.item_altura.id).first()
+        self.assertIsNotNone(resp_item)
+        self.assertEqual(resp_item.maneuver_action, "sim")
+        self.assertEqual(resp_item.maneuver_notes, "Realizado travamento alternativo com fita tubular e trava-quedas")
+
+        pdf_resp = self.client.get(f"/apr/{apr.id}/pdf")
+        self.assertEqual(pdf_resp.status_code, 200)
+
+    def test_blocking_condition_with_maneuver_action_nao(self):
+        """Critério impeditivo com alteração e técnico respondeu NÃO à manobra -> status bloqueada (fator impeditivo)."""
+        with self.client.session_transaction() as sess:
+            sess["_user_id"] = str(self.tech_user.id)
+            sess["csrf_token"] = "test_token"
+
+        APR.query.filter_by(tech_id=self.tech_user.id).delete()
+        db.session.commit()
+
+        payload = {
+            "csrf_token": "test_token",
+            "activity_type": "Trabalho em Altura",
+            "local_description": "Rua das Palmeiras, 150",
+            "risk_factors": json.dumps(["altura"]),
+            f"item_{self.item_altura.id}": "nao",
+            f"maneuver_action_{self.item_altura.id}": "nao",
+            "signature_data": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+        }
+
+        resp = self.client.post("/api/apr/salvar", data=payload)
+        self.assertEqual(resp.status_code, 200)
+        data = resp.get_json()
+        self.assertTrue(data["success"])
+        self.assertEqual(data["status"], "bloqueada")
+        self.assertTrue(data["has_blocking"])
+
+        apr = APR.query.filter_by(protocol=data["protocol"]).first()
+        self.assertIsNotNone(apr)
+        self.assertEqual(apr.status, "bloqueada")
+
+        resp_item = APRResposta.query.filter_by(apr_id=apr.id, item_config_id=self.item_altura.id).first()
+        self.assertIsNotNone(resp_item)
+        self.assertEqual(resp_item.maneuver_action, "nao")
+
+        pdf_resp = self.client.get(f"/apr/{apr.id}/pdf")
+        self.assertEqual(pdf_resp.status_code, 200)
 
 if __name__ == "__main__":
     unittest.main()

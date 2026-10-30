@@ -1298,7 +1298,8 @@ class APRItemConfig(db.Model):
     order = db.Column(db.Integer, default=0)
     question_text = db.Column(db.String(255), nullable=False)
     guidance = db.Column(db.Text, nullable=True)
-    is_blocking_if_negative = db.Column(db.Boolean, default=False)  # Se 'Não', aciona condição impeditiva
+    positive_answer = db.Column(db.String(10), default="sim", nullable=False)  # 'sim' ou 'nao' é a resposta de conformidade/positiva
+    is_blocking_if_negative = db.Column(db.Boolean, default=False)  # Se divergente da resposta positiva, aciona condição impeditiva
     requires_photo = db.Column(db.Boolean, default=False)
     is_active = db.Column(db.Boolean, default=True)
 
@@ -1314,9 +1315,12 @@ class APRResposta(db.Model):
     category = db.Column(db.String(50), nullable=False)
     question_text = db.Column(db.String(255), nullable=False)
     answer = db.Column(db.String(20), nullable=False)  # 'sim', 'nao', 'na'
+    positive_answer = db.Column(db.String(10), default="sim", nullable=True)  # Resposta de conformidade esperada na época
     is_blocking = db.Column(db.Boolean, default=False)
     justification = db.Column(db.Text, nullable=True)
     photo_filename = db.Column(db.String(255), nullable=True)
+    maneuver_action = db.Column(db.String(10), nullable=True)  # 'sim', 'nao' ou None
+    maneuver_notes = db.Column(db.Text, nullable=True)  # Ação de manobra ou motivo do impedimento
 
     apr = db.relationship("APR", backref=db.backref("respostas", cascade="all, delete-orphan", lazy=True))
     item_config = db.relationship("APRItemConfig")

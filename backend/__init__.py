@@ -471,6 +471,10 @@ def create_app():
             text('ALTER TABLE apr ADD COLUMN IF NOT EXISTS signature_image VARCHAR(255)'),
             text('ALTER TABLE apr ADD COLUMN IF NOT EXISTS auxiliary_tech_id INTEGER REFERENCES "user"(id)'),
             text('ALTER TABLE apr ADD COLUMN IF NOT EXISTS auxiliary_signature_image VARCHAR(255)'),
+            text("ALTER TABLE apr_item_config ADD COLUMN IF NOT EXISTS positive_answer VARCHAR(10) DEFAULT 'sim'"),
+            text("ALTER TABLE apr_resposta ADD COLUMN IF NOT EXISTS positive_answer VARCHAR(10) DEFAULT 'sim'"),
+            text("ALTER TABLE apr_resposta ADD COLUMN IF NOT EXISTS maneuver_action VARCHAR(10)"),
+            text("ALTER TABLE apr_resposta ADD COLUMN IF NOT EXISTS maneuver_notes TEXT"),
             text('''
                 CREATE TABLE IF NOT EXISTS apr_membro (
                     id SERIAL PRIMARY KEY,

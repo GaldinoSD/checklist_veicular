@@ -2,6 +2,52 @@
 {% set page_title = "APR - Análise Preliminar de Riscos" %}
 
 {% block content %}
+<script>
+const userHasChecklist = {{ 'true' if current_user.has_permission('checklist_mobile') else 'false' }};
+
+async function finalizarAtividadeAPR(aprId, protocol) {
+    if (!confirm(`Deseja marcar a atividade da APR ${protocol} como finalizada agora?\n\nIsso registrará a data e o horário de encerramento da atividade no laudo oficial e liberará o técnico para iniciar uma nova APR.`)) {
+        return;
+    }
+
+    const btn = document.getElementById('btn-finalizar-apr-ativa');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Finalizando...';
+    }
+
+    try {
+        const csrfToken = document.querySelector('input[name="csrf_token"]') ? document.querySelector('input[name="csrf_token"]').value : '';
+        const formData = new FormData();
+        if (csrfToken) formData.append('csrf_token', csrfToken);
+
+        const res = await fetch(`/api/apr/${aprId}/finalizar`, {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await res.json();
+        if (data && data.success) {
+            alert(`✅ ${data.message || 'Atividade finalizada com sucesso!'}`);
+            window.location.href = '/apr';
+        } else {
+            alert(`⚠️ ${(data && data.message) ? data.message : 'Erro ao finalizar APR.'}`);
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fa-solid fa-flag-checkered text-sm"></i> <span>Marcar como Atividade Finalizada</span>';
+            }
+        }
+    } catch (e) {
+        console.error('Erro ao finalizar APR:', e);
+        alert('Erro de conexão ao finalizar atividade. Tente novamente.');
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-flag-checkered text-sm"></i> <span>Marcar como Atividade Finalizada</span>';
+        }
+    }
+}
+</script>
+
 <!-- Leaflet Map CSS & JS -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -63,6 +109,90 @@ html, body {
         </div>
     </div>
 
+    {% if active_apr %}
+    <!-- ⚠️ CARD OPERACIONAL: ATIVIDADE EM ANDAMENTO (APR PENDENTE DE CONCLUSÃO) -->
+    <div class="mb-6 bg-gradient-to-br from-amber-500/15 via-amber-500/5 to-transparent border-2 border-amber-500/30 rounded-3xl p-5 sm:p-6 shadow-xl backdrop-blur-xl space-y-4 animate-fade-in">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-amber-500/20">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-2xl bg-amber-500/20 text-amber-500 flex items-center justify-center text-lg animate-pulse shrink-0">
+                    <i class="fa-solid fa-clock-rotate-left"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span class="px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-amber-500 text-slate-900">
+                            Atividade em Andamento
+                        </span>
+                        <span class="text-xs font-mono font-bold text-slate-700 dark:text-slate-300">{{ active_apr.protocol }}</span>
+                    </div>
+                    <h2 class="text-base sm:text-lg font-black text-slate-800 dark:text-white mt-0.5">APR Pendente de Conclusão</h2>
+                </div>
+            </div>
+            
+            <a href="{{ url_for('apr_pdf', apr_id=active_apr.id) }}" target="_blank"
+               class="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/20 text-slate-700 dark:text-slate-200 text-xs font-bold transition-all shadow-sm">
+                <i class="fa-solid fa-file-pdf text-red-500"></i>
+                <span>Ver Laudo PDF</span>
+            </a>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+            <div class="p-3 rounded-2xl bg-white/60 dark:bg-white/5 border border-slate-200/60 dark:border-white/5">
+                <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Serviço / Atividade</span>
+                <span class="font-bold text-slate-800 dark:text-white truncate block mt-0.5">{{ active_apr.activity_type }}</span>
+            </div>
+            <div class="p-3 rounded-2xl bg-white/60 dark:bg-white/5 border border-slate-200/60 dark:border-white/5">
+                <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Início da Atividade</span>
+                <span class="font-bold text-slate-800 dark:text-white block mt-0.5">{{ active_apr.created_at.strftime('%d/%m/%Y às %H:%M') }}</span>
+            </div>
+            <div class="p-3 rounded-2xl bg-white/60 dark:bg-white/5 border border-slate-200/60 dark:border-white/5">
+                <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Local da Execução</span>
+                <span class="font-bold text-slate-800 dark:text-white truncate block mt-0.5">{{ active_apr.local_description }}</span>
+            </div>
+            <div class="p-3 rounded-2xl bg-white/60 dark:bg-white/5 border border-slate-200/60 dark:border-white/5">
+                <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Técnico Auxiliar</span>
+                <span class="font-bold text-slate-800 dark:text-white truncate block mt-0.5">
+                    {% if active_apr.auxiliary_tech %}
+                    {{ active_apr.auxiliary_tech.display_name }}
+                    {% else %}
+                    Individual (Sem dupla)
+                    {% endif %}
+                </span>
+            </div>
+        </div>
+
+        <div class="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <i class="fa-solid fa-circle-info text-amber-500 text-lg"></i>
+                <p class="text-xs text-slate-700 dark:text-slate-300">
+                    Esta atividade está registrada como <strong>em execução</strong>. Ao finalizar o serviço de campo, clique no botão ao lado para registrar o horário de término no laudo oficial e liberar a abertura de uma nova APR.
+                </p>
+            </div>
+            <button type="button" onclick="finalizarAtividadeAPR({{ active_apr.id }}, '{{ active_apr.protocol }}')" id="btn-finalizar-apr-ativa"
+                    class="w-full sm:w-auto shrink-0 px-6 py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-black text-xs uppercase tracking-wider transition-all shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2 cursor-pointer">
+                <i class="fa-solid fa-flag-checkered text-sm"></i>
+                <span>Marcar como Atividade Finalizada</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- BLOQUEIO DE NOVO FORMULÁRIO ENQUANTO ATIVIDADE ATUAL ESTIVER EM ANDAMENTO -->
+    <div class="bg-white/70 dark:bg-slate-900/50 backdrop-blur-md border border-slate-200/60 dark:border-white/10 rounded-3xl p-8 text-center space-y-4">
+        <div class="w-16 h-16 rounded-3xl bg-slate-100 dark:bg-white/5 flex items-center justify-center text-slate-400 text-2xl mx-auto">
+            <i class="fa-solid fa-lock text-amber-500"></i>
+        </div>
+        <div class="space-y-1">
+            <h3 class="text-base font-black text-slate-800 dark:text-white">Abertura de Nova APR Bloqueada</h3>
+            <p class="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto">
+                Você já possui a APR <strong>{{ active_apr.protocol }}</strong> em andamento. Conclua a atividade atual acima para que o sistema registre o horário final e libere o preenchimento de uma nova Análise Preliminar de Riscos.
+            </p>
+        </div>
+        <button type="button" onclick="finalizarAtividadeAPR({{ active_apr.id }}, '{{ active_apr.protocol }}')"
+                class="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs uppercase tracking-wider transition-all shadow-md shadow-emerald-600/20 cursor-pointer">
+            <i class="fa-solid fa-flag-checkered"></i>
+            <span>Finalizar Atividade {{ active_apr.protocol }}</span>
+        </button>
+    </div>
+    {% else %}
     <!-- ====================== FORMULÁRIO PRINCIPAL ====================== -->
     <form id="apr-form" onsubmit="return validarEEnviarAPR(event)" enctype="multipart/form-data" class="space-y-6">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
@@ -183,33 +313,45 @@ html, body {
 
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 <!-- Gatilho Altura -->
-                <label class="trigger-card p-4 rounded-2xl border-2 border-slate-200/80 dark:border-white/10 bg-slate-50/50 dark:bg-white/[0.02] flex flex-col items-center text-center cursor-pointer transition-all hover:scale-[1.02]">
+                <label class="trigger-card relative p-4 rounded-2xl border-2 border-slate-200/80 dark:border-white/10 bg-slate-50/50 dark:bg-white/[0.02] flex flex-col items-center text-center cursor-pointer transition-all hover:scale-[1.02] min-h-[105px] justify-center">
+                    <div class="check-badge hidden absolute top-2.5 right-2.5 w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px] shadow-sm">
+                        <i class="fa-solid fa-check"></i>
+                    </div>
                     <input type="checkbox" id="trigger-altura" onchange="toggleRiskCategory('altura', this.checked)" class="sr-only">
-                    <i class="fa-solid fa-person-arrow-up-from-line text-2xl text-slate-400 mb-2 icon-indicator"></i>
+                    <i class="fa-solid fa-person-arrow-up-from-line text-2xl text-slate-400 mb-2 icon-indicator transition-colors"></i>
                     <span class="text-xs font-black text-slate-700 dark:text-slate-300">Trabalho em Altura</span>
                     <span class="text-[9px] text-slate-400 font-bold mt-0.5">NR-35 (Escada / Poste)</span>
                 </label>
 
                 <!-- Gatilho Elétrica -->
-                <label class="trigger-card p-4 rounded-2xl border-2 border-slate-200/80 dark:border-white/10 bg-slate-50/50 dark:bg-white/[0.02] flex flex-col items-center text-center cursor-pointer transition-all hover:scale-[1.02]">
+                <label class="trigger-card relative p-4 rounded-2xl border-2 border-slate-200/80 dark:border-white/10 bg-slate-50/50 dark:bg-white/[0.02] flex flex-col items-center text-center cursor-pointer transition-all hover:scale-[1.02] min-h-[105px] justify-center">
+                    <div class="check-badge hidden absolute top-2.5 right-2.5 w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px] shadow-sm">
+                        <i class="fa-solid fa-check"></i>
+                    </div>
                     <input type="checkbox" id="trigger-eletrica" onchange="toggleRiskCategory('eletrica', this.checked)" class="sr-only">
-                    <i class="fa-solid fa-bolt text-2xl text-slate-400 mb-2 icon-indicator"></i>
+                    <i class="fa-solid fa-bolt text-2xl text-slate-400 mb-2 icon-indicator transition-colors"></i>
                     <span class="text-xs font-black text-slate-700 dark:text-slate-300">Rede Elétrica</span>
                     <span class="text-[9px] text-slate-400 font-bold mt-0.5">NR-10 (Baixa/Média)</span>
                 </label>
 
                 <!-- Gatilho Trânsito/Vias -->
-                <label class="trigger-card p-4 rounded-2xl border-2 border-slate-200/80 dark:border-white/10 bg-slate-50/50 dark:bg-white/[0.02] flex flex-col items-center text-center cursor-pointer transition-all hover:scale-[1.02]">
+                <label class="trigger-card relative p-4 rounded-2xl border-2 border-slate-200/80 dark:border-white/10 bg-slate-50/50 dark:bg-white/[0.02] flex flex-col items-center text-center cursor-pointer transition-all hover:scale-[1.02] min-h-[105px] justify-center">
+                    <div class="check-badge hidden absolute top-2.5 right-2.5 w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px] shadow-sm">
+                        <i class="fa-solid fa-check"></i>
+                    </div>
                     <input type="checkbox" id="trigger-transito" onchange="toggleRiskCategory('transito', this.checked)" class="sr-only">
-                    <i class="fa-solid fa-traffic-cone text-2xl text-slate-400 mb-2 icon-indicator"></i>
+                    <i class="fa-solid fa-traffic-cone text-2xl text-slate-400 mb-2 icon-indicator transition-colors"></i>
                     <span class="text-xs font-black text-slate-700 dark:text-slate-300">Via Pública</span>
                     <span class="text-[9px] text-slate-400 font-bold mt-0.5">Trânsito / Calçada</span>
                 </label>
 
                 <!-- Gatilho Clima/Ambiente -->
-                <label class="trigger-card p-4 rounded-2xl border-2 border-slate-200/80 dark:border-white/10 bg-slate-50/50 dark:bg-white/[0.02] flex flex-col items-center text-center cursor-pointer transition-all hover:scale-[1.02]">
+                <label class="trigger-card relative p-4 rounded-2xl border-2 border-slate-200/80 dark:border-white/10 bg-slate-50/50 dark:bg-white/[0.02] flex flex-col items-center text-center cursor-pointer transition-all hover:scale-[1.02] min-h-[105px] justify-center">
+                    <div class="check-badge hidden absolute top-2.5 right-2.5 w-5 h-5 rounded-full bg-emerald-500 text-white flex items-center justify-center text-[10px] shadow-sm">
+                        <i class="fa-solid fa-check"></i>
+                    </div>
                     <input type="checkbox" id="trigger-clima" onchange="toggleRiskCategory('clima', this.checked)" class="sr-only">
-                    <i class="fa-solid fa-cloud-sun text-2xl text-slate-400 mb-2 icon-indicator"></i>
+                    <i class="fa-solid fa-cloud-sun text-2xl text-slate-400 mb-2 icon-indicator transition-colors"></i>
                     <span class="text-xs font-black text-slate-700 dark:text-slate-300">Clima & Meio</span>
                     <span class="text-[9px] text-slate-400 font-bold mt-0.5">Vento / Chuva / Poste</span>
                 </label>
@@ -233,8 +375,7 @@ html, body {
 
                 <div class="space-y-4">
                     {% for item in categories.geral %}
-                    <div class="question-row p-4 rounded-2xl bg-slate-50/70 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 space-y-3"
-                         data-item-id="{{ item.id }}" data-blocking="{{ 'true' if item.is_blocking_if_negative else 'false' }}">
+                    <div class="question-row p-4 rounded-2xl bg-slate-50/70 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 space-y-3" data-item-id="{{ item.id }}" data-category="{{ item.category }}" data-blocking="{{ 'true' if item.is_blocking_if_negative else 'false' }}" data-positive-answer="{{ item.positive_answer or ('nao' if item.category == 'fator_pessoal' else 'sim') }}">
                         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                             <div class="space-y-0.5">
                                 <div class="flex items-center gap-2">
@@ -256,16 +397,16 @@ html, body {
                             </div>
 
                             <!-- BOTÕES SIM / NÃO / N/A -->
-                            <div class="inline-flex rounded-xl p-1 bg-slate-200/80 dark:bg-slate-800 shrink-0 self-start sm:self-center">
-                                <label class="ans-btn px-4 py-1.5 rounded-lg text-xs font-black cursor-pointer transition-all active-ans bg-emerald-500 text-white shadow-sm">
+                            <div class="w-full sm:w-auto grid grid-cols-3 sm:inline-flex rounded-xl p-1 bg-slate-200/80 dark:bg-slate-800 shrink-0 mt-2 sm:mt-0 gap-1 sm:gap-0">
+                                <label class="ans-btn min-h-[44px] sm:min-h-[36px] px-3 sm:px-4 py-2 sm:py-1.5 rounded-lg text-xs font-black flex items-center justify-center cursor-pointer transition-all active-ans bg-emerald-500 text-white shadow-sm">
                                     <input type="radio" name="item_{{ item.id }}" value="sim" checked onchange="handleAnswerChange({{ item.id }})" class="sr-only">
                                     SIM
                                 </label>
-                                <label class="ans-btn px-4 py-1.5 rounded-lg text-xs font-black text-slate-600 dark:text-slate-400 hover:text-slate-900 cursor-pointer transition-all">
+                                <label class="ans-btn min-h-[44px] sm:min-h-[36px] px-3 sm:px-4 py-2 sm:py-1.5 rounded-lg text-xs font-black flex items-center justify-center text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white cursor-pointer transition-all">
                                     <input type="radio" name="item_{{ item.id }}" value="nao" onchange="handleAnswerChange({{ item.id }})" class="sr-only">
                                     NÃO
                                 </label>
-                                <label class="ans-btn px-4 py-1.5 rounded-lg text-xs font-black text-slate-600 dark:text-slate-400 hover:text-slate-900 cursor-pointer transition-all">
+                                <label class="ans-btn min-h-[44px] sm:min-h-[36px] px-3 sm:px-4 py-2 sm:py-1.5 rounded-lg text-xs font-black flex items-center justify-center text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white cursor-pointer transition-all">
                                     <input type="radio" name="item_{{ item.id }}" value="na" onchange="handleAnswerChange({{ item.id }})" class="sr-only">
                                     N/A
                                 </label>
@@ -275,16 +416,52 @@ html, body {
                         <div id="extra-box-{{ item.id }}" class="{% if not item.requires_photo %}hidden{% endif %} pt-2 border-t border-slate-200/40 dark:border-white/5 space-y-2">
                             <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                                 <input type="text" name="justif_{{ item.id }}" placeholder="Descreva observação ou justificativa..."
-                                       class="flex-1 rounded-xl px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-[11px] font-medium outline-none">
+                                       class="flex-1 rounded-xl px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-xs font-medium text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500 min-h-[42px]">
                                 
-                                <label class="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-slate-200/80 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold hover:bg-slate-300 dark:hover:bg-slate-700 cursor-pointer transition-all">
+                                <label class="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-slate-200/80 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold hover:bg-slate-300 dark:hover:bg-slate-700 cursor-pointer transition-all min-h-[42px] shrink-0">
                                     <i class="fa-solid fa-camera text-slate-500"></i>
                                     <span id="photo-label-{{ item.id }}">Foto</span>
                                     <input type="file" name="foto_{{ item.id }}" accept="image/*" capture="environment" onchange="previewQuestionPhoto(this, {{ item.id }})" class="sr-only">
                                 </label>
-                                <div id="preview-photo-{{ item.id }}" class="hidden w-8 h-8 rounded-lg border border-slate-300 overflow-hidden shrink-0"></div>
+                                <div id="preview-photo-{{ item.id }}" class="hidden w-10 h-10 rounded-xl border border-slate-300 dark:border-white/20 overflow-hidden shrink-0"></div>
                             </div>
                         </div>
+
+                        {% if item.is_blocking_if_negative %}
+                        <div id="maneuver-box-{{ item.id }}" class="hidden pt-3 border-t border-slate-200/80 dark:border-white/10 bg-slate-100/60 dark:bg-white/[0.03] p-3.5 rounded-2xl space-y-3">
+                            <div class="flex items-start gap-2">
+                                <i class="fa-solid fa-triangle-exclamation text-slate-600 dark:text-slate-300 mt-0.5 text-xs"></i>
+                                <div>
+                                    <p class="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wide">Critério Impeditivo Identificado</p>
+                                    <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Houve alguma ação técnica para manobrar a alteração com segurança?</p>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                <label class="maneuver-opt flex items-center gap-2.5 p-3 rounded-xl border border-emerald-500/30 bg-white/90 dark:bg-slate-900/90 cursor-pointer text-xs font-bold text-slate-700 dark:text-slate-200 hover:border-emerald-500 transition-all active:scale-[0.99] min-h-[46px]">
+                                    <input type="radio" name="maneuver_action_{{ item.id }}" value="sim" onchange="handleManeuverChoice({{ item.id }}, 'sim')" class="accent-emerald-500 w-4 h-4 shrink-0">
+                                    <span class="flex items-center gap-1.5"><i class="fa-solid fa-circle-check text-emerald-500"></i> Sim, houve ação para manobrar</span>
+                                </label>
+                                <label class="maneuver-opt flex items-center gap-2.5 p-3 rounded-xl border border-red-500/30 bg-white/90 dark:bg-slate-900/90 cursor-pointer text-xs font-bold text-slate-700 dark:text-slate-200 hover:border-red-500 transition-all active:scale-[0.99] min-h-[46px]">
+                                    <input type="radio" name="maneuver_action_{{ item.id }}" value="nao" onchange="handleManeuverChoice({{ item.id }}, 'nao')" class="accent-red-500 w-4 h-4 shrink-0">
+                                    <span class="flex items-center gap-1.5"><i class="fa-solid fa-ban text-red-500"></i> Não (Fator Impeditivo)</span>
+                                </label>
+                            </div>
+
+                            <div id="maneuver-input-box-{{ item.id }}" class="hidden space-y-1.5 pt-2 border-t border-slate-200 dark:border-white/10">
+                                <label class="text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-slate-300 block">
+                                    Descreva a ação adotada para manobrar a alteração e executar a atividade com segurança: *
+                                </label>
+                                <input type="text" name="maneuver_notes_{{ item.id }}" id="maneuver_notes_{{ item.id }}" placeholder="Ex: Efetuado isolamento prévio e ancoragem alternativa com auxílio da dupla..."
+                                       class="w-full rounded-xl px-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-xs font-medium text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-slate-400 min-h-[44px]">
+                            </div>
+
+                            <div id="maneuver-alert-blocked-{{ item.id }}" class="hidden p-2.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-700 dark:text-red-400 text-xs font-bold">
+                                <i class="fa-solid fa-triangle-exclamation mr-1.5 text-red-500"></i>
+                                <strong>Fator Impeditivo Confirmado!</strong> Como não houve ação para manobrar a alteração, esta APR será registrada como <u>BLOQUEADA</u> e a atividade NÃO deve ser iniciada.
+                            </div>
+                        </div>
+                        {% endif %}
                     </div>
                     {% endfor %}
                 </div>
@@ -305,7 +482,7 @@ html, body {
                 <div class="space-y-4">
                     {% for item in categories.fator_pessoal %}
                     <div class="question-row p-4 rounded-2xl bg-slate-50/70 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 space-y-3"
-                         data-item-id="{{ item.id }}" data-category="fator_pessoal" data-blocking="{{ 'true' if item.is_blocking_if_negative else 'false' }}">
+                         data-item-id="{{ item.id }}" data-category="fator_pessoal" data-blocking="{% if item.is_blocking_if_negative %}true{% else %}false{% endif %}" data-positive-answer="{% if item.positive_answer %}{{ item.positive_answer }}{% else %}nao{% endif %}">
                         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                             <div class="space-y-0.5">
                                 <div class="flex items-center gap-2">
@@ -327,16 +504,16 @@ html, body {
                             </div>
 
                             <!-- BOTÕES SIM / NÃO / N/A (PADRÃO PARA FATOR PESSOAL: NÃO É SEGURO / APTO) -->
-                            <div class="inline-flex rounded-xl p-1 bg-slate-200/80 dark:bg-slate-800 shrink-0 self-start sm:self-center">
-                                <label class="ans-btn px-4 py-1.5 rounded-lg text-xs font-black text-slate-600 dark:text-slate-400 hover:text-slate-900 cursor-pointer transition-all">
+                            <div class="w-full sm:w-auto grid grid-cols-3 sm:inline-flex rounded-xl p-1 bg-slate-200/80 dark:bg-slate-800 shrink-0 mt-2 sm:mt-0 gap-1 sm:gap-0">
+                                <label class="ans-btn min-h-[44px] sm:min-h-[36px] px-3 sm:px-4 py-2 sm:py-1.5 rounded-lg text-xs font-black flex items-center justify-center text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white cursor-pointer transition-all">
                                     <input type="radio" name="item_{{ item.id }}" value="sim" onchange="handleAnswerChange({{ item.id }})" class="sr-only">
                                     SIM
                                 </label>
-                                <label class="ans-btn px-4 py-1.5 rounded-lg text-xs font-black cursor-pointer transition-all active-ans bg-emerald-500 text-white shadow-sm">
+                                <label class="ans-btn min-h-[44px] sm:min-h-[36px] px-3 sm:px-4 py-2 sm:py-1.5 rounded-lg text-xs font-black flex items-center justify-center cursor-pointer transition-all active-ans bg-emerald-500 text-white shadow-sm">
                                     <input type="radio" name="item_{{ item.id }}" value="nao" checked onchange="handleAnswerChange({{ item.id }})" class="sr-only">
                                     NÃO
                                 </label>
-                                <label class="ans-btn px-4 py-1.5 rounded-lg text-xs font-black text-slate-600 dark:text-slate-400 hover:text-slate-900 cursor-pointer transition-all">
+                                <label class="ans-btn min-h-[44px] sm:min-h-[36px] px-3 sm:px-4 py-2 sm:py-1.5 rounded-lg text-xs font-black flex items-center justify-center text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white cursor-pointer transition-all">
                                     <input type="radio" name="item_{{ item.id }}" value="na" onchange="handleAnswerChange({{ item.id }})" class="sr-only">
                                     N/A
                                 </label>
@@ -357,16 +534,52 @@ html, body {
                                 <div id="preview-photo-{{ item.id }}" class="hidden w-8 h-8 rounded-lg border border-slate-300 overflow-hidden shrink-0"></div>
                             </div>
                         </div>
+
+                        {% if item.is_blocking_if_negative %}
+                        <div id="maneuver-box-{{ item.id }}" class="hidden pt-3 border-t border-slate-200/80 dark:border-white/10 bg-slate-100/60 dark:bg-white/[0.03] p-3.5 rounded-2xl space-y-3">
+                            <div class="flex items-start gap-2">
+                                <i class="fa-solid fa-triangle-exclamation text-slate-600 dark:text-slate-300 mt-0.5 text-xs"></i>
+                                <div>
+                                    <p class="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wide">Critério Impeditivo Identificado</p>
+                                    <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Houve alguma ação técnica para manobrar a alteração com segurança?</p>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                <label class="maneuver-opt flex items-center gap-2.5 p-3 rounded-xl border border-emerald-500/30 bg-white/90 dark:bg-slate-900/90 cursor-pointer text-xs font-bold text-slate-700 dark:text-slate-200 hover:border-emerald-500 transition-all active:scale-[0.99] min-h-[46px]">
+                                    <input type="radio" name="maneuver_action_{{ item.id }}" value="sim" onchange="handleManeuverChoice({{ item.id }}, 'sim')" class="accent-emerald-500 w-4 h-4 shrink-0">
+                                    <span class="flex items-center gap-1.5"><i class="fa-solid fa-circle-check text-emerald-500"></i> Sim, houve ação para manobrar</span>
+                                </label>
+                                <label class="maneuver-opt flex items-center gap-2.5 p-3 rounded-xl border border-red-500/30 bg-white/90 dark:bg-slate-900/90 cursor-pointer text-xs font-bold text-slate-700 dark:text-slate-200 hover:border-red-500 transition-all active:scale-[0.99] min-h-[46px]">
+                                    <input type="radio" name="maneuver_action_{{ item.id }}" value="nao" onchange="handleManeuverChoice({{ item.id }}, 'nao')" class="accent-red-500 w-4 h-4 shrink-0">
+                                    <span class="flex items-center gap-1.5"><i class="fa-solid fa-ban text-red-500"></i> Não (Fator Impeditivo)</span>
+                                </label>
+                            </div>
+
+                            <div id="maneuver-input-box-{{ item.id }}" class="hidden space-y-1.5 pt-2 border-t border-slate-200 dark:border-white/10">
+                                <label class="text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-slate-300 block">
+                                    Descreva a ação adotada para manobrar a alteração e executar a atividade com segurança: *
+                                </label>
+                                <input type="text" name="maneuver_notes_{{ item.id }}" id="maneuver_notes_{{ item.id }}" placeholder="Ex: Efetuado isolamento prévio e ancoragem alternativa com auxílio da dupla..."
+                                       class="w-full rounded-xl px-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-xs font-medium text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-slate-400 min-h-[44px]">
+                            </div>
+
+                            <div id="maneuver-alert-blocked-{{ item.id }}" class="hidden p-2.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-700 dark:text-red-400 text-xs font-bold">
+                                <i class="fa-solid fa-triangle-exclamation mr-1.5 text-red-500"></i>
+                                <strong>Fator Impeditivo Confirmado!</strong> Como não houve ação para manobrar a alteração, esta APR será registrada como <u>BLOQUEADA</u> e a atividade NÃO deve ser iniciada.
+                            </div>
+                        </div>
+                        {% endif %}
                     </div>
                     {% endfor %}
                 </div>
             </div>
 
             <!-- BLOCO B: TRABALHO EM ALTURA (NR-35) - CONDICIONAL -->
-            <div id="section-altura" class="hidden bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl border-2 border-amber-500/40 rounded-3xl p-5 sm:p-6 shadow-sm space-y-4 transition-all">
+            <div id="section-altura" class="hidden bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/60 dark:border-white/10 rounded-3xl p-5 sm:p-6 shadow-sm space-y-4 transition-all">
                 <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-white/5">
                     <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500 text-sm">
+                        <div class="w-8 h-8 rounded-xl bg-slate-100 dark:bg-white/5 flex items-center justify-center text-slate-700 dark:text-slate-300 text-sm">
                             <i class="fa-solid fa-person-arrow-up-from-line"></i>
                         </div>
                         <div>
@@ -374,15 +587,14 @@ html, body {
                             <p class="text-[10px] text-slate-400">Verificações de escadas, cinto tipo paraquedista e ancoragens.</p>
                         </div>
                     </div>
-                    <span class="text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400">
-                        NR-35 Ativa
+                    <span class="text-[10px] font-bold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-white/5 px-2.5 py-1 rounded-full border border-slate-200/60 dark:border-white/5">
+                        NR-35
                     </span>
                 </div>
 
                 <div class="space-y-4">
                     {% for item in categories.altura_nr35 %}
-                    <div class="question-row p-4 rounded-2xl bg-slate-50/70 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 space-y-3"
-                         data-item-id="{{ item.id }}" data-blocking="{{ 'true' if item.is_blocking_if_negative else 'false' }}">
+                    <div class="question-row p-4 rounded-2xl bg-slate-50/70 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 space-y-3" data-item-id="{{ item.id }}" data-category="{{ item.category }}" data-blocking="{{ 'true' if item.is_blocking_if_negative else 'false' }}" data-positive-answer="{{ item.positive_answer or ('nao' if item.category == 'fator_pessoal' else 'sim') }}">
                         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                             <div class="space-y-0.5">
                                 <div class="flex items-center gap-2">
@@ -403,16 +615,17 @@ html, body {
                                 {% endif %}
                             </div>
 
-                            <div class="inline-flex rounded-xl p-1 bg-slate-200/80 dark:bg-slate-800 shrink-0 self-start sm:self-center">
-                                <label class="ans-btn px-4 py-1.5 rounded-lg text-xs font-black cursor-pointer transition-all active-ans bg-emerald-500 text-white shadow-sm">
+                            <!-- BOTÕES SIM / NÃO / N/A -->
+                            <div class="w-full sm:w-auto grid grid-cols-3 sm:inline-flex rounded-xl p-1 bg-slate-200/80 dark:bg-slate-800 shrink-0 mt-2 sm:mt-0 gap-1 sm:gap-0">
+                                <label class="ans-btn min-h-[44px] sm:min-h-[36px] px-3 sm:px-4 py-2 sm:py-1.5 rounded-lg text-xs font-black flex items-center justify-center cursor-pointer transition-all active-ans bg-emerald-500 text-white shadow-sm">
                                     <input type="radio" name="item_{{ item.id }}" value="sim" checked onchange="handleAnswerChange({{ item.id }})" class="sr-only">
                                     SIM
                                 </label>
-                                <label class="ans-btn px-4 py-1.5 rounded-lg text-xs font-black text-slate-600 dark:text-slate-400 hover:text-slate-900 cursor-pointer transition-all">
+                                <label class="ans-btn min-h-[44px] sm:min-h-[36px] px-3 sm:px-4 py-2 sm:py-1.5 rounded-lg text-xs font-black flex items-center justify-center text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white cursor-pointer transition-all">
                                     <input type="radio" name="item_{{ item.id }}" value="nao" onchange="handleAnswerChange({{ item.id }})" class="sr-only">
                                     NÃO
                                 </label>
-                                <label class="ans-btn px-4 py-1.5 rounded-lg text-xs font-black text-slate-600 dark:text-slate-400 hover:text-slate-900 cursor-pointer transition-all">
+                                <label class="ans-btn min-h-[44px] sm:min-h-[36px] px-3 sm:px-4 py-2 sm:py-1.5 rounded-lg text-xs font-black flex items-center justify-center text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white cursor-pointer transition-all">
                                     <input type="radio" name="item_{{ item.id }}" value="na" onchange="handleAnswerChange({{ item.id }})" class="sr-only">
                                     N/A
                                 </label>
@@ -422,26 +635,62 @@ html, body {
                         <div id="extra-box-{{ item.id }}" class="{% if not item.requires_photo %}hidden{% endif %} pt-2 border-t border-slate-200/40 dark:border-white/5 space-y-2">
                             <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                                 <input type="text" name="justif_{{ item.id }}" placeholder="Descreva observação ou justificativa..."
-                                       class="flex-1 rounded-xl px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-[11px] font-medium outline-none">
+                                       class="flex-1 rounded-xl px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-xs font-medium text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500 min-h-[42px]">
                                 
-                                <label class="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-slate-200/80 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold hover:bg-slate-300 dark:hover:bg-slate-700 cursor-pointer transition-all">
+                                <label class="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-slate-200/80 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold hover:bg-slate-300 dark:hover:bg-slate-700 cursor-pointer transition-all min-h-[42px] shrink-0">
                                     <i class="fa-solid fa-camera text-slate-500"></i>
                                     <span id="photo-label-{{ item.id }}">Foto</span>
                                     <input type="file" name="foto_{{ item.id }}" accept="image/*" capture="environment" onchange="previewQuestionPhoto(this, {{ item.id }})" class="sr-only">
                                 </label>
-                                <div id="preview-photo-{{ item.id }}" class="hidden w-8 h-8 rounded-lg border border-slate-300 overflow-hidden shrink-0"></div>
+                                <div id="preview-photo-{{ item.id }}" class="hidden w-10 h-10 rounded-xl border border-slate-300 dark:border-white/20 overflow-hidden shrink-0"></div>
                             </div>
                         </div>
+
+                        {% if item.is_blocking_if_negative %}
+                        <div id="maneuver-box-{{ item.id }}" class="hidden pt-3 border-t border-slate-200/80 dark:border-white/10 bg-slate-100/60 dark:bg-white/[0.03] p-3.5 rounded-2xl space-y-3">
+                            <div class="flex items-start gap-2">
+                                <i class="fa-solid fa-triangle-exclamation text-slate-600 dark:text-slate-300 mt-0.5 text-xs"></i>
+                                <div>
+                                    <p class="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wide">Critério Impeditivo Identificado</p>
+                                    <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Houve alguma ação técnica para manobrar a alteração com segurança?</p>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                <label class="maneuver-opt flex items-center gap-2.5 p-3 rounded-xl border border-emerald-500/30 bg-white/90 dark:bg-slate-900/90 cursor-pointer text-xs font-bold text-slate-700 dark:text-slate-200 hover:border-emerald-500 transition-all active:scale-[0.99] min-h-[46px]">
+                                    <input type="radio" name="maneuver_action_{{ item.id }}" value="sim" onchange="handleManeuverChoice({{ item.id }}, 'sim')" class="accent-emerald-500 w-4 h-4 shrink-0">
+                                    <span class="flex items-center gap-1.5"><i class="fa-solid fa-circle-check text-emerald-500"></i> Sim, houve ação para manobrar</span>
+                                </label>
+                                <label class="maneuver-opt flex items-center gap-2.5 p-3 rounded-xl border border-red-500/30 bg-white/90 dark:bg-slate-900/90 cursor-pointer text-xs font-bold text-slate-700 dark:text-slate-200 hover:border-red-500 transition-all active:scale-[0.99] min-h-[46px]">
+                                    <input type="radio" name="maneuver_action_{{ item.id }}" value="nao" onchange="handleManeuverChoice({{ item.id }}, 'nao')" class="accent-red-500 w-4 h-4 shrink-0">
+                                    <span class="flex items-center gap-1.5"><i class="fa-solid fa-ban text-red-500"></i> Não (Fator Impeditivo)</span>
+                                </label>
+                            </div>
+
+                            <div id="maneuver-input-box-{{ item.id }}" class="hidden space-y-1.5 pt-2 border-t border-slate-200 dark:border-white/10">
+                                <label class="text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-slate-300 block">
+                                    Descreva a ação adotada para manobrar a alteração e executar a atividade com segurança: *
+                                </label>
+                                <input type="text" name="maneuver_notes_{{ item.id }}" id="maneuver_notes_{{ item.id }}" placeholder="Ex: Efetuado isolamento prévio e ancoragem alternativa com auxílio da dupla..."
+                                       class="w-full rounded-xl px-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-xs font-medium text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-slate-400 min-h-[44px]">
+                            </div>
+
+                            <div id="maneuver-alert-blocked-{{ item.id }}" class="hidden p-2.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-700 dark:text-red-400 text-xs font-bold">
+                                <i class="fa-solid fa-triangle-exclamation mr-1.5 text-red-500"></i>
+                                <strong>Fator Impeditivo Confirmado!</strong> Como não houve ação para manobrar a alteração, esta APR será registrada como <u>BLOQUEADA</u> e a atividade NÃO deve ser iniciada.
+                            </div>
+                        </div>
+                        {% endif %}
                     </div>
                     {% endfor %}
                 </div>
             </div>
 
             <!-- BLOCO C: RISCOS ELÉTRICOS (NR-10) - CONDICIONAL -->
-            <div id="section-eletrica" class="hidden bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl border-2 border-red-500/40 rounded-3xl p-5 sm:p-6 shadow-sm space-y-4 transition-all">
+            <div id="section-eletrica" class="hidden bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/60 dark:border-white/10 rounded-3xl p-5 sm:p-6 shadow-sm space-y-4 transition-all">
                 <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-white/5">
                     <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 rounded-xl bg-red-500/10 flex items-center justify-center text-red-500 text-sm">
+                        <div class="w-8 h-8 rounded-xl bg-slate-100 dark:bg-white/5 flex items-center justify-center text-slate-700 dark:text-slate-300 text-sm">
                             <i class="fa-solid fa-bolt"></i>
                         </div>
                         <div>
@@ -449,15 +698,14 @@ html, body {
                             <p class="text-[10px] text-slate-400">Detecção de tensão, distâncias regulamentares e fios soltos.</p>
                         </div>
                     </div>
-                    <span class="text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full bg-red-500/10 text-red-600 dark:text-red-400">
-                        NR-10 Ativa
+                    <span class="text-[10px] font-bold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-white/5 px-2.5 py-1 rounded-full border border-slate-200/60 dark:border-white/5">
+                        NR-10
                     </span>
                 </div>
 
                 <div class="space-y-4">
                     {% for item in categories.eletrica_nr10 %}
-                    <div class="question-row p-4 rounded-2xl bg-slate-50/70 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 space-y-3"
-                         data-item-id="{{ item.id }}" data-blocking="{{ 'true' if item.is_blocking_if_negative else 'false' }}">
+                    <div class="question-row p-4 rounded-2xl bg-slate-50/70 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 space-y-3" data-item-id="{{ item.id }}" data-category="{{ item.category }}" data-blocking="{{ 'true' if item.is_blocking_if_negative else 'false' }}" data-positive-answer="{{ item.positive_answer or ('nao' if item.category == 'fator_pessoal' else 'sim') }}">
                         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                             <div class="space-y-0.5">
                                 <div class="flex items-center gap-2">
@@ -478,16 +726,17 @@ html, body {
                                 {% endif %}
                             </div>
 
-                            <div class="inline-flex rounded-xl p-1 bg-slate-200/80 dark:bg-slate-800 shrink-0 self-start sm:self-center">
-                                <label class="ans-btn px-4 py-1.5 rounded-lg text-xs font-black cursor-pointer transition-all active-ans bg-emerald-500 text-white shadow-sm">
+                            <!-- BOTÕES SIM / NÃO / N/A -->
+                            <div class="w-full sm:w-auto grid grid-cols-3 sm:inline-flex rounded-xl p-1 bg-slate-200/80 dark:bg-slate-800 shrink-0 mt-2 sm:mt-0 gap-1 sm:gap-0">
+                                <label class="ans-btn min-h-[44px] sm:min-h-[36px] px-3 sm:px-4 py-2 sm:py-1.5 rounded-lg text-xs font-black flex items-center justify-center cursor-pointer transition-all active-ans bg-emerald-500 text-white shadow-sm">
                                     <input type="radio" name="item_{{ item.id }}" value="sim" checked onchange="handleAnswerChange({{ item.id }})" class="sr-only">
                                     SIM
                                 </label>
-                                <label class="ans-btn px-4 py-1.5 rounded-lg text-xs font-black text-slate-600 dark:text-slate-400 hover:text-slate-900 cursor-pointer transition-all">
+                                <label class="ans-btn min-h-[44px] sm:min-h-[36px] px-3 sm:px-4 py-2 sm:py-1.5 rounded-lg text-xs font-black flex items-center justify-center text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white cursor-pointer transition-all">
                                     <input type="radio" name="item_{{ item.id }}" value="nao" onchange="handleAnswerChange({{ item.id }})" class="sr-only">
                                     NÃO
                                 </label>
-                                <label class="ans-btn px-4 py-1.5 rounded-lg text-xs font-black text-slate-600 dark:text-slate-400 hover:text-slate-900 cursor-pointer transition-all">
+                                <label class="ans-btn min-h-[44px] sm:min-h-[36px] px-3 sm:px-4 py-2 sm:py-1.5 rounded-lg text-xs font-black flex items-center justify-center text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white cursor-pointer transition-all">
                                     <input type="radio" name="item_{{ item.id }}" value="na" onchange="handleAnswerChange({{ item.id }})" class="sr-only">
                                     N/A
                                 </label>
@@ -497,26 +746,62 @@ html, body {
                         <div id="extra-box-{{ item.id }}" class="{% if not item.requires_photo %}hidden{% endif %} pt-2 border-t border-slate-200/40 dark:border-white/5 space-y-2">
                             <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                                 <input type="text" name="justif_{{ item.id }}" placeholder="Descreva observação ou justificativa..."
-                                       class="flex-1 rounded-xl px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-[11px] font-medium outline-none">
+                                       class="flex-1 rounded-xl px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-xs font-medium text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500 min-h-[42px]">
                                 
-                                <label class="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-slate-200/80 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold hover:bg-slate-300 dark:hover:bg-slate-700 cursor-pointer transition-all">
+                                <label class="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-slate-200/80 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold hover:bg-slate-300 dark:hover:bg-slate-700 cursor-pointer transition-all min-h-[42px] shrink-0">
                                     <i class="fa-solid fa-camera text-slate-500"></i>
                                     <span id="photo-label-{{ item.id }}">Foto</span>
                                     <input type="file" name="foto_{{ item.id }}" accept="image/*" capture="environment" onchange="previewQuestionPhoto(this, {{ item.id }})" class="sr-only">
                                 </label>
-                                <div id="preview-photo-{{ item.id }}" class="hidden w-8 h-8 rounded-lg border border-slate-300 overflow-hidden shrink-0"></div>
+                                <div id="preview-photo-{{ item.id }}" class="hidden w-10 h-10 rounded-xl border border-slate-300 dark:border-white/20 overflow-hidden shrink-0"></div>
                             </div>
                         </div>
+
+                        {% if item.is_blocking_if_negative %}
+                        <div id="maneuver-box-{{ item.id }}" class="hidden pt-3 border-t border-slate-200/80 dark:border-white/10 bg-slate-100/60 dark:bg-white/[0.03] p-3.5 rounded-2xl space-y-3">
+                            <div class="flex items-start gap-2">
+                                <i class="fa-solid fa-triangle-exclamation text-slate-600 dark:text-slate-300 mt-0.5 text-xs"></i>
+                                <div>
+                                    <p class="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wide">Critério Impeditivo Identificado</p>
+                                    <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Houve alguma ação técnica para manobrar a alteração com segurança?</p>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                <label class="maneuver-opt flex items-center gap-2.5 p-3 rounded-xl border border-emerald-500/30 bg-white/90 dark:bg-slate-900/90 cursor-pointer text-xs font-bold text-slate-700 dark:text-slate-200 hover:border-emerald-500 transition-all active:scale-[0.99] min-h-[46px]">
+                                    <input type="radio" name="maneuver_action_{{ item.id }}" value="sim" onchange="handleManeuverChoice({{ item.id }}, 'sim')" class="accent-emerald-500 w-4 h-4 shrink-0">
+                                    <span class="flex items-center gap-1.5"><i class="fa-solid fa-circle-check text-emerald-500"></i> Sim, houve ação para manobrar</span>
+                                </label>
+                                <label class="maneuver-opt flex items-center gap-2.5 p-3 rounded-xl border border-red-500/30 bg-white/90 dark:bg-slate-900/90 cursor-pointer text-xs font-bold text-slate-700 dark:text-slate-200 hover:border-red-500 transition-all active:scale-[0.99] min-h-[46px]">
+                                    <input type="radio" name="maneuver_action_{{ item.id }}" value="nao" onchange="handleManeuverChoice({{ item.id }}, 'nao')" class="accent-red-500 w-4 h-4 shrink-0">
+                                    <span class="flex items-center gap-1.5"><i class="fa-solid fa-ban text-red-500"></i> Não (Fator Impeditivo)</span>
+                                </label>
+                            </div>
+
+                            <div id="maneuver-input-box-{{ item.id }}" class="hidden space-y-1.5 pt-2 border-t border-slate-200 dark:border-white/10">
+                                <label class="text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-slate-300 block">
+                                    Descreva a ação adotada para manobrar a alteração e executar a atividade com segurança: *
+                                </label>
+                                <input type="text" name="maneuver_notes_{{ item.id }}" id="maneuver_notes_{{ item.id }}" placeholder="Ex: Efetuado isolamento prévio e ancoragem alternativa com auxílio da dupla..."
+                                       class="w-full rounded-xl px-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-xs font-medium text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-slate-400 min-h-[44px]">
+                            </div>
+
+                            <div id="maneuver-alert-blocked-{{ item.id }}" class="hidden p-2.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-700 dark:text-red-400 text-xs font-bold">
+                                <i class="fa-solid fa-triangle-exclamation mr-1.5 text-red-500"></i>
+                                <strong>Fator Impeditivo Confirmado!</strong> Como não houve ação para manobrar a alteração, esta APR será registrada como <u>BLOQUEADA</u> e a atividade NÃO deve ser iniciada.
+                            </div>
+                        </div>
+                        {% endif %}
                     </div>
                     {% endfor %}
                 </div>
             </div>
 
             <!-- BLOCO D: SINALIZAÇÃO DE VIAS & TRÂNSITO - CONDICIONAL -->
-            <div id="section-transito" class="hidden bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl border-2 border-orange-500/40 rounded-3xl p-5 sm:p-6 shadow-sm space-y-4 transition-all">
+            <div id="section-transito" class="hidden bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/60 dark:border-white/10 rounded-3xl p-5 sm:p-6 shadow-sm space-y-4 transition-all">
                 <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-white/5">
                     <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 rounded-xl bg-orange-500/10 flex items-center justify-center text-orange-500 text-sm">
+                        <div class="w-8 h-8 rounded-xl bg-slate-100 dark:bg-white/5 flex items-center justify-center text-slate-700 dark:text-slate-300 text-sm">
                             <i class="fa-solid fa-traffic-cone"></i>
                         </div>
                         <div>
@@ -524,15 +809,14 @@ html, body {
                             <p class="text-[10px] text-slate-400">Proteção de terceiros, cones refletivos e perímetro de queda.</p>
                         </div>
                     </div>
-                    <span class="text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full bg-orange-500/10 text-orange-600 dark:text-orange-400">
-                        Via Ativa
+                    <span class="text-[10px] font-bold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-white/5 px-2.5 py-1 rounded-full border border-slate-200/60 dark:border-white/5">
+                        Vias Públicas
                     </span>
                 </div>
 
                 <div class="space-y-4">
                     {% for item in categories.sinalizacao_transito %}
-                    <div class="question-row p-4 rounded-2xl bg-slate-50/70 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 space-y-3"
-                         data-item-id="{{ item.id }}" data-blocking="{{ 'true' if item.is_blocking_if_negative else 'false' }}">
+                    <div class="question-row p-4 rounded-2xl bg-slate-50/70 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 space-y-3" data-item-id="{{ item.id }}" data-category="{{ item.category }}" data-blocking="{{ 'true' if item.is_blocking_if_negative else 'false' }}" data-positive-answer="{{ item.positive_answer or ('nao' if item.category == 'fator_pessoal' else 'sim') }}">
                         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                             <div class="space-y-0.5">
                                 <div class="flex items-center gap-2">
@@ -553,16 +837,17 @@ html, body {
                                 {% endif %}
                             </div>
 
-                            <div class="inline-flex rounded-xl p-1 bg-slate-200/80 dark:bg-slate-800 shrink-0 self-start sm:self-center">
-                                <label class="ans-btn px-4 py-1.5 rounded-lg text-xs font-black cursor-pointer transition-all active-ans bg-emerald-500 text-white shadow-sm">
+                            <!-- BOTÕES SIM / NÃO / N/A -->
+                            <div class="w-full sm:w-auto grid grid-cols-3 sm:inline-flex rounded-xl p-1 bg-slate-200/80 dark:bg-slate-800 shrink-0 mt-2 sm:mt-0 gap-1 sm:gap-0">
+                                <label class="ans-btn min-h-[44px] sm:min-h-[36px] px-3 sm:px-4 py-2 sm:py-1.5 rounded-lg text-xs font-black flex items-center justify-center cursor-pointer transition-all active-ans bg-emerald-500 text-white shadow-sm">
                                     <input type="radio" name="item_{{ item.id }}" value="sim" checked onchange="handleAnswerChange({{ item.id }})" class="sr-only">
                                     SIM
                                 </label>
-                                <label class="ans-btn px-4 py-1.5 rounded-lg text-xs font-black text-slate-600 dark:text-slate-400 hover:text-slate-900 cursor-pointer transition-all">
+                                <label class="ans-btn min-h-[44px] sm:min-h-[36px] px-3 sm:px-4 py-2 sm:py-1.5 rounded-lg text-xs font-black flex items-center justify-center text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white cursor-pointer transition-all">
                                     <input type="radio" name="item_{{ item.id }}" value="nao" onchange="handleAnswerChange({{ item.id }})" class="sr-only">
                                     NÃO
                                 </label>
-                                <label class="ans-btn px-4 py-1.5 rounded-lg text-xs font-black text-slate-600 dark:text-slate-400 hover:text-slate-900 cursor-pointer transition-all">
+                                <label class="ans-btn min-h-[44px] sm:min-h-[36px] px-3 sm:px-4 py-2 sm:py-1.5 rounded-lg text-xs font-black flex items-center justify-center text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white cursor-pointer transition-all">
                                     <input type="radio" name="item_{{ item.id }}" value="na" onchange="handleAnswerChange({{ item.id }})" class="sr-only">
                                     N/A
                                 </label>
@@ -572,26 +857,62 @@ html, body {
                         <div id="extra-box-{{ item.id }}" class="{% if not item.requires_photo %}hidden{% endif %} pt-2 border-t border-slate-200/40 dark:border-white/5 space-y-2">
                             <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                                 <input type="text" name="justif_{{ item.id }}" placeholder="Descreva observação ou justificativa..."
-                                       class="flex-1 rounded-xl px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-[11px] font-medium outline-none">
+                                       class="flex-1 rounded-xl px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-xs font-medium text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500 min-h-[42px]">
                                 
-                                <label class="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-slate-200/80 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold hover:bg-slate-300 dark:hover:bg-slate-700 cursor-pointer transition-all">
+                                <label class="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-slate-200/80 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold hover:bg-slate-300 dark:hover:bg-slate-700 cursor-pointer transition-all min-h-[42px] shrink-0">
                                     <i class="fa-solid fa-camera text-slate-500"></i>
                                     <span id="photo-label-{{ item.id }}">Foto</span>
                                     <input type="file" name="foto_{{ item.id }}" accept="image/*" capture="environment" onchange="previewQuestionPhoto(this, {{ item.id }})" class="sr-only">
                                 </label>
-                                <div id="preview-photo-{{ item.id }}" class="hidden w-8 h-8 rounded-lg border border-slate-300 overflow-hidden shrink-0"></div>
+                                <div id="preview-photo-{{ item.id }}" class="hidden w-10 h-10 rounded-xl border border-slate-300 dark:border-white/20 overflow-hidden shrink-0"></div>
                             </div>
                         </div>
+
+                        {% if item.is_blocking_if_negative %}
+                        <div id="maneuver-box-{{ item.id }}" class="hidden pt-3 border-t border-slate-200/80 dark:border-white/10 bg-slate-100/60 dark:bg-white/[0.03] p-3.5 rounded-2xl space-y-3">
+                            <div class="flex items-start gap-2">
+                                <i class="fa-solid fa-triangle-exclamation text-slate-600 dark:text-slate-300 mt-0.5 text-xs"></i>
+                                <div>
+                                    <p class="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wide">Critério Impeditivo Identificado</p>
+                                    <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Houve alguma ação técnica para manobrar a alteração com segurança?</p>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                <label class="maneuver-opt flex items-center gap-2.5 p-3 rounded-xl border border-emerald-500/30 bg-white/90 dark:bg-slate-900/90 cursor-pointer text-xs font-bold text-slate-700 dark:text-slate-200 hover:border-emerald-500 transition-all active:scale-[0.99] min-h-[46px]">
+                                    <input type="radio" name="maneuver_action_{{ item.id }}" value="sim" onchange="handleManeuverChoice({{ item.id }}, 'sim')" class="accent-emerald-500 w-4 h-4 shrink-0">
+                                    <span class="flex items-center gap-1.5"><i class="fa-solid fa-circle-check text-emerald-500"></i> Sim, houve ação para manobrar</span>
+                                </label>
+                                <label class="maneuver-opt flex items-center gap-2.5 p-3 rounded-xl border border-red-500/30 bg-white/90 dark:bg-slate-900/90 cursor-pointer text-xs font-bold text-slate-700 dark:text-slate-200 hover:border-red-500 transition-all active:scale-[0.99] min-h-[46px]">
+                                    <input type="radio" name="maneuver_action_{{ item.id }}" value="nao" onchange="handleManeuverChoice({{ item.id }}, 'nao')" class="accent-red-500 w-4 h-4 shrink-0">
+                                    <span class="flex items-center gap-1.5"><i class="fa-solid fa-ban text-red-500"></i> Não (Fator Impeditivo)</span>
+                                </label>
+                            </div>
+
+                            <div id="maneuver-input-box-{{ item.id }}" class="hidden space-y-1.5 pt-2 border-t border-slate-200 dark:border-white/10">
+                                <label class="text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-slate-300 block">
+                                    Descreva a ação adotada para manobrar a alteração e executar a atividade com segurança: *
+                                </label>
+                                <input type="text" name="maneuver_notes_{{ item.id }}" id="maneuver_notes_{{ item.id }}" placeholder="Ex: Efetuado isolamento prévio e ancoragem alternativa com auxílio da dupla..."
+                                       class="w-full rounded-xl px-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-xs font-medium text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-slate-400 min-h-[44px]">
+                            </div>
+
+                            <div id="maneuver-alert-blocked-{{ item.id }}" class="hidden p-2.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-700 dark:text-red-400 text-xs font-bold">
+                                <i class="fa-solid fa-triangle-exclamation mr-1.5 text-red-500"></i>
+                                <strong>Fator Impeditivo Confirmado!</strong> Como não houve ação para manobrar a alteração, esta APR será registrada como <u>BLOQUEADA</u> e a atividade NÃO deve ser iniciada.
+                            </div>
+                        </div>
+                        {% endif %}
                     </div>
                     {% endfor %}
                 </div>
             </div>
 
             <!-- BLOCO E: CLIMA & AMBIENTE - CONDICIONAL -->
-            <div id="section-clima" class="hidden bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl border-2 border-sky-500/40 rounded-3xl p-5 sm:p-6 shadow-sm space-y-4 transition-all">
+            <div id="section-clima" class="hidden bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl border border-slate-200/60 dark:border-white/10 rounded-3xl p-5 sm:p-6 shadow-sm space-y-4 transition-all">
                 <div class="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-white/5">
                     <div class="flex items-center gap-3">
-                        <div class="w-8 h-8 rounded-xl bg-sky-500/10 flex items-center justify-center text-sky-500 text-sm">
+                        <div class="w-8 h-8 rounded-xl bg-slate-100 dark:bg-white/5 flex items-center justify-center text-slate-700 dark:text-slate-300 text-sm">
                             <i class="fa-solid fa-cloud-sun"></i>
                         </div>
                         <div>
@@ -599,15 +920,14 @@ html, body {
                             <p class="text-[10px] text-slate-400">Ventos fortes, chuvas, estabilidade do poste e fauna perigosa.</p>
                         </div>
                     </div>
-                    <span class="text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full bg-sky-500/10 text-sky-600 dark:text-sky-400">
-                        Clima Ativo
+                    <span class="text-[10px] font-bold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-white/5 px-2.5 py-1 rounded-full border border-slate-200/60 dark:border-white/5">
+                        Condições Climáticas
                     </span>
                 </div>
 
                 <div class="space-y-4">
                     {% for item in categories.clima_ambiente %}
-                    <div class="question-row p-4 rounded-2xl bg-slate-50/70 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 space-y-3"
-                         data-item-id="{{ item.id }}" data-blocking="{{ 'true' if item.is_blocking_if_negative else 'false' }}">
+                    <div class="question-row p-4 rounded-2xl bg-slate-50/70 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 space-y-3" data-item-id="{{ item.id }}" data-category="{{ item.category }}" data-blocking="{{ 'true' if item.is_blocking_if_negative else 'false' }}" data-positive-answer="{{ item.positive_answer or ('nao' if item.category == 'fator_pessoal' else 'sim') }}">
                         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                             <div class="space-y-0.5">
                                 <div class="flex items-center gap-2">
@@ -628,16 +948,17 @@ html, body {
                                 {% endif %}
                             </div>
 
-                            <div class="inline-flex rounded-xl p-1 bg-slate-200/80 dark:bg-slate-800 shrink-0 self-start sm:self-center">
-                                <label class="ans-btn px-4 py-1.5 rounded-lg text-xs font-black cursor-pointer transition-all active-ans bg-emerald-500 text-white shadow-sm">
+                            <!-- BOTÕES SIM / NÃO / N/A -->
+                            <div class="w-full sm:w-auto grid grid-cols-3 sm:inline-flex rounded-xl p-1 bg-slate-200/80 dark:bg-slate-800 shrink-0 mt-2 sm:mt-0 gap-1 sm:gap-0">
+                                <label class="ans-btn min-h-[44px] sm:min-h-[36px] px-3 sm:px-4 py-2 sm:py-1.5 rounded-lg text-xs font-black flex items-center justify-center cursor-pointer transition-all active-ans bg-emerald-500 text-white shadow-sm">
                                     <input type="radio" name="item_{{ item.id }}" value="sim" checked onchange="handleAnswerChange({{ item.id }})" class="sr-only">
                                     SIM
                                 </label>
-                                <label class="ans-btn px-4 py-1.5 rounded-lg text-xs font-black text-slate-600 dark:text-slate-400 hover:text-slate-900 cursor-pointer transition-all">
+                                <label class="ans-btn min-h-[44px] sm:min-h-[36px] px-3 sm:px-4 py-2 sm:py-1.5 rounded-lg text-xs font-black flex items-center justify-center text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white cursor-pointer transition-all">
                                     <input type="radio" name="item_{{ item.id }}" value="nao" onchange="handleAnswerChange({{ item.id }})" class="sr-only">
                                     NÃO
                                 </label>
-                                <label class="ans-btn px-4 py-1.5 rounded-lg text-xs font-black text-slate-600 dark:text-slate-400 hover:text-slate-900 cursor-pointer transition-all">
+                                <label class="ans-btn min-h-[44px] sm:min-h-[36px] px-3 sm:px-4 py-2 sm:py-1.5 rounded-lg text-xs font-black flex items-center justify-center text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white cursor-pointer transition-all">
                                     <input type="radio" name="item_{{ item.id }}" value="na" onchange="handleAnswerChange({{ item.id }})" class="sr-only">
                                     N/A
                                 </label>
@@ -647,16 +968,52 @@ html, body {
                         <div id="extra-box-{{ item.id }}" class="{% if not item.requires_photo %}hidden{% endif %} pt-2 border-t border-slate-200/40 dark:border-white/5 space-y-2">
                             <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                                 <input type="text" name="justif_{{ item.id }}" placeholder="Descreva observação ou justificativa..."
-                                       class="flex-1 rounded-xl px-3 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-[11px] font-medium outline-none">
+                                       class="flex-1 rounded-xl px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-xs font-medium text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500 min-h-[42px]">
                                 
-                                <label class="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-slate-200/80 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold hover:bg-slate-300 dark:hover:bg-slate-700 cursor-pointer transition-all">
+                                <label class="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-slate-200/80 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold hover:bg-slate-300 dark:hover:bg-slate-700 cursor-pointer transition-all min-h-[42px] shrink-0">
                                     <i class="fa-solid fa-camera text-slate-500"></i>
                                     <span id="photo-label-{{ item.id }}">Foto</span>
                                     <input type="file" name="foto_{{ item.id }}" accept="image/*" capture="environment" onchange="previewQuestionPhoto(this, {{ item.id }})" class="sr-only">
                                 </label>
-                                <div id="preview-photo-{{ item.id }}" class="hidden w-8 h-8 rounded-lg border border-slate-300 overflow-hidden shrink-0"></div>
+                                <div id="preview-photo-{{ item.id }}" class="hidden w-10 h-10 rounded-xl border border-slate-300 dark:border-white/20 overflow-hidden shrink-0"></div>
                             </div>
                         </div>
+
+                        {% if item.is_blocking_if_negative %}
+                        <div id="maneuver-box-{{ item.id }}" class="hidden pt-3 border-t border-slate-200/80 dark:border-white/10 bg-slate-100/60 dark:bg-white/[0.03] p-3.5 rounded-2xl space-y-3">
+                            <div class="flex items-start gap-2">
+                                <i class="fa-solid fa-triangle-exclamation text-slate-600 dark:text-slate-300 mt-0.5 text-xs"></i>
+                                <div>
+                                    <p class="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wide">Critério Impeditivo Identificado</p>
+                                    <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Houve alguma ação técnica para manobrar a alteração com segurança?</p>
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                <label class="maneuver-opt flex items-center gap-2.5 p-3 rounded-xl border border-emerald-500/30 bg-white/90 dark:bg-slate-900/90 cursor-pointer text-xs font-bold text-slate-700 dark:text-slate-200 hover:border-emerald-500 transition-all active:scale-[0.99] min-h-[46px]">
+                                    <input type="radio" name="maneuver_action_{{ item.id }}" value="sim" onchange="handleManeuverChoice({{ item.id }}, 'sim')" class="accent-emerald-500 w-4 h-4 shrink-0">
+                                    <span class="flex items-center gap-1.5"><i class="fa-solid fa-circle-check text-emerald-500"></i> Sim, houve ação para manobrar</span>
+                                </label>
+                                <label class="maneuver-opt flex items-center gap-2.5 p-3 rounded-xl border border-red-500/30 bg-white/90 dark:bg-slate-900/90 cursor-pointer text-xs font-bold text-slate-700 dark:text-slate-200 hover:border-red-500 transition-all active:scale-[0.99] min-h-[46px]">
+                                    <input type="radio" name="maneuver_action_{{ item.id }}" value="nao" onchange="handleManeuverChoice({{ item.id }}, 'nao')" class="accent-red-500 w-4 h-4 shrink-0">
+                                    <span class="flex items-center gap-1.5"><i class="fa-solid fa-ban text-red-500"></i> Não (Fator Impeditivo)</span>
+                                </label>
+                            </div>
+
+                            <div id="maneuver-input-box-{{ item.id }}" class="hidden space-y-1.5 pt-2 border-t border-slate-200 dark:border-white/10">
+                                <label class="text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-slate-300 block">
+                                    Descreva a ação adotada para manobrar a alteração e executar a atividade com segurança: *
+                                </label>
+                                <input type="text" name="maneuver_notes_{{ item.id }}" id="maneuver_notes_{{ item.id }}" placeholder="Ex: Efetuado isolamento prévio e ancoragem alternativa com auxílio da dupla..."
+                                       class="w-full rounded-xl px-4 py-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 text-xs font-medium text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-slate-400 min-h-[44px]">
+                            </div>
+
+                            <div id="maneuver-alert-blocked-{{ item.id }}" class="hidden p-2.5 rounded-xl bg-red-500/10 border border-red-500/30 text-red-700 dark:text-red-400 text-xs font-bold">
+                                <i class="fa-solid fa-triangle-exclamation mr-1.5 text-red-500"></i>
+                                <strong>Fator Impeditivo Confirmado!</strong> Como não houve ação para manobrar a alteração, esta APR será registrada como <u>BLOQUEADA</u> e a atividade NÃO deve ser iniciada.
+                            </div>
+                        </div>
+                        {% endif %}
                     </div>
                     {% endfor %}
                 </div>
@@ -664,16 +1021,16 @@ html, body {
 
         </div>
 
-        <!-- 5. PAINEL DE CONDIÇÃO IMPEDITIVA & TRATATIVA EMERGENCIAL (OPÇÃO B ACORDADA) -->
+        <!-- 5. PAINEL DE CONDIÇÃO IMPEDITIVA & TRATATIVAS -->
         <div id="blocking-alert-box" class="hidden bg-amber-500/10 dark:bg-amber-500/15 border-2 border-amber-500/50 rounded-3xl p-5 sm:p-6 space-y-4">
             <div class="flex items-start gap-3">
-                <div class="w-10 h-10 rounded-2xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-lg shadow-amber-500/30">
-                    <i class="fa-solid fa-triangle-exclamation text-lg"></i>
+                <div id="blocking-alert-icon-box" class="w-10 h-10 rounded-2xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-lg shadow-amber-500/30">
+                    <i id="blocking-alert-icon" class="fa-solid fa-triangle-exclamation text-lg"></i>
                 </div>
                 <div>
-                    <h4 class="text-sm font-black text-amber-800 dark:text-amber-300 uppercase tracking-wider">Condição Impeditiva Detectada</h4>
-                    <p class="text-xs text-amber-700 dark:text-amber-400 mt-0.5">
-                        Você marcou "NÃO" em um item crítico de segurança. Conforme a norma, a atividade só poderá ser liberada se for adotada uma <b>Medida de Controle Emergencial / Preventiva</b> devidamente justificada e fotografada.
+                    <h4 id="blocking-alert-title" class="text-sm font-black text-amber-800 dark:text-amber-300 uppercase tracking-wider">Critério Impeditivo Detectado</h4>
+                    <p id="blocking-alert-msg" class="text-xs text-amber-700 dark:text-amber-400 mt-0.5">
+                        Você assinalou alteração em critério impeditivo de segurança. Responda na pergunta acima se houve alguma ação para manobrar a alteração ou se é fator impeditivo.
                     </p>
                 </div>
             </div>
@@ -681,15 +1038,15 @@ html, body {
             <div class="space-y-3 pt-2">
                 <div>
                     <label class="text-[10px] font-black text-amber-800 dark:text-amber-300 uppercase tracking-widest block mb-1">
-                        Descreva a Medida de Controle Adotada para Liberar o Trabalho: *
+                        Observações Complementares / Medidas Preventivas Gerais (Opcional):
                     </label>
-                    <textarea name="emergency_measure_notes" id="emergency_measure_notes" rows="3" placeholder="Ex: A escada não pôde ser amarrada no poste devido a galho, então foi feito o isolamento e realizada poda prévia segura com dupla de apoio..."
+                    <textarea name="emergency_measure_notes" id="emergency_measure_notes" rows="2" placeholder="Observações adicionais sobre as medidas ou manobras da equipe..."
                               class="w-full rounded-2xl p-4 bg-white dark:bg-slate-900 border border-amber-500/40 text-slate-800 dark:text-white text-xs font-medium outline-none focus:ring-2 focus:ring-amber-500"></textarea>
                 </div>
 
                 <div>
                     <label class="text-[10px] font-black text-amber-800 dark:text-amber-300 uppercase tracking-widest block mb-1">
-                        Foto Comprobatória da Medida de Controle (Opcional, porém recomendada)
+                        Foto Comprobatória Geral da Manobra / Local (Opcional)
                     </label>
                     <div class="flex items-center gap-3">
                         <label class="flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-2xl border-2 border-dashed border-amber-500/50 bg-white/50 dark:bg-slate-900/50 hover:bg-amber-500/10 cursor-pointer transition-all">
@@ -739,6 +1096,7 @@ html, body {
         </div>
 
     </form>
+    {% endif %}
 </div>
 
 <!-- ====================== MODAL DE ASSINATURA COM O DEDO ====================== -->
@@ -815,21 +1173,75 @@ function toggleRiskCategory(cat, isChecked) {
     const card = document.getElementById(`trigger-${cat}`).closest('.trigger-card');
     const section = document.getElementById(`section-${cat}`);
     const icon = card.querySelector('.icon-indicator');
+    const badge = card.querySelector('.check-badge');
 
     if (isChecked) {
         activeRiskFactors.add(cat);
-        card.classList.add('border-emerald-500', 'bg-emerald-500/10');
-        card.classList.remove('border-slate-200/80', 'dark:border-white/10');
-        icon.classList.remove('text-slate-400');
-        icon.classList.add('text-emerald-500');
-        if (section) section.classList.remove('hidden');
+        card.classList.add('border-slate-800', 'dark:border-white', 'bg-slate-100', 'dark:bg-white/10', 'shadow-sm');
+        card.classList.remove('border-slate-200/80', 'dark:border-white/10', 'bg-slate-50/50', 'dark:bg-white/[0.02]');
+        if (icon) {
+            icon.classList.remove('text-slate-400');
+            icon.classList.add('text-slate-800', 'dark:text-white');
+        }
+        if (badge) {
+            badge.className = 'check-badge absolute top-2.5 right-2.5 w-5 h-5 rounded-full bg-slate-800 dark:bg-white text-white dark:text-slate-900 flex items-center justify-center text-[10px] shadow-sm';
+            badge.classList.remove('hidden');
+        }
+        if (section) {
+            section.classList.remove('hidden');
+            section.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
     } else {
         activeRiskFactors.delete(cat);
-        card.classList.remove('border-emerald-500', 'bg-emerald-500/10');
-        card.classList.add('border-slate-200/80', 'dark:border-white/10');
-        icon.classList.add('text-slate-400');
-        icon.classList.remove('text-emerald-500');
+        card.classList.remove('border-slate-800', 'dark:border-white', 'bg-slate-100', 'dark:bg-white/10', 'shadow-sm');
+        card.classList.add('border-slate-200/80', 'dark:border-white/10', 'bg-slate-50/50', 'dark:bg-white/[0.02]');
+        if (icon) {
+            icon.classList.add('text-slate-400');
+            icon.classList.remove('text-slate-800', 'dark:text-white');
+        }
+        if (badge) badge.classList.add('hidden');
         if (section) section.classList.add('hidden');
+    }
+
+    checkAllBlockingConditions();
+}
+
+
+function handleManeuverChoice(itemId, choice) {
+    const maneuverBox = document.getElementById(`maneuver-box-${itemId}`);
+    const inputBox = document.getElementById(`maneuver-input-box-${itemId}`);
+    const alertBlocked = document.getElementById(`maneuver-alert-blocked-${itemId}`);
+    const inputNote = document.getElementById(`maneuver_notes_${itemId}`);
+
+    if (maneuverBox) {
+        const radiosM = maneuverBox.querySelectorAll('input[type="radio"]');
+        radiosM.forEach(r => {
+            const optLbl = r.closest('.maneuver-opt');
+            if (optLbl) {
+                if (r.checked) {
+                    if (r.value === 'sim') {
+                        optLbl.classList.add('ring-2', 'ring-emerald-500', 'bg-emerald-500/15');
+                        optLbl.classList.remove('bg-white/90', 'dark:bg-slate-900/90');
+                    } else {
+                        optLbl.classList.add('ring-2', 'ring-red-500', 'bg-red-500/15');
+                        optLbl.classList.remove('bg-white/90', 'dark:bg-slate-900/90');
+                    }
+                } else {
+                    optLbl.classList.remove('ring-2', 'ring-emerald-500', 'ring-red-500', 'bg-emerald-500/15', 'bg-red-500/15');
+                    optLbl.classList.add('bg-white/90', 'dark:bg-slate-900/90');
+                }
+            }
+        });
+    }
+
+    if (choice === 'sim') {
+        if (inputBox) inputBox.classList.remove('hidden');
+        if (alertBlocked) alertBlocked.classList.add('hidden');
+        if (inputNote) inputNote.focus();
+    } else {
+        if (inputBox) inputBox.classList.add('hidden');
+        if (alertBlocked) alertBlocked.classList.remove('hidden');
+        if (inputNote) inputNote.value = '';
     }
 
     checkAllBlockingConditions();
@@ -840,59 +1252,74 @@ function handleAnswerChange(itemId) {
     if (!row) return;
 
     const isFatorPessoal = row.getAttribute('data-category') === 'fator_pessoal';
-    const radios = row.querySelectorAll('input[type="radio"]');
-    let selectedVal = isFatorPessoal ? 'nao' : 'sim';
+    const posAns = (row.getAttribute('data-positive-answer') || (isFatorPessoal ? 'nao' : 'sim')).toLowerCase();
+    const radios = row.querySelectorAll('input[type="radio"][name^="item_"]');
+    let selectedVal = posAns;
+
     radios.forEach(r => {
         const lbl = r.closest('.ans-btn');
         if (r.checked) {
             selectedVal = r.value;
             lbl.classList.add('active-ans');
-            if (isFatorPessoal) {
-                if (r.value === 'nao') {
-                    lbl.className = 'ans-btn px-4 py-1.5 rounded-lg text-xs font-black cursor-pointer transition-all active-ans bg-emerald-500 text-white shadow-sm';
-                } else if (r.value === 'sim') {
-                    lbl.className = 'ans-btn px-4 py-1.5 rounded-lg text-xs font-black cursor-pointer transition-all active-ans bg-red-500 text-white shadow-sm';
-                } else {
-                    lbl.className = 'ans-btn px-4 py-1.5 rounded-lg text-xs font-black cursor-pointer transition-all active-ans bg-slate-600 text-white shadow-sm';
-                }
+            if (r.value === 'na') {
+                lbl.className = 'ans-btn min-h-[44px] sm:min-h-[36px] px-3 sm:px-4 py-2 sm:py-1.5 rounded-lg text-xs font-black flex items-center justify-center cursor-pointer transition-all active-ans bg-slate-600 text-white shadow-sm';
+            } else if (r.value === posAns) {
+                // Resposta positiva/conforme configurada -> Verde
+                lbl.className = 'ans-btn min-h-[44px] sm:min-h-[36px] px-3 sm:px-4 py-2 sm:py-1.5 rounded-lg text-xs font-black flex items-center justify-center cursor-pointer transition-all active-ans bg-emerald-500 text-white shadow-sm';
             } else {
-                if (r.value === 'sim') {
-                    lbl.className = 'ans-btn px-4 py-1.5 rounded-lg text-xs font-black cursor-pointer transition-all active-ans bg-emerald-500 text-white shadow-sm';
-                } else if (r.value === 'nao') {
-                    lbl.className = 'ans-btn px-4 py-1.5 rounded-lg text-xs font-black cursor-pointer transition-all active-ans bg-red-500 text-white shadow-sm';
-                } else {
-                    lbl.className = 'ans-btn px-4 py-1.5 rounded-lg text-xs font-black cursor-pointer transition-all active-ans bg-slate-600 text-white shadow-sm';
-                }
+                // Resposta contrária à positiva (risco) -> Vermelho
+                lbl.className = 'ans-btn min-h-[44px] sm:min-h-[36px] px-3 sm:px-4 py-2 sm:py-1.5 rounded-lg text-xs font-black flex items-center justify-center cursor-pointer transition-all active-ans bg-red-500 text-white shadow-sm';
             }
         } else {
-            lbl.className = 'ans-btn px-4 py-1.5 rounded-lg text-xs font-black text-slate-600 dark:text-slate-400 hover:text-slate-900 cursor-pointer transition-all';
+            lbl.className = 'ans-btn min-h-[44px] sm:min-h-[36px] px-3 sm:px-4 py-2 sm:py-1.5 rounded-lg text-xs font-black flex items-center justify-center text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white cursor-pointer transition-all';
         }
     });
 
+    const isNonCompliant = (selectedVal !== 'na' && selectedVal !== posAns);
+
     const extraBox = document.getElementById(`extra-box-${itemId}`);
     if (extraBox) {
-        if (isFatorPessoal) {
-            if (selectedVal === 'sim') {
-                extraBox.classList.remove('hidden');
-                const justifInput = extraBox.querySelector('input[type="text"]');
-                if (justifInput) justifInput.required = true;
-            } else {
-                extraBox.classList.add('hidden');
-                const justifInput = extraBox.querySelector('input[type="text"]');
-                if (justifInput) {
-                    justifInput.required = false;
-                    justifInput.value = '';
-                }
+        const isReqPhoto = row.querySelector('.border-blue-500\\/20') !== null;
+
+        if (isNonCompliant) {
+            extraBox.classList.remove('hidden');
+            const justifInput = extraBox.querySelector('input[type="text"]');
+            if (justifInput && isFatorPessoal) {
+                justifInput.required = true;
             }
         } else {
-            if (selectedVal === 'nao') {
-                extraBox.classList.remove('hidden');
-            } else {
-                const isReqPhoto = row.querySelector('.border-blue-500\\/20') !== null;
-                if (!isReqPhoto) {
-                    extraBox.classList.add('hidden');
-                }
+            if (!isReqPhoto) {
+                extraBox.classList.add('hidden');
             }
+            const justifInput = extraBox.querySelector('input[type="text"]');
+            if (justifInput && isFatorPessoal) {
+                justifInput.required = false;
+                justifInput.value = '';
+            }
+        }
+    }
+
+    const maneuverBox = document.getElementById(`maneuver-box-${itemId}`);
+    if (maneuverBox) {
+        if (isNonCompliant) {
+            maneuverBox.classList.remove('hidden');
+        } else {
+            maneuverBox.classList.add('hidden');
+            const radiosM = maneuverBox.querySelectorAll('input[type="radio"]');
+            radiosM.forEach(r => {
+                r.checked = false;
+                const optLbl = r.closest('.maneuver-opt');
+                if (optLbl) {
+                    optLbl.classList.remove('ring-2', 'ring-emerald-500', 'ring-red-500', 'bg-emerald-500/15', 'bg-red-500/15');
+                    optLbl.classList.add('bg-white/90', 'dark:bg-slate-900/90');
+                }
+            });
+            const inputBox = document.getElementById(`maneuver-input-box-${itemId}`);
+            const alertBlocked = document.getElementById(`maneuver-alert-blocked-${itemId}`);
+            const inputNote = document.getElementById(`maneuver_notes_${itemId}`);
+            if (inputBox) inputBox.classList.add('hidden');
+            if (alertBlocked) alertBlocked.classList.add('hidden');
+            if (inputNote) inputNote.value = '';
         }
     }
 
@@ -900,7 +1327,11 @@ function handleAnswerChange(itemId) {
 }
 
 function checkAllBlockingConditions() {
-    let hasBlocking = false;
+    let hasAnyRisk = false;
+    let hasUnresolvedImpediment = false;
+    let hasPendingChoice = false;
+    let hasResolvedManeuver = false;
+
     const rows = document.querySelectorAll('.question-row');
 
     rows.forEach(row => {
@@ -911,21 +1342,80 @@ function checkAllBlockingConditions() {
 
         const isBlockingRule = row.getAttribute('data-blocking') === 'true';
         const isFatorPessoal = row.getAttribute('data-category') === 'fator_pessoal';
+        const posAns = (row.getAttribute('data-positive-answer') || (isFatorPessoal ? 'nao' : 'sim')).toLowerCase();
         const checkedRadio = row.querySelector('input[type="radio"]:checked');
+
         if (isBlockingRule && checkedRadio) {
-            if (isFatorPessoal && checkedRadio.value === 'sim') {
-                hasBlocking = true;
-            } else if (!isFatorPessoal && checkedRadio.value === 'nao') {
-                hasBlocking = true;
+            if (checkedRadio.value !== 'na' && checkedRadio.value !== posAns) {
+                hasAnyRisk = true;
+                const itemId = row.getAttribute('data-item-id');
+                const mChoice = row.querySelector(`input[name="maneuver_action_${itemId}"]:checked`);
+                if (!mChoice) {
+                    hasPendingChoice = true;
+                } else if (mChoice.value === 'nao') {
+                    hasUnresolvedImpediment = true;
+                } else if (mChoice.value === 'sim') {
+                    hasResolvedManeuver = true;
+                }
             }
         }
     });
 
     const alertBox = document.getElementById('blocking-alert-box');
-    if (hasBlocking) {
-        alertBox.classList.remove('hidden');
+    const alertTitle = document.getElementById('blocking-alert-title');
+    const alertMsg = document.getElementById('blocking-alert-msg');
+    const alertIconBox = document.getElementById('blocking-alert-icon-box');
+    const alertIcon = document.getElementById('blocking-alert-icon');
+    const btnSubmit = document.getElementById('btn-submit-apr');
+    const btnSubmitText = document.getElementById('btn-submit-text');
+    const btnSubmitIcon = document.getElementById('btn-submit-icon');
+
+    if (!hasAnyRisk) {
+        if (alertBox) alertBox.classList.add('hidden');
+        if (btnSubmit) {
+            btnSubmit.className = "w-full py-4 rounded-2xl font-black text-sm uppercase tracking-wider text-white bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] shadow-lg shadow-emerald-600/25 transition-all flex items-center justify-center gap-2.5 cursor-pointer";
+            if (btnSubmitText) btnSubmitText.textContent = "Finalizar e Assinar APR";
+            if (btnSubmitIcon) btnSubmitIcon.className = "fa-solid fa-paper-plane text-base";
+        }
     } else {
-        alertBox.classList.add('hidden');
+        if (alertBox) alertBox.classList.remove('hidden');
+        if (hasUnresolvedImpediment) {
+            // Fator impeditivo ativo! Atividade Bloqueada
+            if (alertBox) alertBox.className = "bg-red-500/10 dark:bg-red-500/15 border-2 border-red-500/60 rounded-3xl p-5 sm:p-6 space-y-4";
+            if (alertIconBox) alertIconBox.className = "w-10 h-10 rounded-2xl bg-red-600 text-white flex items-center justify-center shrink-0 shadow-lg shadow-red-500/30";
+            if (alertIcon) alertIcon.className = "fa-solid fa-ban text-lg";
+            if (alertTitle) alertTitle.innerHTML = '<span class="text-red-700 dark:text-red-400 font-black">Condição Impeditiva Confirmada (Atividade Bloqueada)</span>';
+            if (alertMsg) alertMsg.innerHTML = 'Constam critérios impeditivos sem ação de manobra viável. Conforme diretrizes de segurança, esta APR será registrada como <strong>BLOQUEADA</strong> e o trabalho <strong>NÃO deve ser iniciado</strong>.';
+            if (btnSubmit) {
+                btnSubmit.className = "w-full py-4 rounded-2xl font-black text-sm uppercase tracking-wider text-white bg-red-600 hover:bg-red-700 active:scale-[0.99] shadow-lg shadow-red-600/25 transition-all flex items-center justify-center gap-2.5 cursor-pointer";
+                if (btnSubmitText) btnSubmitText.textContent = "Registrar APR como BLOQUEADA (Critério Impeditivo)";
+                if (btnSubmitIcon) btnSubmitIcon.className = "fa-solid fa-ban text-base";
+            }
+        } else if (hasPendingChoice) {
+            // Aguardando resposta de manobra
+            if (alertBox) alertBox.className = "bg-amber-500/10 dark:bg-amber-500/15 border-2 border-amber-500/50 rounded-3xl p-5 sm:p-6 space-y-4";
+            if (alertIconBox) alertIconBox.className = "w-10 h-10 rounded-2xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-lg shadow-amber-500/30";
+            if (alertIcon) alertIcon.className = "fa-solid fa-triangle-exclamation text-lg";
+            if (alertTitle) alertTitle.innerHTML = '<span class="text-amber-800 dark:text-amber-300 font-black">Critério Impeditivo Detectado</span>';
+            if (alertMsg) alertMsg.innerHTML = 'Responda nas perguntas destacadas se houve alguma ação para manobrar a alteração com segurança ou se é fator impeditivo.';
+            if (btnSubmit) {
+                btnSubmit.className = "w-full py-4 rounded-2xl font-black text-sm uppercase tracking-wider text-white bg-amber-600 hover:bg-amber-700 active:scale-[0.99] shadow-lg shadow-amber-600/25 transition-all flex items-center justify-center gap-2.5 cursor-pointer";
+                if (btnSubmitText) btnSubmitText.textContent = "Verificar Critérios Impeditivos";
+                if (btnSubmitIcon) btnSubmitIcon.className = "fa-solid fa-triangle-exclamation text-base";
+            }
+        } else {
+            // Todas as alterações foram manobradas com segurança!
+            if (alertBox) alertBox.className = "bg-emerald-500/10 dark:bg-emerald-500/15 border-2 border-emerald-500/50 rounded-3xl p-5 sm:p-6 space-y-4";
+            if (alertIconBox) alertIconBox.className = "w-10 h-10 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-lg shadow-emerald-500/30";
+            if (alertIcon) alertIcon.className = "fa-solid fa-shield-halved text-lg";
+            if (alertTitle) alertTitle.innerHTML = '<span class="text-emerald-800 dark:text-emerald-300 font-black">Ações de Manobra Declaradas</span>';
+            if (alertMsg) alertMsg.innerHTML = 'As alterações de risco foram contornadas com ações declaradas. A atividade será <strong>liberada com registro das medidas de manobra</strong>.';
+            if (btnSubmit) {
+                btnSubmit.className = "w-full py-4 rounded-2xl font-black text-sm uppercase tracking-wider text-white bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] shadow-lg shadow-emerald-600/25 transition-all flex items-center justify-center gap-2.5 cursor-pointer";
+                if (btnSubmitText) btnSubmitText.textContent = "Finalizar e Assinar APR (Liberada)";
+                if (btnSubmitIcon) btnSubmitIcon.className = "fa-solid fa-paper-plane text-base";
+            }
+        }
     }
 }
 
@@ -1177,6 +1667,7 @@ function atualizarUIModalAssinatura() {
 }
 
 function abrirModalAssinatura() {
+    document.body.classList.add('overflow-hidden');
     const modal = document.getElementById('modal-assinatura-apr');
     modal.classList.remove('hidden');
 
@@ -1195,6 +1686,7 @@ function abrirModalAssinatura() {
 }
 
 function fecharModalAssinatura() {
+    document.body.classList.remove('overflow-hidden');
     const modal = document.getElementById('modal-assinatura-apr');
     if (modal) modal.classList.add('hidden');
     currentSigStep = 1;
@@ -1284,16 +1776,42 @@ function validarEEnviarAPR(event) {
         return false;
     }
 
-    const blockingBox = document.getElementById('blocking-alert-box');
-    if (blockingBox && !blockingBox.classList.contains('hidden')) {
-        const emergInput = document.getElementById('emergency_measure_notes');
-        if (!emergInput.value.trim()) {
-            emergInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            emergInput.focus();
-            emergInput.classList.add('ring-2', 'ring-red-500');
-            setTimeout(() => emergInput.classList.remove('ring-2', 'ring-red-500'), 3000);
-            mostrarAlertaValidacao('Condição impeditiva identificada! É obrigatório preencher a <strong>Medida de Controle Adotada</strong>.');
-            return false;
+    // Validação de Critérios Impeditivos e Ação de Manobra
+    const allRows = document.querySelectorAll('.question-row');
+    for (const row of allRows) {
+        const parentSection = row.closest('[id^="section-"]');
+        if (parentSection && parentSection.classList.contains('hidden')) {
+            continue;
+        }
+
+        const isBlockingRule = row.getAttribute('data-blocking') === 'true';
+        const isFatorPessoal = row.getAttribute('data-category') === 'fator_pessoal';
+        const posAns = (row.getAttribute('data-positive-answer') || (isFatorPessoal ? 'nao' : 'sim')).toLowerCase();
+        const checkedRadio = row.querySelector('input[type="radio"]:checked');
+
+        if (isBlockingRule && checkedRadio) {
+            if (checkedRadio.value !== 'na' && checkedRadio.value !== posAns) {
+                const itemId = row.getAttribute('data-item-id');
+                const mChoice = row.querySelector(`input[name="maneuver_action_${itemId}"]:checked`);
+                if (!mChoice) {
+                    row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    row.classList.add('ring-2', 'ring-amber-500');
+                    setTimeout(() => row.classList.remove('ring-2', 'ring-amber-500'), 3000);
+                    mostrarAlertaValidacao('No critério impeditivo selecionado, informe se <strong>houve alguma ação para manobrar a alteração</strong> ou se é <strong>fator impeditivo</strong>.');
+                    return false;
+                }
+                if (mChoice.value === 'sim') {
+                    const mInput = document.getElementById(`maneuver_notes_${itemId}`) || row.querySelector(`input[name="maneuver_notes_${itemId}"]`);
+                    if (mInput && !mInput.value.trim()) {
+                        mInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        mInput.focus();
+                        mInput.classList.add('ring-2', 'ring-red-500');
+                        setTimeout(() => mInput.classList.remove('ring-2', 'ring-red-500'), 3000);
+                        mostrarAlertaValidacao('Você indicou que houve ação para manobrar a alteração. Por favor, <strong>descreva a ação de manobra adotada</strong>.');
+                        return false;
+                    }
+                }
+            }
         }
     }
 
@@ -1362,13 +1880,18 @@ async function enviarAPR() {
                         <p class="text-xs text-slate-600 dark:text-slate-300">${data.message}</p>
                         <div class="pt-4 flex flex-col gap-2">
                             <a href="/apr" class="w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-xs uppercase tracking-widest rounded-xl transition-all shadow-md shadow-emerald-600/20 flex items-center justify-center gap-2">
-                                <i class="fa-solid fa-plus-circle"></i>
-                                <span>Preencher Nova APR</span>
+                                <i class="fa-solid fa-clock-rotate-left"></i>
+                                <span>Acompanhar Atividade / Ver APR</span>
                             </a>
+                            ${(typeof userHasChecklist !== 'undefined' && userHasChecklist) ? `
                             <a href="/checklist" class="w-full py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 font-bold text-xs uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-2">
                                 <i class="fa-solid fa-clipboard-check"></i>
-                                <span>Voltar ao Checklist</span>
-                            </a>
+                                <span>Ir para o Checklist</span>
+                            </a>` : `
+                            <a href="{{ url_for('index') }}" class="w-full py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 font-bold text-xs uppercase tracking-widest rounded-xl transition-all flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-house"></i>
+                                <span>Voltar ao Início</span>
+                            </a>`}
                         </div>
                     </div>
                 </div>
