@@ -35,35 +35,94 @@
 
     <!-- ====================== MENSAGENS DO MODO ====================== -->
     {% if disabled %}
-    <div class="mb-6 p-6 glass-premium rounded-[2rem] border-red-500/20 text-center animate-premium">
-        <div class="w-12 h-12 rounded-full bg-red-500/10 flex items-center justify-center mx-auto mb-4">
-            <i class="fa-solid fa-ban text-red-500 text-xl"></i>
+    <div class="py-12 sm:py-16 text-center animate-premium max-w-lg mx-auto">
+        <!-- Engrenagens Minimalistas em Movimento Direto na Tela -->
+        <div class="relative w-28 h-28 mx-auto mb-6 flex items-center justify-center">
+            <svg viewBox="0 0 120 120" class="w-24 h-24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <!-- Engrenagem Principal (sentido horário) -->
+                <g class="animate-gear-spin-cw origin-center" style="transform-origin: 52px 52px;">
+                    <!-- Dentes da engrenagem principal -->
+                    <circle cx="52" cy="52" r="28" stroke="currentColor" class="text-slate-400 dark:text-slate-500" stroke-width="6" stroke-dasharray="7 5.5"/>
+                    <circle cx="52" cy="52" r="24" stroke="currentColor" class="text-slate-700 dark:text-slate-200" stroke-width="2.5"/>
+                    <circle cx="52" cy="52" r="9" class="fill-slate-100 dark:fill-slate-800" stroke="currentColor" class="text-slate-700 dark:text-slate-200" stroke-width="2.5"/>
+                    <!-- Raios internos minimalistas -->
+                    <line x1="52" y1="28" x2="52" y2="43" stroke="currentColor" class="text-slate-400 dark:text-slate-500" stroke-width="2"/>
+                    <line x1="52" y1="61" x2="52" y2="76" stroke="currentColor" class="text-slate-400 dark:text-slate-500" stroke-width="2"/>
+                    <line x1="28" y1="52" x2="43" y2="52" stroke="currentColor" class="text-slate-400 dark:text-slate-500" stroke-width="2"/>
+                    <line x1="61" y1="52" x2="76" y2="52" stroke="currentColor" class="text-slate-400 dark:text-slate-500" stroke-width="2"/>
+                </g>
+
+                <!-- Engrenagem Menor Acoplada (sentido anti-horário) -->
+                <g class="animate-gear-spin-ccw origin-center" style="transform-origin: 86px 86px;">
+                    <circle cx="86" cy="86" r="16" stroke="currentColor" class="text-slate-400 dark:text-slate-500" stroke-width="4.5" stroke-dasharray="5 4"/>
+                    <circle cx="86" cy="86" r="13" stroke="currentColor" class="text-slate-500 dark:text-slate-400" stroke-width="2"/>
+                    <circle cx="86" cy="86" r="5" class="fill-slate-100 dark:fill-slate-800" stroke="currentColor" class="text-slate-600 dark:text-slate-300" stroke-width="2"/>
+                </g>
+            </svg>
         </div>
-        <h3 class="text-lg font-bold text-slate-800 dark:text-white mb-1">Acesso Bloqueado</h3>
-        <p class="text-sm text-slate-500">O checklist foi desativado temporariamente pela supervisão.</p>
+
+        <!-- Título Solicitado -->
+        <h3 class="text-lg sm:text-xl font-black text-slate-800 dark:text-white tracking-tight mb-2">
+            Módulo temporariamente indisponível para manutenção
+        </h3>
+
+        <!-- Mensagem de Apoio Minimalista -->
+        <p class="text-xs sm:text-sm text-slate-400 dark:text-slate-500 max-w-sm mx-auto font-medium leading-relaxed">
+            Estamos realizando melhorias no checklist. O acesso será reestabelecido em breve pela supervisão técnica.
+        </p>
     </div>
     {% endif %}
 
     {% if not disabled and not success %}
     <div class="mb-8 grid grid-cols-1 gap-4 animate-premium">
-        {% if mode == "start_only" %}
+        {% if mode == "free" %}
+        <div class="p-5 glass-premium rounded-[2rem] border-amber-500/10 flex items-center gap-4">
+            <div class="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center text-amber-500">
+                <i class="fa-solid fa-bolt"></i>
+            </div>
+            <div>
+                <p class="text-xs font-black text-slate-800 dark:text-white uppercase tracking-tight">Modo: Livre</p>
+                <p class="text-[11px] text-slate-500">Inspeções ilimitadas e sem restrições de horário.</p>
+            </div>
+        </div>
+        {% elif mode == "start_only" %}
         <div class="p-5 glass-premium rounded-[2rem] border-blue-500/10 flex items-center gap-4">
             <div class="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-600">
                 <i class="fa-solid fa-circle-info"></i>
             </div>
             <div>
                 <p class="text-xs font-black text-slate-800 dark:text-white uppercase tracking-tight">Modo: Somente Início</p>
-                <p class="text-[11px] text-slate-500">Uma única inspeção diária necessária.</p>
+                <p class="text-[11px] text-slate-500">Uma única inspeção diária por técnico.</p>
             </div>
         </div>
         {% elif mode == "start_end" %}
-        <div class="p-5 glass-premium rounded-[2rem] border-purple-500/10 flex items-center gap-4">
-            <div class="w-10 h-10 rounded-xl bg-purple-500/10 flex items-center justify-center text-purple-600">
+        <div class="p-5 glass-premium rounded-[2rem] border-sky-500/10 flex items-center gap-4">
+            <div class="w-10 h-10 rounded-xl bg-sky-500/10 flex items-center justify-center text-sky-600">
                 <i class="fa-solid fa-arrows-rotate"></i>
             </div>
             <div>
                 <p class="text-xs font-black text-slate-800 dark:text-white uppercase tracking-tight">Modo: Início + Chegada</p>
-                <p class="text-[11px] text-slate-500">Inspeção obrigatória na saída e no retorno.</p>
+                <p class="text-[11px] text-slate-500">Inspeção obrigatória na saída e no retorno com o veículo.</p>
+            </div>
+        </div>
+        {% elif mode == "daily_vehicle" %}
+        <div class="p-5 glass-premium rounded-[2rem] border-orange-500/10 flex items-center gap-4">
+            <div class="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center text-orange-600">
+                <i class="fa-solid fa-calendar-day"></i>
+            </div>
+            <div>
+                <p class="text-xs font-black text-slate-800 dark:text-white uppercase tracking-tight">Modo: Diário Único por Veículo</p>
+                <p class="text-[11px] text-slate-500">Apenas um checklist necessário por dia para cada veículo.</p>
+            </div>
+        </div>
+        {% elif mode == "weekly" %}
+        <div class="p-5 glass-premium rounded-[2rem] border-emerald-500/10 flex items-center gap-4">
+            <div class="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-600">
+                <i class="fa-solid fa-calendar-week"></i>
+            </div>
+            <div>
+                <p class="text-xs font-black text-slate-800 dark:text-white uppercase tracking-tight">Modo: Semanal por Veículo</p>
+                <p class="text-[11px] text-slate-500">Uma inspeção por semana realizada para cada veículo.</p>
             </div>
         </div>
         {% endif %}
@@ -83,7 +142,7 @@
                                     class="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-900/5 dark:border-white/5 rounded-2xl px-5 py-4 text-sm font-bold text-slate-800 dark:text-white appearance-none focus:ring-4 focus:ring-blue-500/10 transition-all outline-none">
                                 <option value="">Selecione o Veículo</option>
                                 {% for v in vehicles %}
-                                    <option value="{{ v.id }}" data-plate="{{ v.plate }}" data-vtype="{{ v.type or 'carro' }}">{{ v.plate }} — {{ v.brand }} {{ v.model }}</option>
+                                    <option value="{{ v.id }}" data-plate="{{ v.plate }}" data-vtype="{{ v.type or 'carro' }}" data-km="{{ v.km or 0 }}">{{ v.plate }} — {{ v.brand }} {{ v.model }}</option>
                                 {% endfor %}
                             </select>
                             <div class="absolute right-5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
@@ -174,15 +233,21 @@
                 {% if vtype_items %}
                 {% for q in vtype_items %}
                 {% set q_index = loop.index %}
-                <div class="card-premium p-6 group transition-all hover:border-blue-500/20 mb-4">
+                <div class="card-premium p-6 group transition-all hover:border-blue-500/20 mb-4 checklist-item-card"
+                     id="item-card-{{ vtype }}-{{ q_index }}"
+                     data-item-index="{{ q_index }}"
+                     data-item-text="{{ q.text }}"
+                     data-required="{{ 'true' if q.required else 'false' }}"
+                     data-type="{{ q.type }}"
+                     data-require-justif-no="{{ 'true' if q.require_justif_no else 'false' }}">
                     <div class="flex gap-4">
-                        <div class="w-8 h-8 rounded-xl bg-slate-100 dark:bg-white/5 flex items-center justify-center text-[11px] font-black text-slate-400 group-hover:bg-blue-500 group-hover:text-white transition-all">
+                        <div class="w-8 h-8 rounded-xl bg-slate-100 dark:bg-white/5 flex items-center justify-center text-[11px] font-black text-slate-400 group-hover:bg-blue-500 group-hover:text-white transition-all item-badge">
                             {{ q_index }}
                         </div>
                         <div class="flex-1 space-y-4">
                             <label class="block text-sm font-bold text-slate-700 dark:text-white leading-relaxed">
-                                {{ q.text }}
-                                {% if q.required %}<span class="text-red-500 ml-1">*</span>{% endif %}
+                                <span class="item-question-title">{{ q.text }}</span>
+                                {% if q.required %}<span class="text-red-500 ml-1 font-bold">*</span>{% endif %}
                             </label>
 
                             <div class="p-4 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-900/5 dark:border-white/5">
@@ -249,10 +314,15 @@
                             </div>
 
                             {% if q.type != 'data' %}
-                            <div class="pl-4 border-l-2 border-slate-100 dark:border-white/5 space-y-1">
-                                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Justificativa / Observação</label>
+                            <div class="pl-4 border-l-2 border-slate-100 dark:border-white/5 space-y-1 item-just-container">
+                                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center justify-between">
+                                    <span>Justificativa / Observação</span>
+                                    {% if q.require_justif_no %}
+                                    <span class="text-amber-500 font-bold text-[9px] just-required-badge hidden">* Obrigatória para "Não"</span>
+                                    {% endif %}
+                                </label>
                                 <input type="text" name="item{{ q_index }}_just" placeholder="Adicionar observação..."
-                                       class="w-full bg-transparent border-none outline-none text-xs font-bold text-slate-500 placeholder:text-slate-300">
+                                       class="w-full bg-transparent border-none outline-none text-xs font-bold text-slate-500 placeholder:text-slate-300 item-just-input transition-all">
                             </div>
                             {% endif %}
                         </div>
@@ -340,6 +410,46 @@
     .vehicle-fade-icon.active {
         opacity: 1 !important;
         transform: scale(1);
+    }
+
+    /* Estilos de Validação e Destaque de Itens Pendentes */
+    .card-item-error {
+        border-color: #ef4444 !important;
+        box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.25), 0 10px 25px -5px rgba(239, 68, 68, 0.15) !important;
+    }
+    .card-item-error .item-badge {
+        background-color: #ef4444 !important;
+        color: #ffffff !important;
+    }
+    @keyframes errorPulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.02); }
+    }
+    .item-card-error-pulse {
+        animation: errorPulse 0.4s ease-in-out 2;
+    }
+    .just-input-error {
+        border-bottom: 2px solid #ef4444 !important;
+        background-color: rgba(239, 68, 68, 0.06) !important;
+        border-radius: 0.375rem;
+        padding-left: 0.5rem;
+    }
+
+    /* Animações Minimalistas de Engrenagens */
+    @keyframes gearSpinCw {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+    .animate-gear-spin-cw {
+        animation: gearSpinCw 12s linear infinite;
+    }
+
+    @keyframes gearSpinCcw {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(-360deg); }
+    }
+    .animate-gear-spin-ccw {
+        animation: gearSpinCcw 6.8s linear infinite;
     }
 </style>
 
@@ -432,9 +542,249 @@
 
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script>
+function validateChecklistForm() {
+    const vehicleSelect = document.getElementById('vehicle_id_select');
+    if (!vehicleSelect || !vehicleSelect.value) {
+        showToast('Por favor, selecione o veículo operacional.', 'error');
+        vehicleSelect.focus();
+        return false;
+    }
+
+    const selectedOption = vehicleSelect.options[vehicleSelect.selectedIndex];
+    const vtype = selectedOption ? (selectedOption.dataset.vtype || 'carro') : 'carro';
+    const minKm = parseInt(selectedOption ? (selectedOption.dataset.km || '0') : '0', 10);
+
+    // 1. Validação de KM
+    const kmInput = document.getElementById('km');
+    const kmRaw = kmInput ? kmInput.value.trim() : '';
+    const kmVal = parseInt(kmRaw, 10);
+    
+    if (!kmInput || kmRaw === '' || isNaN(kmVal)) {
+        showToast('Por favor, informe a quilometragem atual do veículo.', 'error');
+        highlightElement(kmInput);
+        kmInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        kmInput.focus();
+        return false;
+    }
+
+    if (kmVal < minKm) {
+        showToast(`A quilometragem informada (${kmVal} km) não pode ser inferior ao KM atual do veículo (${minKm} km).`, 'error');
+        highlightElement(kmInput);
+        kmInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        kmInput.focus();
+        return false;
+    }
+
+    // 2. Validação dos itens do checklist
+    const activeGroup = document.querySelector(`.checklist-type-group[data-vehicle-type="${vtype}"]`);
+    if (!activeGroup) {
+        showToast('Nenhum checklist disponível para o tipo de veículo selecionado.', 'error');
+        return false;
+    }
+
+    const itemCards = activeGroup.querySelectorAll('.checklist-item-card');
+    const missing = [];
+    let firstMissingCard = null;
+
+    // Limpa destaques anteriores
+    activeGroup.querySelectorAll('.card-item-error').forEach(c => c.classList.remove('card-item-error'));
+    activeGroup.querySelectorAll('.just-input-error').forEach(j => j.classList.remove('just-input-error'));
+    activeGroup.querySelectorAll('.pending-badge').forEach(b => b.remove());
+
+    itemCards.forEach(card => {
+        const isRequired = card.dataset.required === 'true';
+        const qType = card.dataset.type;
+        const qIndex = card.dataset.itemIndex;
+        const qText = card.dataset.itemText;
+        const requireJustifNo = card.dataset.requireJustifNo === 'true';
+
+        let isAnswered = false;
+        let answerVal = null;
+        let justMissing = false;
+
+        if (qType === 'texto_curto' || qType === 'paragrafo' || qType === 'numero' || qType === 'data') {
+            const inp = card.querySelector(`[name="item${qIndex}"]`);
+            if (inp && inp.value.trim() !== '') {
+                isAnswered = true;
+                answerVal = inp.value.trim();
+            }
+        } else if (qType === 'dropdown') {
+            const sel = card.querySelector(`select[name="item${qIndex}"]`);
+            if (sel && sel.value !== '') {
+                isAnswered = true;
+                answerVal = sel.value;
+            }
+        } else if (qType === 'sim_nao_na' || qType === 'radio') {
+            const checked = card.querySelector(`input[name="item${qIndex}"]:checked`);
+            if (checked) {
+                isAnswered = true;
+                answerVal = checked.value;
+            }
+        } else if (qType === 'checkboxes') {
+            const checkedBoxes = card.querySelectorAll(`input[name="item${qIndex}"]:checked`);
+            if (checkedBoxes.length > 0) {
+                isAnswered = true;
+            }
+        }
+
+        // Justificativa obrigatória se resposta for "Não"
+        if (qType === 'sim_nao_na' && requireJustifNo && answerVal === 'Não') {
+            const justInp = card.querySelector(`input[name="item${qIndex}_just"]`);
+            if (!justInp || justInp.value.trim() === '') {
+                justMissing = true;
+            }
+        }
+
+        if ((isRequired && !isAnswered) || justMissing) {
+            missing.push({
+                card: card,
+                index: qIndex,
+                text: qText,
+                justMissing: justMissing
+            });
+
+            // Aplica destaque no card
+            card.classList.add('card-item-error');
+            const badgeContainer = card.querySelector('.item-badge');
+            if (badgeContainer) {
+                badgeContainer.classList.add('bg-red-500', 'text-white');
+            }
+
+            // Adiciona badge de pendência
+            const labelEl = card.querySelector('label');
+            if (labelEl && !card.querySelector('.pending-badge')) {
+                const pend = document.createElement('span');
+                pend.className = 'pending-badge ml-2 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider bg-red-100 text-red-600 dark:bg-red-950/50 dark:text-red-400 rounded-md';
+                pend.textContent = justMissing ? 'Justificativa Pendente' : 'Pendente';
+                labelEl.appendChild(pend);
+            }
+
+            if (justMissing) {
+                const justInp = card.querySelector(`input[name="item${qIndex}_just"]`);
+                if (justInp) {
+                    justInp.classList.add('just-input-error');
+                }
+            }
+
+            if (!firstMissingCard) {
+                firstMissingCard = card;
+            }
+        }
+    });
+
+    if (missing.length > 0) {
+        const first = missing[0];
+        const toastMsg = first.justMissing 
+            ? `Item ${first.index}: Por favor, preencha a justificativa do item "${first.text}".`
+            : `Item ${first.index}: O item "${first.text}" é obrigatório e precisa ser respondido.`;
+        
+        showToast(toastMsg, 'error');
+
+        if (firstMissingCard) {
+            firstMissingCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            firstMissingCard.classList.add('item-card-error-pulse');
+            setTimeout(() => firstMissingCard.classList.remove('item-card-error-pulse'), 1000);
+        }
+        return false;
+    }
+
+    return true;
+}
+
+function highlightElement(el) {
+    if (!el) return;
+    el.classList.add('ring-2', 'ring-red-500', 'border-red-500');
+    el.classList.add('item-card-error-pulse');
+    setTimeout(() => el.classList.remove('item-card-error-pulse'), 1000);
+}
+
+function checkAndClearCardError(card) {
+    const qIndex = card.dataset.itemIndex;
+    const qType = card.dataset.type;
+    const isRequired = card.dataset.required === 'true';
+    const requireJustifNo = card.dataset.requireJustifNo === 'true';
+
+    let isAnswered = false;
+    let answerVal = null;
+    let justMissing = false;
+
+    if (qType === 'texto_curto' || qType === 'paragrafo' || qType === 'numero' || qType === 'data') {
+        const inp = card.querySelector(`[name="item${qIndex}"]`);
+        if (inp && inp.value.trim() !== '') {
+            isAnswered = true;
+            answerVal = inp.value.trim();
+        }
+    } else if (qType === 'dropdown') {
+        const sel = card.querySelector(`select[name="item${qIndex}"]`);
+        if (sel && sel.value !== '') {
+            isAnswered = true;
+            answerVal = sel.value;
+        }
+    } else if (qType === 'sim_nao_na' || qType === 'radio') {
+        const checked = card.querySelector(`input[name="item${qIndex}"]:checked`);
+        if (checked) {
+            isAnswered = true;
+            answerVal = checked.value;
+        }
+    } else if (qType === 'checkboxes') {
+        const checkedBoxes = card.querySelectorAll(`input[name="item${qIndex}"]:checked`);
+        if (checkedBoxes.length > 0) isAnswered = true;
+    }
+
+    if (qType === 'sim_nao_na' && requireJustifNo && answerVal === 'Não') {
+        const justInp = card.querySelector(`input[name="item${qIndex}_just"]`);
+        if (!justInp || justInp.value.trim() === '') justMissing = true;
+    }
+
+    if ((!isRequired || isAnswered) && !justMissing) {
+        card.classList.remove('card-item-error', 'item-card-error-pulse');
+        const badgeContainer = card.querySelector('.item-badge');
+        if (badgeContainer) badgeContainer.classList.remove('bg-red-500', 'text-white');
+        const pend = card.querySelector('.pending-badge');
+        if (pend) pend.remove();
+        const justInp = card.querySelector(`input[name="item${qIndex}_just"]`);
+        if (justInp) justInp.classList.remove('just-input-error');
+    }
+}
+
+// Ouvintes em tempo real para remover erro conforme o usuário preenche
+document.addEventListener('input', (e) => {
+    const card = e.target.closest('.checklist-item-card');
+    if (card && card.classList.contains('card-item-error')) {
+        checkAndClearCardError(card);
+    }
+    const kmInp = document.getElementById('km');
+    if (e.target === kmInp) {
+        kmInp.classList.remove('ring-2', 'ring-red-500', 'border-red-500');
+    }
+});
+
+document.addEventListener('change', (e) => {
+    const card = e.target.closest('.checklist-item-card');
+    if (card) {
+        checkAndClearCardError(card);
+
+        // Se for radio sim_nao_na, exibe aviso visual se marcar "Não"
+        if (card.dataset.type === 'sim_nao_na' && card.dataset.requireJustifNo === 'true') {
+            const checked = card.querySelector(`input[name="item${card.dataset.itemIndex}"]:checked`);
+            const badge = card.querySelector('.just-required-badge');
+            if (badge) {
+                if (checked && checked.value === 'Não') {
+                    badge.classList.remove('hidden');
+                } else {
+                    badge.classList.add('hidden');
+                }
+            }
+        }
+    }
+});
+
 function handleChecklistSubmit(e) {
-    // Bloqueia envio para abrir modal de assinatura
+    // Bloqueia envio para validação
     e.preventDefault();
+    if (!validateChecklistForm()) {
+        return false;
+    }
     openSignatureModal(document.getElementById('vehicle-checklist-form'));
     return false;
 }
@@ -778,13 +1128,20 @@ const VTYPE_META = {
 function onVehicleChange(selectEl) {
   const selected = selectEl.options[selectEl.selectedIndex];
   const vtype = selected ? (selected.dataset.vtype || 'carro') : null;
+  const kmAtual = selected ? (selected.dataset.km || '0') : '0';
 
   // Oculta mensagem inicial
   const noVehicleMsg = document.getElementById('no-vehicle-msg');
   if (noVehicleMsg) noVehicleMsg.classList.add('hidden');
 
-  // Oculta todos os grupos de checklist
-  document.querySelectorAll('.checklist-type-group').forEach(g => g.classList.add('hidden'));
+  // Oculta todos os grupos de checklist e desativa seus inputs para evitar conflitos de nomes
+  document.querySelectorAll('.checklist-type-group').forEach(g => {
+    g.classList.add('hidden');
+    g.querySelectorAll('input, select, textarea').forEach(el => el.disabled = true);
+    g.querySelectorAll('.card-item-error').forEach(c => c.classList.remove('card-item-error'));
+    g.querySelectorAll('.pending-badge').forEach(b => b.remove());
+    g.querySelectorAll('.just-input-error').forEach(j => j.classList.remove('just-input-error'));
+  });
 
   // Atualiza badge de tipo
   const badge = document.getElementById('vehicle-type-badge');
@@ -794,6 +1151,8 @@ function onVehicleChange(selectEl) {
   const fotosSection = document.getElementById('checklist-fotos-section');
   const submitSection = document.getElementById('checklist-submit-section');
 
+  const kmInput = document.getElementById('km');
+
   if (!selectEl.value || !vtype) {
     if (badge) badge.classList.add('hidden');
     if (noVehicleMsg) noVehicleMsg.classList.remove('hidden');
@@ -802,9 +1161,18 @@ function onVehicleChange(selectEl) {
     return;
   }
 
-  // Exibe o grupo correto
+  // Define KM mínimo sugerido no placeholder do odômetro
+  if (kmInput) {
+    kmInput.min = kmAtual;
+    kmInput.placeholder = `Mínimo: ${kmAtual} KM`;
+  }
+
+  // Exibe o grupo correto e reativa seus inputs
   const group = document.querySelector(`.checklist-type-group[data-vehicle-type="${vtype}"]`);
-  if (group) group.classList.remove('hidden');
+  if (group) {
+    group.classList.remove('hidden');
+    group.querySelectorAll('input, select, textarea').forEach(el => el.disabled = false);
+  }
 
   // Exibe seções de fotos e botão enviar
   if (fotosSection) fotosSection.classList.remove('hidden');

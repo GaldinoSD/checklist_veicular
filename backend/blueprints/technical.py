@@ -1206,7 +1206,7 @@ def atividade_realizada_pdf(id):
     if not content:
         content.append(("Informação", "Nenhum campo registrado"))
 
-    make_premium_pdf(buffer, f"Relatório de Atividade Realizada: {a.title}", metadata, content)
+    make_premium_pdf(buffer, f"Relatório de Atividade: {a.title}", metadata, content)
     buffer.seek(0)
 
     return send_file(

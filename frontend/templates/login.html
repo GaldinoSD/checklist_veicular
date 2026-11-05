@@ -106,7 +106,7 @@
       
       <!-- TOP LOGO E TÍTULOS -->
       <div>
-        <div class="mb-8">
+        <div class="mb-8 flex justify-center">
           <img src="{% if sys_config and sys_config.login_logo %}{{ url_for('static', filename='uploads/layout/' ~ sys_config.login_logo, v='2') }}{% else %}{{ url_for('static', filename='logo.png', v='2') }}{% endif %}"
             alt="Logo do Sistema" class="logo-adjust">
         </div>

@@ -2,6 +2,36 @@
 {% set page_title = "Meus Treinamentos" %}
 
 {% block content %}
+<style>
+    /* Animação das plumas de fumaça de café */
+    @keyframes smokeRise1 {
+        0% { transform: translateY(0) scaleX(1); opacity: 0; }
+        30% { opacity: 0.8; }
+        70% { transform: translateY(-16px) scaleX(1.4) translateX(-3px); opacity: 0.4; }
+        100% { transform: translateY(-28px) scaleX(1.8) translateX(-6px); opacity: 0; }
+    }
+    @keyframes smokeRise2 {
+        0% { transform: translateY(0) scaleX(1); opacity: 0; }
+        35% { opacity: 0.9; }
+        75% { transform: translateY(-18px) scaleX(1.3) translateX(2px); opacity: 0.35; }
+        100% { transform: translateY(-30px) scaleX(1.7) translateX(5px); opacity: 0; }
+    }
+    @keyframes smokeRise3 {
+        0% { transform: translateY(0) scaleX(1); opacity: 0; }
+        40% { opacity: 0.7; }
+        80% { transform: translateY(-15px) scaleX(1.5) translateX(-2px); opacity: 0.3; }
+        100% { transform: translateY(-26px) scaleX(1.9) translateX(-4px); opacity: 0; }
+    }
+    .animate-coffee-smoke-1 {
+        animation: smokeRise1 2.8s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    }
+    .animate-coffee-smoke-2 {
+        animation: smokeRise2 3.2s cubic-bezier(0.4, 0, 0.2, 1) infinite 0.7s;
+    }
+    .animate-coffee-smoke-3 {
+        animation: smokeRise3 2.6s cubic-bezier(0.4, 0, 0.2, 1) infinite 1.3s;
+    }
+</style>
 <div class="max-w-7xl mx-auto pb-12">
 
     <!-- ✅ HEADER PREMIUM OPERACIONAL -->
@@ -43,50 +73,58 @@
         <p class="text-xs font-black text-slate-400 uppercase tracking-widest">Carregando treinamentos...</p>
     </div>
 
-    <!-- EMPTY STATE (Full-Width Responsive Card, Clean, Animated & Inspiring) -->
-    <div id="training-empty" class="hidden animate-premium w-full mb-8">
-        <div class="card-premium p-8 md:p-12 w-full border-2 border-emerald-500/20 shadow-xl bg-gradient-to-r from-emerald-500/[0.08] via-emerald-500/[0.02] to-teal-500/[0.08] dark:from-emerald-500/[0.06] dark:via-slate-900/40 dark:to-teal-500/[0.06] relative overflow-hidden rounded-[2rem] md:rounded-[2.5rem]">
-            
-            <!-- Background Decorative Ambient Glows -->
-            <div class="absolute -top-12 -right-12 w-48 h-48 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none"></div>
-            <div class="absolute -bottom-12 -left-12 w-48 h-48 bg-teal-500/10 rounded-full blur-3xl pointer-events-none"></div>
+    <!-- EMPTY STATE (Direto na Tela, Minimalista com Café Animado) -->
+    <div id="training-empty" class="hidden animate-premium w-full py-12 sm:py-16 text-center max-w-lg mx-auto">
+        <!-- Ícone da Xícara de Café Marrom com Efeito de Fumaça Animada -->
+        <div class="relative w-28 h-28 mx-auto mb-5 flex items-center justify-center">
+            <svg viewBox="0 0 120 120" class="w-24 h-24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <!-- Plumas de Fumaça de Café Flutuando (Keyframes de fumaça ondulante) -->
+                <g class="coffee-smoke-group" opacity="0.8">
+                    <!-- Fumaça da esquerda -->
+                    <path class="animate-coffee-smoke-1 origin-bottom"
+                          d="M48 42 C44 34 52 26 48 18 C46 14 50 10 48 6" 
+                          stroke="#a8a29e" stroke-width="2.5" stroke-linecap="round"/>
+                    <!-- Fumaça do centro -->
+                    <path class="animate-coffee-smoke-2 origin-bottom"
+                          d="M60 40 C56 30 64 22 60 14 C58 10 62 6 60 2" 
+                          stroke="#78716c" stroke-width="2.5" stroke-linecap="round"/>
+                    <!-- Fumaça da direita -->
+                    <path class="animate-coffee-smoke-3 origin-bottom"
+                          d="M72 42 C76 34 68 26 72 18 C74 14 70 10 72 6" 
+                          stroke="#a8a29e" stroke-width="2.5" stroke-linecap="round"/>
+                </g>
 
-            <div class="flex flex-col md:flex-row items-center justify-between gap-6 md:gap-8 text-center md:text-left relative z-10">
-                
-                <!-- Left: Icon & Text Content -->
-                <div class="flex flex-col md:flex-row items-center gap-6 md:gap-8 flex-1">
-                    <!-- Animated Glowing Halo -->
-                    <div class="relative w-20 h-20 md:w-24 md:h-24 shrink-0 flex items-center justify-center">
-                        <div class="absolute inset-0 rounded-full bg-emerald-500/20 dark:bg-emerald-500/30 animate-ping opacity-40"></div>
-                        <div class="relative w-16 h-16 md:w-20 md:h-20 rounded-full bg-gradient-to-tr from-teal-600 via-teal-500 to-emerald-400 text-white flex items-center justify-center text-2xl md:text-3xl shadow-xl shadow-teal-500/30">
-                            <i class="fa-solid fa-check-double"></i>
-                        </div>
-                    </div>
+                <!-- Pires / Pratinho da Xícara -->
+                <ellipse cx="60" cy="98" rx="36" ry="6" fill="#78350f" opacity="0.3"/>
+                <path d="M26 96 Q60 102 94 96 Q60 106 26 96 Z" fill="#78350f"/>
+                <ellipse cx="60" cy="96" rx="34" ry="4.5" fill="#92400e"/>
 
-                    <!-- Texts -->
-                    <div class="space-y-1.5 flex-1 max-w-3xl">
-                        <div class="flex items-center justify-center md:justify-start gap-2 text-[10px] font-black uppercase tracking-widest text-emerald-600 dark:text-emerald-400">
-                            <i class="fa-solid fa-shield-halved"></i>
-                            <span>Status Operacional em Dia</span>
-                        </div>
-                        <h3 class="text-xl md:text-3xl font-black text-slate-800 dark:text-white tracking-tight">
-                            Tudo em Dia por Aqui! ✨
-                        </h3>
-                        <p class="text-xs md:text-sm text-slate-500 dark:text-slate-400 leading-relaxed font-medium" id="training-empty-desc">
-                            Excelente trabalho! Todas as suas capacitações técnicas estão em dia e em total conformidade operacional.
-                        </p>
-                    </div>
-                </div>
+                <!-- Corpo da Xícara de Café Marrom Elegante -->
+                <path d="M34 52 L39 88 Q40 94 50 94 L70 94 Q80 94 81 88 L86 52 Z" fill="#78350f"/>
+                <!-- Brilho lateral sutil da xícara -->
+                <path d="M37 54 L41 86 Q42 90 48 90 L46 90 Q40 88 39 84 L35 54 Z" fill="#b45309" opacity="0.5"/>
 
-                <!-- Right: Conformity Badge -->
-                <div class="shrink-0 flex items-center justify-center">
-                    <div class="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-emerald-500/10 dark:bg-emerald-500/15 border border-emerald-500/25 text-emerald-600 dark:text-emerald-400 text-xs font-black uppercase tracking-wider shadow-sm">
-                        <i class="fa-solid fa-circle-check text-sm"></i> Conformidade Garantida
-                    </div>
-                </div>
+                <!-- Café quente na superfície -->
+                <ellipse cx="60" cy="52" rx="26" ry="5.5" fill="#451a03"/>
+                <!-- Espuminha / Brilho do café -->
+                <ellipse cx="60" cy="52" rx="20" ry="3.5" fill="#291102"/>
+                <path d="M52 51 Q58 53 66 51" stroke="#a16207" stroke-width="1.2" stroke-linecap="round" opacity="0.6"/>
 
-            </div>
+                <!-- Asa da Xícara -->
+                <path d="M84 58 C96 58 98 78 82 82" stroke="#78350f" stroke-width="5" stroke-linecap="round"/>
+                <path d="M84 61 C93 61 94 75 83 78" stroke="#92400e" stroke-width="2" stroke-linecap="round"/>
+            </svg>
         </div>
+
+        <!-- Título -->
+        <h3 class="text-xl sm:text-2xl font-black text-slate-800 dark:text-white tracking-tight mb-2">
+            Tudo em Dia por Aqui! ☕
+        </h3>
+
+        <!-- Subtexto Dinâmico -->
+        <p class="text-xs sm:text-sm text-slate-400 dark:text-slate-500 max-w-sm mx-auto font-medium leading-relaxed" id="training-empty-desc">
+            Você não possui treinamentos pendentes nesta categoria. Aproveite para tomar um café!
+        </p>
     </div>
 
     <!-- COURSE LIST -->

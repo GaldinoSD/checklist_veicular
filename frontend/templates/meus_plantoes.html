@@ -3,36 +3,8 @@
 
 {% block content %}
 <style>
-/* Micro-interações e efeitos dedicados ao Plantão Operacional */
-@keyframes pulseRadarRing {
-    0% { transform: scale(0.95); opacity: 0.8; }
-    50% { transform: scale(1.15); opacity: 0.2; }
-    100% { transform: scale(0.95); opacity: 0.8; }
-}
-
-@keyframes floatGentle {
-    0%, 100% { transform: translateY(0px); }
-    50% { transform: translateY(-2px); }
-}
-
-@keyframes beaconGlow {
-    0%, 100% { box-shadow: 0 0 10px rgba(14, 165, 233, 0.4), inset 0 0 8px rgba(16, 185, 129, 0.2); }
-    50% { box-shadow: 0 0 20px rgba(16, 185, 129, 0.5), inset 0 0 12px rgba(14, 165, 233, 0.3); }
-}
-
-.radar-beacon {
-    animation: beaconGlow 3s ease-in-out infinite;
-}
-
-.radar-wave {
-    animation: pulseRadarRing 2.4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
-}
-
-.operational-float {
-    animation: floatGentle 4s ease-in-out infinite;
-}
-
-/* Ocultar barra de rolagem nos filtros no mobile mantendo scroll por toque */
+/* Micro-interações dedicadas ao Plantão Operacional (Design System Sem Violeta/Purple) */
+/* Ocultar barra de rolagem horizontal mantendo scroll por toque */
 .scrollbar-none::-webkit-scrollbar {
     display: none;
 }
@@ -42,46 +14,53 @@
 }
 </style>
 
-<div class="max-w-7xl mx-auto pb-16 px-2 sm:px-4 space-y-4 sm:space-y-6">
+<div class="max-w-7xl mx-auto pb-16 space-y-4 sm:space-y-6">
 
     <!-- ======================================================== -->
-    <!-- 1. CENTRAL DE PLANTÃO OPERACIONAL COM SINCRONIZAÇÃO     -->
+    <!-- 1. HEADER OPERACIONAL PREMIUM                           -->
+    <!-- ======================================================== -->
+    <div class="flex items-center justify-between pb-2 border-b border-slate-200/80 dark:border-white/5">
+        <div class="flex items-center gap-3.5">
+            <div class="w-11 h-11 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-br from-sky-600 to-blue-700 text-white flex items-center justify-center text-lg sm:text-xl shadow-lg shadow-sky-500/20 shrink-0">
+                <i class="fa-solid fa-tower-broadcast"></i>
+            </div>
+            <div>
+                <nav class="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-0.5">
+                    <span>Operação</span>
+                    <i class="fa-solid fa-chevron-right text-[8px] opacity-30"></i>
+                    <span class="text-sky-500">Escalas Técnicas</span>
+                </nav>
+                <h1 class="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">Meus Plantões</h1>
+            </div>
+        </div>
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- 2. HERO: STATUS OPERACIONAL DO TÉCNICO                   -->
     <!-- ======================================================== -->
     <div id="card-hero-responsabilidade" 
-         class="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-slate-50 via-white to-sky-50/40 dark:from-slate-900 dark:via-slate-900/95 dark:to-slate-850 p-4 sm:p-6 border border-slate-200/90 dark:border-white/10 shadow-xs hover:shadow-sm transition-all">
+         class="rounded-2xl sm:rounded-3xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-white/10 p-5 sm:p-6 shadow-xs">
         
-        <!-- Elementos de iluminação suave em background -->
-        <div class="absolute -right-12 -top-12 w-44 h-44 rounded-full bg-sky-500/10 dark:bg-sky-500/15 blur-3xl pointer-events-none"></div>
-        <div class="absolute -left-12 -bottom-12 w-44 h-44 rounded-full bg-emerald-500/10 dark:bg-emerald-500/10 blur-3xl pointer-events-none"></div>
-
-        <div class="relative z-10 flex flex-col gap-3.5 sm:gap-4">
+        <div class="flex flex-col gap-4">
             
-            <!-- Barra Superior do Card (Pill de Status + Sincronização) -->
+            <!-- Barra Superior do Card (Status do Próximo Plantão) -->
             <div class="flex items-center justify-between gap-2 flex-wrap">
                 <div class="flex items-center gap-2">
-                    <span class="text-[10px] font-black uppercase tracking-wider text-sky-600 dark:text-sky-400 flex items-center gap-1.5">
-                        <i class="fa-solid fa-satellite-dish text-[10px]"></i>
-                        <span>Central de Plantões</span>
-                    </span>
-                    <span id="hero-timing-pill" class="text-[10px] font-bold uppercase px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10">
+                    <span id="hero-timing-pill" class="text-[10px] font-black uppercase px-3 py-1 rounded-full bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10">
                         Monitorando
                     </span>
                 </div>
 
-                <button type="button" onclick="loadMeusPlantoesPage(true)" id="btn-refresh-plantoes"
-                        class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200/90 dark:border-white/10 text-[11px] font-bold text-slate-700 dark:text-slate-200 hover:text-sky-600 dark:hover:text-sky-400 shadow-2xs active:scale-95 transition-all">
-                    <i class="fa-solid fa-rotate-right text-xs text-sky-500" id="icon-refresh-spin"></i>
-                    <span>Sincronizar</span>
-                </button>
+                <div class="text-[11px] font-bold text-slate-400 flex items-center gap-1.5">
+                    <i class="fa-solid fa-clock text-slate-400 text-xs"></i>
+                    <span>Plantão Técnico</span>
+                </div>
             </div>
 
             <!-- Corpo de Identificação Operacional -->
-            <div class="flex items-start gap-3.5 sm:gap-4">
-                
-                <!-- Radar Indicador de Plantão -->
-                <div class="relative flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-tr from-sky-600 to-emerald-500 text-white shrink-0 radar-beacon shadow-md shadow-sky-500/20">
-                    <span class="absolute w-full h-full rounded-2xl border-2 border-emerald-400/50 radar-wave"></span>
-                    <i id="hero-radar-icon" class="fa-solid fa-shield-halved text-xl sm:text-2xl relative z-10 drop-shadow"></i>
+            <div class="flex items-start gap-4 pt-1">
+                <div class="w-12 h-12 sm:w-13 sm:h-13 rounded-2xl bg-slate-100 dark:bg-slate-800 border border-slate-200/80 dark:border-white/10 text-slate-700 dark:text-slate-300 flex items-center justify-center shrink-0 shadow-2xs">
+                    <i id="hero-radar-icon" class="fa-solid fa-headset text-xl sm:text-2xl"></i>
                 </div>
 
                 <div class="space-y-1 min-w-0 flex-1">
@@ -89,52 +68,65 @@
                         Compromisso Técnico e Responsabilidade de Plantão
                     </h3>
 
-                    <p id="hero-responsibility-desc" class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed max-w-2xl">
-                        Mantenha seu telefone disponível para acionamento, realize o checklist preventivo do veículo e confira seus equipamentos de atendimento.
+                    <p id="hero-responsibility-desc" class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed font-medium max-w-3xl">
+                        Mantenha seu telefone disponível para acionamento, realize o checklist do veículo e confira seu kit de ferramentas antes do início da jornada.
                     </p>
                 </div>
-
             </div>
 
-        </div>
-
-    </div>
-
-    <!-- ======================================================== -->
-    <!-- 2. BARRA DE MÉTRICAS RÁPIDAS (MOBILE & DESKTOP)          -->
-    <!-- ======================================================== -->
-    <div class="grid grid-cols-3 gap-2 sm:gap-3.5">
-        <div class="bg-white dark:bg-slate-900 rounded-2xl p-3 sm:p-4 border border-slate-200/80 dark:border-white/10 shadow-xs flex flex-col justify-between">
-            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Agendados</span>
-            <div class="flex items-baseline justify-between mt-1">
-                <span id="stat-upcoming-count" class="text-lg sm:text-2xl font-black text-sky-600 dark:text-sky-400 leading-none">0</span>
-                <i class="fa-solid fa-calendar-check text-xs text-sky-500/40"></i>
-            </div>
-        </div>
-
-        <div class="bg-white dark:bg-slate-900 rounded-2xl p-3 sm:p-4 border border-slate-200/80 dark:border-white/10 shadow-xs flex flex-col justify-between">
-            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Neste Mês</span>
-            <div class="flex items-baseline justify-between mt-1">
-                <span id="stat-month-count" class="text-lg sm:text-2xl font-black text-slate-900 dark:text-white leading-none">0</span>
-                <i class="fa-solid fa-calendar text-xs text-slate-400/40"></i>
-            </div>
-        </div>
-
-        <div class="bg-white dark:bg-slate-900 rounded-2xl p-3 sm:p-4 border border-slate-200/80 dark:border-white/10 shadow-xs flex flex-col justify-between">
-            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">Neste Ano</span>
-            <div class="flex items-baseline justify-between mt-1">
-                <span id="stat-year-count" class="text-lg sm:text-2xl font-black text-slate-900 dark:text-white leading-none">0</span>
-                <i class="fa-solid fa-chart-simple text-xs text-slate-400/40"></i>
-            </div>
         </div>
     </div>
 
     <!-- ======================================================== -->
-    <!-- 3. CONTROLES: FILTRO RÁPIDO & BUSCA DINÂMICA             -->
+    <!-- 3. CARDS DE MÉTRICAS OPERACIONAIS                        -->
+    <!-- ======================================================== -->
+    <div class="grid grid-cols-3 gap-2.5 sm:gap-4">
+        <div class="bg-white dark:bg-slate-900 rounded-2xl p-3.5 sm:p-5 border border-slate-200/80 dark:border-white/10 shadow-xs flex flex-col justify-between transition-all hover:border-sky-500/30">
+            <div class="flex items-center justify-between">
+                <span class="text-[10px] font-black uppercase tracking-wider text-slate-400">Próximos</span>
+                <div class="w-7 h-7 rounded-lg bg-sky-500/10 text-sky-500 flex items-center justify-center text-xs">
+                    <i class="fa-solid fa-calendar-check"></i>
+                </div>
+            </div>
+            <div class="mt-3 flex items-baseline gap-1">
+                <span id="stat-upcoming-count" class="text-2xl sm:text-3xl font-black text-sky-600 dark:text-sky-400 leading-none">0</span>
+                <span class="text-[10px] font-bold text-slate-400">escalas</span>
+            </div>
+        </div>
+
+        <div class="bg-white dark:bg-slate-900 rounded-2xl p-3.5 sm:p-5 border border-slate-200/80 dark:border-white/10 shadow-xs flex flex-col justify-between transition-all hover:border-slate-400/30">
+            <div class="flex items-center justify-between">
+                <span class="text-[10px] font-black uppercase tracking-wider text-slate-400">Neste Mês</span>
+                <div class="w-7 h-7 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-xs">
+                    <i class="fa-solid fa-calendar-day"></i>
+                </div>
+            </div>
+            <div class="mt-3 flex items-baseline gap-1">
+                <span id="stat-month-count" class="text-2xl sm:text-3xl font-black text-slate-800 dark:text-white leading-none">0</span>
+                <span class="text-[10px] font-bold text-slate-400">cumpridos</span>
+            </div>
+        </div>
+
+        <div class="bg-white dark:bg-slate-900 rounded-2xl p-3.5 sm:p-5 border border-slate-200/80 dark:border-white/10 shadow-xs flex flex-col justify-between transition-all hover:border-slate-400/30">
+            <div class="flex items-center justify-between">
+                <span class="text-[10px] font-black uppercase tracking-wider text-slate-400">No Ano</span>
+                <div class="w-7 h-7 rounded-lg bg-slate-100 dark:bg-white/10 text-slate-600 dark:text-slate-300 flex items-center justify-center text-xs">
+                    <i class="fa-solid fa-chart-line"></i>
+                </div>
+            </div>
+            <div class="mt-3 flex items-baseline gap-1">
+                <span id="stat-year-count" class="text-2xl sm:text-3xl font-black text-slate-800 dark:text-white leading-none">0</span>
+                <span class="text-[10px] font-bold text-slate-400">total</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ======================================================== -->
+    <!-- 4. CONTROLES: BUSCA & FILTROS POR DIA                    -->
     <!-- ======================================================== -->
     <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-white/10 p-3.5 sm:p-4 shadow-xs space-y-3">
         
-        <!-- Header da Seção de Escalas com Contador -->
+        <!-- Header com Contador -->
         <div class="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-white/5">
             <div class="flex items-center gap-2">
                 <span class="w-2 h-2 rounded-full bg-sky-500 shadow-xs shadow-sky-500/50"></span>
@@ -154,26 +146,26 @@
             <div class="relative flex-1">
                 <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-xs text-slate-400"></i>
                 <input type="text" id="input-search-plantoes" oninput="filterPlantoesPageList()"
-                       placeholder="Buscar data, equipe, parceiro..."
-                       class="w-full pl-8 pr-3 py-2 rounded-xl text-xs bg-slate-50 dark:bg-slate-800/90 border border-slate-200 dark:border-white/10 text-slate-800 dark:text-white placeholder:text-slate-400 outline-none focus:border-sky-500 transition-colors">
+                       placeholder="Buscar por data, equipe, parceiro..."
+                       class="w-full pl-8 pr-3 py-2.5 rounded-xl text-xs bg-slate-50 dark:bg-slate-800/90 border border-slate-200 dark:border-white/10 text-slate-800 dark:text-white placeholder:text-slate-400 outline-none focus:border-sky-500 transition-colors">
             </div>
 
             <!-- Botões de Filtro por Tipo de Plantão com Rolagem Suave -->
             <div class="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
                 <button type="button" onclick="setTypeFilter('all', this)"
-                        class="type-filter-btn px-3 py-1.5 rounded-xl text-xs font-black transition-all bg-slate-900 text-white dark:bg-white dark:text-slate-900 shrink-0 shadow-2xs active:scale-95">
+                        class="type-filter-btn px-3.5 py-2 rounded-xl text-xs font-black transition-all bg-slate-900 text-white dark:bg-white dark:text-slate-900 shrink-0 shadow-xs active:scale-95">
                     Todos
                 </button>
                 <button type="button" onclick="setTypeFilter('sabado', this)"
-                        class="type-filter-btn px-3 py-1.5 rounded-xl text-xs font-bold transition-all bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 shrink-0 active:scale-95">
+                        class="type-filter-btn px-3.5 py-2 rounded-xl text-xs font-bold transition-all bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 shrink-0 active:scale-95">
                     Sábados
                 </button>
                 <button type="button" onclick="setTypeFilter('domingo', this)"
-                        class="type-filter-btn px-3 py-1.5 rounded-xl text-xs font-bold transition-all bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 shrink-0 active:scale-95">
+                        class="type-filter-btn px-3.5 py-2 rounded-xl text-xs font-bold transition-all bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 shrink-0 active:scale-95">
                     Domingos
                 </button>
                 <button type="button" onclick="setTypeFilter('feriado', this)"
-                        class="type-filter-btn px-3 py-1.5 rounded-xl text-xs font-bold transition-all bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 shrink-0 active:scale-95">
+                        class="type-filter-btn px-3.5 py-2 rounded-xl text-xs font-bold transition-all bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 shrink-0 active:scale-95">
                     Feriados
                 </button>
             </div>
@@ -183,24 +175,24 @@
     </div>
 
     <!-- ======================================================== -->
-    <!-- 4. LISTA DE PLANTÕES (CARDS MOBILE OTIMIZADOS)           -->
+    <!-- 5. LISTA DE PLANTÕES (CARDS OPERACIONAIS DE ALTO IMPACTO)-->
     <!-- ======================================================== -->
-    <div id="page-plantoes-list-container" class="space-y-3 min-h-[260px]">
+    <div id="page-plantoes-list-container" class="space-y-3.5 min-h-[260px]">
         
         <!-- Skeleton Loading State com shimmer moderno -->
-        <div class="space-y-3 animate-pulse">
-            <div class="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-white/10 shadow-xs flex items-center gap-3.5">
-                <div class="w-13 h-13 rounded-xl bg-slate-100 dark:bg-slate-800 shrink-0"></div>
-                <div class="flex-1 space-y-2">
-                    <div class="h-3.5 bg-slate-200 dark:bg-slate-800 rounded w-1/3"></div>
-                    <div class="h-2.5 bg-slate-100 dark:bg-slate-800/60 rounded w-1/2"></div>
+        <div class="space-y-3.5 animate-pulse">
+            <div class="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-white/10 shadow-xs flex items-center gap-4">
+                <div class="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-slate-800 shrink-0"></div>
+                <div class="flex-1 space-y-2.5">
+                    <div class="h-4 bg-slate-200 dark:bg-slate-800 rounded w-1/3"></div>
+                    <div class="h-3 bg-slate-100 dark:bg-slate-800/60 rounded w-1/2"></div>
                 </div>
             </div>
-            <div class="p-4 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-white/10 shadow-xs flex items-center gap-3.5">
-                <div class="w-13 h-13 rounded-xl bg-slate-100 dark:bg-slate-800 shrink-0"></div>
-                <div class="flex-1 space-y-2">
-                    <div class="h-3.5 bg-slate-200 dark:bg-slate-800 rounded w-1/4"></div>
-                    <div class="h-2.5 bg-slate-100 dark:bg-slate-800/60 rounded w-2/3"></div>
+            <div class="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-white/10 shadow-xs flex items-center gap-4">
+                <div class="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-slate-800 shrink-0"></div>
+                <div class="flex-1 space-y-2.5">
+                    <div class="h-4 bg-slate-200 dark:bg-slate-800 rounded w-1/4"></div>
+                    <div class="h-3 bg-slate-100 dark:bg-slate-800/60 rounded w-2/3"></div>
                 </div>
             </div>
         </div>
@@ -208,28 +200,42 @@
     </div>
 
     <!-- ======================================================== -->
-    <!-- 5. BANNER INFORMATIVO DE NOTIFICAÇÕES                    -->
+    <!-- 6. PROTOCOLO OPERACIONAL DO TÉCNICO DE PLANTÃO           -->
     <!-- ======================================================== -->
-    <div class="p-3.5 sm:p-4 rounded-2xl bg-slate-100/90 dark:bg-slate-900 border border-slate-200/80 dark:border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-slate-600 dark:text-slate-400 shadow-2xs">
-        <div class="flex items-center gap-3">
-            <div class="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-500 border border-amber-500/20 flex items-center justify-center shrink-0">
-                <i class="fa-solid fa-bell text-sm"></i>
-            </div>
-            <div class="min-w-0">
-                <span class="font-extrabold text-slate-800 dark:text-slate-200 block sm:inline">Alertas Automáticos em Tempo Real:</span>
-                <span class="leading-relaxed">Qualquer inclusão, alteração ou troca de escala no cronograma é notificada de imediato no sininho e no seu WhatsApp.</span>
-            </div>
+    <div class="rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-white/10 p-4 sm:p-5 shadow-xs space-y-3">
+        <div class="flex items-center gap-2.5 text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200">
+            <i class="fa-solid fa-list-check text-sky-500"></i>
+            <span>Checklist Rápido do Plantonista</span>
         </div>
-        <div class="text-[11px] font-bold text-slate-400 shrink-0 flex items-center gap-1.5 self-start sm:self-auto pl-12 sm:pl-0">
-            <i class="fa-solid fa-circle-check text-emerald-500"></i>
-            <span>Sincronizado com Gestão Técnica</span>
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
+            <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/60 dark:border-white/5 flex items-start gap-2.5">
+                <i class="fa-solid fa-van-shuttle text-sky-500 text-sm mt-0.5 shrink-0"></i>
+                <div>
+                    <span class="font-bold text-slate-800 dark:text-white block">1. Veículo & Combustível</span>
+                    <span class="text-[11px] text-slate-500 dark:text-slate-400">Verifique o nível de combustível e faça o checklist veicular de saída.</span>
+                </div>
+            </div>
+            <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/60 dark:border-white/5 flex items-start gap-2.5">
+                <i class="fa-solid fa-toolbox text-emerald-500 text-sm mt-0.5 shrink-0"></i>
+                <div>
+                    <span class="font-bold text-slate-800 dark:text-white block">2. Equipamentos & EPIs</span>
+                    <span class="text-[11px] text-slate-500 dark:text-slate-400">Confira máquina de fusão, OTDR, escada e EPIs obrigatórios para trabalho seguro.</span>
+                </div>
+            </div>
+            <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/60 dark:border-white/5 flex items-start gap-2.5">
+                <i class="fa-solid fa-phone-volume text-amber-500 text-sm mt-0.5 shrink-0"></i>
+                <div>
+                    <span class="font-bold text-slate-800 dark:text-white block">3. Canal de Comunicação</span>
+                    <span class="text-[11px] text-slate-500 dark:text-slate-400">Mantenha contato direto no grupo operacional e informe qualquer incidente.</span>
+                </div>
+            </div>
         </div>
     </div>
 
 </div>
 
 <!-- ======================================================== -->
-<!-- 6. JAVASCRIPT DE CONTROLE E RENDERIZAÇÃO DA PÁGINA       -->
+<!-- 7. JAVASCRIPT DE CONTROLE E RENDERIZAÇÃO DA PÁGINA       -->
 <!-- ======================================================== -->
 <script>
     let plantoesMasterData = null;
@@ -239,9 +245,9 @@
     function setTypeFilter(type, btn) {
         currentTypeFilter = type;
         document.querySelectorAll('.type-filter-btn').forEach(b => {
-            b.className = 'type-filter-btn px-3 py-1.5 rounded-xl text-xs font-bold transition-all bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 shrink-0 active:scale-95';
+            b.className = 'type-filter-btn px-3.5 py-2 rounded-xl text-xs font-bold transition-all bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 shrink-0 active:scale-95';
         });
-        btn.className = 'type-filter-btn px-3 py-1.5 rounded-xl text-xs font-black transition-all bg-slate-900 text-white dark:bg-white dark:text-slate-900 shrink-0 shadow-2xs active:scale-95';
+        btn.className = 'type-filter-btn px-3.5 py-2 rounded-xl text-xs font-black transition-all bg-slate-900 text-white dark:bg-white dark:text-slate-900 shrink-0 shadow-xs active:scale-95';
         renderPlantoesPage();
     }
 
@@ -298,7 +304,7 @@
                     }
                 }
 
-                // Atualiza Hero e Banner de Responsabilidade Operacional (Sem Emojis)
+                // Atualiza Hero e Banner de Responsabilidade Operacional
                 const heroTitle = document.getElementById('hero-responsibility-title');
                 const heroDesc = document.getElementById('hero-responsibility-desc');
                 const heroPill = document.getElementById('hero-timing-pill');
@@ -310,23 +316,23 @@
 
                         if (next.is_today) {
                             heroTitle.textContent = `Você está de plantão hoje (${next.weekday})`;
-                            heroDesc.textContent = `Mantenha seu telefone disponível para acionamento, realize o checklist preventivo do veículo e confira seus equipamentos de atendimento.`;
-                            heroPill.textContent = 'Plantão Hoje';
-                            heroPill.className = 'text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-emerald-600 text-white animate-pulse';
-                            heroIcon.className = 'fa-solid fa-triangle-exclamation text-xl sm:text-2xl relative z-10 text-white';
+                            heroDesc.textContent = `Atenção aos acionamentos operacionais. Realize a inspeção do veículo e mantenha contato direto com o supervisor de campo.`;
+                            heroPill.textContent = 'Plantão Ativo Hoje';
+                            heroPill.className = 'text-[10px] font-black uppercase px-3 py-1 rounded-full bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xs';
+                            heroIcon.className = 'fa-solid fa-headset text-xl sm:text-2xl';
                         } else {
                             heroTitle.textContent = `Próximo plantão: ${next.formatted_date} (${next.weekday})`;
                             heroDesc.textContent = `Escalado como ${next.type_label} (${next.timing_badge}). Pontualidade, segurança e comunicação direta com a supervisão são fundamentais na nossa operação.`;
                             heroPill.textContent = next.timing_badge;
-                            heroPill.className = 'text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-sky-100 dark:bg-sky-500/20 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-400/30';
-                            heroIcon.className = 'fa-solid fa-shield-halved text-xl sm:text-2xl relative z-10 text-white';
+                            heroPill.className = 'text-[10px] font-black uppercase px-3 py-1 rounded-full bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10';
+                            heroIcon.className = 'fa-solid fa-calendar-check text-xl sm:text-2xl';
                         }
                     } else {
                         heroTitle.textContent = `Situação regular • Sem plantões pendentes`;
                         heroDesc.textContent = `Você não possui escalas ou plantões agendados para os próximos dias. Continue com o excelente trabalho e dedicação!`;
                         heroPill.textContent = 'Operação Regular';
-                        heroPill.className = 'text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700';
-                        heroIcon.className = 'fa-solid fa-circle-check text-xl sm:text-2xl relative z-10 text-white';
+                        heroPill.className = 'text-[10px] font-black uppercase px-3 py-1 rounded-full bg-slate-100 dark:bg-white/10 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-white/10';
+                        heroIcon.className = 'fa-solid fa-circle-check text-xl sm:text-2xl';
                     }
                 }
 
@@ -354,7 +360,7 @@
         }
     }
 
-    // Renderiza a lista de plantões futuros com design mobile aprimorado
+    // Renderiza a lista de plantões futuros com acabamento visual de alto padrão
     function renderPlantoesPage() {
         const container = document.getElementById('page-plantoes-list-container');
         if (!container || !plantoesMasterData) return;
@@ -386,10 +392,10 @@
         if (list.length === 0) {
             container.innerHTML = `
                 <div class="text-center py-14 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-white/10 shadow-xs p-6">
-                    <div class="w-14 h-14 rounded-2xl bg-sky-500/10 text-sky-500 flex items-center justify-center text-2xl mx-auto mb-3 shadow-2xs">
+                    <div class="w-14 h-14 rounded-2xl bg-sky-500/10 text-sky-500 flex items-center justify-center text-2xl mx-auto mb-3">
                         <i class="fa-solid fa-calendar-check"></i>
                     </div>
-                    <h4 class="text-sm font-extrabold text-slate-800 dark:text-white">
+                    <h4 class="text-sm font-black text-slate-800 dark:text-white">
                         ${searchVal ? 'Nenhum plantão localizado' : 'Nenhum plantão agendado'}
                     </h4>
                     <p class="text-xs text-slate-400 max-w-sm mx-auto mt-1 leading-relaxed">
@@ -405,34 +411,38 @@
         // Renderiza cada card com acabamento profissional mobile-first
         const cardsHtml = list.map(item => {
             let badgeColorClass = 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-white/10';
-            let dateBarColor = 'bg-sky-500';
+            let barColor = 'bg-sky-500';
+            let iconType = 'fa-calendar';
             
             if (item.badge_type === 'sabado') {
                 badgeColorClass = 'bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 border-sky-200/60 dark:border-sky-800/40';
-                dateBarColor = 'bg-sky-500';
+                barColor = 'bg-sky-500';
+                iconType = 'fa-satellite-dish';
             } else if (item.badge_type === 'domingo') {
                 badgeColorClass = 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200/60 dark:border-emerald-800/40';
-                dateBarColor = 'bg-emerald-500';
+                barColor = 'bg-emerald-500';
+                iconType = 'fa-shield-halved';
             } else if (item.badge_type === 'feriado') {
                 badgeColorClass = 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200/60 dark:border-amber-800/40';
-                dateBarColor = 'bg-amber-500';
+                barColor = 'bg-amber-500';
+                iconType = 'fa-star';
             }
 
             let timingBadgeHtml = '';
             if (item.timing_class === 'today') {
                 timingBadgeHtml = `
-                    <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-emerald-600 text-white text-[10px] font-black uppercase tracking-wider shadow-xs">
-                        <span class="w-1.5 h-1.5 rounded-full bg-white animate-ping"></span>
-                        <span>Hoje</span>
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-emerald-600 text-white text-[10px] font-black uppercase tracking-wider shadow-sm animate-pulse">
+                        <span class="w-1.5 h-1.5 rounded-full bg-white"></span>
+                        <span>Plantão Hoje</span>
                     </span>`;
             } else if (item.timing_class === 'soon') {
                 timingBadgeHtml = `
-                    <span class="inline-flex items-center px-2.5 py-1 rounded-lg bg-amber-500 text-white text-[10px] font-black uppercase tracking-wider shadow-xs">
+                    <span class="inline-flex items-center px-3 py-1 rounded-xl bg-amber-500 text-white text-[10px] font-black uppercase tracking-wider shadow-sm">
                         <span>Amanhã</span>
                     </span>`;
             } else {
                 timingBadgeHtml = `
-                    <span class="inline-flex items-center px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-white/10 text-[10px] font-bold">
+                    <span class="inline-flex items-center px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200/80 dark:border-white/10 text-[10px] font-bold">
                         <span>${escapeHtml(item.timing_badge)}</span>
                     </span>`;
             }
@@ -448,48 +458,49 @@
             const colleaguesHtml = (item.colleagues && item.colleagues.length > 0)
                 ? `<div class="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-300">
                      <i class="fa-solid fa-user-group text-[11px] text-emerald-500 shrink-0"></i>
-                     <span class="text-slate-400 font-medium">Parceiros:</span>
-                     <span class="font-semibold text-slate-800 dark:text-slate-200">${item.colleagues.map(escapeHtml).join(', ')}</span>
+                     <span class="text-slate-400 font-medium">Parceiros de Plantão:</span>
+                     <span class="font-bold text-slate-800 dark:text-slate-200">${item.colleagues.map(escapeHtml).join(', ')}</span>
                    </div>`
                 : '';
 
             const obsHtml = item.obs 
-                ? `<div class="mt-1 text-xs text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/60 p-2.5 rounded-xl border-l-2 border-sky-500 border border-slate-200/60 dark:border-white/5 flex items-start gap-2.5">
-                     <i class="fa-regular fa-message text-xs text-sky-500 mt-0.5 shrink-0"></i>
+                ? `<div class="mt-2 text-xs text-slate-600 dark:text-slate-300 bg-slate-50 dark:bg-slate-800/60 p-3 rounded-xl border-l-2 border-sky-500 border border-slate-200/60 dark:border-white/5 flex items-start gap-2.5">
+                     <i class="fa-regular fa-comment-dots text-xs text-sky-500 mt-0.5 shrink-0"></i>
                      <span class="leading-relaxed font-medium">${escapeHtml(item.obs)}</span>
                    </div>`
                 : '';
 
             return `
-                <div class="relative overflow-hidden rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-white/10 p-3.5 sm:p-5 shadow-xs hover:shadow-md hover:border-sky-400/50 dark:hover:border-sky-500/30 transition-all active:scale-[0.99] group">
+                <div class="relative overflow-hidden rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-white/10 p-4 sm:p-5 shadow-xs hover:shadow-md hover:border-sky-400/50 dark:hover:border-sky-500/30 transition-all active:scale-[0.99] group">
                     
-                    <!-- Linha lateral decorativa colorida por tipo -->
-                    <div class="absolute top-0 left-0 w-1 sm:w-1.5 h-full ${dateBarColor}"></div>
+                    <!-- Faixa lateral decorativa de status -->
+                    <div class="absolute top-0 left-0 w-1.5 h-full ${barColor}"></div>
 
-                    <div class="pl-2 sm:pl-3 flex flex-col gap-2.5 sm:gap-3">
+                    <div class="pl-2 sm:pl-3 flex flex-col gap-3">
                         
-                        <!-- Linha Superior: Tile de Data + Tipo de Plantão + Timing Badge -->
+                        <!-- Linha Superior: Bloco de Data + Tipo + Timing Badge -->
                         <div class="flex items-start justify-between gap-3">
                             
-                            <div class="flex items-center gap-3 min-w-0">
-                                <!-- Tile de Data Compacto -->
-                                <div class="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-slate-50 dark:bg-slate-800/90 border border-slate-200/70 dark:border-white/10 flex flex-col items-center justify-center shrink-0 shadow-2xs group-hover:scale-105 transition-transform">
-                                    <span class="text-[9px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-400 leading-none">${escapeHtml(item.month_short)}</span>
-                                    <span class="text-lg sm:text-xl font-black text-slate-900 dark:text-white leading-none mt-0.5">${escapeHtml(item.day)}</span>
+                            <div class="flex items-center gap-3.5 min-w-0">
+                                <!-- Bloco de Calendário Moderno -->
+                                <div class="w-13 h-13 sm:w-14 sm:h-14 rounded-2xl bg-slate-100 dark:bg-slate-800 border border-slate-200/70 dark:border-white/10 flex flex-col items-center justify-center shrink-0 shadow-2xs group-hover:scale-105 transition-transform">
+                                    <span class="text-[9px] font-black uppercase tracking-wider text-sky-600 dark:text-sky-400 leading-none">${escapeHtml(item.month_short)}</span>
+                                    <span class="text-xl sm:text-2xl font-black text-slate-900 dark:text-white leading-none mt-1">${escapeHtml(item.day)}</span>
                                 </div>
 
                                 <!-- Detalhes do Dia e Categoria -->
-                                <div class="min-w-0">
-                                    <h4 class="text-sm font-black text-slate-900 dark:text-white capitalize truncate">${escapeHtml(item.weekday)}</h4>
-                                    <div class="mt-0.5">
-                                        <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-black border ${badgeColorClass}">
+                                <div class="min-w-0 space-y-1">
+                                    <h4 class="text-sm sm:text-base font-black text-slate-900 dark:text-white capitalize truncate">${escapeHtml(item.weekday)}</h4>
+                                    <div class="flex items-center gap-1.5">
+                                        <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg text-[10px] font-black border ${badgeColorClass}">
+                                            <i class="fa-solid ${iconType} text-[9px]"></i>
                                             ${escapeHtml(item.type_label)}
                                         </span>
                                     </div>
                                 </div>
                             </div>
 
-                            <!-- Badge de Tempo (Hoje, Amanhã, Em X dias) -->
+                            <!-- Badge de Tempo -->
                             <div class="shrink-0 pt-0.5">
                                 ${timingBadgeHtml}
                             </div>
@@ -497,7 +508,7 @@
                         </div>
 
                         <!-- Detalhes de Equipe e Parceiros -->
-                        <div class="space-y-1.5 pt-0.5 text-xs">
+                        <div class="space-y-1.5 pt-1 text-xs border-t border-slate-100 dark:border-white/5">
                             ${teamHtml}
                             ${colleaguesHtml}
                         </div>

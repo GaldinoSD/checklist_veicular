@@ -43,8 +43,11 @@
                  dark:bg-white/5 dark:text-white dark:border-white/5
                  outline-none focus:ring-4 focus:ring-blue-500/10 transition-all text-sm font-bold">
           <option value="disabled" {% if config.mode=='disabled' %}selected{% endif %}>❌ Desativado (Sistema em Manutenção)</option>
-          <option value="start_only" {% if config.mode=='start_only' %}selected{% endif %}>🟦 Somente na Saída (Início do Turno)</option>
-          <option value="start_end" {% if config.mode=='start_end' %}selected{% endif %}>🟩 Saída e Chegada (Fluxo Completo)</option>
+          <option value="free" {% if config.mode=='free' %}selected{% endif %}>🟨 Modo Livre (Sem restrições ou bloqueios)</option>
+          <option value="start_only" {% if config.mode=='start_only' %}selected{% endif %}>🟦 Somente na Saída (1x ao dia por técnico)</option>
+          <option value="start_end" {% if config.mode=='start_end' %}selected{% endif %}>🟩 Saída e Chegada (Início e Retorno do turno)</option>
+          <option value="daily_vehicle" {% if config.mode=='daily_vehicle' %}selected{% endif %}>🟧 Diário Único por Veículo (1x ao dia por veículo)</option>
+          <option value="weekly" {% if config.mode=='weekly' %}selected{% endif %}>🟪 Semanal por Veículo (1x na semana por veículo)</option>
         </select>
       </div>
       <button class="px-8 py-3.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl transition-all active:scale-95 whitespace-nowrap">

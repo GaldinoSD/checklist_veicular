@@ -1469,7 +1469,7 @@ def config_checklist():
 def config_checklist_mode():
     mode = request.form.get("mode", "start_only")
 
-    allowed = {"disabled", "start_only", "start_end"}
+    allowed = {"disabled", "start_only", "start_end", "free", "daily_vehicle", "weekly"}
     if mode not in allowed:
         mode = "start_only"
 
@@ -2970,6 +2970,37 @@ def checklist_mobile():
                 if first.vehicle_id != v_id_int:
                     flash("O checklist de chegada deve ser feito para o mesmo veículo do início.", "error")
                     return redirect(url_for("checklist_mobile"))
+
+        elif mode == "daily_vehicle":
+            v_id_int = int(vehicle_id)
+            q_vehicle_today = Checklist.query.filter(
+                Checklist.vehicle_id == v_id_int,
+                db.func.date(Checklist.date) == today
+            )
+            if q_vehicle_today.count() >= 1:
+                first_chk = q_vehicle_today.order_by(Checklist.date.asc()).first()
+                tech_who = first_chk.technician or "outro técnico"
+                flash(f"Este veículo já possui checklist realizado hoje por {tech_who}.", "error")
+                return redirect(url_for("checklist_mobile"))
+
+        elif mode == "weekly":
+            from datetime import timedelta
+            v_id_int = int(vehicle_id)
+            start_of_week = today - timedelta(days=today.weekday())
+            q_vehicle_week = Checklist.query.filter(
+                Checklist.vehicle_id == v_id_int,
+                db.func.date(Checklist.date) >= start_of_week
+            )
+            if q_vehicle_week.count() >= 1:
+                first_chk = q_vehicle_week.order_by(Checklist.date.asc()).first()
+                tech_who = first_chk.technician or "outro técnico"
+                data_str = first_chk.date.strftime("%d/%m") if hasattr(first_chk.date, "strftime") else "nesta semana"
+                flash(f"Este veículo já possui checklist realizado nesta semana ({data_str} por {tech_who}).", "error")
+                return redirect(url_for("checklist_mobile"))
+
+        elif mode == "free":
+            # Modo Livre: Sem limites diários ou restrições de fluxo
+            pass
 
         # 🔍 VALIDAÇÃO DE KM (v já foi obtido para detectar o tipo)
         if v:

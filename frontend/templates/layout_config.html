@@ -1070,7 +1070,7 @@ WWW.ADAPTLINK.COM.BR{% endif %}</textarea>
                   <!-- Esquerda: Formulário Clean -->
                   <div id="simLeftForm" class="w-full lg:w-1/2 p-2.5 flex flex-col justify-between bg-white shrink-0">
                     <div>
-                      <div class="flex justify-start mb-1">
+                      <div class="flex justify-center mb-1">
                         <img id="simLogo" src="{% if config and config.login_logo %}{{ url_for('static', filename='uploads/layout/' ~ config.login_logo) }}{% else %}{{ url_for('static', filename='logo.png') }}{% endif %}" class="object-contain" style="max-height: 24px; max-width: 100%;">
                       </div>
                       <p id="simTitleText" class="text-[7.5px] font-bold text-slate-800 tracking-tight truncate">{{ config.login_title_text or 'Acesse sua conta' }}</p>

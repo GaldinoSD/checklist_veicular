@@ -1189,7 +1189,6 @@ function toggleRiskCategory(cat, isChecked) {
         }
         if (section) {
             section.classList.remove('hidden');
-            section.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
     } else {
         activeRiskFactors.delete(cat);
