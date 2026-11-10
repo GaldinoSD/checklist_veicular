@@ -41,31 +41,38 @@
     <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-4 border-b border-slate-200 dark:border-white/5 mb-6">
 
         <div class="flex items-center gap-5 relative z-10">
-            <div class="w-12 h-12 rounded-[1.25rem] bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-2xl shadow-blue-500/20">
-                <i class="fa-solid fa-car-side text-xl"></i>
+            <div id="header-icon-box" class="w-12 h-12 rounded-[1.25rem] bg-gradient-to-br {% if active_tab == 'solicitacoes' %}from-indigo-500 to-blue-600{% else %}from-blue-500 to-indigo-600{% endif %} flex items-center justify-center text-white shadow-2xl shadow-blue-500/20">
+                <i id="header-icon" class="fa-solid {% if active_tab == 'solicitacoes' %}fa-file-circle-check{% else %}fa-car-side{% endif %} text-xl"></i>
             </div>
             <div>
                 <nav class="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-0.5">
                     <span>Ativos</span>
                     <i class="fa-solid fa-chevron-right text-[8px] opacity-30"></i>
-                    <span class="text-blue-500">Frota de Veículos</span>
+                    <span id="header-crumb" class="text-blue-500">{% if active_tab == 'solicitacoes' %}Solicitações de Revisão{% else %}Frota de Veículos{% endif %}</span>
                 </nav>
-                <h2 class="text-2xl font-black text-slate-800 dark:text-white tracking-tight">Gerenciamento de Frota</h2>
+                <h2 id="header-title" class="text-2xl font-black text-slate-800 dark:text-white tracking-tight">{% if active_tab == 'solicitacoes' %}Solicitações de Revisão / Manutenção{% else %}Gerenciamento de Frota{% endif %}</h2>
             </div>
         </div>
 
         <div class="flex flex-wrap items-center gap-4 relative z-10">
             <!-- BUSCA PREMIUM COMPACT -->
             <form method="get" class="flex items-center gap-2 group">
+                <input type="hidden" name="tab" id="search-active-tab" value="{{ active_tab }}">
                 <div class="relative">
                     <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors text-xs"></i>
-                    <input id="q" name="q" value="{{ q }}" placeholder="Buscar placa ou modelo..." 
+                    <input id="q" name="q" value="{{ q }}" placeholder="Buscar placa, modelo, protocolo..." 
                            class="bg-slate-900/5 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 rounded-xl pl-10 pr-4 py-2.5 text-xs font-bold text-slate-700 dark:text-white placeholder:text-slate-400 outline-none focus:border-blue-500/50 transition-all w-56">
                 </div>
                 <button class="p-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-lg shadow-blue-500/20 transition-all active:scale-95">
                     <i class="fa-solid fa-magnifying-glass text-xs"></i>
                 </button>
             </form>
+
+            <!-- BOTÃO SOLICITAR REVISÃO / MANUTENÇÃO -->
+            <button type="button" onclick="openModalSolicitacaoManutencao()"
+                    class="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-blue-500/20 transition-all active:scale-95 flex items-center gap-2">
+                <i class="fa-solid fa-file-circle-plus text-xs"></i> Solicitar Revisão
+            </button>
 
             {% if ROLE_ADMIN %}
             <button type="button" onclick="document.getElementById('modalNovoVeiculo').showModal()"
@@ -78,8 +85,25 @@
 </div>
 
 <!-- ===============================
-      GRID DE CARDS (4 POR LINHA)
+      SUB-ABAS: FROTA E SOLICITAÇÕES
 ================================ -->
+<div class="flex items-center gap-3 mb-6 border-b border-slate-200 dark:border-white/5 pb-3">
+    <button type="button" id="tab-btn-frota" onclick="switchVehicleTab('frota')"
+            class="px-5 py-2.5 rounded-xl font-black text-[11px] uppercase tracking-wider transition-all flex items-center gap-2 {% if active_tab != 'solicitacoes' %}bg-blue-600 text-white shadow-md shadow-blue-500/20{% else %}text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5{% endif %}">
+        <i class="fa-solid fa-car-side"></i> Frota de Veículos
+        <span class="ml-1.5 px-2 py-0.5 rounded-full {% if active_tab != 'solicitacoes' %}bg-white/20 text-white{% else %}bg-slate-200 dark:bg-white/10 text-slate-700 dark:text-slate-300{% endif %} text-[10px] font-extrabold">{{ veiculos|length }}</span>
+    </button>
+    <button type="button" id="tab-btn-solicitacoes" onclick="switchVehicleTab('solicitacoes')"
+            class="px-5 py-2.5 rounded-xl font-black text-[11px] uppercase tracking-wider transition-all flex items-center gap-2 {% if active_tab == 'solicitacoes' %}bg-blue-600 text-white shadow-md shadow-blue-500/20{% else %}text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5{% endif %}">
+        <i class="fa-solid fa-clipboard-list"></i> Solicitações de Revisão / Manutenção
+        <span id="badge-count-solicitacoes" class="ml-1.5 px-2 py-0.5 rounded-full {% if active_tab == 'solicitacoes' %}bg-white/20 text-white{% else %}bg-slate-200 dark:bg-white/10 text-slate-700 dark:text-slate-300{% endif %} text-[10px] font-extrabold">{{ solicitacoes|length }}</span>
+    </button>
+</div>
+
+<!-- ===============================
+      PAINEL 1: FROTA DE VEÍCULOS
+================================ -->
+<div id="pane-frota" class="vehicle-tab-pane {% if active_tab == 'solicitacoes' %}hidden{% endif %}">
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
 
 {% for v in veiculos %}
@@ -632,6 +656,194 @@
 </div>
 {% endfor %}
 </div>
+</div> <!-- Fim #pane-frota -->
+
+<!-- ==============================================
+      PAINEL 2: SOLICITAÇÕES DE REVISÃO / MANUTENÇÃO (ESTILO CHECKLISTS)
+=============================================== -->
+<div id="pane-solicitacoes" class="vehicle-tab-pane {% if active_tab != 'solicitacoes' %}hidden{% endif %} animate-fade-in-up">
+    
+    <div class="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl shadow-sm overflow-hidden p-6">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs text-slate-600 dark:text-slate-300">
+                <thead class="bg-slate-50/80 dark:bg-slate-800/80 border-b border-slate-200/80 dark:border-slate-800 text-[11px] font-extrabold text-slate-400 dark:text-slate-400 uppercase tracking-wider">
+                    <tr>
+                        <th class="px-6 py-4 w-36">Data</th>
+                        <th class="px-4 py-4 w-32">Protocolo</th>
+                        <th class="px-4 py-4 w-44">Veículo</th>
+                        <th class="px-4 py-4 w-36">Solicitante</th>
+                        <th class="px-4 py-4 w-24 text-right">KM</th>
+                        <th class="px-4 py-4 w-36">Intervenção</th>
+                        <th class="px-4 py-4 w-28">Status</th>
+                        <th class="px-6 py-4 w-32 text-center">Ações</th>
+                    </tr>
+                </thead>
+
+                {# namespace para controlar o grupo mês/ano (mesmo padrão do checklists.html) #}
+                {% set ns_solic = namespace(last_group=None, is_first=true, group_index=0) %}
+
+                {% for s in solicitacoes %}
+                    {# converte mês para PT #}
+                    {% set mes_num = s.created_at.strftime('%m') if s.created_at else '01' %}
+                    {% if mes_num == '01' %}{% set mes_pt = 'Janeiro' %}
+                    {% elif mes_num == '02' %}{% set mes_pt = 'Fevereiro' %}
+                    {% elif mes_num == '03' %}{% set mes_pt = 'Março' %}
+                    {% elif mes_num == '04' %}{% set mes_pt = 'Abril' %}
+                    {% elif mes_num == '05' %}{% set mes_pt = 'Maio' %}
+                    {% elif mes_num == '06' %}{% set mes_pt = 'Junho' %}
+                    {% elif mes_num == '07' %}{% set mes_pt = 'Julho' %}
+                    {% elif mes_num == '08' %}{% set mes_pt = 'Agosto' %}
+                    {% elif mes_num == '09' %}{% set mes_pt = 'Setembro' %}
+                    {% elif mes_num == '10' %}{% set mes_pt = 'Outubro' %}
+                    {% elif mes_num == '11' %}{% set mes_pt = 'Novembro' %}
+                    {% elif mes_num == '12' %}{% set mes_pt = 'Dezembro' %}
+                    {% else %}{% set mes_pt = mes_num %}{% endif %}
+
+                    {% set grupo_solic = mes_pt ~ ' de ' ~ (s.created_at.strftime('%Y') if s.created_at else '2026') %}
+
+                    {# Cabeçalho agrupador por mês / ano #}
+                    {% if grupo_solic != ns_solic.last_group %}
+                        {% if ns_solic.last_group is not none %}
+                            </tbody>
+                        {% endif %}
+
+                        {% set ns_solic.group_index = ns_solic.group_index + 1 %}
+
+                        <tbody>
+                            <tr class="bg-slate-50/90 dark:bg-slate-800/90 border-y border-slate-200/80 dark:border-slate-800 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-all select-none" 
+                                onclick="toggleSolicMonthGroup({{ ns_solic.group_index }})">
+                                <td colspan="8" class="px-6 py-3.5 text-blue-700 dark:text-blue-300 font-extrabold uppercase tracking-wider text-xs">
+                                    <div class="flex items-center justify-between">
+                                        <span class="flex items-center gap-2.5">
+                                            <div class="w-7 h-7 rounded-lg bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center border border-blue-200 dark:border-blue-900/50">
+                                                <i class="fa-solid fa-calendar-days text-xs"></i>
+                                            </div>
+                                            <span>{{ grupo_solic }}</span>
+                                        </span>
+                                        <div class="w-6 h-6 rounded-full bg-slate-200/60 dark:bg-slate-700/60 flex items-center justify-center text-slate-500 dark:text-slate-400">
+                                            <i id="chevron-solic-{{ ns_solic.group_index }}" class="fa-solid fa-chevron-down text-[10px] transition-transform duration-300 {% if ns_solic.is_first %}rotate-180{% endif %}"></i>
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+
+                        <tbody id="tbody-solic-{{ ns_solic.group_index }}" class="text-slate-900 dark:text-gray-200 {% if not ns_solic.is_first %}hidden{% endif %}">
+                        {% set ns_solic.last_group = grupo_solic %}
+                        {% set ns_solic.is_first = false %}
+                    {% endif %}
+
+                    <tr class="border-b border-slate-200/80 dark:border-slate-800 hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition">
+                        <!-- Data -->
+                        <td class="px-6 py-4 whitespace-nowrap font-semibold text-slate-700 dark:text-slate-300">
+                            {{ s.created_at.strftime('%d/%m/%Y %H:%M') if s.created_at else '-' }}
+                        </td>
+
+                        <!-- Protocolo -->
+                        <td class="px-4 py-4 whitespace-nowrap">
+                            <span class="px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 font-mono font-bold text-[11px] text-slate-800 dark:text-slate-200 border border-slate-200/60 dark:border-slate-700">
+                                {{ s.protocol }}
+                            </span>
+                        </td>
+
+                        <!-- Veículo / Placa -->
+                        <td class="px-4 py-4">
+                            <div class="flex items-center gap-2">
+                                <span class="px-2 py-0.5 rounded bg-blue-600 text-white font-mono font-black text-[10px] tracking-wider">
+                                    {{ s.vehicle.plate if s.vehicle else '-' }}
+                                </span>
+                                <span class="font-bold text-slate-700 dark:text-slate-300 truncate max-w-[130px]" title="{{ s.vehicle.model if s.vehicle else '' }}">
+                                    {{ s.vehicle.model if s.vehicle else '' }}
+                                </span>
+                            </div>
+                        </td>
+
+                        <!-- Solicitante -->
+                        <td class="px-4 py-4 font-medium text-slate-600 dark:text-slate-300">
+                            {{ s.created_by.display_name if s.created_by else 'Sistema' }}
+                        </td>
+
+                        <!-- KM -->
+                        <td class="px-4 py-4 text-right font-mono text-slate-500 font-semibold">
+                            {{ s.km_current or (s.vehicle.km if s.vehicle else 0) }}
+                        </td>
+
+                        <!-- Intervenção -->
+                        <td class="px-4 py-4 whitespace-nowrap">
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-900/50">
+                                <i class="fa-solid fa-wrench text-[9px]"></i> {{ s.service_type }}
+                            </span>
+                        </td>
+
+                        <!-- Status -->
+                        <td class="px-4 py-4 whitespace-nowrap">
+                            {% if s.status == 'FINALIZADA' %}
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-900/50">
+                                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Concluída
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-900/50">
+                                <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span> {{ s.status }}
+                            </span>
+                            {% endif %}
+                        </td>
+
+                        <!-- Ações -->
+                        <td class="px-6 py-4 text-center whitespace-nowrap">
+                            <div class="flex items-center justify-center gap-1.5">
+                                <button type="button" class="px-2.5 py-1.5 text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800 font-semibold rounded-lg transition text-xs inline-flex items-center gap-1 cursor-pointer"
+                                        onclick="showSolicitacaoDetail({{ s.id }})" title="Ver Detalhes">
+                                    <i class="fa-solid fa-eye text-[11px]"></i> Ver
+                                </button>
+                                
+                                <a href="/veiculos/solicitacao-manutencao/{{ s.id }}/pdf" target="_blank"
+                                   class="p-1.5 text-slate-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg transition cursor-pointer"
+                                   title="Abrir / Baixar PDF Oficial">
+                                    <i class="fa-solid fa-file-pdf text-xs"></i>
+                                </a>
+
+                                {% if ROLE_ADMIN or current_user.has_permission('veiculos') %}
+                                <form action="/veiculos/solicitacao-manutencao/{{ s.id }}/toggle-status" method="POST" class="inline" title="{% if s.status == 'FINALIZADA' %}Reabrir Solicitação{% else %}Marcar como Concluída / Finalizada{% endif %}">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                                    <button type="submit" class="p-1.5 {% if s.status == 'FINALIZADA' %}text-emerald-600 hover:text-amber-600 dark:text-emerald-400 hover:bg-amber-50 dark:hover:bg-amber-950/40{% else %}text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40{% endif %} rounded-lg transition cursor-pointer">
+                                        <i class="fa-solid {% if s.status == 'FINALIZADA' %}fa-circle-check text-emerald-600 dark:text-emerald-400{% else %}fa-circle-notch{% endif %} text-xs"></i>
+                                    </button>
+                                </form>
+                                {% endif %}
+
+                                {% if ROLE_ADMIN or current_user.has_permission('veiculos') %}
+                                <form action="/veiculos/solicitacao-manutencao/{{ s.id }}/delete" method="POST" onsubmit="return confirm('Tem certeza que deseja excluir esta solicitação?');" class="inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                                    <button type="submit" class="p-1.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition cursor-pointer" title="Excluir">
+                                        <i class="fa-solid fa-trash-can text-xs"></i>
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+
+                {% else %}
+                    <tbody>
+                        <tr>
+                            <td class="py-12 text-slate-500 dark:text-gray-400 text-center uppercase text-[10px] font-black tracking-widest" colspan="8">
+                                <div class="flex flex-col items-center justify-center gap-2">
+                                    <i class="fa-solid fa-clipboard-list text-3xl text-slate-300 dark:text-slate-700"></i>
+                                    <span>Nenhuma solicitação de revisão registrada.</span>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                {% endfor %}
+
+                {% if ns_solic.last_group is not none %}
+                    </tbody>
+                {% endif %}
+
+            </table>
+        </div>
+    </div>
+</div>
 
 <!-- ===============================
       MODAL NOVO VEÍCULO
@@ -778,6 +990,264 @@
   </form>
 </dialog>
 
+<!-- ==============================================
+      MODAL: SOLICITAÇÃO DE REVISÃO / MANUTENÇÃO
+=============================================== -->
+<dialog id="modalSolicitacaoManutencao"
+        class="rounded-[2.5rem] bg-white dark:bg-slate-900 border border-slate-900/10 dark:border-white/10 p-7 sm:p-8 shadow-2xl w-[780px] max-w-[95vw] overflow-hidden">
+  
+  <form id="formSolicitacaoManutencao" onsubmit="submitSolicitacaoManutencao(event)" class="space-y-6">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+    <!-- Header do Modal -->
+    <div class="flex items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-white/5">
+      <div class="flex items-center gap-3.5">
+        <div class="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-xl shadow-blue-500/20">
+          <i class="fa-solid fa-file-circle-plus text-xl"></i>
+        </div>
+        <div>
+          <h2 class="text-xl font-black text-slate-800 dark:text-white tracking-tight">Solicitação de Revisão / Manutenção</h2>
+          <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Gerar documento oficial padronizado para oficina</p>
+        </div>
+      </div>
+      <button type="button" onclick="document.getElementById('modalSolicitacaoManutencao').close()"
+              class="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-white flex items-center justify-center transition-colors">
+        <i class="fa-solid fa-xmark text-sm"></i>
+      </button>
+    </div>
+
+    <!-- Corpo do Formulário -->
+    <div class="space-y-4 max-h-[68vh] overflow-y-auto pr-1">
+
+      <!-- 1. Seleção do Veículo -->
+      <div>
+        <label class="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5 block ml-1">
+          Selecione o Veículo *
+        </label>
+        <select id="solic_vehicle_id" name="vehicle_id" required onchange="carregarInfoVeiculoSolicitacao(this.value)"
+                class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-3 text-xs font-bold text-slate-800 dark:text-white outline-none focus:ring-4 focus:ring-blue-500/10 transition-all cursor-pointer">
+          <option value="" class="dark:bg-slate-850 dark:text-white">-- Escolha um veículo da frota --</option>
+          {% for v in veiculos %}
+          <option value="{{ v.id }}" class="dark:bg-slate-850 dark:text-white">
+            {{ v.plate }} - {{ v.model }} ({{ v.brand or 'N/A' }}) {% if v.km %} - {{ v.km }} km{% endif %}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- 2. Pré-visualização Automática do Veículo (Preenchido via API) -->
+      <div id="solic_vehicle_preview" class="hidden p-4 rounded-2xl bg-blue-50/70 dark:bg-blue-950/25 border border-blue-200/80 dark:border-blue-900/50 space-y-3 animate-fade-in-up">
+        <div class="flex items-center justify-between border-b border-blue-200/60 dark:border-blue-900/40 pb-2.5">
+          <div class="flex items-center gap-2.5">
+            <span id="preview_plate" class="px-2.5 py-1 rounded-md bg-blue-700 text-white font-mono font-black text-xs shadow-sm">---</span>
+            <div>
+              <h4 id="preview_model" class="text-xs font-black text-slate-800 dark:text-white">---</h4>
+              <p id="preview_driver" class="text-[10px] text-slate-500 dark:text-slate-400">Condutor: ---</p>
+            </div>
+          </div>
+          <div class="text-right">
+            <span id="preview_km" class="text-xs font-black text-blue-700 dark:text-blue-300">0 km</span>
+            <p id="preview_year" class="text-[9px] font-bold text-slate-400">Ano: ---</p>
+          </div>
+        </div>
+
+        <!-- Ficha Técnica Rápida -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-[10px]">
+          <div class="bg-white/80 dark:bg-slate-900/60 p-2 rounded-xl border border-blue-100 dark:border-white/5">
+            <span class="text-slate-400 block font-bold">Óleo do Motor:</span>
+            <span id="preview_oil" class="font-black text-slate-700 dark:text-slate-200">---</span>
+          </div>
+          <div class="bg-white/80 dark:bg-slate-900/60 p-2 rounded-xl border border-blue-100 dark:border-white/5">
+            <span class="text-slate-400 block font-bold">Filtro Óleo / Ar:</span>
+            <span id="preview_filters" class="font-black text-slate-700 dark:text-slate-200">---</span>
+          </div>
+          <div class="bg-white/80 dark:bg-slate-900/60 p-2 rounded-xl border border-blue-100 dark:border-white/5">
+            <span class="text-slate-400 block font-bold">Calibragem Pneus:</span>
+            <span id="preview_tire" class="font-black text-slate-700 dark:text-slate-200">---</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. Campos Manuais: KM e Tipo de Intervenção -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5 block ml-1">
+            KM Atual do Odômetro *
+          </label>
+          <input type="number" id="solic_km_current" name="km_current" required placeholder="Ex: 45200"
+                 class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-800 dark:text-white outline-none focus:ring-4 focus:ring-blue-500/10 transition-all">
+          <span class="text-[9px] text-slate-400 ml-1">Preenchido com o KM do cadastro, edite se necessário.</span>
+        </div>
+
+        <div>
+          <label class="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5 block ml-1">
+            Tipo de Intervenção *
+          </label>
+          <select name="service_type" required
+                  class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-xs font-bold text-slate-800 dark:text-white outline-none focus:ring-4 focus:ring-blue-500/10 transition-all cursor-pointer">
+            <option value="Revisão Preventiva Periódica" class="dark:bg-slate-850">Revisão Preventiva Periódica</option>
+            <option value="Troca de Óleo e Filtros" class="dark:bg-slate-850">Troca de Óleo e Filtros</option>
+            <option value="Manutenção Corretiva Geral" class="dark:bg-slate-850">Manutenção Corretiva Geral</option>
+            <option value="Sistema de Freios e Suspensão" class="dark:bg-slate-850">Sistema de Freios e Suspensão</option>
+            <option value="Pneus / Alinhamento e Balanceamento" class="dark:bg-slate-850">Pneus / Alinhamento e Balanceamento</option>
+            <option value="Elétrica e Bateria" class="dark:bg-slate-850">Elétrica e Bateria</option>
+            <option value="Ar-Condicionado / Climatização" class="dark:bg-slate-850">Ar-Condicionado / Climatização</option>
+            <option value="Outros Serviços" class="dark:bg-slate-850">Outros Serviços</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- 4. Descrição dos Defeitos / Serviços Solicitados -->
+      <div>
+        <label class="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5 block ml-1">
+          Descrição dos Defeitos / Serviços Solicitados *
+        </label>
+        <textarea name="description" rows="3" required
+                  placeholder="Descreva detalhadamente os sintomas, ruídos, peças a substituir ou itens solicitados para a revisão na oficina..."
+                  class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-xs font-medium text-slate-800 dark:text-white outline-none focus:ring-4 focus:ring-blue-500/10 transition-all resize-y"></textarea>
+      </div>
+
+      <!-- 5. Observações Adicionais / Sugestão de Fornecedor -->
+      <div>
+        <label class="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-1.5 block ml-1">
+          Observações Adicionais / Oficina Sugerida (Opcional)
+        </label>
+        <input type="text" name="notes" placeholder="Ex: Oficina Mecânica Central, garantia, orçamento prévio..."
+               class="w-full bg-slate-50 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl px-4 py-2.5 text-xs font-medium text-slate-800 dark:text-white outline-none focus:ring-4 focus:ring-blue-500/10 transition-all">
+      </div>
+
+    </div>
+
+    <!-- Ações Inferiores -->
+    <div class="flex items-center justify-between gap-3 pt-4 border-t border-slate-900/5 dark:border-white/5">
+      <button type="button" onclick="document.getElementById('modalSolicitacaoManutencao').close()"
+              class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 rounded-xl text-slate-700 dark:text-slate-300 font-black text-[10px] uppercase tracking-widest transition-all">
+        Cancelar
+      </button>
+
+      <button type="submit" id="btnSubmitSolicitacao"
+              class="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-blue-500/20 transition-all active:scale-95 flex items-center gap-2">
+        <i class="fa-solid fa-file-pdf text-xs text-red-300"></i>
+        <span>Salvar e Emitir PDF</span>
+      </button>
+    </div>
+
+  </form>
+</dialog>
+
+<!-- ✅ MODAL SOLICITAÇÃO DETAIL (DISCRETO & EXECUTIVO - ESTILO CHECKLISTS) -->
+<div id="modalSolicitacaoDetail" class="fixed inset-0 hidden items-center justify-center z-[100] p-4">
+  <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="closeModal('modalSolicitacaoDetail')"></div>
+  <div class="relative w-full max-w-4xl rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 shadow-2xl overflow-hidden flex flex-col max-h-[90vh] text-left">
+    
+    <!-- Header Discreto -->
+    <div class="p-6 border-b border-slate-100 dark:border-white/5 flex items-start justify-between gap-4 shrink-0">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-blue-100 dark:bg-white/5 flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0">
+          <i class="fa-solid fa-wrench"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2 flex-wrap">
+            <h3 id="modalSolicDetailTitle" class="text-base font-black text-slate-800 dark:text-white">Solicitação #---</h3>
+            <span id="modalSolicStatusBadge" class="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border"></span>
+          </div>
+          <p id="modalSolicDetailSubtitle" class="text-xs text-slate-400 mt-0.5">Carregando informações...</p>
+        </div>
+      </div>
+      <button type="button" onclick="closeModal('modalSolicitacaoDetail')" class="w-8 h-8 rounded-lg hover:bg-slate-100 dark:hover:bg-white/5 flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-white transition-all">
+        <i class="fa-solid fa-xmark text-sm"></i>
+      </button>
+    </div>
+
+    <!-- Content -->
+    <div class="flex-1 overflow-y-auto p-6 custom-scrollbar space-y-4">
+      
+      <!-- Ficha Técnica do Veículo -->
+      <div class="p-4 bg-slate-50 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/5 rounded-2xl">
+        <h4 class="font-extrabold text-xs text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-3 flex items-center gap-2">
+          <i class="fa-solid fa-car-side text-blue-500"></i> Dados do Veículo & Especificações
+        </h4>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+          <div class="p-2.5 bg-white dark:bg-slate-800/60 rounded-xl border border-slate-200/60 dark:border-white/5">
+            <span class="text-[10px] font-black uppercase text-slate-400 block mb-0.5">Veículo</span>
+            <span id="modalSolicVeiculo" class="font-bold text-slate-800 dark:text-white"></span>
+          </div>
+          <div class="p-2.5 bg-white dark:bg-slate-800/60 rounded-xl border border-slate-200/60 dark:border-white/5">
+            <span class="text-[10px] font-black uppercase text-slate-400 block mb-0.5">Quilometragem</span>
+            <span id="modalSolicKm" class="font-bold text-slate-800 dark:text-white"></span>
+          </div>
+          <div class="p-2.5 bg-white dark:bg-slate-800/60 rounded-xl border border-slate-200/60 dark:border-white/5">
+            <span class="text-[10px] font-black uppercase text-slate-400 block mb-0.5">Condutor</span>
+            <span id="modalSolicCondutor" class="font-bold text-slate-800 dark:text-white"></span>
+          </div>
+          <div class="p-2.5 bg-white dark:bg-slate-800/60 rounded-xl border border-slate-200/60 dark:border-white/5">
+            <span class="text-[10px] font-black uppercase text-slate-400 block mb-0.5">Solicitante</span>
+            <span id="modalSolicSolicitante" class="font-bold text-slate-800 dark:text-white"></span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs mt-3">
+          <div class="p-2.5 bg-white dark:bg-slate-800/60 rounded-xl border border-slate-200/60 dark:border-white/5">
+            <span class="text-[10px] font-black uppercase text-slate-400 block mb-0.5">Óleo do Motor</span>
+            <span id="modalSolicOleo" class="font-bold text-slate-700 dark:text-slate-300 text-[11px]"></span>
+          </div>
+          <div class="p-2.5 bg-white dark:bg-slate-800/60 rounded-xl border border-slate-200/60 dark:border-white/5">
+            <span class="text-[10px] font-black uppercase text-slate-400 block mb-0.5">Filtros (Óleo/Ar)</span>
+            <span id="modalSolicFiltros" class="font-bold text-slate-700 dark:text-slate-300 text-[11px]"></span>
+          </div>
+          <div class="p-2.5 bg-white dark:bg-slate-800/60 rounded-xl border border-slate-200/60 dark:border-white/5">
+            <span class="text-[10px] font-black uppercase text-slate-400 block mb-0.5">Freio / Arrefecimento</span>
+            <span id="modalSolicFluidos" class="font-bold text-slate-700 dark:text-slate-300 text-[11px]"></span>
+          </div>
+          <div class="p-2.5 bg-white dark:bg-slate-800/60 rounded-xl border border-slate-200/60 dark:border-white/5">
+            <span class="text-[10px] font-black uppercase text-slate-400 block mb-0.5">Calibragem Pneus</span>
+            <span id="modalSolicPneus" class="font-bold text-slate-700 dark:text-slate-300 text-[11px]"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Descrição dos Serviços -->
+      <div class="p-4 bg-slate-50 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/5 rounded-2xl">
+        <span class="font-bold text-slate-700 dark:text-slate-300 block mb-1.5 text-[11px] uppercase tracking-wider">
+          <i class="fa-solid fa-clipboard-list mr-1 text-blue-500"></i> Serviços e Sintomas Relatados:
+        </span>
+        <p id="modalSolicDescricao" class="text-xs text-slate-700 dark:text-slate-300 whitespace-pre-line leading-relaxed bg-white dark:bg-slate-800/40 p-3 rounded-xl border border-slate-200/60 dark:border-white/5"></p>
+      </div>
+
+      <!-- Observações Gerais (se houver) -->
+      <div id="modalSolicNotesContainer" class="hidden p-3 bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 rounded-xl text-xs">
+        <span class="font-bold text-slate-700 dark:text-slate-300 block mb-1 text-[11px] uppercase tracking-wider">
+          <i class="fa-regular fa-comment-dots mr-1"></i> Observações Complementares:
+        </span>
+        <p id="modalSolicNotes" class="text-slate-600 dark:text-slate-400 italic whitespace-pre-line"></p>
+      </div>
+    </div>
+
+    <!-- Footer Discreto -->
+    <div class="px-6 py-4 bg-slate-50 dark:bg-white/[0.02] border-t border-slate-100 dark:border-white/5 flex flex-wrap items-center justify-between gap-3 shrink-0">
+      <div>
+        {% if ROLE_ADMIN or current_user.has_permission('veiculos') %}
+        <button type="button" id="btnModalToggleStatus" onclick="toggleStatusFromModal()"
+                class="px-4 py-2 rounded-xl font-bold text-xs tracking-wider transition-all flex items-center gap-1.5 cursor-pointer bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm shadow-emerald-500/20">
+          <i id="btnModalToggleIcon" class="fa-solid fa-circle-check text-xs"></i>
+          <span id="btnModalToggleText">Marcar como Finalizada</span>
+        </button>
+        {% endif %}
+      </div>
+      <div class="flex items-center gap-3">
+        <a id="modalSolicPdfBtn" href="#" target="_blank"
+           class="px-4 py-2 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 rounded-xl font-bold text-xs tracking-wider shadow-sm transition-all flex items-center gap-1.5">
+          <i class="fa-solid fa-file-pdf text-xs text-red-500"></i> Abrir Documento Oficial (PDF)
+        </a>
+        <button type="button" onclick="closeModal('modalSolicitacaoDetail')"
+                class="px-4 py-2 bg-slate-200 hover:bg-slate-300 dark:bg-white/10 dark:hover:bg-white/20 text-slate-700 dark:text-slate-200 rounded-xl font-bold text-xs tracking-wider transition-all">
+          Fechar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
   // ✅ Fecha todos os <dialog> ao clicar fora (no backdrop)
   (function () {
@@ -793,6 +1263,254 @@
       });
     });
   })();
+
+  function switchVehicleTab(tab) {
+    const paneFrota = document.getElementById('pane-frota');
+    const paneSolic = document.getElementById('pane-solicitacoes');
+    const btnFrota = document.getElementById('tab-btn-frota');
+    const btnSolic = document.getElementById('tab-btn-solicitacoes');
+    const searchTab = document.getElementById('search-active-tab');
+    const headerCrumb = document.getElementById('header-crumb');
+    const headerTitle = document.getElementById('header-title');
+    const headerIcon = document.getElementById('header-icon');
+
+    if (tab === 'solicitacoes') {
+      if (paneFrota) paneFrota.classList.add('hidden');
+      if (paneSolic) paneSolic.classList.remove('hidden');
+
+      if (btnFrota) btnFrota.className = "px-5 py-2.5 rounded-xl font-black text-[11px] uppercase tracking-wider transition-all flex items-center gap-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5";
+      if (btnSolic) btnSolic.className = "px-5 py-2.5 rounded-xl font-black text-[11px] uppercase tracking-wider transition-all flex items-center gap-2 bg-blue-600 text-white shadow-md shadow-blue-500/20";
+      
+      if (searchTab) searchTab.value = 'solicitacoes';
+      if (headerCrumb) headerCrumb.textContent = 'Solicitações de Revisão';
+      if (headerTitle) headerTitle.textContent = 'Solicitações de Revisão / Manutenção';
+      if (headerIcon) { headerIcon.className = 'fa-solid fa-file-circle-check text-xl'; }
+
+      history.replaceState(null, '', '?tab=solicitacoes');
+    } else {
+      if (paneSolic) paneSolic.classList.add('hidden');
+      if (paneFrota) paneFrota.classList.remove('hidden');
+
+      if (btnSolic) btnSolic.className = "px-5 py-2.5 rounded-xl font-black text-[11px] uppercase tracking-wider transition-all flex items-center gap-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/5";
+      if (btnFrota) btnFrota.className = "px-5 py-2.5 rounded-xl font-black text-[11px] uppercase tracking-wider transition-all flex items-center gap-2 bg-blue-600 text-white shadow-md shadow-blue-500/20";
+
+      if (searchTab) searchTab.value = 'frota';
+      if (headerCrumb) headerCrumb.textContent = 'Frota de Veículos';
+      if (headerTitle) headerTitle.textContent = 'Gerenciamento de Frota';
+      if (headerIcon) { headerIcon.className = 'fa-solid fa-car-side text-xl'; }
+
+      history.replaceState(null, '', window.location.pathname);
+    }
+  }
+
+  function openModalSolicitacaoManutencao() {
+    const form = document.getElementById('formSolicitacaoManutencao');
+    if (form) form.reset();
+    const preview = document.getElementById('solic_vehicle_preview');
+    if (preview) preview.classList.add('hidden');
+    const modal = document.getElementById('modalSolicitacaoManutencao');
+    if (modal) modal.showModal();
+  }
+
+  async function carregarInfoVeiculoSolicitacao(vehicleId) {
+    const preview = document.getElementById('solic_vehicle_preview');
+    const kmInput = document.getElementById('solic_km_current');
+    if (!vehicleId) {
+      if (preview) preview.classList.add('hidden');
+      if (kmInput) kmInput.value = '';
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/veiculos/info/${vehicleId}`);
+      if (!res.ok) throw new Error('Erro ao carregar dados do veículo');
+      const data = await res.json();
+
+      document.getElementById('preview_plate').innerText = data.plate;
+      document.getElementById('preview_model').innerText = `${data.brand} ${data.model}`;
+      document.getElementById('preview_driver').innerText = `Condutor: ${data.driver_name}`;
+      document.getElementById('preview_km').innerText = `${data.km.toLocaleString('pt-BR')} km`;
+      document.getElementById('preview_year').innerText = `Ano: ${data.year || 'N/I'}`;
+
+      document.getElementById('preview_oil').innerText = `${data.oil_type} (${data.oil_brand})`;
+      document.getElementById('preview_filters').innerText = `${data.filter_oil} / ${data.filter_air}`;
+      document.getElementById('preview_tire').innerText = data.tire_pressure;
+
+      if (kmInput) kmInput.value = data.km || '';
+      if (preview) preview.classList.remove('hidden');
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  async function submitSolicitacaoManutencao(e) {
+    e.preventDefault();
+    const form = e.target;
+    const btn = document.getElementById('btnSubmitSolicitacao');
+    const origHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-xs"></i> Gerando Documento...';
+
+    const formData = new FormData(form);
+
+    try {
+      const res = await fetch('/veiculos/solicitacao-manutencao', {
+        method: 'POST',
+        body: formData
+      });
+      
+      const data = await res.json();
+
+      if (res.ok && data.success) {
+        document.getElementById('modalSolicitacaoManutencao').close();
+        if (data.pdf_url) {
+          window.open(data.pdf_url, '_blank');
+        }
+        setTimeout(() => {
+          window.location.href = '/veiculos?tab=solicitacoes';
+        }, 350);
+      } else {
+        alert(data.error || 'Erro ao gerar solicitação.');
+        btn.disabled = false;
+        btn.innerHTML = origHtml;
+      }
+    } catch (err) {
+      console.error('Erro na solicitação:', err);
+      alert('Erro de comunicação com o servidor ao processar solicitação.');
+      btn.disabled = false;
+      btn.innerHTML = origHtml;
+    }
+  }
+  function toggleSolicMonthGroup(index) {
+    const tbody = document.getElementById(`tbody-solic-${index}`);
+    const chevron = document.getElementById(`chevron-solic-${index}`);
+    if (tbody && chevron) {
+      tbody.classList.toggle('hidden');
+      chevron.classList.toggle('rotate-180');
+    }
+  }
+
+  let currentModalSolicId = null;
+
+  async function showSolicitacaoDetail(id) {
+    currentModalSolicId = id;
+    const modal = document.getElementById('modalSolicitacaoDetail');
+    if (!modal) return;
+
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+
+    document.getElementById('modalSolicDetailTitle').innerText = 'Carregando...';
+    document.getElementById('modalSolicDetailSubtitle').innerText = 'Buscando informações da solicitação...';
+    document.getElementById('modalSolicDescricao').innerText = 'Carregando...';
+    document.getElementById('modalSolicNotesContainer').classList.add('hidden');
+
+    try {
+      const res = await fetch(`/api/veiculos/solicitacao-manutencao/${id}`);
+      if (!res.ok) throw new Error('Erro ao carregar detalhes');
+      const data = await res.json();
+
+      document.getElementById('modalSolicDetailTitle').innerText = `Solicitação ${data.protocol}`;
+      
+      const badge = document.getElementById('modalSolicStatusBadge');
+      const btnToggle = document.getElementById('btnModalToggleStatus');
+      const iconToggle = document.getElementById('btnModalToggleIcon');
+      const textToggle = document.getElementById('btnModalToggleText');
+
+      if (data.is_finalizada) {
+        document.getElementById('modalSolicDetailSubtitle').innerText = `Registrado em ${data.date} • Concluído em ${data.completed_at || '-'} • ${data.service_type}`;
+        badge.innerText = 'CONCLUÍDA / FINALIZADA';
+        badge.className = 'text-[9px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full border bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-900/50';
+
+        if (btnToggle) {
+          btnToggle.className = 'px-4 py-2 rounded-xl font-bold text-xs tracking-wider transition-all flex items-center gap-1.5 cursor-pointer bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/50 dark:hover:bg-amber-900/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-900/50';
+          if (iconToggle) iconToggle.className = 'fa-solid fa-rotate-left text-xs';
+          if (textToggle) textToggle.innerText = 'Reabrir Solicitação';
+        }
+      } else {
+        document.getElementById('modalSolicDetailSubtitle').innerText = `Registrado em ${data.date} • ${data.service_type}`;
+        badge.innerText = data.status || 'SOLICITADO';
+        badge.className = 'text-[9px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full border bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-900/50';
+
+        if (btnToggle) {
+          btnToggle.className = 'px-4 py-2 rounded-xl font-bold text-xs tracking-wider transition-all flex items-center gap-1.5 cursor-pointer bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm shadow-emerald-500/20';
+          if (iconToggle) iconToggle.className = 'fa-solid fa-circle-check text-xs';
+          if (textToggle) textToggle.innerText = 'Marcar como Finalizada';
+        }
+      }
+
+      document.getElementById('modalSolicVeiculo').innerText = `${data.plate} - ${data.model}`;
+      document.getElementById('modalSolicKm').innerText = `${data.km.toLocaleString('pt-BR')} km`;
+      document.getElementById('modalSolicCondutor').innerText = data.driver;
+      document.getElementById('modalSolicSolicitante').innerText = data.solicitante;
+
+      document.getElementById('modalSolicOleo').innerText = data.oil_type;
+      document.getElementById('modalSolicFiltros').innerText = `${data.filter_oil} / ${data.filter_air}`;
+      document.getElementById('modalSolicFluidos').innerText = `${data.brake_fluid} / ${data.coolant_type}`;
+      document.getElementById('modalSolicPneus').innerText = data.tire_pressure;
+
+      document.getElementById('modalSolicDescricao').innerText = data.description || 'Nenhum detalhe informado.';
+
+      if (data.notes) {
+        document.getElementById('modalSolicNotes').innerText = data.notes;
+        document.getElementById('modalSolicNotesContainer').classList.remove('hidden');
+      }
+
+      document.getElementById('modalSolicPdfBtn').href = data.pdf_url;
+    } catch (err) {
+      alert('Erro ao carregar detalhes da solicitação.');
+      closeModal('modalSolicitacaoDetail');
+    }
+  }
+
+  async function toggleStatusFromModal() {
+    if (!currentModalSolicId) return;
+    const btn = document.getElementById('btnModalToggleStatus');
+    const origHtml = btn ? btn.innerHTML : '';
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-xs"></i> Processando...';
+    }
+
+    try {
+      const csrfToken = document.querySelector('input[name="csrf_token"]')?.value || '';
+      const formData = new FormData();
+      formData.append('csrf_token', csrfToken);
+
+      const res = await fetch(`/veiculos/solicitacao-manutencao/${currentModalSolicId}/toggle-status?ajax=1`, {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest'
+        }
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        window.location.href = '/veiculos?tab=solicitacoes';
+      } else {
+        alert(data.error || 'Erro ao alternar status da solicitação.');
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = origHtml;
+        }
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Erro de comunicação com o servidor.');
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = origHtml;
+      }
+    }
+  }
+
+  function closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+      modal.classList.add('hidden');
+      modal.classList.remove('flex');
+    }
+  }
 </script>
 
 {% endblock %}

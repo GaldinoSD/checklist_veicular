@@ -7,7 +7,7 @@ from datetime import datetime, timedelta, date
 from pathlib import Path
 from collections import defaultdict
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, send_from_directory, abort, jsonify, session, current_app
+from flask import Blueprint, render_template, request, redirect, url_for, flash, send_from_directory, abort, jsonify, session, current_app, send_file
 from flask_login import login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
@@ -52,12 +52,303 @@ from backend.utils import (
 
 
 
+# ----------------- SOLICITAÇÃO DE REVISÃO E MANUTENÇÃO VEICULAR -----------------
+class VehicleMaintenanceRequest(db.Model):
+    __tablename__ = "vehicle_maintenance_request"
+
+    id = db.Column(db.Integer, primary_key=True)
+    protocol = db.Column(db.String(30), unique=True, nullable=False)
+    vehicle_id = db.Column(db.Integer, db.ForeignKey("vehicle.id", ondelete="CASCADE"), nullable=False)
+    vehicle = db.relationship("Vehicle", backref=db.backref("maintenance_requests", lazy=True, cascade="all, delete-orphan"))
+
+    created_by_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
+    created_by = db.relationship("User", foreign_keys=[created_by_id])
+
+    completed_by_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
+    completed_by = db.relationship("User", foreign_keys=[completed_by_id])
+
+    km_current = db.Column(db.Integer, nullable=True)
+    service_type = db.Column(db.String(100), nullable=False)
+    description = db.Column(db.Text, nullable=False)
+    notes = db.Column(db.Text, nullable=True)
+    status = db.Column(db.String(30), default="SOLICITADO")
+    created_at = db.Column(db.DateTime, default=lambda: agora())
+    completed_at = db.Column(db.DateTime, nullable=True)
+
+
+def ensure_maintenance_request_table():
+    try:
+        VehicleMaintenanceRequest.__table__.create(db.engine, checkfirst=True)
+    except Exception:
+        pass
+    try:
+        with db.engine.connect() as conn:
+            conn.execute(text("ALTER TABLE vehicle_maintenance_request ADD COLUMN IF NOT EXISTS completed_at TIMESTAMP;"))
+            conn.execute(text("ALTER TABLE vehicle_maintenance_request ADD COLUMN IF NOT EXISTS completed_by_id INTEGER;"))
+            conn.commit()
+    except Exception:
+        try:
+            with db.engine.connect() as conn:
+                conn.execute(text("ALTER TABLE vehicle_maintenance_request ADD COLUMN completed_at DATETIME;"))
+                conn.execute(text("ALTER TABLE vehicle_maintenance_request ADD COLUMN completed_by_id INTEGER;"))
+                conn.commit()
+        except Exception:
+            pass
+
+
+def generate_maintenance_request_pdf_buffer(req_obj):
+    from io import BytesIO
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.units import mm
+    from reportlab.lib import colors
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    import datetime
+
+    v = req_obj.vehicle
+    info = v.info if v else None
+
+    try:
+        from zoneinfo import ZoneInfo
+        BRT = ZoneInfo("America/Sao_Paulo")
+    except Exception:
+        from datetime import timezone, timedelta
+        BRT = timezone(timedelta(hours=-3))
+
+    dt_criacao_brt = req_obj.created_at.astimezone(BRT) if req_obj.created_at and req_obj.created_at.tzinfo is not None else req_obj.created_at
+    criacao_str = dt_criacao_brt.strftime("%d/%m/%Y às %H:%M") if dt_criacao_brt else "N/A"
+
+    dt_conclusao_brt = req_obj.completed_at.astimezone(BRT) if req_obj.completed_at and req_obj.completed_at.tzinfo is not None else req_obj.completed_at
+    conclusao_str = dt_conclusao_brt.strftime("%d/%m/%Y às %H:%M") if dt_conclusao_brt else "Em aberto"
+    now_brt_str = datetime.datetime.now(BRT).strftime("%d/%m/%Y %H:%M")
+
+    AZUL = colors.Color(25/255, 60/255, 120/255)
+    AZUL_HEADER = colors.HexColor("#1F3C78")
+    CINZA_TEXTO = colors.HexColor("#4D4D4D")
+    CINZA_FUNDO = colors.HexColor("#F8FAFC")
+    BORDA = colors.HexColor("#CBD5E1")
+
+    RODAPE_LINHAS = [
+        "ADAPT LINK SERVIÇOS EM COMUNICAÇÃO MULTIMÍDIA EIRELI",
+        "CNPJ: 08.980.148/0001-41       Inscr. Est.: 78.342.480",
+        "Rua Waldir Pedro de Medeiros, 253 – São Miguel – Seropédica – RJ",
+        "CEP: 23.893-725",
+        "Tel.: (21) 3812-5900 / (21) 2682-7822",
+        "WWW.ADAPTLINK.COM.BR",
+    ]
+
+    config = SystemConfig.query.first()
+    logo_path_custom = None
+    if config and config.pdf_logo:
+        custom_p = LAYOUT_UPLOAD_DIR / config.pdf_logo
+        if custom_p.exists():
+            logo_path_custom = str(custom_p)
+    pdf_logo_path = logo_path_custom if logo_path_custom else (str(LOGO_PATH) if LOGO_PATH.exists() else None)
+
+    custom_rodape_linhas = None
+    if config and config.pdf_footer:
+        custom_rodape_linhas = [linha.strip() for linha in config.pdf_footer.splitlines() if linha.strip()]
+    pdf_rodape_linhas = custom_rodape_linhas if custom_rodape_linhas is not None else RODAPE_LINHAS
+
+    def _on_page(c, doc):
+        width, height = A4
+        if pdf_logo_path:
+            try:
+                pdf_h = (config.pdf_logo_height if config else 30) or 30
+                pdf_w = pdf_h * 2.36
+                c.drawImage(pdf_logo_path, 12*mm, height - 12*mm - pdf_h, pdf_w, pdf_h,
+                            preserveAspectRatio=True, mask="auto")
+            except Exception:
+                pass
+        c.setStrokeColor(AZUL)
+        c.setLineWidth(1.2)
+        c.line(12*mm, height - 26*mm, width - 12*mm, height - 26*mm)
+        c.setFont("Helvetica-Bold", 12)
+        c.setFillColor(AZUL)
+        title_doc = "SOLICITAÇÃO DE REVISÃO E MANUTENÇÃO - CONCLUÍDA" if req_obj.status == "FINALIZADA" else "SOLICITAÇÃO DE REVISÃO E MANUTENÇÃO"
+        c.drawCentredString(width/2, height - 13*mm, title_doc)
+        c.setFont("Helvetica-Bold", 8.5)
+        c.setFillColor(colors.HexColor("#334155"))
+        placa_txt = v.plate if v else "N/A"
+        c.drawCentredString(width/2, height - 19*mm, f"PROTOCOLO: {req_obj.protocol}  |  VEÍCULO: {placa_txt}  |  STATUS: {req_obj.status}")
+        c.setFont("Helvetica", 7)
+        c.setFillColor(CINZA_TEXTO)
+        c.drawString(12*mm, height - 30*mm, f"Emitido em: {now_brt_str}")
+
+        footer_line_y = 19*mm
+        c.setStrokeColor(colors.HexColor("#CBD5E1"))
+        c.setLineWidth(0.8)
+        c.line(12*mm, footer_line_y, width - 12*mm, footer_line_y)
+        c.setFont("Helvetica", 6.5)
+        c.setFillColor(colors.HexColor("#64748B"))
+        y = 15.5*mm
+        for linha in pdf_rodape_linhas:
+            c.drawCentredString(width/2, y, linha)
+            y -= 2.5*mm
+        c.setFont("Helvetica-Oblique", 6.5)
+        c.drawRightString(width - 12*mm, 5*mm, f"Página {c.getPageNumber()}")
+
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        rightMargin=12 * mm,
+        leftMargin=12 * mm,
+        topMargin=32 * mm,
+        bottomMargin=23 * mm
+    )
+
+    styles = getSampleStyleSheet()
+    style_label = ParagraphStyle("Lbl", parent=styles["Normal"], fontName="Helvetica-Bold", fontSize=7, leading=9, textColor=colors.HexColor("#1E293B"))
+    style_val = ParagraphStyle("Val", parent=styles["Normal"], fontName="Helvetica", fontSize=7, leading=9, textColor=colors.HexColor("#334155"))
+    style_desc = ParagraphStyle("Desc", parent=styles["Normal"], fontName="Helvetica", fontSize=8, leading=11, textColor=colors.HexColor("#0F172A"))
+    style_sec = ParagraphStyle("Sec", fontName="Helvetica-Bold", fontSize=8.5, leading=11, textColor=AZUL_HEADER, spaceBefore=4, spaceAfter=2)
+
+    story = []
+
+    # 1. Informações do Veículo
+    story.append(Paragraph("<b>1. DADOS DO VEÍCULO (ATIVO)</b>", style_sec))
+    driver_name = v.driver.display_name if (v and v.driver) else "Não informado"
+    km_show = f"{req_obj.km_current:,} km".replace(",", ".") if req_obj.km_current else (f"{v.km:,} km".replace(",", ".") if v and v.km else "0 km")
+
+    t_veic_data = [
+        [Paragraph("<b>PLACA:</b>", style_label), Paragraph(f"<b>{v.plate if v else 'N/A'}</b>", style_val),
+         Paragraph("<b>TIPO DE VEÍCULO:</b>", style_label), Paragraph((v.type or 'carro').upper() if v else 'N/A', style_val)],
+        [Paragraph("<b>MARCA / MODELO:</b>", style_label), Paragraph(f"{v.brand or ''} {v.model or ''}" if v else 'N/A', style_val),
+         Paragraph("<b>ANO FABRICAÇÃO:</b>", style_label), Paragraph(str(v.year or 'N/I') if v else 'N/I', style_val)],
+        [Paragraph("<b>KM NO REGISTRO:</b>", style_label), Paragraph(km_show, style_val),
+         Paragraph("<b>MOTORISTA / CONDUTOR:</b>", style_label), Paragraph(driver_name.upper(), style_val)]
+    ]
+    t_veic = Table(t_veic_data, colWidths=[32*mm, 61*mm, 38*mm, 55*mm])
+    t_veic.setStyle(TableStyle([
+        ('GRID', (0,0), (-1,-1), 0.5, BORDA),
+        ('BACKGROUND', (0,0), (0,-1), CINZA_FUNDO),
+        ('BACKGROUND', (2,0), (2,-1), CINZA_FUNDO),
+        ('TOPPADDING', (0,0), (-1,-1), 2.5),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 2.5),
+        ('LEFTPADDING', (0,0), (-1,-1), 3),
+        ('RIGHTPADDING', (0,0), (-1,-1), 3),
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+    ]))
+    story.append(t_veic)
+    story.append(Spacer(1, 3.5*mm))
+
+    # 2. Ficha Técnica e Lubrificantes
+    story.append(Paragraph("<b>2. ESPECIFICAÇÕES TÉCNICAS E LUBRIFICANTES RECOMENDADOS</b>", style_sec))
+    oleo_txt = f"{info.oil_type or 'N/I'} ({info.oil_brand or 'N/I'})" if info else "N/I"
+    if info and info.oil_capacity_l:
+        oleo_txt += f" - {info.oil_capacity_l} Litros"
+    
+    t_ficha_data = [
+        [Paragraph("<b>ÓLEO DO MOTOR:</b>", style_label), Paragraph(oleo_txt, style_val),
+         Paragraph("<b>FILTRO DE ÓLEO:</b>", style_label), Paragraph(info.filter_oil or 'N/I' if info else 'N/I', style_val)],
+        [Paragraph("<b>FILTRO DE AR:</b>", style_label), Paragraph(info.filter_air or 'N/I' if info else 'N/I', style_val),
+         Paragraph("<b>FILTRO DE COMB.:</b>", style_label), Paragraph(info.filter_fuel or 'N/I' if info else 'N/I', style_val)],
+        [Paragraph("<b>FLUIDO DE FREIO:</b>", style_label), Paragraph(info.brake_fluid or 'N/I' if info else 'N/I', style_val),
+         Paragraph("<b>ARREFECIMENTO:</b>", style_label), Paragraph(info.coolant_type or 'N/I' if info else 'N/I', style_val)],
+        [Paragraph("<b>PRESSÃO PNEUS:</b>", style_label), Paragraph(info.tire_pressure or 'N/I' if info else 'N/I', style_val),
+         Paragraph("<b>OBS. TÉCNICA:</b>", style_label), Paragraph((info.notes[:45] + '...') if info and info.notes and len(info.notes) > 45 else (info.notes if info and info.notes else 'Conforme manual'), style_val)]
+    ]
+    t_ficha = Table(t_ficha_data, colWidths=[32*mm, 61*mm, 38*mm, 55*mm])
+    t_ficha.setStyle(TableStyle([
+        ('GRID', (0,0), (-1,-1), 0.5, BORDA),
+        ('BACKGROUND', (0,0), (0,-1), CINZA_FUNDO),
+        ('BACKGROUND', (2,0), (2,-1), CINZA_FUNDO),
+        ('TOPPADDING', (0,0), (-1,-1), 2.5),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 2.5),
+        ('LEFTPADDING', (0,0), (-1,-1), 3),
+        ('RIGHTPADDING', (0,0), (-1,-1), 3),
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+    ]))
+    story.append(t_ficha)
+    story.append(Spacer(1, 3.5*mm))
+
+    # 3. Informações da Solicitação & Conclusão
+    story.append(Paragraph("<b>3. DADOS DA SOLICITAÇÃO & SITUAÇÃO</b>", style_sec))
+    solicitante_nome = req_obj.created_by.display_name if req_obj.created_by else "Administrador / Sistema"
+    is_finalizada = (req_obj.status == "FINALIZADA")
+    status_color = "#16A34A" if is_finalizada else "#1D4ED8"
+    status_label = "FINALIZADA / CONCLUÍDA" if is_finalizada else req_obj.status
+    status_html = f"<font color='{status_color}'><b>{status_label}</b></font>"
+
+    if is_finalizada:
+        t_solic_data = [
+            [Paragraph("<b>PROTOCOLO:</b>", style_label), Paragraph(f"<b>{req_obj.protocol}</b>", style_val),
+             Paragraph("<b>DATA DA SOLICITAÇÃO:</b>", style_label), Paragraph(criacao_str, style_val)],
+            [Paragraph("<b>TIPO DE INTERVENÇÃO:</b>", style_label), Paragraph(f"<b>{req_obj.service_type}</b>", style_val),
+             Paragraph("<b>DATA DE CONCLUSÃO:</b>", style_label), Paragraph(f"<b><font color='#16A34A'>{conclusao_str}</font></b>", style_val)],
+            [Paragraph("<b>SOLICITANTE:</b>", style_label), Paragraph(solicitante_nome.upper(), style_val),
+             Paragraph("<b>STATUS ATUAL:</b>", style_label), Paragraph(status_html, style_val)]
+        ]
+    else:
+        t_solic_data = [
+            [Paragraph("<b>PROTOCOLO:</b>", style_label), Paragraph(f"<b>{req_obj.protocol}</b>", style_val),
+             Paragraph("<b>DATA DA SOLICITAÇÃO:</b>", style_label), Paragraph(criacao_str, style_val)],
+            [Paragraph("<b>TIPO DE INTERVENÇÃO:</b>", style_label), Paragraph(f"<b>{req_obj.service_type}</b>", style_val),
+             Paragraph("<b>STATUS ATUAL:</b>", style_label), Paragraph(status_html, style_val)],
+            [Paragraph("<b>SOLICITANTE:</b>", style_label), Paragraph(solicitante_nome.upper(), style_val),
+             Paragraph("<b>EMPRESA SOLICITANTE:</b>", style_label), Paragraph("ADAPT LINK COMUNICAÇÃO", style_val)]
+        ]
+    t_solic = Table(t_solic_data, colWidths=[32*mm, 61*mm, 38*mm, 55*mm])
+    t_solic.setStyle(TableStyle([
+        ('GRID', (0,0), (-1,-1), 0.5, BORDA),
+        ('BACKGROUND', (0,0), (0,-1), CINZA_FUNDO),
+        ('BACKGROUND', (2,0), (2,-1), CINZA_FUNDO),
+        ('TOPPADDING', (0,0), (-1,-1), 2.5),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 2.5),
+        ('LEFTPADDING', (0,0), (-1,-1), 3),
+        ('RIGHTPADDING', (0,0), (-1,-1), 3),
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+    ]))
+    story.append(t_solic)
+    story.append(Spacer(1, 3.5*mm))
+
+    # 4. Descrição dos Serviços e Sintomas
+    story.append(Paragraph("<b>4. DESCRIÇÃO DOS SERVIÇOS / REPAROS SOLICITADOS</b>", style_sec))
+    desc_html = req_obj.description.replace("\n", "<br/>")
+    t_desc_data = [
+        [Paragraph(desc_html, style_desc)]
+    ]
+    t_desc = Table(t_desc_data, colWidths=[186*mm])
+    t_desc.setStyle(TableStyle([
+        ('GRID', (0,0), (-1,-1), 0.6, colors.HexColor("#93C5FD")),
+        ('BACKGROUND', (0,0), (-1,-1), colors.HexColor("#F0F9FF")),
+        ('TOPPADDING', (0,0), (-1,-1), 5),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 5),
+        ('LEFTPADDING', (0,0), (-1,-1), 5),
+        ('RIGHTPADDING', (0,0), (-1,-1), 5),
+    ]))
+    story.append(t_desc)
+
+    if req_obj.notes:
+        story.append(Spacer(1, 3*mm))
+        story.append(Paragraph("<b>5. OBSERVAÇÕES COMPLEMENTARES</b>", style_sec))
+        notes_html = req_obj.notes.replace("\n", "<br/>")
+        t_notes_data = [[Paragraph(notes_html, style_val)]]
+        t_notes = Table(t_notes_data, colWidths=[186*mm])
+        t_notes.setStyle(TableStyle([
+            ('GRID', (0,0), (-1,-1), 0.5, BORDA),
+            ('BACKGROUND', (0,0), (-1,-1), CINZA_FUNDO),
+            ('TOPPADDING', (0,0), (-1,-1), 4),
+            ('BOTTOMPADDING', (0,0), (-1,-1), 4),
+            ('LEFTPADDING', (0,0), (-1,-1), 4),
+            ('RIGHTPADDING', (0,0), (-1,-1), 4),
+        ]))
+        story.append(t_notes)
+
+    doc.build(story, onFirstPage=_on_page, onLaterPages=_on_page)
+    buffer.seek(0)
+    return buffer
+
+
 # ----------------- VEÍCULOS (admin + supervisor) -----------------
 @fleet_bp.route("/veiculos")
 @supervisor_allowed
 def vehicles():
+    ensure_maintenance_request_table()
     q = (request.args.get("q") or "").strip()
-    query = Vehicle.query.options(joinedload(Vehicle.info))  # ✅ carrega info junto (evita N+1)
+    active_tab = (request.args.get("tab") or "frota").strip()
+    query = Vehicle.query.options(joinedload(Vehicle.info), joinedload(Vehicle.driver))
 
     if q:
         like = f"%{q}%"
@@ -71,7 +362,6 @@ def vehicles():
 
     veiculos = query.order_by(Vehicle.plate.asc()).all()
 
-    # garantir valor padrão caso venha nulo
     for v in veiculos:
         if not v.type:
             v.type = "carro"
@@ -79,7 +369,295 @@ def vehicles():
             v.status = "ATIVO"
 
     colaboradores = User.query.order_by(User.username.asc()).all()
-    return render_template("vehicles.html", veiculos=veiculos, q=q, colaboradores=colaboradores)
+    
+    solicitacoes = []
+    try:
+        sol_q = VehicleMaintenanceRequest.query.options(
+            joinedload(VehicleMaintenanceRequest.vehicle),
+            joinedload(VehicleMaintenanceRequest.created_by)
+        )
+        if q:
+            like = f"%{q}%"
+            sol_q = sol_q.join(VehicleMaintenanceRequest.vehicle).filter(
+                db.or_(
+                    VehicleMaintenanceRequest.protocol.ilike(like),
+                    VehicleMaintenanceRequest.service_type.ilike(like),
+                    VehicleMaintenanceRequest.description.ilike(like),
+                    Vehicle.plate.ilike(like),
+                    Vehicle.model.ilike(like)
+                )
+            )
+        solicitacoes = sol_q.order_by(VehicleMaintenanceRequest.created_at.desc()).all()
+    except Exception as e:
+        print("⚠️ Erro ao buscar solicitações de manutenção:", e)
+
+    return render_template(
+        "vehicles.html",
+        veiculos=veiculos,
+        q=q,
+        colaboradores=colaboradores,
+        solicitacoes=solicitacoes,
+        active_tab=active_tab
+    )
+
+
+@fleet_bp.route("/veiculos/solicitacoes-manutencao")
+@login_required
+def vehicle_maintenance_requests_page():
+    """Redireciona para a aba de Solicitações de Revisão/Manutenção de Veículos."""
+    if not (current_user.is_admin or current_user.is_supervisor or current_user.has_permission("veiculos")):
+        flash("Acesso não autorizado para esta funcionalidade.", "error")
+        return redirect_to_user_home(current_user)
+    return redirect(url_for("vehicles") + "?tab=solicitacoes")
+
+
+@fleet_bp.route("/api/veiculos/info/<int:vehicle_id>")
+@login_required
+def api_vehicle_info(vehicle_id):
+    """Retorna dados do veículo e da ficha técnica para preenchimento dinâmico do formulário."""
+    v = Vehicle.query.options(joinedload(Vehicle.info), joinedload(Vehicle.driver)).get_or_404(vehicle_id)
+    info = v.info
+    driver_name = v.driver.display_name if v.driver else (v.driver.username if v.driver else "Não atribuído")
+    return jsonify({
+        "success": True,
+        "id": v.id,
+        "plate": v.plate,
+        "brand": v.brand or "",
+        "model": v.model or "",
+        "year": v.year or "",
+        "km": v.km or 0,
+        "type": (v.type or "carro").upper(),
+        "driver_name": driver_name,
+        "oil_type": (info.oil_type if info else "") or "Não informado",
+        "oil_brand": (info.oil_brand if info else "") or "Não informado",
+        "oil_capacity_l": (info.oil_capacity_l if info else "") or "Não informado",
+        "filter_oil": (info.filter_oil if info else "") or "Não informado",
+        "filter_air": (info.filter_air if info else "") or "Não informado",
+        "filter_fuel": (info.filter_fuel if info else "") or "Não informado",
+        "brake_fluid": (info.brake_fluid if info else "") or "Não informado",
+        "coolant_type": (info.coolant_type if info else "") or "Não informado",
+        "tire_pressure": (info.tire_pressure if info else "") or "Não informado",
+        "notes": (info.notes if info else "") or ""
+    })
+
+
+@fleet_bp.route("/veiculos/solicitacao-manutencao", methods=["POST"])
+@login_required
+def vehicle_maintenance_request_create():
+    """Registra uma nova solicitação de revisão/manutenção e retorna URL para emissão do PDF."""
+    ensure_maintenance_request_table()
+    data = request.form
+    vehicle_id = data.get("vehicle_id", type=int)
+    if not vehicle_id:
+        return jsonify({"success": False, "error": "Veículo não selecionado."}), 400
+
+    vehicle = Vehicle.query.get_or_404(vehicle_id)
+    service_type = (data.get("service_type") or "Revisão Preventiva").strip()
+    description = (data.get("description") or "").strip()
+    if not description:
+        return jsonify({"success": False, "error": "A descrição dos serviços ou defeitos é obrigatória."}), 400
+
+    km_current = data.get("km_current", type=int)
+    if km_current is None or km_current <= 0:
+        km_current = vehicle.km or 0
+
+    notes = (data.get("notes") or "").strip()
+
+    now = agora()
+    year = now.year
+    try:
+        count_year = VehicleMaintenanceRequest.query.filter(
+            db.extract('year', VehicleMaintenanceRequest.created_at) == year
+        ).count() + 1
+    except Exception:
+        count_year = VehicleMaintenanceRequest.query.count() + 1
+    protocol = f"SM-{year}-{count_year:04d}"
+
+    req_obj = VehicleMaintenanceRequest(
+        protocol=protocol,
+        vehicle_id=vehicle.id,
+        created_by_id=current_user.id if current_user.is_authenticated else None,
+        km_current=km_current,
+        service_type=service_type,
+        description=description,
+        notes=notes,
+        status="SOLICITADO",
+        created_at=now
+    )
+    db.session.add(req_obj)
+    db.session.commit()
+
+    # Salva também o arquivo PDF gerado em RELATORIOS_DIR (assim como os checklists fazem)
+    try:
+        RELATORIOS_DIR.mkdir(parents=True, exist_ok=True)
+        pdf_buf = generate_maintenance_request_pdf_buffer(req_obj)
+        pdf_name = f"solicitacao_{protocol}_{vehicle.plate}.pdf"
+        with open(RELATORIOS_DIR / pdf_name, "wb") as f_pdf:
+            f_pdf.write(pdf_buf.getvalue())
+    except Exception as e:
+        print("⚠️ Erro ao salvar cópia do PDF em RELATORIOS_DIR:", e)
+
+    registrar_log(f"Criou solicitação de manutenção {protocol} para o veículo {vehicle.plate}")
+
+    return jsonify({
+        "success": True,
+        "id": req_obj.id,
+        "protocol": protocol,
+        "message": f"Solicitação {protocol} registrada com sucesso!",
+        "pdf_url": url_for("vehicle_maintenance_request_pdf", req_id=req_obj.id)
+    })
+
+
+@fleet_bp.route("/api/veiculos/solicitacao-manutencao/<int:req_id>")
+@supervisor_allowed
+def api_vehicle_maintenance_request_detail(req_id):
+    """Retorna dados completos da solicitação para exibição no modal de detalhes."""
+    ensure_maintenance_request_table()
+    req_obj = VehicleMaintenanceRequest.query.options(
+        joinedload(VehicleMaintenanceRequest.vehicle).joinedload(Vehicle.info),
+        joinedload(VehicleMaintenanceRequest.vehicle).joinedload(Vehicle.driver),
+        joinedload(VehicleMaintenanceRequest.created_by),
+        joinedload(VehicleMaintenanceRequest.completed_by)
+    ).get_or_404(req_id)
+
+    v = req_obj.vehicle
+    info = v.info if v else None
+    driver = v.driver if v else None
+    driver_name = driver.display_name if driver else "Não atribuído"
+
+    try:
+        from zoneinfo import ZoneInfo
+        BRT = ZoneInfo("America/Sao_Paulo")
+    except Exception:
+        from datetime import timezone, timedelta
+        BRT = timezone(timedelta(hours=-3))
+
+    dt_criacao_brt = req_obj.created_at.astimezone(BRT) if req_obj.created_at and req_obj.created_at.tzinfo is not None else req_obj.created_at
+    criacao_str = dt_criacao_brt.strftime("%d/%m/%Y às %H:%M") if dt_criacao_brt else "-"
+
+    dt_conclusao_brt = req_obj.completed_at.astimezone(BRT) if req_obj.completed_at and req_obj.completed_at.tzinfo is not None else req_obj.completed_at
+    conclusao_str = dt_conclusao_brt.strftime("%d/%m/%Y às %H:%M") if dt_conclusao_brt else None
+
+    return jsonify({
+        "id": req_obj.id,
+        "protocol": req_obj.protocol,
+        "date": criacao_str,
+        "plate": v.plate if v else "-",
+        "model": f"{v.brand} {v.model}" if v else "-",
+        "driver": driver_name,
+        "solicitante": req_obj.created_by.display_name if req_obj.created_by else "Sistema",
+        "km": req_obj.km_current or (v.km if v else 0),
+        "service_type": req_obj.service_type,
+        "status": req_obj.status,
+        "is_finalizada": (req_obj.status == "FINALIZADA"),
+        "completed_at": conclusao_str,
+        "completed_by": req_obj.completed_by.display_name if req_obj.completed_by else None,
+        "description": req_obj.description,
+        "notes": req_obj.notes or "",
+        "oil_type": f"{info.oil_type} ({info.oil_brand})" if info and info.oil_type else "Não informado",
+        "filter_oil": info.filter_oil if info and info.filter_oil else "Não informado",
+        "filter_air": info.filter_air if info and info.filter_air else "Não informado",
+        "filter_fuel": info.filter_fuel if info and info.filter_fuel else "Não informado",
+        "brake_fluid": info.brake_fluid if info and info.brake_fluid else "Não informado",
+        "coolant_type": info.coolant_type if info and info.coolant_type else "Não informado",
+        "tire_pressure": info.tire_pressure if info and info.tire_pressure else "Não informado",
+        "pdf_url": url_for("vehicle_maintenance_request_pdf", req_id=req_obj.id)
+    })
+
+
+@fleet_bp.route("/veiculos/solicitacao-manutencao/<int:req_id>/toggle-status", methods=["POST"])
+@supervisor_allowed
+def vehicle_maintenance_request_toggle_status(req_id):
+    """Marca a solicitação como FINALIZADA ou reabre como SOLICITADO."""
+    ensure_maintenance_request_table()
+    req_obj = VehicleMaintenanceRequest.query.get_or_404(req_id)
+
+    if req_obj.status == "FINALIZADA":
+        req_obj.status = "SOLICITADO"
+        req_obj.completed_at = None
+        req_obj.completed_by_id = None
+        action_msg = f"Solicitação {req_obj.protocol} reaberta (status SOLICITADO)."
+    else:
+        req_obj.status = "FINALIZADA"
+        req_obj.completed_at = agora()
+        req_obj.completed_by_id = current_user.id if current_user.is_authenticated else None
+        action_msg = f"Solicitação {req_obj.protocol} marcada como FINALIZADA."
+
+    db.session.commit()
+
+    # Regenera PDF em RELATORIOS_DIR para manter arquivo em disco sincronizado com status atualizado
+    try:
+        plate = req_obj.vehicle.plate if req_obj.vehicle else ""
+        pdf_name = f"solicitacao_{req_obj.protocol}_{plate}.pdf"
+        p = RELATORIOS_DIR / pdf_name
+        RELATORIOS_DIR.mkdir(parents=True, exist_ok=True)
+        pdf_buf = generate_maintenance_request_pdf_buffer(req_obj)
+        with open(p, "wb") as f_pdf:
+            f_pdf.write(pdf_buf.getvalue())
+    except Exception as e:
+        print("⚠️ Erro ao atualizar PDF em RELATORIOS_DIR:", e)
+
+    registrar_log(action_msg)
+
+    # Se for requisição AJAX/JSON
+    if request.is_json or request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.args.get("ajax") == "1":
+        return jsonify({
+            "success": True,
+            "status": req_obj.status,
+            "is_finalizada": (req_obj.status == "FINALIZADA"),
+            "completed_at": req_obj.completed_at.strftime("%d/%m/%Y às %H:%M") if req_obj.completed_at else None,
+            "message": action_msg
+        })
+
+    flash(action_msg, "success")
+    return redirect(url_for("vehicles") + "?tab=solicitacoes")
+
+
+@fleet_bp.route("/veiculos/solicitacao-manutencao/<int:req_id>/pdf")
+@login_required
+def vehicle_maintenance_request_pdf(req_id):
+    """Gera e envia o PDF padronizado da Solicitação de Revisão / Manutenção."""
+    ensure_maintenance_request_table()
+    req_obj = VehicleMaintenanceRequest.query.options(
+        joinedload(VehicleMaintenanceRequest.vehicle).joinedload(Vehicle.info),
+        joinedload(VehicleMaintenanceRequest.vehicle).joinedload(Vehicle.driver),
+        joinedload(VehicleMaintenanceRequest.created_by)
+    ).get_or_404(req_id)
+
+    pdf_buffer = generate_maintenance_request_pdf_buffer(req_obj)
+    download = request.args.get("download", "0") == "1"
+    filename = f"solicitacao_manutencao_{req_obj.protocol}.pdf"
+
+    return send_file(
+        pdf_buffer,
+        mimetype="application/pdf",
+        as_attachment=download,
+        download_name=filename
+    )
+
+
+@fleet_bp.route("/veiculos/solicitacao-manutencao/<int:req_id>/delete", methods=["POST"])
+@supervisor_allowed
+def vehicle_maintenance_request_delete(req_id):
+    """Exclui uma solicitação de manutenção do histórico e apaga arquivo em disco se houver."""
+    ensure_maintenance_request_table()
+    req_obj = VehicleMaintenanceRequest.query.get_or_404(req_id)
+    proto = req_obj.protocol
+    plate = req_obj.vehicle.plate if req_obj.vehicle else ""
+    db.session.delete(req_obj)
+    db.session.commit()
+
+    try:
+        pdf_name = f"solicitacao_{proto}_{plate}.pdf"
+        p = RELATORIOS_DIR / pdf_name
+        if p.exists():
+            p.unlink()
+    except Exception:
+        pass
+
+    registrar_log(f"Excluiu solicitação de manutenção {proto}")
+    flash(f"Solicitação {proto} excluída com sucesso.", "success")
+    return redirect(url_for("vehicles") + "?tab=solicitacoes")
 
 
 
@@ -476,6 +1054,362 @@ def deletar_movimento(mov_id):
         flash("❌ Erro ao excluir registro.", "error")
 
     return redirect(url_for("controle_veiculos"))
+
+
+def generate_controle_veiculos_diario_pdf_buffer(target_date, saidas, chegada_por_saida):
+    from io import BytesIO
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.units import mm
+    from reportlab.lib import colors
+    from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+    from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+    import datetime
+
+    try:
+        from zoneinfo import ZoneInfo
+        BRT = ZoneInfo("America/Sao_Paulo")
+    except Exception:
+        from datetime import timezone, timedelta
+        BRT = timezone(timedelta(hours=-3))
+
+    data_formatada = target_date.strftime("%d/%m/%Y")
+    dia_semana_map = {
+        0: "Segunda-feira",
+        1: "Terça-feira",
+        2: "Quarta-feira",
+        3: "Quinta-feira",
+        4: "Sexta-feira",
+        5: "Sábado",
+        6: "Domingo"
+    }
+    dia_semana = dia_semana_map.get(target_date.weekday(), "")
+    now_brt_str = datetime.datetime.now(BRT).strftime("%d/%m/%Y às %H:%M")
+
+    AZUL = colors.Color(25/255, 60/255, 120/255)
+    AZUL_HEADER = colors.HexColor("#1F3C78")
+    CINZA_TEXTO = colors.HexColor("#4D4D4D")
+    CINZA_FUNDO = colors.HexColor("#F8FAFC")
+    BORDA = colors.HexColor("#CBD5E1")
+
+    RODAPE_LINHAS = [
+        "ADAPT LINK SERVIÇOS EM COMUNICAÇÃO MULTIMÍDIA EIRELI",
+        "CNPJ: 08.980.148/0001-41       Inscr. Est.: 78.342.480",
+        "Rua Waldir Pedro de Medeiros, 253 – São Miguel – Seropédica – RJ",
+        "CEP: 23.893-725",
+        "Tel.: (21) 3812-5900 / (21) 2682-7822",
+        "WWW.ADAPTLINK.COM.BR",
+    ]
+
+    config = SystemConfig.query.first()
+    logo_path_custom = None
+    if config and config.pdf_logo:
+        custom_p = LAYOUT_UPLOAD_DIR / config.pdf_logo
+        if custom_p.exists():
+            logo_path_custom = str(custom_p)
+    pdf_logo_path = logo_path_custom if logo_path_custom else (str(LOGO_PATH) if LOGO_PATH.exists() else None)
+
+    custom_rodape_linhas = None
+    if config and config.pdf_footer:
+        custom_rodape_linhas = [linha.strip() for linha in config.pdf_footer.splitlines() if linha.strip()]
+    pdf_rodape_linhas = custom_rodape_linhas if custom_rodape_linhas is not None else RODAPE_LINHAS
+
+    def _on_page(c, doc):
+        width, height = A4
+        if pdf_logo_path:
+            try:
+                pdf_h = (config.pdf_logo_height if config else 30) or 30
+                pdf_w = pdf_h * 2.36
+                c.drawImage(pdf_logo_path, 12*mm, height - 12*mm - pdf_h, pdf_w, pdf_h,
+                            preserveAspectRatio=True, mask="auto")
+            except Exception:
+                pass
+        c.setStrokeColor(AZUL)
+        c.setLineWidth(1.2)
+        c.line(12*mm, height - 26*mm, width - 12*mm, height - 26*mm)
+        c.setFont("Helvetica-Bold", 12)
+        c.setFillColor(AZUL)
+        c.drawCentredString(width/2, height - 13*mm, "CONTROLE DE ENTRADA E SAÍDA - RELATÓRIO DIÁRIO")
+        c.setFont("Helvetica-Bold", 8.5)
+        c.setFillColor(colors.HexColor("#334155"))
+        c.drawCentredString(width/2, height - 19*mm, f"DATA DE REFERÊNCIA: {data_formatada} ({dia_semana.upper()})")
+        c.setFont("Helvetica", 7)
+        c.setFillColor(CINZA_TEXTO)
+        c.drawString(12*mm, height - 30*mm, f"Emitido em: {now_brt_str}")
+
+        footer_line_y = 19*mm
+        c.setStrokeColor(colors.HexColor("#CBD5E1"))
+        c.setLineWidth(0.8)
+        c.line(12*mm, footer_line_y, width - 12*mm, footer_line_y)
+        c.setFont("Helvetica", 6.5)
+        c.setFillColor(colors.HexColor("#64748B"))
+        y = 15.5*mm
+        for linha in pdf_rodape_linhas:
+            c.drawCentredString(width/2, y, linha)
+            y -= 2.5*mm
+        c.setFont("Helvetica-Oblique", 6.5)
+        c.drawRightString(width - 12*mm, 5*mm, f"Página {c.getPageNumber()}")
+
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        rightMargin=12 * mm,
+        leftMargin=12 * mm,
+        topMargin=32 * mm,
+        bottomMargin=23 * mm
+    )
+
+    styles = getSampleStyleSheet()
+    style_sec = ParagraphStyle(
+        'SecTitle',
+        parent=styles['Normal'],
+        fontName='Helvetica-Bold',
+        fontSize=8.5,
+        textColor=AZUL,
+        spaceAfter=2*mm
+    )
+    style_card_lbl = ParagraphStyle(
+        'CardLbl',
+        parent=styles['Normal'],
+        fontName='Helvetica-Bold',
+        fontSize=6.5,
+        textColor=colors.HexColor("#64748B"),
+        alignment=1,
+        leading=8
+    )
+    style_card_val = ParagraphStyle(
+        'CardVal',
+        parent=styles['Normal'],
+        fontName='Helvetica-Bold',
+        fontSize=11,
+        textColor=colors.HexColor("#0F172A"),
+        alignment=1,
+        leading=13
+    )
+    style_th = ParagraphStyle(
+        'Th',
+        parent=styles['Normal'],
+        fontName='Helvetica-Bold',
+        fontSize=6.5,
+        textColor=colors.white,
+        alignment=1,
+        leading=8
+    )
+    style_td = ParagraphStyle(
+        'Td',
+        parent=styles['Normal'],
+        fontName='Helvetica',
+        fontSize=6.5,
+        textColor=colors.HexColor("#1E293B"),
+        leading=8
+    )
+    style_td_center = ParagraphStyle(
+        'TdCenter',
+        parent=styles['Normal'],
+        fontName='Helvetica',
+        fontSize=6.5,
+        textColor=colors.HexColor("#1E293B"),
+        alignment=1,
+        leading=8
+    )
+    style_td_bold = ParagraphStyle(
+        'TdBold',
+        parent=styles['Normal'],
+        fontName='Helvetica-Bold',
+        fontSize=6.5,
+        textColor=colors.HexColor("#1E293B"),
+        alignment=1,
+        leading=8
+    )
+
+    story = []
+
+    # Totalizadores
+    total_saidas = len(saidas)
+    total_em_rota = sum(1 for s in saidas if s.id not in chegada_por_saida)
+    total_concluidas = total_saidas - total_em_rota
+    total_km_rodado = sum(max(0, chegada_por_saida[s.id].km - s.km) for s in saidas if s.id in chegada_por_saida)
+    km_str = f"{total_km_rodado:,} km".replace(",", ".")
+
+    story.append(Paragraph("<b>1. RESUMO OPERACIONAL DO DIA</b>", style_sec))
+
+    card_data = [
+        [
+            Paragraph("TOTAL DE SAÍDAS", style_card_lbl),
+            Paragraph("VIAGENS CONCLUÍDAS", style_card_lbl),
+            Paragraph("VEÍCULOS EM ROTA", style_card_lbl),
+            Paragraph("KM TOTAL RODADO", style_card_lbl)
+        ],
+        [
+            Paragraph(f"<b>{total_saidas}</b>", style_card_val),
+            Paragraph(f"<b><font color='#16A34A'>{total_concluidas}</font></b>", style_card_val),
+            Paragraph(f"<b><font color='#EA580C'>{total_em_rota}</font></b>" if total_em_rota > 0 else "<b>0</b>", style_card_val),
+            Paragraph(f"<b><font color='#2563EB'>{km_str}</font></b>", style_card_val)
+        ]
+    ]
+    t_cards = Table(card_data, colWidths=[46.5*mm, 46.5*mm, 46.5*mm, 46.5*mm])
+    t_cards.setStyle(TableStyle([
+        ('GRID', (0,0), (-1,-1), 0.5, BORDA),
+        ('BACKGROUND', (0,0), (-1,0), CINZA_FUNDO),
+        ('BACKGROUND', (0,1), (-1,1), colors.white),
+        ('TOPPADDING', (0,0), (-1,-1), 2.5),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 2.5),
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+    ]))
+    story.append(t_cards)
+    story.append(Spacer(1, 3.5*mm))
+
+    # Tabela detalhada
+    story.append(Paragraph("<b>2. REGISTRO DETALHADO DE ENTRADAS E SAÍDAS</b>", style_sec))
+
+    col_widths = [8*mm, 32*mm, 36*mm, 28*mm, 28*mm, 20*mm, 34*mm]
+    headers = [
+        Paragraph("#", style_th),
+        Paragraph("VEÍCULO / PLACA", style_th),
+        Paragraph("CONDUTOR / RESPONSÁVEL", style_th),
+        Paragraph("SAÍDA", style_th),
+        Paragraph("CHEGADA", style_th),
+        Paragraph("KM RODADO", style_th),
+        Paragraph("SITUAÇÃO / OBS", style_th)
+    ]
+    t_rows = [headers]
+
+    if saidas:
+        for idx, s in enumerate(saidas, start=1):
+            c = chegada_por_saida.get(s.id)
+            placa = s.vehicle.plate if s.vehicle else "N/A"
+            mod = f"{s.vehicle.brand or ''} {s.vehicle.model or ''}".strip() if s.vehicle else ""
+            veic_p = Paragraph(f"<b>{placa}</b><br/><font size='5' color='#64748B'>{mod[:20]}</font>", style_td)
+
+            # Responsável
+            resp_p = Paragraph(f"<b>{s.responsavel.upper()}</b>", style_td)
+
+            # Saída
+            hora_s = s.data_hora.strftime("%H:%M") if s.data_hora else "-"
+            km_s = f"{s.km:,} km".replace(",", ".")
+            saida_p = Paragraph(f"<b>{hora_s}</b><br/><font size='5.5' color='#475569'>KM {km_s}</font>", style_td_center)
+
+            # Chegada & KM & Status
+            if c:
+                hora_c = c.data_hora.strftime("%H:%M") if c.data_hora else "-"
+                km_c = f"{c.km:,} km".replace(",", ".")
+                chegada_p = Paragraph(f"<b>{hora_c}</b><br/><font size='5.5' color='#475569'>KM {km_c}</font>", style_td_center)
+                km_diff = max(0, c.km - s.km)
+                km_diff_str = f"{km_diff:,} km".replace(",", ".")
+                diff_p = Paragraph(f"<b>{km_diff_str}</b>", style_td_bold)
+                status_html = "<font color='#16A34A'><b>CONCLUÍDO</b></font>"
+            else:
+                chegada_p = Paragraph("<font color='#EA580C'><b>EM ABERTO</b></font>", style_td_center)
+                diff_p = Paragraph("<font color='#94A3B8'>-</font>", style_td_center)
+                status_html = "<font color='#EA580C'><b>EM ROTA</b></font>"
+
+            obs_txt = ""
+            if s.obs and s.obs.strip():
+                obs_txt += s.obs.strip()
+            if c and c.obs and c.obs.strip():
+                if obs_txt:
+                    obs_txt += " | " + c.obs.strip()
+                else:
+                    obs_txt += c.obs.strip()
+
+            if obs_txt:
+                obs_cell = Paragraph(f"{status_html}<br/><font size='5.5' color='#64748B'>{obs_txt[:40]}</font>", style_td)
+            else:
+                obs_cell = Paragraph(status_html, style_td)
+
+            t_rows.append([
+                Paragraph(str(idx), style_td_center),
+                veic_p,
+                resp_p,
+                saida_p,
+                chegada_p,
+                diff_p,
+                obs_cell
+            ])
+    else:
+        t_rows.append([
+            Paragraph("Nenhuma saída ou movimentação registrada nesta data.", style_td_center),
+            "", "", "", "", "", ""
+        ])
+
+    t_mov = Table(t_rows, colWidths=col_widths, repeatRows=1)
+    t_style = [
+        ('BACKGROUND', (0,0), (-1,0), AZUL_HEADER),
+        ('GRID', (0,0), (-1,-1), 0.5, BORDA),
+        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
+        ('TOPPADDING', (0,0), (-1,-1), 2.5),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 2.5),
+        ('LEFTPADDING', (0,0), (-1,-1), 2.5),
+        ('RIGHTPADDING', (0,0), (-1,-1), 2.5),
+    ]
+    if not saidas:
+        t_style.append(('SPAN', (0,1), (-1,1)))
+        t_style.append(('TOPPADDING', (0,1), (-1,1), 6))
+        t_style.append(('BOTTOMPADDING', (0,1), (-1,1), 6))
+    else:
+        t_style.append(('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, CINZA_FUNDO]))
+
+    t_mov.setStyle(TableStyle(t_style))
+    story.append(t_mov)
+
+    doc.build(story, onFirstPage=_on_page, onLaterPages=_on_page)
+    buffer.seek(0)
+    return buffer
+
+
+@fleet_bp.route("/controle-veiculos/pdf-diario")
+@login_required
+def controle_veiculos_pdf_diario():
+    if not current_user.is_admin and not current_user.has_permission("veiculos") and not current_user.has_permission("controle_veiculos"):
+        flash("Acesso não autorizado para esta funcionalidade.", "error")
+        return redirect(url_for("controle_veiculos"))
+
+    data_param = request.args.get("data")
+    if data_param:
+        try:
+            target_date = datetime.strptime(data_param, "%Y-%m-%d").date()
+        except ValueError:
+            target_date = agora().date()
+    else:
+        target_date = agora().date()
+
+    start_dt = datetime.combine(target_date, datetime.min.time())
+    end_dt = datetime.combine(target_date, datetime.max.time())
+
+    saidas = (
+        VehicleMov.query.options(joinedload(VehicleMov.vehicle))
+        .filter(
+            VehicleMov.tipo == "saida",
+            VehicleMov.data_hora >= start_dt,
+            VehicleMov.data_hora <= end_dt
+        )
+        .order_by(VehicleMov.data_hora.asc())
+        .all()
+    )
+
+    saida_ids = [s.id for s in saidas]
+    chegadas = []
+    if saida_ids:
+        chegadas = (
+            VehicleMov.query.options(joinedload(VehicleMov.vehicle))
+            .filter(
+                VehicleMov.tipo == "entrada",
+                VehicleMov.saida_id.in_(saida_ids)
+            )
+            .all()
+        )
+    chegada_por_saida = {c.saida_id: c for c in chegadas}
+
+    pdf_buffer = generate_controle_veiculos_diario_pdf_buffer(target_date, saidas, chegada_por_saida)
+    download = request.args.get("download", "0") == "1"
+    filename = f"controle_es_{target_date.strftime('%Y-%m-%d')}.pdf"
+
+    return send_file(
+        pdf_buffer,
+        mimetype="application/pdf",
+        as_attachment=download,
+        download_name=filename
+    )
 
 from datetime import datetime
 from flask import request, redirect, url_for, render_template, flash
@@ -3354,7 +4288,10 @@ def vistorias_nova():
 @fleet_bp.route("/vistorias/<int:vistoria_id>")
 @supervisor_allowed
 def vistorias_detail(vistoria_id):
-    v = Vistoria.query.get_or_404(vistoria_id)
+    v = Vistoria.query.options(
+        joinedload(Vistoria.vehicle),
+        joinedload(Vistoria.fotos)
+    ).get_or_404(vistoria_id)
 
     fotos_por_item = defaultdict(list)
     for f in v.fotos:

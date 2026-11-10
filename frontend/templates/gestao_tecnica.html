@@ -3136,46 +3136,130 @@
     </div>
 </div>
 
-<!-- Modal: Detalhes da Anotação (Visualização) -->
-<div id="modal-anotacao-detalhes" class="fixed inset-0 bg-black/50 backdrop-blur-sm hidden items-center justify-center z-[60] p-4">
-    <div class="bg-white dark:bg-gray-900 w-full max-w-md rounded-2xl shadow-2xl overflow-hidden border border-slate-900/10 dark:border-white/10 flex flex-col max-h-[85vh]">
-        <div class="px-6 py-4 border-b border-slate-900/10 dark:border-white/10 flex justify-between items-center bg-slate-50 dark:bg-gray-800/50">
-            <h3 class="text-md font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                <i class="fa-solid fa-note-sticky text-teal-500"></i>
-                <span>Detalhes da Anotação</span>
-            </h3>
-            <button onclick="closeModal('modal-anotacao-detalhes')" class="text-slate-400 hover:text-slate-600 transition-colors">
-                <i class="fa-solid fa-xmark"></i>
+<!-- Modal: Detalhes da Anotação (Visualização Executiva com Foco em Rede & Conclusão) -->
+<div id="modal-anotacao-detalhes" class="fixed inset-0 bg-slate-950/60 backdrop-blur-sm hidden items-center justify-center z-[60] p-4">
+    <div class="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800 flex flex-col max-h-[90vh] animate-scale-in">
+        <!-- Header -->
+        <div class="px-6 py-5 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/80 dark:bg-slate-800/40">
+            <div class="flex items-center gap-3.5">
+                <div id="detalhe-anotacao-icon-box" class="w-11 h-11 rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center text-lg border border-blue-200/50 dark:border-blue-900/40 shadow-sm shrink-0">
+                    <i id="detalhe-anotacao-icon" class="fa-solid fa-network-wired"></i>
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <span id="detalhe-anotacao-badge-tipo" class="text-[10px] font-black uppercase tracking-widest text-slate-400">Anotação Técnica</span>
+                        <span class="text-slate-300 dark:text-slate-700">•</span>
+                        <span id="detalhe-anotacao-ref" class="text-[10px] font-bold text-slate-500 font-mono">#AN-0</span>
+                    </div>
+                    <h3 id="detalhe-anotacao-titulo" class="text-base font-black text-slate-800 dark:text-white leading-tight"></h3>
+                </div>
+            </div>
+            <button onclick="closeModal('modal-anotacao-detalhes')" class="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer">
+                <i class="fa-solid fa-xmark text-sm"></i>
             </button>
         </div>
-        <div class="p-6 space-y-4 overflow-y-auto text-sm flex-1">
-            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 dark:border-white/5 pb-3">
-                <div class="flex flex-col gap-1">
-                    <div class="flex items-center gap-2">
-                        <span id="detalhe-anotacao-categoria" class="px-2.5 py-0.5 bg-teal-50 dark:bg-teal-950/20 text-teal-600 dark:text-teal-400 rounded-md text-[9px] font-black uppercase tracking-wider w-fit"></span>
-                        <span id="detalhe-anotacao-status" class="px-2.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider w-fit"></span>
+
+        <!-- Body -->
+        <div class="p-6 space-y-4 overflow-y-auto flex-1 text-xs">
+            <!-- Grid de Metadados -->
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <!-- Status -->
+                <div class="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200/80 dark:border-slate-800 flex flex-col justify-between">
+                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Status</span>
+                    <div id="detalhe-anotacao-status-container">
+                        <span id="detalhe-anotacao-status" class="px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider inline-flex items-center gap-1.5 w-fit"></span>
                     </div>
-                    <h4 id="detalhe-anotacao-titulo" class="font-extrabold text-base text-slate-800 dark:text-white leading-tight"></h4>
+                </div>
+
+                <!-- Categoria -->
+                <div class="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200/80 dark:border-slate-800 flex flex-col justify-between">
+                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Categoria</span>
+                    <span id="detalhe-anotacao-categoria" class="px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider inline-flex items-center gap-1.5 w-fit bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300"></span>
+                </div>
+
+                <!-- Autor -->
+                <div class="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200/80 dark:border-slate-800 flex flex-col justify-between">
+                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Autor</span>
+                    <span class="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5 truncate">
+                        <i class="fa-solid fa-user-circle text-slate-400"></i>
+                        <span id="detalhe-anotacao-autor" class="truncate">-</span>
+                    </span>
+                </div>
+
+                <!-- Data de Registro -->
+                <div class="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200/80 dark:border-slate-800 flex flex-col justify-between">
+                    <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-1">Registrado em</span>
+                    <span class="font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                        <i class="fa-solid fa-calendar-day text-slate-400"></i>
+                        <span id="detalhe-anotacao-data-registro">-</span>
+                    </span>
                 </div>
             </div>
 
-            <!-- Date -->
-            <div class="flex items-center gap-2 text-xs text-slate-600 dark:text-gray-300 bg-slate-50 dark:bg-gray-800/20 p-3 rounded-xl border border-slate-900/5 dark:border-white/5">
-                <i class="fa-solid fa-calendar-day text-teal-500 text-sm"></i>
+            <!-- Agendamento / Evento (Condicional) -->
+            <div id="detalhe-anotacao-evento-row" class="hidden items-center gap-3 p-3 bg-blue-50/70 dark:bg-blue-950/30 rounded-2xl border border-blue-200/60 dark:border-blue-900/40">
+                <div class="w-8 h-8 rounded-xl bg-blue-100 dark:bg-blue-900/60 text-blue-600 dark:text-blue-300 flex items-center justify-center shrink-0">
+                    <i class="fa-solid fa-calendar-check text-xs"></i>
+                </div>
                 <div>
-                    <span class="text-[9px] font-bold text-slate-400 block uppercase">Agendado Para</span>
-                    <span id="detalhe-anotacao-data" class="font-semibold text-slate-700 dark:text-gray-200"></span>
+                    <span class="text-[9px] font-black text-blue-500 uppercase tracking-widest block">Agendado no Calendário</span>
+                    <span id="detalhe-anotacao-data-evento" class="font-bold text-slate-800 dark:text-slate-200 text-xs"></span>
                 </div>
             </div>
 
-            <!-- Description -->
-            <div class="space-y-1.5 bg-slate-50 dark:bg-gray-800/40 p-4 rounded-xl border border-slate-900/5 dark:border-white/5">
-                <span class="text-[9px] font-bold text-slate-400 block uppercase tracking-wider">Descrição / Conteúdo</span>
-                <p id="detalhe-anotacao-descricao" class="text-slate-600 dark:text-gray-300 text-xs leading-relaxed whitespace-pre-wrap"></p>
+            <!-- Banner Exclusivo de Anotações em Rede -->
+            <div id="detalhe-anotacao-rede-panel" class="hidden p-3.5 bg-gradient-to-r from-sky-500/10 via-blue-500/10 to-indigo-500/10 dark:from-sky-950/40 dark:via-blue-950/30 dark:to-indigo-950/20 rounded-2xl border border-sky-500/20 text-xs">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-sky-500 animate-ping"></span>
+                        <span class="font-extrabold text-[11px] text-sky-700 dark:text-sky-300 uppercase tracking-wider flex items-center gap-1.5">
+                            <i class="fa-solid fa-server text-sky-500"></i> Informações Técnicas de Rede
+                        </span>
+                    </div>
+                    <span class="text-[10px] font-bold text-sky-600 dark:text-sky-400 bg-sky-100 dark:bg-sky-900/50 px-2.5 py-0.5 rounded-full border border-sky-300/40">
+                        Infraestrutura ISP
+                    </span>
+                </div>
+                <div id="detalhe-anotacao-rede-tags" class="flex flex-wrap gap-1.5">
+                    <!-- Tags de rede detectadas dinamicamente (IPs, VLANs, etc) -->
+                </div>
+            </div>
+
+            <!-- Descrição / Conteúdo -->
+            <div class="space-y-2">
+                <div class="flex items-center justify-between">
+                    <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                        <i class="fa-solid fa-align-left text-slate-400"></i> Descrição & Detalhes Técnicos
+                    </span>
+                    <button type="button" onclick="copiarConteudoAnotacao()" class="text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 cursor-pointer">
+                        <i class="fa-solid fa-copy"></i> <span id="btn-copiar-anotacao-label">Copiar Texto</span>
+                    </button>
+                </div>
+                <div id="detalhe-anotacao-descricao-card" class="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 text-slate-700 dark:text-slate-200 leading-relaxed font-sans text-xs">
+                    <div id="detalhe-anotacao-descricao" class="whitespace-pre-wrap break-words font-mono text-[11.5px]"></div>
+                </div>
             </div>
         </div>
-        <div class="px-6 py-3 bg-slate-50 dark:bg-gray-800/30 border-t border-slate-900/10 dark:border-white/10 flex justify-end">
-            <button onclick="closeModal('modal-anotacao-detalhes')" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 dark:bg-gray-800 dark:hover:bg-gray-700 text-slate-700 dark:text-gray-300 rounded-xl text-xs font-bold transition-all active:scale-95">Fechar</button>
+
+        <!-- Footer com Botão de Marcar como Concluído, PDF e Fechar -->
+        <div class="px-6 py-4 bg-slate-50/80 dark:bg-slate-800/40 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2.5">
+            <div class="flex items-center gap-2">
+                <!-- Botão de Marcar como Concluído / Reabrir -->
+                <button type="button" id="btn-modal-toggle-status" onclick="toggleModalAnotacaoStatus()" class="px-4 py-2.5 rounded-xl text-xs font-black transition-all active:scale-95 flex items-center gap-2 cursor-pointer shadow-md">
+                    <!-- Preenchido dinamicamente -->
+                </button>
+            </div>
+            <div class="flex items-center gap-2">
+                <button type="button" onclick="downloadModalAnotacaoPDF()" class="px-3.5 py-2.5 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/30 dark:hover:bg-rose-900/40 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/50 rounded-xl text-xs font-bold transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer" title="Gerar PDF Padronizado">
+                    <i class="fa-solid fa-file-pdf text-xs"></i> <span>PDF</span>
+                </button>
+                <button type="button" onclick="editModalAnotacao()" class="px-3.5 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-bold transition-all active:scale-95 flex items-center gap-1.5 cursor-pointer">
+                    <i class="fa-solid fa-pen text-xs"></i> <span>Editar</span>
+                </button>
+                <button type="button" onclick="closeModal('modal-anotacao-detalhes')" class="px-4 py-2.5 bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold transition-all active:scale-95 cursor-pointer">
+                    Fechar
+                </button>
+            </div>
         </div>
     </div>
 </div>
@@ -6628,7 +6712,7 @@ function filterAnotacoes() {
         if (!query) return true;
         const title = (i.title || '').toLowerCase();
         const description = (i.description || '').toLowerCase();
-        const user = (i.user || '').toLowerCase();
+        const user = (i.user_name || i.user || '').toLowerCase();
         return title.includes(query) || description.includes(query) || user.includes(query);
     });
     renderAnotacoesTable(filtered);
@@ -6669,11 +6753,11 @@ function renderAnotacoesTable(data) {
                     <thead class="bg-slate-50/80 dark:bg-slate-800/80 border-b border-slate-200/80 dark:border-slate-800 text-[11px] font-extrabold text-slate-400 dark:text-slate-400 uppercase tracking-wider">
                         <tr>
                             <th class="px-6 py-4 w-40">Data</th>
-                            <th class="px-4 py-4 w-32">Categoria</th>
-                            <th class="px-4 py-4 w-64">Título</th>
+                            <th class="px-4 py-4 w-36">Categoria</th>
+                            <th class="px-4 py-4">Título</th>
                             <th class="px-4 py-4 w-40">Autor</th>
-                            <th class="px-4 py-4 w-28">Status</th>
-                            <th class="px-6 py-4 w-40 text-center">Ações</th>
+                            <th class="px-4 py-4 w-32">Status</th>
+                            <th class="px-6 py-4 w-48 text-center">Ações</th>
                         </tr>
                     </thead>
     `;
@@ -6739,59 +6823,76 @@ function renderAnotacoesTable(data) {
         const categoryClass = i.category === 'Supervisão' 
             ? 'bg-amber-100/80 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 border-amber-500/30'
             : i.category === 'Rede'
-            ? 'bg-blue-100/80 dark:bg-blue-500/20 text-blue-700 dark:text-blue-400 border-blue-500/30'
-            : 'bg-purple-100/80 dark:bg-purple-500/20 text-purple-700 dark:text-purple-400 border-purple-500/30';
+            ? 'bg-sky-100/80 dark:bg-sky-500/20 text-sky-700 dark:text-sky-400 border-sky-500/30'
+            : 'bg-blue-100/80 dark:bg-blue-500/20 text-blue-700 dark:text-blue-400 border-blue-500/30';
+
+        const categoryIcon = i.category === 'Supervisão'
+            ? '<i class="fa-solid fa-clipboard-check mr-1 text-[9px]"></i>'
+            : i.category === 'Rede'
+            ? '<i class="fa-solid fa-network-wired mr-1 text-[9px]"></i>'
+            : '<i class="fa-solid fa-note-sticky mr-1 text-[9px]"></i>';
 
         const isConcluido = (i.status || '').toUpperCase() === 'CONCLUIDO' || (i.status || '').toUpperCase() === 'CONCLUÍDO';
         const statusBadge = isConcluido 
-            ? '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-600 border border-emerald-500/20 whitespace-nowrap shrink-0"><i class="fa-solid fa-circle-check"></i>Concluída</span>' 
-            : '<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-amber-50 text-amber-600 border border-amber-500/20 whitespace-nowrap shrink-0"><i class="fa-solid fa-clock animate-pulse"></i>Pendente</span>';
+            ? '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-600 border border-emerald-500/20 whitespace-nowrap shrink-0 shadow-xs"><i class="fa-solid fa-circle-check"></i>Concluída</span>' 
+            : '<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider bg-amber-50 text-amber-600 border border-amber-500/20 whitespace-nowrap shrink-0 shadow-xs"><i class="fa-solid fa-clock animate-pulse"></i>Pendente</span>';
 
         tableHtml += `
             <tr class="border-b border-slate-200/80 dark:border-slate-800 hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition">
                 <!-- Data -->
-                <td class="px-4 py-2 whitespace-nowrap text-slate-700 dark:text-gray-300 font-medium">
+                <td class="px-6 py-3 whitespace-nowrap text-slate-700 dark:text-gray-300 font-medium">
                     ${dateFormatted}
                 </td>
 
                 <!-- Categoria -->
-                <td class="px-4 py-2">
-                    <span class="px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider ${categoryClass} border">
-                        ${i.category}
+                <td class="px-4 py-3">
+                    <span class="inline-flex items-center px-2 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider ${categoryClass} border">
+                        ${categoryIcon}${i.category}
                     </span>
                 </td>
 
                 <!-- Título -->
-                <td class="px-4 py-2 font-bold text-slate-800 dark:text-white leading-snug">
+                <td class="px-4 py-3 font-bold text-slate-800 dark:text-white leading-snug">
                     ${i.title || '-'}
                 </td>
 
                 <!-- Autor -->
-                <td class="px-4 py-2 text-slate-700 dark:text-gray-300 font-medium">
-                    <span class="flex items-center gap-1.5"><i class="fa-solid fa-user-circle text-slate-400"></i> ${i.user || 'N/A'}</span>
+                <td class="px-4 py-3 text-slate-700 dark:text-gray-300 font-medium whitespace-nowrap">
+                    <span class="flex items-center gap-1.5"><i class="fa-solid fa-user-circle text-slate-400"></i> ${i.user_name || i.user || 'N/A'}</span>
                 </td>
 
                 <!-- Status -->
-                <td class="px-4 py-2">
+                <td class="px-4 py-3">
                     ${statusBadge}
                 </td>
 
                 <!-- Ações -->
-                <td class="px-6 py-4 text-center whitespace-nowrap">
+                <td class="px-6 py-3 text-center whitespace-nowrap">
                     <div class="flex items-center justify-center gap-1.5">
-                        <button onclick="showAnotacaoDetalhes(${i.id})" class="px-2.5 py-1.5 text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800 font-semibold rounded-lg transition text-xs inline-flex items-center gap-1.5 cursor-pointer" title="Visualizar">
+                        <!-- Botão Concluir / Reabrir Rápido -->
+                        <button type="button" onclick="toggleAnotacaoStatus(${i.id}, '${isConcluido ? 'PENDENTE' : 'CONCLUIDO'}')" 
+                                class="p-1.5 rounded-lg transition cursor-pointer ${isConcluido ? 'text-emerald-600 hover:text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/40' : 'text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40'}" 
+                                title="${isConcluido ? 'Reabrir Anotação (Marcar Pendente)' : 'Marcar como Concluída'}">
+                            <i class="fa-solid ${isConcluido ? 'fa-circle-check text-emerald-600' : 'fa-check'} text-xs"></i>
+                        </button>
+
+                        <!-- Ver Detalhes -->
+                        <button type="button" onclick="showAnotacaoDetalhes(${i.id})" class="px-2.5 py-1.5 text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800 font-semibold rounded-lg transition text-xs inline-flex items-center gap-1.5 cursor-pointer" title="Visualizar Detalhes">
                             <i class="fa-solid fa-eye text-[11px]"></i> Ver
                         </button>
                         
-                        <button onclick="downloadAnotacaoPDF(${i.id})" class="p-1.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition cursor-pointer" title="Gerar PDF">
+                        <!-- Gerar PDF -->
+                        <button type="button" onclick="downloadAnotacaoPDF(${i.id})" class="p-1.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition cursor-pointer" title="Gerar PDF">
                             <i class="fa-solid fa-file-pdf text-xs"></i>
                         </button>
                         
-                        <button onclick="editAnotacao(${i.id})" class="p-1.5 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 rounded-lg transition cursor-pointer" title="Editar">
+                        <!-- Editar -->
+                        <button type="button" onclick="editAnotacao(${i.id})" class="p-1.5 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/40 rounded-lg transition cursor-pointer" title="Editar">
                             <i class="fa-solid fa-pen text-xs"></i>
                         </button>
                         
-                        <button onclick="deleteAnotacao(${i.id})" class="p-1.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition cursor-pointer" title="Excluir">
+                        <!-- Excluir -->
+                        <button type="button" onclick="deleteAnotacao(${i.id})" class="p-1.5 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition cursor-pointer" title="Excluir">
                             <i class="fa-solid fa-trash-can text-xs"></i>
                         </button>
                     </div>
@@ -8282,13 +8383,13 @@ function selectEquipeParaEscala(teamId) {
 function switchAnotacaoTab(tab) {
     currentAnotacaoTab = tab;
     document.querySelectorAll('.anot-tab-btn').forEach(btn => {
-        btn.classList.remove('bg-purple-600', 'text-white', 'shadow-lg', 'shadow-purple-500/20');
+        btn.classList.remove('bg-blue-600', 'bg-purple-600', 'text-white', 'shadow-lg', 'shadow-blue-500/20', 'shadow-purple-500/20');
         btn.classList.add('bg-slate-100', 'dark:bg-white/5', 'text-slate-500');
     });
     const active = document.getElementById(`btn-anot-${tab}`);
     if(active) {
         active.classList.remove('bg-slate-100', 'dark:bg-white/5', 'text-slate-500');
-        active.classList.add('bg-purple-600', 'text-white', 'shadow-lg', 'shadow-purple-500/20');
+        active.classList.add('bg-blue-600', 'text-white', 'shadow-lg', 'shadow-blue-500/20');
     }
     loadItems('anotacoes');
 }
@@ -8632,38 +8733,254 @@ async function showReuniaoDetalhes(id) {
     openModal('modal-reuniao-detalhes');
 }
 
-async function showAnotacaoDetalhes(id) {
-    const res = await fetch(`/api/gestao/anotacoes?t=${Date.now()}`);
-    if(!res.ok) return alert("Erro ao carregar dados da anotação.");
-    const items = await res.json();
-    const item = items.find(x => parseInt(x.id) === parseInt(id));
-    if(!item) return alert("Anotação não encontrada.");
+let currentDetalheAnotacaoId = null;
+let currentDetalheAnotacao = null;
 
-    document.getElementById('detalhe-anotacao-titulo').textContent = item.title || 'Sem Título';
-    document.getElementById('detalhe-anotacao-categoria').textContent = item.category || 'Geral';
-    
-    const statusEl = document.getElementById('detalhe-anotacao-status');
-    if (statusEl) {
-        const isConcluido = (item.status || '').toUpperCase() === 'CONCLUIDO' || (item.status || '').toUpperCase() === 'CONCLUÍDO';
-        statusEl.textContent = isConcluido ? 'Concluída' : 'Pendente';
-        statusEl.className = `px-2.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider w-fit ${
-            isConcluido 
-                ? 'bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' 
-                : 'bg-amber-50 dark:bg-amber-950/20 text-amber-600 dark:text-amber-400 border border-amber-500/20'
-        }`;
+async function showAnotacaoDetalhes(id) {
+    currentDetalheAnotacaoId = id;
+    let item = currentAnotacoes ? currentAnotacoes.find(x => parseInt(x.id) === parseInt(id)) : null;
+    if (!item) {
+        try {
+            const res = await fetch(`/api/gestao/anotacoes/${id}?t=${Date.now()}`);
+            if (res.ok) {
+                item = await res.json();
+            } else {
+                const resAll = await fetch(`/api/gestao/anotacoes?t=${Date.now()}`);
+                if (resAll.ok) {
+                    const items = await resAll.json();
+                    item = items.find(x => parseInt(x.id) === parseInt(id));
+                }
+            }
+        } catch (e) {
+            console.error(e);
+        }
     }
+    if(!item) return (typeof showToast === 'function' ? showToast("Anotação não encontrada.", "error") : alert("Anotação não encontrada."));
+    currentDetalheAnotacao = item;
+
+    // Ref & Título
+    const refEl = document.getElementById('detalhe-anotacao-ref');
+    if (refEl) refEl.textContent = `#AN-${item.id}`;
     
-    let dateFormatted = 'N/A';
+    const titleEl = document.getElementById('detalhe-anotacao-titulo');
+    if (titleEl) titleEl.textContent = item.title || 'Sem Título';
+
+    // Categoria e Ícone
+    const cat = item.category || 'Geral';
+    const catEl = document.getElementById('detalhe-anotacao-categoria');
+    const iconBoxEl = document.getElementById('detalhe-anotacao-icon-box');
+    const iconEl = document.getElementById('detalhe-anotacao-icon');
+    const badgeTipoEl = document.getElementById('detalhe-anotacao-badge-tipo');
+    const redePanel = document.getElementById('detalhe-anotacao-rede-panel');
+    const redeTags = document.getElementById('detalhe-anotacao-rede-tags');
+
+    if (catEl) {
+        catEl.textContent = cat;
+        if (cat === 'Rede') {
+            catEl.className = 'px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider inline-flex items-center gap-1.5 w-fit bg-sky-100 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 border border-sky-300/40';
+        } else if (cat === 'Supervisão') {
+            catEl.className = 'px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider inline-flex items-center gap-1.5 w-fit bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-300/40';
+        } else {
+            catEl.className = 'px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider inline-flex items-center gap-1.5 w-fit bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-300/40';
+        }
+    }
+
+    if (iconBoxEl && iconEl) {
+        if (cat === 'Rede') {
+            iconBoxEl.className = 'w-11 h-11 rounded-2xl bg-sky-50 dark:bg-sky-950/60 text-sky-600 dark:text-sky-400 flex items-center justify-center text-lg border border-sky-200/50 dark:border-sky-900/40 shadow-sm shrink-0';
+            iconEl.className = 'fa-solid fa-network-wired';
+            if (badgeTipoEl) badgeTipoEl.textContent = 'Infraestrutura & Rede';
+        } else if (cat === 'Supervisão') {
+            iconBoxEl.className = 'w-11 h-11 rounded-2xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center text-lg border border-amber-200/50 dark:border-amber-900/40 shadow-sm shrink-0';
+            iconEl.className = 'fa-solid fa-clipboard-check';
+            if (badgeTipoEl) badgeTipoEl.textContent = 'Supervisão Técnica';
+        } else {
+            iconBoxEl.className = 'w-11 h-11 rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center text-lg border border-blue-200/50 dark:border-blue-900/40 shadow-sm shrink-0';
+            iconEl.className = 'fa-solid fa-note-sticky';
+            if (badgeTipoEl) badgeTipoEl.textContent = 'Anotação Técnica';
+        }
+    }
+
+    // Autor
+    const autorEl = document.getElementById('detalhe-anotacao-autor');
+    if (autorEl) autorEl.textContent = item.user_name || item.user || 'Administração';
+
+    // Data de Registro
+    const dtRegEl = document.getElementById('detalhe-anotacao-data-registro');
+    if (dtRegEl) {
+        if (item.date) {
+            const d = new Date(item.date);
+            dtRegEl.textContent = !isNaN(d.getTime()) ? d.toLocaleDateString('pt-BR') : item.date;
+        } else {
+            dtRegEl.textContent = 'N/A';
+        }
+    }
+
+    // Data de Evento/Agendamento
+    const eventoRow = document.getElementById('detalhe-anotacao-evento-row');
+    const eventoEl = document.getElementById('detalhe-anotacao-data-evento');
     if (item.event_date) {
+        let dateFormatted = item.event_date;
         const dateParts = item.event_date.split('-');
         if (dateParts.length === 3) {
             dateFormatted = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`;
         }
+        if (eventoEl) eventoEl.textContent = dateFormatted;
+        if (eventoRow) eventoRow.classList.remove('hidden');
+    } else {
+        if (eventoRow) eventoRow.classList.add('hidden');
     }
-    document.getElementById('detalhe-anotacao-data').textContent = dateFormatted;
-    document.getElementById('detalhe-anotacao-descricao').textContent = item.description || '';
+
+    // Descrição e Detalhes
+    const desc = item.description || 'Sem descrição informada.';
+    const descEl = document.getElementById('detalhe-anotacao-descricao');
+    if (descEl) descEl.textContent = desc;
+
+    // Seção Especial de Rede: detecção de IPs, VLANs e equipamentos
+    if (cat === 'Rede') {
+        if (redePanel) redePanel.classList.remove('hidden');
+        if (redeTags) {
+            const tags = [];
+            // Detecção de IPs (IPv4)
+            const ipRegex = /\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9]?)(?:\/\d{1,2})?\b/g;
+            const ips = [...new Set(desc.match(ipRegex) || [])];
+            ips.slice(0, 4).forEach(ip => {
+                tags.push(`<span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-sky-100 dark:bg-sky-900/60 text-sky-800 dark:text-sky-200 border border-sky-300/50"><i class="fa-solid fa-server mr-1 text-[9px]"></i>${ip}</span>`);
+            });
+
+            // Detecção de VLAN
+            const vlanRegex = /vlan\s*[:#=]?\s*(\d+)/gi;
+            let vm;
+            while ((vm = vlanRegex.exec(desc)) !== null) {
+                tags.push(`<span class="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-indigo-100 dark:bg-indigo-900/60 text-indigo-800 dark:text-indigo-200 border border-indigo-300/50"><i class="fa-solid fa-tags mr-1 text-[9px]"></i>VLAN ${vm[1]}</span>`);
+            }
+
+            // Tags padrão caso não haja IPs específicos
+            if (tags.length === 0) {
+                tags.push(`<span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-sky-100/70 dark:bg-sky-900/40 text-sky-700 dark:text-sky-300 border border-sky-300/30"><i class="fa-solid fa-network-wired mr-1 text-[9px]"></i>Rede & Infraestrutura</span>`);
+                tags.push(`<span class="px-2 py-0.5 rounded-md text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300"><i class="fa-solid fa-diagram-project mr-1 text-[9px]"></i>Topologia ISP</span>`);
+            }
+            redeTags.innerHTML = tags.join('');
+        }
+    } else {
+        if (redePanel) redePanel.classList.add('hidden');
+    }
+
+    // Atualiza status e botão no Modal
+    updateAnotacaoModalStatusUI(item.status);
 
     openModal('modal-anotacao-detalhes');
+}
+
+function updateAnotacaoModalStatusUI(status) {
+    const isConcluido = (status || '').toUpperCase() === 'CONCLUIDO' || (status || '').toUpperCase() === 'CONCLUÍDO';
+    
+    // Status Badge
+    const statusEl = document.getElementById('detalhe-anotacao-status');
+    if (statusEl) {
+        statusEl.innerHTML = isConcluido 
+            ? `<i class="fa-solid fa-circle-check"></i> Concluída`
+            : `<i class="fa-solid fa-clock animate-pulse"></i> Pendente`;
+        statusEl.className = `px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider inline-flex items-center gap-1.5 w-fit ${
+            isConcluido
+                ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                : 'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-500/20'
+        }`;
+    }
+
+    // Botão de Alternar Status no Footer do Modal
+    const btnToggle = document.getElementById('btn-modal-toggle-status');
+    if (btnToggle) {
+        if (isConcluido) {
+            btnToggle.className = 'px-4 py-2.5 rounded-xl text-xs font-black transition-all active:scale-95 flex items-center gap-2 cursor-pointer shadow-md bg-amber-500 hover:bg-amber-600 text-white shadow-amber-500/20';
+            btnToggle.innerHTML = `<i class="fa-solid fa-rotate-left"></i> <span>Reabrir Anotação</span>`;
+            btnToggle.title = 'Marcar anotação como Pendente';
+        } else {
+            btnToggle.className = 'px-4 py-2.5 rounded-xl text-xs font-black transition-all active:scale-95 flex items-center gap-2 cursor-pointer shadow-md bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/20';
+            btnToggle.innerHTML = `<i class="fa-solid fa-circle-check"></i> <span>Marcar como Concluída</span>`;
+            btnToggle.title = 'Marcar anotação como Concluída';
+        }
+    }
+}
+
+async function toggleModalAnotacaoStatus() {
+    if (!currentDetalheAnotacaoId) return;
+    const curStatus = (currentDetalheAnotacao && currentDetalheAnotacao.status) || 'PENDENTE';
+    const isConcluido = curStatus.toUpperCase() === 'CONCLUIDO' || curStatus.toUpperCase() === 'CONCLUÍDO';
+    const targetStatus = isConcluido ? 'PENDENTE' : 'CONCLUIDO';
+    
+    await toggleAnotacaoStatus(currentDetalheAnotacaoId, targetStatus);
+    if (currentDetalheAnotacao) {
+        currentDetalheAnotacao.status = targetStatus;
+    }
+    updateAnotacaoModalStatusUI(targetStatus);
+}
+
+async function toggleAnotacaoStatus(id, targetStatus) {
+    try {
+        const res = await fetch(`/api/gestao/anotacoes/${id}/status`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({status: targetStatus})
+        });
+        if (res.ok) {
+            const data = await res.json();
+            const newStatus = data.new_status || targetStatus;
+            
+            // Atualiza no array em memória
+            if (currentAnotacoes) {
+                const item = currentAnotacoes.find(x => parseInt(x.id) === parseInt(id));
+                if (item) item.status = newStatus;
+            }
+            if (currentDetalheAnotacao && parseInt(currentDetalheAnotacao.id) === parseInt(id)) {
+                currentDetalheAnotacao.status = newStatus;
+                updateAnotacaoModalStatusUI(newStatus);
+            }
+            filterAnotacoes();
+            const isConc = (newStatus || '').toUpperCase() === 'CONCLUIDO' || (newStatus || '').toUpperCase() === 'CONCLUÍDO';
+            if (typeof showToast === 'function') {
+                showToast(isConc ? 'Anotação marcada como concluída!' : 'Anotação reaberta com sucesso!', 'success');
+            }
+        } else {
+            if (typeof showToast === 'function') {
+                showToast('Erro ao atualizar status da anotação.', 'error');
+            } else {
+                alert('Erro ao atualizar status da anotação.');
+            }
+        }
+    } catch (e) {
+        console.error(e);
+        if (typeof showToast === 'function') {
+            showToast('Erro de comunicação com o servidor.', 'error');
+        } else {
+            alert('Erro de comunicação com o servidor.');
+        }
+    }
+}
+
+function downloadModalAnotacaoPDF() {
+    if (!currentDetalheAnotacaoId) return;
+    downloadAnotacaoPDF(currentDetalheAnotacaoId);
+}
+
+function editModalAnotacao() {
+    if (!currentDetalheAnotacaoId) return;
+    const id = currentDetalheAnotacaoId;
+    closeModal('modal-anotacao-detalhes');
+    editAnotacao(id);
+}
+
+function copiarConteudoAnotacao() {
+    const descEl = document.getElementById('detalhe-anotacao-descricao');
+    const text = descEl ? descEl.textContent : '';
+    if (!text) return;
+    navigator.clipboard.writeText(text).then(() => {
+        const label = document.getElementById('btn-copiar-anotacao-label');
+        if (label) {
+            label.textContent = 'Copiado!';
+            setTimeout(() => { label.textContent = 'Copiar Texto'; }, 2000);
+        }
+    });
 }
 
 async function showTarefaDetalhes(id) {

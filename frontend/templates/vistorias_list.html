@@ -165,7 +165,7 @@
               </span>
             </td>
             <td class="px-6 py-4 text-right whitespace-nowrap">
-              <button onclick="openVistoriaDetailModal({{ r.id }})" class="px-2.5 py-1.5 text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800 font-semibold rounded-lg transition text-xs inline-flex items-center gap-1.5 cursor-pointer">
+              <button onclick="openVistoriaDetailModal({{ r.id }})" onmouseenter="prefetchVistoria({{ r.id }})" class="px-2.5 py-1.5 text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800 font-semibold rounded-lg transition text-xs inline-flex items-center gap-1.5 cursor-pointer">
                 <i class="fa-solid fa-eye text-[11px]"></i> Ver
               </button>
               <form action="{{ url_for('vistorias_excluir', vistoria_id=r.id) }}" method="POST" class="inline-block ml-1" onsubmit="return confirm('Deseja realmente excluir esta vistoria e todas as fotos associadas?');">
@@ -514,8 +514,9 @@
 <!-- ===================================
      ✅ MODAL: VISUALIZAR VISTORIA (DISCRETO & EXECUTIVO)
      =================================== -->
-<dialog id="modalVerVistoria" class="bg-transparent backdrop:bg-slate-900/50 backdrop:backdrop-blur-md outline-none border-none p-0 max-w-[95vw] w-[960px] rounded-2xl overflow-hidden shadow-2xl">
-    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-2xl p-6 flex flex-col max-h-[90vh] text-left">
+<div id="modalVerVistoria" class="fixed inset-0 hidden items-center justify-center z-[100] p-4">
+    <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="closeVerVistoriaModal()"></div>
+    <div class="relative w-full max-w-4xl rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 shadow-2xl overflow-hidden flex flex-col max-h-[90vh] text-left animate-fade-in">
         
         <!-- Header Discreto -->
         <div class="flex items-start justify-between pb-4 border-b border-slate-100 dark:border-white/5 mb-4 shrink-0 gap-4">
@@ -719,7 +720,7 @@
             </div>
         </div>
     </div>
-</dialog>
+</div>
 
 <!-- Litepicker -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/litepicker/dist/css/litepicker.css" />
@@ -984,20 +985,6 @@ window.onerror = function(message, source, lineno, colno, error) {
         const modalNova = document.getElementById('modalNovaVistoria');
         if (modalNova) {
             modalNova.close();
-            document.body.classList.remove('overflow-hidden');
-        }
-    }
-    window.openVerVistoriaModal = function() {
-        const modalVer = document.getElementById('modalVerVistoria');
-        if (modalVer) {
-            modalVer.showModal();
-            document.body.classList.add('overflow-hidden');
-        }
-    }
-    window.closeVerVistoriaModal = function() {
-        const modalVer = document.getElementById('modalVerVistoria');
-        if (modalVer) {
-            modalVer.close();
             document.body.classList.remove('overflow-hidden');
         }
     }
@@ -1343,24 +1330,141 @@ window.onerror = function(message, source, lineno, colno, error) {
             }
         };
 
+        const vistoriaCache = new Map();
+
+        window.prefetchVistoria = function(id) {
+            if (!id || vistoriaCache.has(id)) return;
+            fetch(`/vistorias/${id}?format=json`)
+                .then(res => res.ok ? res.json() : null)
+                .then(data => { if (data) vistoriaCache.set(id, data); })
+                .catch(() => {});
+        };
+
         window.openVerVistoriaModal = function() {
             if (typeof switchVerVistoriaView === 'function') {
                 switchVerVistoriaView('table');
             }
-            modalVer.showModal();
-            document.body.classList.add('overflow-hidden');
+            const modal = document.getElementById('modalVerVistoria');
+            if (modal) {
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+                document.body.classList.add('overflow-hidden');
+            }
         };
         
         window.closeVerVistoriaModal = function() {
-            modalVer.close();
-            document.body.classList.remove('overflow-hidden');
+            const modal = document.getElementById('modalVerVistoria');
+            if (modal) {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+                document.body.classList.remove('overflow-hidden');
+            }
         };
 
-        window.openVistoriaDetailModal = function(vistoriaId) {
-            openVerVistoriaModal();
+        window.renderVistoriaDetail = function(data) {
+            document.getElementById('verModalTitle').textContent = `Vistoria #${data.id} • ${data.plate}`;
             
-            document.getElementById('verModalLoader').classList.remove('hidden');
-            document.getElementById('verModalContent').classList.add('hidden');
+            const turnoFormatted = data.turno === 'inicio' ? 'Início do Expediente' : (data.turno === 'durante' ? 'Durante Expediente' : 'Fim do Expediente');
+            const localFormatted = data.local ? ` • ${data.local}` : '';
+            document.getElementById('verModalSubtitle').textContent = `Técnico/Turno: ${turnoFormatted}${localFormatted} • Data: ${data.created_at}`;
+            
+            document.getElementById('verModalKMVal').textContent = data.km ? `${data.km} KM` : "-";
+            document.getElementById('verModalTurnoVal').textContent = turnoFormatted;
+            
+            // Configura link do PDF
+            document.getElementById('verModalPdfBtn').href = `/vistorias/${data.id}/pdf`;
+            
+            // Configura botão de edição
+            document.getElementById('verModalEditBtn').onclick = () => {
+                closeVerVistoriaModal();
+                openEditVistoriaModal(data);
+            };
+            
+            // Configura botão de exclusão no rodapé do modal
+            document.getElementById('verModalDeleteContainer').innerHTML = `
+                <form action="/vistorias/${data.id}/excluir" method="POST" class="inline" onsubmit="return confirm('Deseja realmente excluir esta vistoria e todas as fotos associadas?');">
+                    <button type="submit" class="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/30 dark:hover:bg-rose-900/40 text-rose-700 dark:text-rose-400 border border-rose-200/60 dark:border-rose-800/40 rounded-xl text-xs font-bold transition-all">
+                        <i class="fa-solid fa-trash-can mr-1"></i> Excluir
+                    </button>
+                </form>
+            `;
+            
+            const badge = document.getElementById('verModalStatusBadge');
+            if (data.status_geral === 'avarias') {
+                badge.className = "text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400 border border-rose-200 dark:border-rose-800/40";
+                badge.innerHTML = '<i class="fa-solid fa-triangle-exclamation text-[8px] mr-0.5"></i> Com Avarias';
+            } else {
+                badge.className = "text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/40";
+                badge.innerHTML = '<i class="fa-solid fa-circle-check text-[8px] mr-0.5"></i> Conforme (OK)';
+            }
+            
+            // Alternar o SVG de detalhes com base no tipo
+            const verSvgCarro = document.getElementById("ver_svg_container_carro");
+            const verSvgMoto = document.getElementById("ver_svg_container_moto");
+            if (verSvgCarro && verSvgMoto) {
+                if (data.vehicle_type === "moto") {
+                    verSvgCarro.classList.add("hidden");
+                    verSvgMoto.classList.remove("hidden");
+                } else {
+                    verSvgCarro.classList.remove("hidden");
+                    verSvgMoto.classList.add("hidden");
+                }
+            }
+            
+            // Observações Gerais
+            const obsContainer = document.getElementById('verModalObsContainer');
+            const obsText = document.getElementById('verModalObservacoes');
+            if (data.observacoes && data.observacoes.trim() !== '') {
+                obsText.textContent = data.observacoes;
+                obsContainer.classList.remove('hidden');
+            } else {
+                obsContainer.classList.add('hidden');
+            }
+            
+            // Fotos Gerais
+            const fotosGeraisContainer = document.getElementById('verModalFotosGeraisContainer');
+            const fotosGeraisList = document.getElementById('verModalFotosGeraisList');
+            fotosGeraisList.innerHTML = '';
+            if (data.fotos_gerais && data.fotos_gerais.length > 0) {
+                fotosGeraisContainer.classList.remove('hidden');
+                data.fotos_gerais.forEach(filename => {
+                    const a = document.createElement('a');
+                    a.href = "javascript:void(0)";
+                    a.onclick = () => openLightbox(`/static/vistorias_fotos/${filename}`);
+                    a.className = "group relative block w-14 h-14 overflow-hidden rounded-xl border border-slate-200 dark:border-white/10 shadow-sm hover:border-slate-400 transition-all";
+                    a.innerHTML = `
+                        <img src="/static/vistorias_fotos/${filename}" class="w-full h-full object-cover group-hover:scale-105 transition-transform" alt="Foto Geral" />
+                        <div class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[10px]">
+                            <i class="fa-solid fa-up-right-and-down-left-from-center"></i>
+                        </div>
+                    `;
+                    fotosGeraisList.appendChild(a);
+                });
+            } else {
+                fotosGeraisContainer.classList.add('hidden');
+            }
+            
+            const subLabels = (data.vehicle_type === "moto") ? {
+                de: "Dianteiro (D)",
+                te: "Traseiro (T)",
+                diant: "Escapamento / Motor",
+                fe: "Farol (Dianteiro)",
+                le: "Lanterna (Traseira)",
+                esq: "Esquerdo",
+                dir: "Direito"
+            } : {
+                de: "Dianteiro Esquerdo (DE)", dd: "Dianteiro Direito (DD)",
+                te: "Traseiro Esquerdo (TE)", td: "Traseiro Direito (TD)",
+                diant: "Dianteiro", tras: "Traseiro",
+                fe: "Farol Esquerdo", fd: "Farol Direito",
+                le: "Lanterna Esquerda", ld: "Lanterna Direita",
+                esq: "Esquerdo", dir: "Direito",
+                vlde: "Vidro Lateral Diant. Esq.", vldd: "Vidro Lateral Diant. Dir.",
+                vlte: "Vidro Lateral Tras. Esq.", vltd: "Vidro Lateral Tras. Dir."
+            };
+
+            const tbody = document.getElementById('verModalItemsTbody');
+            tbody.innerHTML = '';
             
             // Reset SVG parts to ok initially
             const svgVerParts = document.querySelectorAll("#modal_svg_ver [data-part], #modal_svg_ver_moto [data-part]");
@@ -1369,218 +1473,132 @@ window.onerror = function(message, source, lineno, colno, error) {
                 part.onclick = null;
             });
 
+            let countOk = 0;
+            let countAvaria = 0;
+
+            (data.items || []).forEach((item, idx) => {
+                let cleanObs = item.obs || "";
+                let activeSubs = [];
+                const partsMatch = cleanObs.match(/^\[parts:([^\]]+)\]\s*(.*)/);
+                if (partsMatch) {
+                    activeSubs = partsMatch[1].split(",");
+                    cleanObs = partsMatch[2];
+                }
+                
+                const isAvaria = item.status === 'avaria';
+                if (isAvaria) countAvaria++; else countOk++;
+                
+                let subInfoHTML = '<span class="text-slate-300 dark:text-slate-600">-</span>';
+                if (activeSubs.length > 0) {
+                    const subTextList = activeSubs.map(s => subLabels[s] || s).join(", ");
+                    subInfoHTML = `<span class="inline-block px-2 py-0.5 bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-slate-300 rounded text-[10px] font-medium border border-slate-200/60 dark:border-white/10">${subTextList}</span>`;
+                }
+                
+                let photosHTML = '<span class="text-slate-300 dark:text-slate-600">-</span>';
+                if (item.fotos && item.fotos.length > 0) {
+                    photosHTML = `
+                        <div class="flex items-center gap-1.5 flex-wrap">
+                            ${item.fotos.map(filename => `
+                                <a href="javascript:void(0)" onclick="openLightbox('/static/vistorias_fotos/${filename}')" 
+                                   class="group relative block w-9 h-9 overflow-hidden rounded-lg border border-slate-200 dark:border-white/10 shadow-sm hover:border-slate-400 transition-all shrink-0">
+                                    <img src="/static/vistorias_fotos/${filename}" class="w-full h-full object-cover group-hover:scale-105 transition-transform" alt="Foto" />
+                                    <div class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[8px]">
+                                        <i class="fa-solid fa-up-right-and-down-left-from-center"></i>
+                                    </div>
+                                </a>
+                            `).join("")}
+                        </div>
+                    `;
+                }
+                
+                let statusChip = isAvaria
+                    ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400 border border-rose-200/60 dark:border-rose-800/40">
+                        <i class="fa-solid fa-triangle-exclamation text-[8px]"></i> Avaria
+                       </span>`
+                    : `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/40">
+                        <i class="fa-solid fa-circle-check text-[8px]"></i> OK
+                       </span>`;
+                
+                const tr = document.createElement('tr');
+                tr.id = `ver_row_${item.key}`;
+                tr.className = `hover:bg-slate-50/70 dark:hover:bg-white/[0.02] transition-colors ${isAvaria ? 'bg-rose-50/20 dark:bg-rose-950/10' : ''}`;
+                tr.innerHTML = `
+                    <td class="py-2.5 px-3 text-center text-slate-400 font-mono text-[11px]">${idx + 1}</td>
+                    <td class="py-2.5 px-3 font-bold text-slate-800 dark:text-slate-100">${item.label}</td>
+                    <td class="py-2.5 px-3">${subInfoHTML}</td>
+                    <td class="py-2.5 px-3">${statusChip}</td>
+                    <td class="py-2.5 px-3 text-slate-600 dark:text-slate-300 text-[11px]">
+                        ${cleanObs.trim() ? `<span class="${isAvaria ? 'text-rose-600 dark:text-rose-400 font-medium' : ''}">${cleanObs}</span>` : '<span class="text-slate-300 dark:text-slate-600">-</span>'}
+                    </td>
+                    <td class="py-2.5 px-3">${photosHTML}</td>
+                `;
+                tbody.appendChild(tr);
+
+                // Destaque da parte no mapa 2D
+                if (isAvaria) {
+                    if (activeSubs.length > 0) {
+                        activeSubs.forEach(sub => {
+                            const matchingParts = document.querySelectorAll(`#modal_svg_ver [data-part="${item.key}"][data-sub="${sub}"], #modal_svg_ver_moto [data-part="${item.key}"][data-sub="${sub}"]`);
+                            matchingParts.forEach(part => {
+                                part.className.baseVal = "transition duration-200 part-avaria";
+                                part.onclick = () => {
+                                    switchVerVistoriaView('table');
+                                    tr.scrollIntoView({ behavior: "smooth", block: "center" });
+                                    tr.classList.add("pulse-highlight");
+                                    setTimeout(() => tr.classList.remove("pulse-highlight"), 1500);
+                                };
+                            });
+                        });
+                    } else {
+                        const matchingParts = document.querySelectorAll(`#modal_svg_ver [data-part="${item.key}"], #modal_svg_ver_moto [data-part="${item.key}"]`);
+                        matchingParts.forEach(part => {
+                            part.className.baseVal = "transition duration-200 part-avaria";
+                            part.onclick = () => {
+                                switchVerVistoriaView('table');
+                                tr.scrollIntoView({ behavior: "smooth", block: "center" });
+                                tr.classList.add("pulse-highlight");
+                                setTimeout(() => tr.classList.remove("pulse-highlight"), 1500);
+                            };
+                        });
+                    }
+                }
+            });
+
+            // Summary Pills in Header
+            const summaryPills = document.getElementById('verModalSummaryPills');
+            summaryPills.classList.remove('hidden');
+            summaryPills.innerHTML = `
+                <span class="px-2 py-0.5 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 rounded-lg text-[10px] font-bold">${data.items.length} itens</span>
+                <span class="px-2 py-0.5 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 rounded-lg text-[10px] font-bold">${countOk} OK</span>
+                ${countAvaria > 0 ? `<span class="px-2 py-0.5 bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400 rounded-lg text-[10px] font-bold">${countAvaria} Avaria${countAvaria > 1 ? 's' : ''}</span>` : ''}
+            `;
+            
+            document.getElementById('verModalLoader').classList.add('hidden');
+            document.getElementById('verModalContent').classList.remove('hidden');
+        };
+
+        window.openVistoriaDetailModal = function(vistoriaId) {
+            openVerVistoriaModal();
+            
+            // Se já temos em cache, renderiza de imediato sem delay
+            if (vistoriaCache.has(vistoriaId)) {
+                renderVistoriaDetail(vistoriaCache.get(vistoriaId));
+                return;
+            }
+            
+            document.getElementById('verModalLoader').classList.remove('hidden');
+            document.getElementById('verModalContent').classList.add('hidden');
+            document.getElementById('verModalTitle').textContent = `Vistoria #${vistoriaId}...`;
+            document.getElementById('verModalSubtitle').textContent = "Carregando informações...";
+
             fetch(`/vistorias/${vistoriaId}?format=json`)
                 .then(response => {
                     if (!response.ok) throw new Error("Erro ao buscar vistoria");
                     return response.json();
                 })
                 .then(data => {
-                    document.getElementById('verModalTitle').textContent = `Vistoria #${data.id} • ${data.plate}`;
-                    
-                    const turnoFormatted = data.turno === 'inicio' ? 'Início do Expediente' : (data.turno === 'durante' ? 'Durante Expediente' : 'Fim do Expediente');
-                    const localFormatted = data.local ? ` • ${data.local}` : '';
-                    document.getElementById('verModalSubtitle').textContent = `Técnico/Turno: ${turnoFormatted}${localFormatted} • Data: ${data.created_at}`;
-                    
-                    document.getElementById('verModalKMVal').textContent = data.km ? `${data.km} KM` : "-";
-                    document.getElementById('verModalTurnoVal').textContent = turnoFormatted;
-                    
-                    // Configura link do PDF
-                    document.getElementById('verModalPdfBtn').href = `/vistorias/${data.id}/pdf`;
-                    
-                    // Configura botão de edição
-                    document.getElementById('verModalEditBtn').onclick = () => {
-                        closeVerVistoriaModal();
-                        openEditVistoriaModal(data);
-                    };
-                    
-                    // Configura botão de exclusão no rodapé do modal
-                    document.getElementById('verModalDeleteContainer').innerHTML = `
-                        <form action="/vistorias/${data.id}/excluir" method="POST" class="inline" onsubmit="return confirm('Deseja realmente excluir esta vistoria e todas as fotos associadas?');">
-                            <button type="submit" class="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/30 dark:hover:bg-rose-900/40 text-rose-700 dark:text-rose-400 border border-rose-200/60 dark:border-rose-800/40 rounded-xl text-xs font-bold transition-all">
-                                <i class="fa-solid fa-trash-can mr-1"></i> Excluir
-                            </button>
-                        </form>
-                    `;
-                    
-                    const badge = document.getElementById('verModalStatusBadge');
-                    if (data.status_geral === 'avarias') {
-                        badge.className = "text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400 border border-rose-200 dark:border-rose-800/40";
-                        badge.innerHTML = '<i class="fa-solid fa-triangle-exclamation text-[8px] mr-0.5"></i> Com Avarias';
-                    } else {
-                        badge.className = "text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/40";
-                        badge.innerHTML = '<i class="fa-solid fa-circle-check text-[8px] mr-0.5"></i> Conforme (OK)';
-                    }
-                    
-                    // Alternar o SVG de detalhes com base no tipo
-                    const verSvgCarro = document.getElementById("ver_svg_container_carro");
-                    const verSvgMoto = document.getElementById("ver_svg_container_moto");
-                    if (verSvgCarro && verSvgMoto) {
-                        if (data.vehicle_type === "moto") {
-                            verSvgCarro.classList.add("hidden");
-                            verSvgMoto.classList.remove("hidden");
-                        } else {
-                            verSvgCarro.classList.remove("hidden");
-                            verSvgMoto.classList.add("hidden");
-                        }
-                    }
-                    
-                    // Observações Gerais
-                    const obsContainer = document.getElementById('verModalObsContainer');
-                    const obsText = document.getElementById('verModalObservacoes');
-                    if (data.observacoes && data.observacoes.trim() !== '') {
-                        obsText.textContent = data.observacoes;
-                        obsContainer.classList.remove('hidden');
-                    } else {
-                        obsContainer.classList.add('hidden');
-                    }
-                    
-                    // Fotos Gerais
-                    const fotosGeraisContainer = document.getElementById('verModalFotosGeraisContainer');
-                    const fotosGeraisList = document.getElementById('verModalFotosGeraisList');
-                    fotosGeraisList.innerHTML = '';
-                    if (data.fotos_gerais && data.fotos_gerais.length > 0) {
-                        fotosGeraisContainer.classList.remove('hidden');
-                        data.fotos_gerais.forEach(filename => {
-                            const a = document.createElement('a');
-                            a.href = "javascript:void(0)";
-                            a.onclick = () => openLightbox(`/static/vistorias_fotos/${filename}`);
-                            a.className = "group relative block w-14 h-14 overflow-hidden rounded-xl border border-slate-200 dark:border-white/10 shadow-sm hover:border-slate-400 transition-all";
-                            a.innerHTML = `
-                                <img src="/static/vistorias_fotos/${filename}" class="w-full h-full object-cover group-hover:scale-105 transition-transform" alt="Foto Geral" />
-                                <div class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[10px]">
-                                    <i class="fa-solid fa-up-right-and-down-left-from-center"></i>
-                                </div>
-                            `;
-                            fotosGeraisList.appendChild(a);
-                        });
-                    } else {
-                        fotosGeraisContainer.classList.add('hidden');
-                    }
-                    
-                    const subLabels = (data.vehicle_type === "moto") ? {
-                        de: "Dianteiro (D)",
-                        te: "Traseiro (T)",
-                        diant: "Escapamento / Motor",
-                        fe: "Farol (Dianteiro)",
-                        le: "Lanterna (Traseira)",
-                        esq: "Esquerdo",
-                        dir: "Direito"
-                    } : {
-                        de: "Dianteiro Esquerdo (DE)", dd: "Dianteiro Direito (DD)",
-                        te: "Traseiro Esquerdo (TE)", td: "Traseiro Direito (TD)",
-                        diant: "Dianteiro", tras: "Traseiro",
-                        fe: "Farol Esquerdo", fd: "Farol Direito",
-                        le: "Lanterna Esquerda", ld: "Lanterna Direita",
-                        esq: "Esquerdo", dir: "Direito",
-                        vlde: "Vidro Lateral Diant. Esq.", vldd: "Vidro Lateral Diant. Dir.",
-                        vlte: "Vidro Lateral Tras. Esq.", vltd: "Vidro Lateral Tras. Dir."
-                    };
-
-                    const tbody = document.getElementById('verModalItemsTbody');
-                    tbody.innerHTML = '';
-                    
-                    let countOk = 0;
-                    let countAvaria = 0;
-
-                    (data.items || []).forEach((item, idx) => {
-                        let cleanObs = item.obs || "";
-                        let activeSubs = [];
-                        const partsMatch = cleanObs.match(/^\[parts:([^\]]+)\]\s*(.*)/);
-                        if (partsMatch) {
-                            activeSubs = partsMatch[1].split(",");
-                            cleanObs = partsMatch[2];
-                        }
-                        
-                        const isAvaria = item.status === 'avaria';
-                        if (isAvaria) countAvaria++; else countOk++;
-                        
-                        let subInfoHTML = '<span class="text-slate-300 dark:text-slate-600">-</span>';
-                        if (activeSubs.length > 0) {
-                            const subTextList = activeSubs.map(s => subLabels[s] || s).join(", ");
-                            subInfoHTML = `<span class="inline-block px-2 py-0.5 bg-slate-100 dark:bg-white/5 text-slate-700 dark:text-slate-300 rounded text-[10px] font-medium border border-slate-200/60 dark:border-white/10">${subTextList}</span>`;
-                        }
-                        
-                        let photosHTML = '<span class="text-slate-300 dark:text-slate-600">-</span>';
-                        if (item.fotos && item.fotos.length > 0) {
-                            photosHTML = `
-                                <div class="flex items-center gap-1.5 flex-wrap">
-                                    ${item.fotos.map(filename => `
-                                        <a href="javascript:void(0)" onclick="openLightbox('/static/vistorias_fotos/${filename}')" 
-                                           class="group relative block w-9 h-9 overflow-hidden rounded-lg border border-slate-200 dark:border-white/10 shadow-sm hover:border-slate-400 transition-all shrink-0">
-                                            <img src="/static/vistorias_fotos/${filename}" class="w-full h-full object-cover group-hover:scale-105 transition-transform" alt="Foto" />
-                                            <div class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[8px]">
-                                                <i class="fa-solid fa-up-right-and-down-left-from-center"></i>
-                                            </div>
-                                        </a>
-                                    `).join("")}
-                                </div>
-                            `;
-                        }
-                        
-                        let statusChip = isAvaria
-                            ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400 border border-rose-200/60 dark:border-rose-800/40">
-                                <i class="fa-solid fa-triangle-exclamation text-[8px]"></i> Avaria
-                               </span>`
-                            : `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/40">
-                                <i class="fa-solid fa-circle-check text-[8px]"></i> OK
-                               </span>`;
-                        
-                        const tr = document.createElement('tr');
-                        tr.id = `ver_row_${item.key}`;
-                        tr.className = `hover:bg-slate-50/70 dark:hover:bg-white/[0.02] transition-colors ${isAvaria ? 'bg-rose-50/20 dark:bg-rose-950/10' : ''}`;
-                        tr.innerHTML = `
-                            <td class="py-2.5 px-3 text-center text-slate-400 font-mono text-[11px]">${idx + 1}</td>
-                            <td class="py-2.5 px-3 font-bold text-slate-800 dark:text-slate-100">${item.label}</td>
-                            <td class="py-2.5 px-3">${subInfoHTML}</td>
-                            <td class="py-2.5 px-3">${statusChip}</td>
-                            <td class="py-2.5 px-3 text-slate-600 dark:text-slate-300 text-[11px]">
-                                ${cleanObs.trim() ? `<span class="${isAvaria ? 'text-rose-600 dark:text-rose-400 font-medium' : ''}">${cleanObs}</span>` : '<span class="text-slate-300 dark:text-slate-600">-</span>'}
-                            </td>
-                            <td class="py-2.5 px-3">${photosHTML}</td>
-                        `;
-                        tbody.appendChild(tr);
-
-                        // Destaque da parte no mapa 2D
-                        if (isAvaria) {
-                            if (activeSubs.length > 0) {
-                                activeSubs.forEach(sub => {
-                                    const matchingParts = document.querySelectorAll(`#modal_svg_ver [data-part="${item.key}"][data-sub="${sub}"], #modal_svg_ver_moto [data-part="${item.key}"][data-sub="${sub}"]`);
-                                    matchingParts.forEach(part => {
-                                        part.className.baseVal = "transition duration-200 part-avaria";
-                                        part.onclick = () => {
-                                            switchVerVistoriaView('table');
-                                            tr.scrollIntoView({ behavior: "smooth", block: "center" });
-                                            tr.classList.add("pulse-highlight");
-                                            setTimeout(() => tr.classList.remove("pulse-highlight"), 1500);
-                                        };
-                                    });
-                                });
-                            } else {
-                                const matchingParts = document.querySelectorAll(`#modal_svg_ver [data-part="${item.key}"], #modal_svg_ver_moto [data-part="${item.key}"]`);
-                                matchingParts.forEach(part => {
-                                    part.className.baseVal = "transition duration-200 part-avaria";
-                                    part.onclick = () => {
-                                        switchVerVistoriaView('table');
-                                        tr.scrollIntoView({ behavior: "smooth", block: "center" });
-                                        tr.classList.add("pulse-highlight");
-                                        setTimeout(() => tr.classList.remove("pulse-highlight"), 1500);
-                                    };
-                                });
-                            }
-                        }
-                    });
-
-                    // Summary Pills in Header
-                    const summaryPills = document.getElementById('verModalSummaryPills');
-                    summaryPills.classList.remove('hidden');
-                    summaryPills.innerHTML = `
-                        <span class="px-2 py-0.5 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 rounded-lg text-[10px] font-bold">${data.items.length} itens</span>
-                        <span class="px-2 py-0.5 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 rounded-lg text-[10px] font-bold">${countOk} OK</span>
-                        ${countAvaria > 0 ? `<span class="px-2 py-0.5 bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400 rounded-lg text-[10px] font-bold">${countAvaria} Avaria${countAvaria > 1 ? 's' : ''}</span>` : ''}
-                    `;
-                    
-                    document.getElementById('verModalLoader').classList.add('hidden');
-                    document.getElementById('verModalContent').classList.remove('hidden');
+                    vistoriaCache.set(vistoriaId, data);
+                    renderVistoriaDetail(data);
                 })
                 .catch(err => {
                     console.error(err);
@@ -1913,7 +1931,11 @@ window.switchVistoriaTab = function(modalId, activeTab) {
 }
 
 document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") closeOCRScanner();
+    if (e.key === "Escape") {
+        closeOCRScanner();
+        closeVerVistoriaModal();
+        closeLightbox();
+    }
 });
 </script>
 
@@ -1949,7 +1971,7 @@ window.closeLightbox = function() {
         // Apenas restaura scroll se nenhum outro modal principal estiver aberto
         const modalNova = document.getElementById('modalNovaVistoria');
         const modalVer = document.getElementById('modalVerVistoria');
-        const isAnyOpen = (modalNova && modalNova.open) || (modalVer && modalVer.open);
+        const isAnyOpen = (modalNova && modalNova.open) || (modalVer && !modalVer.classList.contains('hidden'));
         if (!isAnyOpen) {
             document.body.classList.remove('overflow-hidden');
         }

@@ -2282,9 +2282,25 @@ def api_reunioes(id=None):
 
 # --- ANOTAÇÕES ---
 @technical_bp.route("/api/gestao/anotacoes", methods=["GET", "POST"])
-@technical_bp.route("/api/gestao/anotacoes/<int:id>", methods=["PUT", "DELETE"])
+@technical_bp.route("/api/gestao/anotacoes/<int:id>", methods=["GET", "PUT", "DELETE"])
 @login_required
 def api_anotacoes(id=None):
+    if request.method == "GET" and id:
+        i = Note.query.get_or_404(id)
+        return jsonify({
+            "id": i.id,
+            "title": i.title,
+            "category": i.category,
+            "description": i.description,
+            "user_id": i.user_id,
+            "user_name": i.user.username if i.user else "N/A",
+            "user": i.user.username if i.user else "N/A",
+            "date": i.date.isoformat() if i.date else "",
+            "priority": i.priority or "MEDIA",
+            "event_date": str(i.event_date) if i.event_date else "",
+            "status": i.status or "PENDENTE"
+        })
+
     if request.method == "DELETE" or (request.method == "POST" and id):
         target_id = id or request.json.get("id")
         n = Note.query.get_or_404(target_id)
@@ -2328,8 +2344,9 @@ def api_anotacoes(id=None):
             "description": i.description,
             "user_id": i.user_id,
             "user_name": i.user.username if i.user else "N/A",
+            "user": i.user.username if i.user else "N/A",
             "date": i.date.isoformat() if i.date else "",
-            "priority": i.priority,
+            "priority": i.priority or "MEDIA",
             "event_date": str(i.event_date) if i.event_date else "",
             "status": i.status or "PENDENTE"
         })
@@ -2684,12 +2701,13 @@ def api_rota_exata(id=None):
 
 # --- STATUS TOGGLE GENÉRICO ---
 @technical_bp.route("/api/gestao/<string:slug>/<int:id>/status", methods=["POST"])
+@technical_bp.route("/api/gestao/anotacoes/<int:id>/status", methods=["POST"])
 @supervisor_allowed
-def api_status_toggle(slug, id):
+def api_status_toggle(id, slug=None):
+    if slug is None:
+        slug = "anotacoes"
     data = request.json or {}
     new_status = data.get("status")
-    if not new_status:
-        return jsonify({"error": "Status não fornecido"}), 400
 
     if slug == "tarefas":
         obj = Task.query.get_or_404(id)
@@ -2701,12 +2719,18 @@ def api_status_toggle(slug, id):
         obj = RotaExata.query.get_or_404(id)
     elif slug == "rfo":
         obj = RFO.query.get_or_404(id)
+    elif slug == "anotacoes":
+        obj = Note.query.get_or_404(id)
     else:
         return jsonify({"error": "Módulo inválido"}), 400
 
+    if not new_status:
+        cur = (getattr(obj, "status", None) or "").upper()
+        new_status = "PENDENTE" if cur in ["CONCLUIDO", "CONCLUÍDO"] else "CONCLUIDO"
+
     obj.status = new_status
     db.session.commit()
-    return jsonify({"status": "ok"})
+    return jsonify({"status": "ok", "new_status": obj.status})
 
 def make_premium_pdf(buffer, title, metadata, content_table_data, image_paths=None, signature_path=None):
     metadata = dict(metadata)
@@ -11212,68 +11236,37 @@ def generate_annual_schedule_pdf_buffer(year, data, logo_path=None):
         ('TOPPADDING', (0,0), (-1,-1), 0),
     ]))
 
-    # PAGE 1: SÁBADOS & DOMINGOS
+    # PAGE 1: SÁBADOS & DOMINGOS (Tabela Unificada - compatível com quebra de página automática do ReportLab)
     saturdays = data.get("saturdays", [])
     sundays = data.get("sundays", [])
 
-    sat_data = [
-        [Paragraph("ESCALA DE SÁBADO", style_header_main), ""],
-        [Paragraph("SÁBADO", style_header_sub), Paragraph("EQUIPE", style_header_sub)]
+    weekend_data = [
+        [
+            Paragraph("ESCALA DE SÁBADO", style_header_main), "", "",
+            Paragraph("PLANTÃO DE DOMINGO", style_header_main), "", "", ""
+        ],
+        [
+            Paragraph("SÁBADO", style_header_sub), Paragraph("EQUIPE", style_header_sub), "",
+            Paragraph("DOMINGO", style_header_sub), Paragraph("INTERNO", style_header_sub),
+            Paragraph("EXTERNO", style_header_sub), Paragraph("EXTERNO", style_header_sub)
+        ]
     ]
-    sat_styles = [
+
+    weekend_styles = [
         ('SPAN', (0,0), (1,0)),
+        ('SPAN', (3,0), (6,0)),
         ('ALIGN', (0,0), (-1,-1), 'CENTER'),
         ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-        ('GRID', (0,0), (-1,-1), 0.7, colors.black),
-        ('TOPPADDING', (0,0), (-1,-1), 1.2),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 1.2),
-        ('LEFTPADDING', (0,0), (-1,-1), 2.5),
-        ('RIGHTPADDING', (0,0), (-1,-1), 2.5),
-        ('BACKGROUND', (0,0), (-1,0), colors.HexColor("#F8FAFC")),
-        ('BACKGROUND', (0,1), (-1,1), colors.HexColor("#F1F5F9")),
-    ]
-
-    for s in saturdays:
-        row_idx = len(sat_data)
-        team_str = s.get("team", "")
-        team_color_hex = "#0f172a"
-        if "ROSA" in team_str.upper():
-            team_color_hex = "#db2777"
-        elif "AZUL" in team_str.upper():
-            team_color_hex = "#0284c7"
-        elif "AMAREL" in team_str.upper():
-            team_color_hex = "#ca8a04"
-        elif "VERD" in team_str.upper():
-            team_color_hex = "#16a34a"
-
-        t_style = ParagraphStyle(
-            f"SatT_{row_idx}_{year}",
-            parent=style_sat_team,
-            textColor=colors.HexColor(team_color_hex)
-        )
-        sat_data.append([
-            Paragraph(s.get("date_extenso", s.get("date", "")), style_sat_date),
-            Paragraph(team_str.upper(), t_style)
-        ])
-
-    sat_table = Table(sat_data, colWidths=[105, 95])
-    sat_table.setStyle(TableStyle(sat_styles))
-
-    sun_data = [
-        [Paragraph("PLANTÃO DE DOMINGO", style_header_main), "", "", ""],
-        [Paragraph("DOMINGO", style_header_sub), Paragraph("INTERNO", style_header_sub), Paragraph("EXTERNO", style_header_sub), Paragraph("EXTERNO", style_header_sub)]
-    ]
-    sun_styles = [
-        ('SPAN', (0,0), (3,0)),
-        ('ALIGN', (0,0), (-1,-1), 'CENTER'),
-        ('VALIGN', (0,0), (-1,-1), 'MIDDLE'),
-        ('GRID', (0,0), (-1,-1), 0.7, colors.black),
-        ('TOPPADDING', (0,0), (-1,-1), 1.2),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 1.2),
+        ('GRID', (0,0), (1,-1), 0.7, colors.black),
+        ('GRID', (3,0), (6,-1), 0.7, colors.black),
+        ('TOPPADDING', (0,0), (-1,-1), 1.0),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 1.0),
         ('LEFTPADDING', (0,0), (-1,-1), 2),
         ('RIGHTPADDING', (0,0), (-1,-1), 2),
-        ('BACKGROUND', (0,0), (-1,0), colors.HexColor("#F8FAFC")),
-        ('BACKGROUND', (0,1), (-1,1), colors.HexColor("#F1F5F9")),
+        ('BACKGROUND', (0,0), (1,0), colors.HexColor("#F8FAFC")),
+        ('BACKGROUND', (3,0), (6,0), colors.HexColor("#F8FAFC")),
+        ('BACKGROUND', (0,1), (1,1), colors.HexColor("#F1F5F9")),
+        ('BACKGROUND', (3,1), (6,1), colors.HexColor("#F1F5F9")),
     ]
 
     def parse_tech_list(raw_val):
@@ -11291,43 +11284,74 @@ def generate_annual_schedule_pdf_buffer(year, data, logo_path=None):
         parts = [p.strip() for p in str(raw_val).replace(";", ",").replace("\n", ",").split(",") if p.strip()]
         return parts
 
-    for s in sundays:
-        internos = parse_tech_list(s.get("internos")) or parse_tech_list(s.get("interno"))
-        externos = parse_tech_list(s.get("externos")) or (parse_tech_list(s.get("externo_1")) + parse_tech_list(s.get("externo_2")))
-        
-        interno_html = "<br/>".join(internos)
-        if len(externos) <= 1:
-            ext_1_html = externos[0] if len(externos) == 1 else ""
-            ext_2_html = ""
-        elif len(externos) == 2:
-            ext_1_html = externos[0]
-            ext_2_html = externos[1]
-        else:
-            mid = (len(externos) + 1) // 2
-            ext_1_html = "<br/>".join(externos[:mid])
-            ext_2_html = "<br/>".join(externos[mid:])
+    num_rows = max(len(saturdays), len(sundays))
+    for i in range(num_rows):
+        row_idx = len(weekend_data)
 
-        sun_data.append([
-            Paragraph(s.get("date_extenso", s.get("date", "")), style_sun_date),
-            Paragraph(interno_html, style_sun_tech),
-            Paragraph(ext_1_html, style_sun_tech),
-            Paragraph(ext_2_html, style_sun_tech)
+        # Sábado
+        if i < len(saturdays):
+            s_sat = saturdays[i]
+            team_str = s_sat.get("team", "")
+            team_color_hex = "#0f172a"
+            if "ROSA" in team_str.upper():
+                team_color_hex = "#db2777"
+            elif "AZUL" in team_str.upper():
+                team_color_hex = "#0284c7"
+            elif "AMAREL" in team_str.upper():
+                team_color_hex = "#ca8a04"
+            elif "VERD" in team_str.upper():
+                team_color_hex = "#16a34a"
+
+            t_style = ParagraphStyle(
+                f"SatT_{row_idx}_{year}",
+                parent=style_sat_team,
+                textColor=colors.HexColor(team_color_hex)
+            )
+            sat_date_p = Paragraph(s_sat.get("date_extenso", s_sat.get("date", "")), style_sat_date)
+            sat_team_p = Paragraph(team_str.upper(), t_style)
+        else:
+            sat_date_p = ""
+            sat_team_p = ""
+
+        # Domingo
+        if i < len(sundays):
+            s_sun = sundays[i]
+            internos = parse_tech_list(s_sun.get("internos")) or parse_tech_list(s_sun.get("interno"))
+            externos = parse_tech_list(s_sun.get("externos")) or (parse_tech_list(s_sun.get("externo_1")) + parse_tech_list(s_sun.get("externo_2")))
+
+            interno_html = "<br/>".join(internos)
+            if len(externos) <= 1:
+                ext_1_html = externos[0] if len(externos) == 1 else ""
+                ext_2_html = ""
+            elif len(externos) == 2:
+                ext_1_html = externos[0]
+                ext_2_html = externos[1]
+            else:
+                mid = (len(externos) + 1) // 2
+                ext_1_html = "<br/>".join(externos[:mid])
+                ext_2_html = "<br/>".join(externos[mid:])
+
+            sun_date_p = Paragraph(s_sun.get("date_extenso", s_sun.get("date", "")), style_sun_date)
+            sun_int_p = Paragraph(interno_html, style_sun_tech)
+            sun_ext1_p = Paragraph(ext_1_html, style_sun_tech)
+            sun_ext2_p = Paragraph(ext_2_html, style_sun_tech)
+        else:
+            sun_date_p = ""
+            sun_int_p = ""
+            sun_ext1_p = ""
+            sun_ext2_p = ""
+
+        weekend_data.append([
+            sat_date_p, sat_team_p, "",
+            sun_date_p, sun_int_p, sun_ext1_p, sun_ext2_p
         ])
 
-    sun_table = Table(sun_data, colWidths=[105, 78, 85, 92])
-    sun_table.setStyle(TableStyle(sun_styles))
-
-    page1_container = Table(
-        [[sat_table, "", sun_table]],
-        colWidths=[200, 5, 360]
+    weekend_table = Table(
+        weekend_data,
+        colWidths=[105, 95, 4, 105, 78, 85, 90],
+        repeatRows=2
     )
-    page1_container.setStyle(TableStyle([
-        ('VALIGN', (0,0), (-1,-1), 'TOP'),
-        ('LEFTPADDING', (0,0), (-1,-1), 0),
-        ('RIGHTPADDING', (0,0), (-1,-1), 0),
-        ('TOPPADDING', (0,0), (-1,-1), 0),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 0),
-    ]))
+    weekend_table.setStyle(TableStyle(weekend_styles))
 
     # PAGE 2: FERIADOS
     holidays = data.get("holidays", [])
@@ -11382,13 +11406,13 @@ def generate_annual_schedule_pdf_buffer(year, data, logo_path=None):
                 Paragraph(h_ext_2_html, style_holiday_tech)
             ])
 
-    hol_table = Table(hol_data, colWidths=[205, 120, 120, 120])
+    hol_table = Table(hol_data, colWidths=[205, 120, 120, 120], repeatRows=2)
     hol_table.setStyle(TableStyle(hol_styles))
 
     elements = [
         header_table,
         Spacer(1, 2*mm),
-        page1_container,
+        weekend_table,
         PageBreak(),
         header_table,
         Spacer(1, 4*mm),
