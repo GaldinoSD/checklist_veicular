@@ -2,12 +2,13 @@
 from backend.utils import GlobalBlueprint
 technical_bp = GlobalBlueprint("technical", __name__)
 
-import os, json, uuid, requests, pytz, holidays
+import os, json, uuid, requests, pytz, holidays, io, re
+from functools import wraps
 from datetime import datetime, timedelta, date
 from pathlib import Path
 from collections import defaultdict
 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, send_from_directory, abort, jsonify, session, current_app, send_file
+from flask import Blueprint, render_template, request, redirect, url_for, flash, send_from_directory, abort, jsonify, session, current_app, send_file, Response
 from flask_login import login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
@@ -25,7 +26,7 @@ from reportlab.lib.styles import getSampleStyleSheet
 # backend components
 from backend import db
 from backend.config import (
-    TZ, REV_INTERVAL, REV_ALERT_MARGIN, WEEKS_WINDOW, ALLOWED_EXT,
+    BASE_DIR, TZ, REV_INTERVAL, REV_ALERT_MARGIN, WEEKS_WINDOW, ALLOWED_EXT,
     VISTORIAS_UPLOAD_DIR, AVARIAS_UPLOAD_DIR, TREINAMENTOS_UPLOAD_DIR,
     UPLOAD_DIR, LOGO_PATH, LAYOUT_UPLOAD_DIR, INBOX_DIR, RELATORIOS_DIR
 )
@@ -50,6 +51,67 @@ from backend.utils import (
     user_can_receive_announcement
 )
 import io
+
+
+# --- PADRONIZAÇÃO DE PROTOCOLOS (GESTÃO TÉCNICA) ---
+def _note_protocol(self):
+    y = self.date.year if getattr(self, "date", None) else agora().year
+    return f"AN-{y}-{self.id:04d}"
+
+def _activity_protocol(self):
+    y = self.date.year if getattr(self, "date", None) else agora().year
+    return f"ATV-{y}-{self.id:04d}"
+
+def _meeting_protocol(self):
+    y = self.date.year if getattr(self, "date", None) else agora().year
+    return f"REU-{y}-{self.id:04d}"
+
+def _rfo_protocol(self):
+    y = self.date.year if getattr(self, "date", None) else agora().year
+    return f"RFO-{y}-{self.id:04d}"
+
+def _rota_exata_protocol(self):
+    y = self.date.year if getattr(self, "date", None) else agora().year
+    return f"REX-{y}-{self.id:04d}"
+
+def _supervisao_protocol(self):
+    d = getattr(self, "created_at", None) or getattr(self, "date", None)
+    y = d.year if d else agora().year
+    return f"SUP-{y}-{self.id:04d}"
+
+def _encerramento_protocol(self):
+    d = getattr(self, "date", None)
+    y = d.year if d else agora().year
+    return f"ENC-{y}-{self.id:04d}"
+
+def _completed_activity_protocol(self):
+    d = getattr(self, "date", None) or getattr(self, "created_at", None)
+    y = d.year if d else agora().year
+    return f"AR-{y}-{self.id:04d}"
+
+def _tool_inspection_protocol(self):
+    d = getattr(self, "updated_at", None) or getattr(self, "created_at", None)
+    y = d.year if d else agora().year
+    return f"FER-{y}-{self.id:04d}"
+
+if not hasattr(Note, "protocol"):
+    Note.protocol = property(_note_protocol)
+if not hasattr(Activity, "protocol"):
+    Activity.protocol = property(_activity_protocol)
+if not hasattr(Meeting, "protocol"):
+    Meeting.protocol = property(_meeting_protocol)
+if not hasattr(RFO, "protocol"):
+    RFO.protocol = property(_rfo_protocol)
+if not hasattr(RotaExata, "protocol"):
+    RotaExata.protocol = property(_rota_exata_protocol)
+if not hasattr(SupervisaoTecnica, "protocol"):
+    SupervisaoTecnica.protocol = property(_supervisao_protocol)
+if not hasattr(Encerramento, "protocol"):
+    Encerramento.protocol = property(_encerramento_protocol)
+if not hasattr(CompletedActivity, "protocol"):
+    CompletedActivity.protocol = property(_completed_activity_protocol)
+if not hasattr(UserToolInspection, "protocol"):
+    UserToolInspection.protocol = property(_tool_inspection_protocol)
 
 
 
@@ -291,13 +353,14 @@ def geradores_pdf():
     story.append(Spacer(1, 2*mm))
 
     user_name = getattr(current_user, 'username', 'N/A').upper() if hasattr(current_user, 'username') else 'SISTEMA'
+    protocol = f"GER-{now_dt.year}-{now_dt.strftime('%m%d')}"
 
     meta_table_data = [
         [
+            Paragraph("<b>Protocolo:</b>", label_style),
+            Paragraph(f"<b><font color='#1F3C78'>{protocol}</font></b>", value_style),
             Paragraph("<b>Data/Hora Emissão:</b>", label_style),
-            Paragraph(emission_str, value_style),
-            Paragraph("<b>Solicitado por:</b>", label_style),
-            Paragraph(user_name, value_style)
+            Paragraph(emission_str, value_style)
         ],
         [
             Paragraph("<b>Total de Geradores:</b>", label_style),
@@ -372,7 +435,7 @@ def geradores_pdf():
     data_table.setStyle(TableStyle(t_style))
     story.append(data_table)
 
-    draw_bg = get_premium_pdf_draw_background(title, extra_right_text=f"Emissão: {now_dt.strftime('%d/%m/%Y %H:%M')}")
+    draw_bg = get_premium_pdf_draw_background(title, extra_right_text=f"PROTOCOLO: {protocol} | Emissão: {now_dt.strftime('%d/%m/%Y %H:%M')}")
     doc.build(story, onFirstPage=draw_bg, onLaterPages=draw_bg)
     buffer.seek(0)
 
@@ -380,7 +443,7 @@ def geradores_pdf():
         buffer,
         mimetype="application/pdf",
         as_attachment=False,
-        download_name=f"relatorio_geradores_{now_dt.strftime('%d_%m_%Y')}.pdf"
+        download_name=f"relatorio_geradores_{protocol}.pdf"
     )
 
 
@@ -495,9 +558,11 @@ def api_rfo(id=None):
     rfos = RFO.query.order_by(RFO.date.desc().nullslast()).all()
     res = []
     for r in rfos:
+        protocol = getattr(r, "protocol", f"RFO-{r.date.year if r.date else agora().year}-{r.id:04d}")
         res.append({
             "id": r.id,
-            "number": r.number,
+            "protocol": protocol,
+            "number": r.number or protocol,
             "title": r.title,
             "date": str(r.date) if r.date else "",
             "start_time": r.start_time,
@@ -545,6 +610,7 @@ def api_supervisao(id=None):
         i = SupervisaoTecnica.query.get_or_404(id)
         return jsonify({
             "id": i.id,
+            "protocol": getattr(i, "protocol", f"SUP-{i.date.year if i.date else agora().year}-{i.id:04d}"),
             "supervisor_id": i.supervisor_id,
             "supervisor_name": i.supervisor.username if i.supervisor else "N/A",
             "date": str(i.date) if i.date else "",
@@ -686,6 +752,7 @@ def api_supervisao(id=None):
     for i in items:
         res.append({
             "id": i.id,
+            "protocol": getattr(i, "protocol", f"SUP-{i.date.year if i.date else agora().year}-{i.id:04d}"),
             "supervisor_id": i.supervisor_id,
             "supervisor_name": i.supervisor.username if i.supervisor else "N/A",
             "date": str(i.date) if i.date else "",
@@ -698,7 +765,6 @@ def api_supervisao(id=None):
             "photos_json": i.photos_json
         })
     return jsonify(res)
-
 
 
 
@@ -1161,6 +1227,7 @@ def api_atividades_realizadas(id=None):
             fields = []
         res.append({
             "id": i.id,
+            "protocol": getattr(i, "protocol", f"AR-{i.date.year if i.date else agora().year}-{i.id:04d}"),
             "title": i.title,
             "responsible_id": i.responsible_id,
             "responsible_name": i.responsible.username if i.responsible else "N/A",
@@ -1181,8 +1248,10 @@ def atividade_realizada_pdf(id):
     a = CompletedActivity.query.get_or_404(id)
     buffer = io.BytesIO()
 
+    protocol = getattr(a, "protocol", f"AR-{a.date.year if a.date else agora().year}-{a.id:04d}")
     metadata = {
-        "__ref_id__": f"AR-{a.id}",
+        "__ref_id__": protocol,
+        "Protocolo": protocol,
         "Título": a.title or "N/A",
         "Data": a.date.strftime("%d/%m/%Y") if a.date else "N/A",
         "Responsável": (a.responsible.username if a.responsible else "N/A").upper(),
@@ -1206,14 +1275,14 @@ def atividade_realizada_pdf(id):
     if not content:
         content.append(("Informação", "Nenhum campo registrado"))
 
-    make_premium_pdf(buffer, f"Relatório de Atividade: {a.title}", metadata, content)
+    make_premium_pdf(buffer, f"Relatório de Atividade: {a.title} ({protocol})", metadata, content)
     buffer.seek(0)
 
     return send_file(
         buffer,
         mimetype="application/pdf",
         as_attachment=False,
-        download_name=f"atividade_realizada_{datetime.now().strftime('%d_%m_%Y')}.pdf"
+        download_name=f"atividade_realizada_{protocol}.pdf"
     )
 
 
@@ -2260,6 +2329,7 @@ def api_reunioes(id=None):
                 names = i.participants
         res.append({
             "id": i.id,
+            "protocol": getattr(i, "protocol", f"REU-{i.date.year if i.date else agora().year}-{i.id:04d}"),
             "title": i.title,
             "subject": i.subject,
             "date": str(i.date) if i.date else "",
@@ -2287,8 +2357,10 @@ def api_reunioes(id=None):
 def api_anotacoes(id=None):
     if request.method == "GET" and id:
         i = Note.query.get_or_404(id)
+        protocol = getattr(i, "protocol", f"AN-{i.date.year if i.date else agora().year}-{i.id:04d}")
         return jsonify({
             "id": i.id,
+            "protocol": protocol,
             "title": i.title,
             "category": i.category,
             "description": i.description,
@@ -2337,8 +2409,10 @@ def api_anotacoes(id=None):
     items = Note.query.order_by(Note.date.desc()).all()
     res = []
     for i in items:
+        protocol = getattr(i, "protocol", f"AN-{i.date.year if i.date else agora().year}-{i.id:04d}")
         res.append({
             "id": i.id,
+            "protocol": protocol,
             "title": i.title,
             "category": i.category,
             "description": i.description,
@@ -2363,8 +2437,10 @@ def anotacao_pdf(id):
     n = Note.query.get_or_404(id)
     buffer = io.BytesIO()
 
+    protocol = getattr(n, "protocol", f"AN-{n.date.year if n.date else agora().year}-{n.id:04d}")
     metadata = {
-        "__ref_id__": f"AN-{n.id}",
+        "__ref_id__": protocol,
+        "Protocolo": protocol,
         "Autor": (n.user.username if n.user else "N/A").upper(),
         "Data de Criação": n.date.strftime("%d/%m/%Y %H:%M") if n.date else "N/A",
         "Categoria": n.category or "Geral",
@@ -2380,14 +2456,14 @@ def anotacao_pdf(id):
         ("Descrição Detalhada", n.description or "Sem descrição registrada.")
     ]
 
-    make_premium_pdf(buffer, "Anotação Técnica", metadata, content)
+    make_premium_pdf(buffer, f"Anotação Técnica ({protocol})", metadata, content)
     buffer.seek(0)
     
     return send_file(
         buffer,
         mimetype="application/pdf",
         as_attachment=False,
-        download_name=f"anotacao_{datetime.now().strftime('%d_%m_%Y')}.pdf"
+        download_name=f"anotacao_{protocol}.pdf"
     )
 
 
@@ -2568,6 +2644,7 @@ def api_atividades(id=None):
 
         res.append({
             "id": i.id,
+            "protocol": getattr(i, "protocol", f"ATV-{i.date.year if i.date else agora().year}-{i.id:04d}"),
             "user_id": i.user_id,
             "user_name": i.user.username if i.user else "N/A",
             "type": i.type,
@@ -2613,6 +2690,7 @@ def api_rota_exata(id=None):
         r = RotaExata.query.get_or_404(id)
         return jsonify({
             "id": r.id,
+            "protocol": getattr(r, "protocol", f"REX-{r.date.year if r.date else agora().year}-{r.id:04d}"),
             "supervisor_id": r.supervisor_id,
             "date": str(r.date) if r.date else "",
             "time": r.time,
@@ -2685,6 +2763,7 @@ def api_rota_exata(id=None):
     for r in items:
         res.append({
             "id": r.id,
+            "protocol": getattr(r, "protocol", f"REX-{r.date.year if r.date else agora().year}-{r.id:04d}"),
             "supervisor_id": r.supervisor_id,
             "supervisor_name": r.supervisor.username if r.supervisor else "N/A",
             "date": str(r.date) if r.date else "",
@@ -2734,7 +2813,9 @@ def api_status_toggle(id, slug=None):
 
 def make_premium_pdf(buffer, title, metadata, content_table_data, image_paths=None, signature_path=None):
     metadata = dict(metadata)
-    ref_id = metadata.pop("__ref_id__", None)
+    ref_id = metadata.pop("__ref_id__", None) or metadata.get("Protocolo")
+    if ref_id and "Protocolo" not in metadata:
+        metadata = {"Protocolo": ref_id, **metadata}
 
     from reportlab.lib.pagesizes import A4
     from reportlab.lib import colors
@@ -2846,6 +2927,10 @@ def make_premium_pdf(buffer, title, metadata, content_table_data, image_paths=No
         c.setFillColor(colors.HexColor("#475569"))
         now_str = agora().strftime("%d/%m/%Y %H:%M")
         c.drawString(25, divider_y - 10, f"Emitido em: {now_str}")
+        if ref_id:
+            c.setFont("Helvetica-Bold", 8)
+            c.setFillColor(colors.HexColor("#1F3C78"))
+            c.drawRightString(width - 25, divider_y - 10, f"PROTOCOLO: {ref_id}")
 
         c.setStrokeColor(colors.HexColor("#E2E8F0"))
         c.setLineWidth(0.8)
@@ -3091,8 +3176,10 @@ def encerramento_pdf(id):
         closing_times = [p.get("closing_time") or p.get("status") for p in patios_list if p.get("closing_time") or p.get("status")]
         closing_display_time = ", ".join(closing_times) if closing_times else "N/A"
 
+    protocol = getattr(e, "protocol", f"ENC-{e.date.year if e.date else agora().year}-{e.id:04d}")
     metadata = {
-        "__ref_id__": f"EN-{e.id}",
+        "__ref_id__": protocol,
+        "Protocolo": protocol,
         "Pátio(s)": patio_display_name,
         "Data": e.date.strftime("%d/%m/%Y") if e.date else "N/A",
         "Horário de Fechamento": closing_display_time or "N/A",
@@ -3116,14 +3203,14 @@ def encerramento_pdf(id):
         ("Observações Gerais", e.obs or "Nenhuma observação informada.")
     ]
 
-    make_premium_pdf(buffer, "Relatório de Encerramento Diário", metadata, content)
+    make_premium_pdf(buffer, f"Relatório de Encerramento Diário ({protocol})", metadata, content)
     buffer.seek(0)
     
     return send_file(
         buffer,
         mimetype="application/pdf",
         as_attachment=False,
-        download_name=f"encerramento_diario_{datetime.now().strftime('%d_%m_%Y')}.pdf"
+        download_name=f"encerramento_diario_{protocol}.pdf"
     )
 
 
@@ -3166,10 +3253,13 @@ def atividade_pdf(id):
             "obs": a.obs
         }]
         
+    protocol = getattr(a, "protocol", f"ATV-{a.date.year if a.date else agora().year}-{a.id:04d}")
+
     if len(blocks) <= 1:
         # Layout individual legado/simplificado
         metadata = {
-            "__ref_id__": f"AT-{a.id}",
+            "__ref_id__": protocol,
+            "Protocolo": protocol,
             "Tipo de Atividade": (a.type or "N/A").upper(),
             "Data": a.date.strftime("%d/%m/%Y") if a.date else "N/A",
             "Horário": a.time or "N/A",
@@ -3198,7 +3288,7 @@ def atividade_pdf(id):
             except Exception as ex:
                 print("⚠️ Erro ao carregar fotos da atividade:", ex)
 
-        make_premium_pdf(buffer, "Relatório de Atividade Técnica", metadata, content, image_paths=image_paths)
+        make_premium_pdf(buffer, f"Relatório de Atividade Técnica ({protocol})", metadata, content, image_paths=image_paths)
     else:
         # ==========================================
         # 🔥 LAYOUT PREMIUM CONSOLIDADO MULTITÉCNICO 🔥
@@ -3556,8 +3646,10 @@ def reuniao_pdf(id):
         except Exception:
             parts_str = m.participants
 
+    protocol = getattr(m, "protocol", f"REU-{m.date.year if m.date else agora().year}-{m.id:04d}")
     metadata = {
-        "__ref_id__": f"RN-{m.id}",
+        "__ref_id__": protocol,
+        "Protocolo": protocol,
         "Assunto": m.subject or "N/A",
         "Data": m.date.strftime("%d/%m/%Y") if m.date else "N/A",
         "Horário": m.time or "N/A",
@@ -3572,14 +3664,14 @@ def reuniao_pdf(id):
         ("Ações / Próximos Passos", m.actions or "Sem ações mapeadas")
     ]
 
-    make_premium_pdf(buffer, f"Ata de Reunião: {m.title}", metadata, content)
+    make_premium_pdf(buffer, f"Ata de Reunião: {m.title} ({protocol})", metadata, content)
     buffer.seek(0)
     
     return send_file(
         buffer,
         mimetype="application/pdf",
         as_attachment=False,
-        download_name=f"ata_reuniao_{datetime.now().strftime('%d_%m_%Y')}.pdf"
+        download_name=f"ata_reuniao_{protocol}.pdf"
     )
 
 
@@ -3614,9 +3706,11 @@ def rfo_pdf(id):
     start_formatted = format_dt(r.start_time)
     end_formatted = format_dt(r.end_time)
 
+    protocol = getattr(r, "protocol", f"RFO-{r.date.year if r.date else agora().year}-{r.id:04d}")
     metadata = {
-        "__ref_id__": r.number or f"RF-{r.id}",
-        "Número RFO": r.number or "N/A",
+        "__ref_id__": protocol,
+        "Protocolo": protocol,
+        "Número RFO": r.number or protocol,
         "Cidade / Bairro": f"{r.city or 'N/A'} / {r.neighborhood or 'N/A'}",
         "Data": r.date.strftime("%d/%m/%Y") if r.date else "N/A",
         "Horário": f"{start_formatted} até {end_formatted}",
@@ -3644,14 +3738,14 @@ def rfo_pdf(id):
         except Exception as ex:
             print("⚠️ Erro ao carregar fotos do RFO para o PDF:", ex)
 
-    make_premium_pdf(buffer, f"Relatório de Ocorrência (RFO): {r.title or 'Sem Título'}", metadata, content, image_paths=image_paths)
+    make_premium_pdf(buffer, f"Relatório de Ocorrência (RFO): {r.title or 'Sem Título'} ({protocol})", metadata, content, image_paths=image_paths)
     buffer.seek(0)
     
     return send_file(
         buffer,
         mimetype="application/pdf",
         as_attachment=False,
-        download_name=f"rfo_{datetime.now().strftime('%d_%m_%Y')}.pdf"
+        download_name=f"rfo_{protocol}.pdf"
     )
 
 
@@ -3665,8 +3759,10 @@ def rota_exata_pdf(id):
     r = RotaExata.query.get_or_404(id)
     buffer = io.BytesIO()
 
+    protocol = getattr(r, "protocol", f"REX-{r.date.year if r.date else agora().year}-{r.id:04d}")
     metadata = {
-        "__ref_id__": f"RE-{r.id}",
+        "__ref_id__": protocol,
+        "Protocolo": protocol,
         "Supervisor": r.supervisor.username if r.supervisor else "N/A",
         "Data de Auditoria": r.date.strftime("%d/%m/%Y") if r.date else "N/A",
         "Horário": r.date_created.strftime("%H:%M") if r.date_created else (r.time or "N/A"),
@@ -3716,14 +3812,14 @@ def rota_exata_pdf(id):
         ("Auditoria de Técnicos em Campo", techs_str or "Nenhuma auditoria de técnico registrada")
     ]
 
-    make_premium_pdf(buffer, "Relatório de Auditoria Rota Exata", metadata, content)
+    make_premium_pdf(buffer, f"Relatório de Auditoria Rota Exata ({protocol})", metadata, content)
     buffer.seek(0)
     
     return send_file(
         buffer,
         mimetype="application/pdf",
         as_attachment=False,
-        download_name=f"auditoria_rota_exata_{datetime.now().strftime('%d_%m_%Y')}.pdf"
+        download_name=f"auditoria_rota_exata_{protocol}.pdf"
     )
 
 
@@ -3737,8 +3833,10 @@ def supervisao_pdf(id):
     s = SupervisaoTecnica.query.get_or_404(id)
     buffer = io.BytesIO()
 
+    protocol = getattr(s, "protocol", f"SUP-{s.date.year if s.date else agora().year}-{s.id:04d}")
     metadata = {
-        "__ref_id__": f"SV-{s.id}",
+        "__ref_id__": protocol,
+        "Protocolo": protocol,
         "Supervisor": (s.supervisor.username if s.supervisor else "N/A").upper(),
         "Data de Auditoria": s.date.strftime("%d/%m/%Y") if s.date else "N/A",
         "Horário": s.time or "N/A",
@@ -3879,14 +3977,14 @@ def supervisao_pdf(id):
         except Exception as ex:
             print("⚠️ Erro ao carregar fotos gerais da supervisão para o PDF:", ex)
 
-    make_premium_pdf(buffer, "Relatório de Supervisão Técnica em Campo", metadata, content, image_paths=orphaned_image_paths)
+    make_premium_pdf(buffer, f"Relatório de Supervisão Técnica em Campo ({protocol})", metadata, content, image_paths=orphaned_image_paths)
     buffer.seek(0)
     
     return send_file(
         buffer,
         mimetype="application/pdf",
         as_attachment=False,
-        download_name=f"supervisao_campo_{datetime.now().strftime('%d_%m_%Y')}.pdf"
+        download_name=f"supervisao_campo_{protocol}.pdf"
     )
 
 
@@ -10151,17 +10249,18 @@ def controle_ferramentas_relatorio_pdf(user_id):
     story = []
     
     # 1. Resumo Executivo / Dados do Registro
+    protocol = getattr(ins, "protocol", f"FER-{ins.updated_at.year if ins.updated_at else 2026}-{ins.id:04d}")
     total_items = len(valid_statuses)
     ok_pct = int(total_ok / total_items * 100) if total_items > 0 else 100
     resumo_data = [
         [
+            Paragraph(f"<b>Protocolo:</b> <font color='#1F3C78'><b>{protocol}</b></font>", cell_norm),
             Paragraph("<b>Colaborador:</b> " + user.username.upper(), cell_norm),
-            Paragraph("<b>Data da Vistoria:</b> " + ins.updated_at.strftime("%d/%m/%Y %H:%M"), cell_norm),
-            Paragraph("<b>Status:</b> " + ("Confirmado / Assinado" if ins.is_locked else "Aberto para Edição"), cell_norm)
+            Paragraph("<b>Data da Vistoria:</b> " + ins.updated_at.strftime("%d/%m/%Y %H:%M"), cell_norm)
         ],
         [
-            Paragraph(f"<b>Total de Itens:</b> {total_items}", cell_norm),
-            Paragraph(f"<b>Em Ordem:</b> {total_ok} ({ok_pct}%)", cell_norm),
+            Paragraph("<b>Status:</b> " + ("Confirmado / Assinado" if ins.is_locked else "Aberto para Edição"), cell_norm),
+            Paragraph(f"<b>Total de Itens:</b> {total_items} (Em Ordem: {total_ok} - {ok_pct}%)", cell_norm),
             Paragraph(f"<b>Avarias:</b> {total_avarias} | <b>Ausentes:</b> {total_faltas}", cell_norm)
         ]
     ]
@@ -10270,7 +10369,7 @@ def controle_ferramentas_relatorio_pdf(user_id):
         canvas.setFont("Helvetica", 7.5)
         canvas.setFillColor(colors.HexColor("#64748b"))
         now_str = agora().strftime("%d/%m/%Y às %H:%M")
-        canvas.drawString(55*mm if logo_path else 15*mm, height - 22*mm, f"ADAPTLINK • Ref: VT-{ins.id} • Emitido em: {now_str}")
+        canvas.drawString(55*mm if logo_path else 15*mm, height - 22*mm, f"ADAPTLINK • Protocolo: {protocol} • Emitido em: {now_str}")
         canvas.drawRightString(width - 15*mm, height - 22*mm, f"Técnico: {user.username.upper()}")
         
         # Linha e Informações do Rodapé
@@ -10290,7 +10389,7 @@ def controle_ferramentas_relatorio_pdf(user_id):
         buffer,
         mimetype="application/pdf",
         as_attachment=False,
-        download_name=f"vistoria_ferramentas_{user.username}_{datetime.now().strftime('%d_%m_%Y')}.pdf"
+        download_name=f"vistoria_ferramentas_{protocol}_{user.username}.pdf"
     )
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     response.headers["Pragma"] = "no-cache"
@@ -11756,10 +11855,12 @@ def api_gestao_cronograma_anual_pdf(year):
         custom_p = LAYOUT_UPLOAD_DIR / config.pdf_logo
         if custom_p.exists():
             logo_path = str(custom_p)
-    if not logo_path and os.path.exists("logo.png"):
-        logo_path = "logo.png"
-    if not logo_path and os.path.exists("/var/www/checklist_veicular/frontend/static/uploads/layout/layout_pdf_logo_6cece00e.png"):
-        logo_path = "/var/www/checklist_veicular/frontend/static/uploads/layout/layout_pdf_logo_6cece00e.png"
+    if not logo_path:
+        default_logo = BASE_DIR / "frontend" / "static" / "logo.png"
+        if default_logo.exists():
+            logo_path = str(default_logo)
+        elif os.path.exists("logo.png"):
+            logo_path = "logo.png"
 
     pdf_buffer = generate_annual_schedule_pdf_buffer(year, data, logo_path=logo_path)
     
@@ -11791,6 +11892,1016 @@ def api_gestao_cronograma_anual_auto_fill(year):
 
 
 
+# =========================================================================
+# 📌 MÓDULO: CONTROLE DE PENDÊNCIAS DA SUPERVISÃO TÉCNICA
+# =========================================================================
+
+PENDENCIAS_UPLOAD_DIR = BASE_DIR / "frontend" / "static" / "uploads" / "pendencias"
+PENDENCIAS_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+ALLOWED_PENDENCIA_EXT = {".png", ".jpg", ".jpeg", ".webp", ".pdf"}
+
+# Registra dinamicamente a permissão granular no módulo de autenticação
+try:
+    from backend.blueprints import auth as _auth_mod
+    _found_mod = False
+    for _m in _auth_mod.PERMISSION_MODULES:
+        if _m.get("category") == "Gestão Técnica & Operacional":
+            _pkeys = [p[0] for p in _m.get("perms", [])]
+            if "perm_pendencias_supervisao" not in _pkeys:
+                _m["perms"].append(("perm_pendencias_supervisao", "Controle de Pendências (Supervisão)"))
+            _found_mod = True
+            break
+    if not _found_mod and len(_auth_mod.PERMISSION_MODULES) > 0:
+        _auth_mod.PERMISSION_MODULES[0]["perms"].append(("perm_pendencias_supervisao", "Controle de Pendências (Supervisão)"))
+    if "perm_pendencias_supervisao" not in _auth_mod.ALL_SYSTEM_PERMS:
+        _auth_mod.ALL_SYSTEM_PERMS.append("perm_pendencias_supervisao")
+except Exception as _e_perm:
+    print("⚠️ Aviso: Não foi possível atualizar PERMISSION_MODULES dinamicamente:", _e_perm)
+
+# Patch suave em User.has_permission para garantir suporte transparente
+if hasattr(User, "has_permission"):
+    _base_has_permission = User.has_permission
+    def _pendencias_has_permission(self, perm):
+        raw_perm = perm[5:] if perm.startswith("perm_") else perm
+        if raw_perm == "pendencias_supervisao":
+            if self.is_admin or getattr(self, "role", "") in ("admin", "supervisor", "gestor"):
+                return True
+            if self.permissions:
+                try:
+                    p = json.loads(self.permissions)
+                    if isinstance(p, dict):
+                        for k in ("perm_pendencias_supervisao", "pendencias_supervisao"):
+                            if k in p and p[k] is not None:
+                                return bool(p[k])
+                except Exception:
+                    pass
+        return _base_has_permission(self, perm)
+    User.has_permission = _pendencias_has_permission
 
 
+class Pendencia(db.Model):
+    __tablename__ = "pendencias"
 
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(255), nullable=False)
+    description = db.Column(db.Text, nullable=False)
+    responsible_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    creator_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    created_at = db.Column(db.DateTime, default=agora)
+    deadline = db.Column(db.Date, nullable=False)
+    category = db.Column(db.String(50), default="Operacional")
+    priority = db.Column(db.String(20), default="Média")
+    status = db.Column(db.String(20), default="Aberta")
+    obs = db.Column(db.Text, nullable=True)
+    attachments_json = db.Column(db.Text, nullable=True)
+
+    # Conclusão / Resolução
+    closed_at = db.Column(db.DateTime, nullable=True)
+    closed_by_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
+    solution_description = db.Column(db.Text, nullable=True)
+    closing_notes = db.Column(db.Text, nullable=True)
+    closing_attachments_json = db.Column(db.Text, nullable=True)
+
+    # Cancelamento
+    cancelled_at = db.Column(db.DateTime, nullable=True)
+    cancelled_by_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
+    cancel_justification = db.Column(db.Text, nullable=True)
+
+    # Relacionamentos
+    responsible = db.relationship("User", foreign_keys=[responsible_id], backref="pendencias_atribuidas")
+    creator = db.relationship("User", foreign_keys=[creator_id], backref="pendencias_criadas")
+    closed_by = db.relationship("User", foreign_keys=[closed_by_id])
+    cancelled_by = db.relationship("User", foreign_keys=[cancelled_by_id])
+    historico = db.relationship("PendenciaHistorico", backref="pendencia", cascade="all, delete-orphan", order_by="desc(PendenciaHistorico.created_at)")
+    comentarios = db.relationship("PendenciaComentario", backref="pendencia", cascade="all, delete-orphan", order_by="asc(PendenciaComentario.created_at)")
+
+    @property
+    def protocol(self):
+        y = self.created_at.year if self.created_at else agora().year
+        return f"PEN-{y}-{self.id:04d}"
+
+    @property
+    def is_overdue(self):
+        if self.status in ("Concluída", "Cancelada"):
+            return False
+        if not self.deadline:
+            return False
+        return self.deadline < agora().date()
+
+    @property
+    def is_due_soon(self):
+        if self.status in ("Concluída", "Cancelada"):
+            return False
+        if not self.deadline:
+            return False
+        days = (self.deadline - agora().date()).days
+        return 0 <= days <= 1
+
+    @property
+    def days_to_deadline(self):
+        if not self.deadline:
+            return 999
+        return (self.deadline - agora().date()).days
+
+    def to_dict(self):
+        today = agora().date()
+        days_to_deadline = self.days_to_deadline
+        is_overdue = self.is_overdue
+        is_due_soon = self.is_due_soon
+
+        if self.closed_at and self.created_at:
+            resolution_days = max(1, (self.closed_at.date() - self.created_at.date()).days)
+        else:
+            resolution_days = (today - (self.created_at.date() if self.created_at else today)).days
+
+        att_list = []
+        if self.attachments_json:
+            try:
+                att_list = json.loads(self.attachments_json)
+            except Exception:
+                att_list = []
+
+        closing_att_list = []
+        if self.closing_attachments_json:
+            try:
+                closing_att_list = json.loads(self.closing_attachments_json)
+            except Exception:
+                closing_att_list = []
+
+        return {
+            "id": self.id,
+            "protocol": self.protocol,
+            "title": self.title,
+            "description": self.description,
+            "responsible_id": self.responsible_id,
+            "responsible_name": (self.responsible.username if self.responsible else "N/A"),
+            "creator_id": self.creator_id,
+            "creator_name": (self.creator.username if self.creator else "Sistema"),
+            "created_at": self.created_at.strftime("%d/%m/%Y %H:%M") if self.created_at else "",
+            "created_at_iso": self.created_at.strftime("%Y-%m-%d") if self.created_at else "",
+            "deadline": self.deadline.strftime("%d/%m/%Y") if self.deadline else "",
+            "deadline_iso": self.deadline.strftime("%Y-%m-%d") if self.deadline else "",
+            "category": self.category or "Operacional",
+            "priority": self.priority or "Média",
+            "status": self.status or "Aberta",
+            "obs": self.obs or "",
+            "attachments": att_list,
+            "is_overdue": is_overdue,
+            "is_due_soon": is_due_soon,
+            "days_to_deadline": days_to_deadline,
+            "resolution_days": resolution_days,
+            "closed_at": self.closed_at.strftime("%d/%m/%Y %H:%M") if self.closed_at else "",
+            "closed_by_name": (self.closed_by.username if self.closed_by else ""),
+            "solution_description": self.solution_description or "",
+            "closing_notes": self.closing_notes or "",
+            "closing_attachments": closing_att_list,
+            "cancelled_at": self.cancelled_at.strftime("%d/%m/%Y %H:%M") if self.cancelled_at else "",
+            "cancelled_by_name": (self.cancelled_by.username if self.cancelled_by else ""),
+            "cancel_justification": self.cancel_justification or ""
+        }
+
+
+class PendenciaHistorico(db.Model):
+    __tablename__ = "pendencia_historico"
+
+    id = db.Column(db.Integer, primary_key=True)
+    pendencia_id = db.Column(db.Integer, db.ForeignKey("pendencias.id", ondelete="CASCADE"), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    action_type = db.Column(db.String(50), nullable=False)
+    description = db.Column(db.Text, nullable=False)
+    old_value = db.Column(db.Text, nullable=True)
+    new_value = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=agora)
+
+    user = db.relationship("User")
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "action_type": self.action_type,
+            "description": self.description,
+            "old_value": self.old_value or "",
+            "new_value": self.new_value or "",
+            "user_name": (self.user.username if self.user else "Sistema"),
+            "created_at": self.created_at.strftime("%d/%m/%Y %H:%M") if self.created_at else ""
+        }
+
+
+class PendenciaComentario(db.Model):
+    __tablename__ = "pendencia_comentario"
+
+    id = db.Column(db.Integer, primary_key=True)
+    pendencia_id = db.Column(db.Integer, db.ForeignKey("pendencias.id", ondelete="CASCADE"), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    comment = db.Column(db.Text, nullable=False)
+    attachments_json = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, default=agora)
+
+    user = db.relationship("User")
+
+    def to_dict(self):
+        att = []
+        if self.attachments_json:
+            try:
+                att = json.loads(self.attachments_json)
+            except Exception:
+                att = []
+        return {
+            "id": self.id,
+            "comment": self.comment,
+            "user_name": (self.user.username if self.user else "Sistema"),
+            "attachments": att,
+            "created_at": self.created_at.strftime("%d/%m/%Y %H:%M") if self.created_at else ""
+        }
+
+
+_tables_ensured = False
+
+def ensure_pendencias_tables():
+    global _tables_ensured
+    if _tables_ensured:
+        return
+    from sqlalchemy import text
+    try:
+        with db.engine.connect() as conn:
+            conn.execute(text('''
+                CREATE TABLE IF NOT EXISTS pendencias (
+                    id SERIAL PRIMARY KEY,
+                    title VARCHAR(255) NOT NULL,
+                    description TEXT NOT NULL,
+                    responsible_id INTEGER NOT NULL REFERENCES "user"(id),
+                    creator_id INTEGER NOT NULL REFERENCES "user"(id),
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    deadline DATE NOT NULL,
+                    category VARCHAR(50) DEFAULT 'Operacional',
+                    priority VARCHAR(20) DEFAULT 'Média',
+                    status VARCHAR(20) DEFAULT 'Aberta',
+                    obs TEXT,
+                    attachments_json TEXT,
+                    closed_at TIMESTAMP,
+                    closed_by_id INTEGER REFERENCES "user"(id),
+                    solution_description TEXT,
+                    closing_notes TEXT,
+                    closing_attachments_json TEXT,
+                    cancelled_at TIMESTAMP,
+                    cancelled_by_id INTEGER REFERENCES "user"(id),
+                    cancel_justification TEXT
+                );
+                CREATE TABLE IF NOT EXISTS pendencia_historico (
+                    id SERIAL PRIMARY KEY,
+                    pendencia_id INTEGER NOT NULL REFERENCES pendencias(id) ON DELETE CASCADE,
+                    user_id INTEGER NOT NULL REFERENCES "user"(id),
+                    action_type VARCHAR(50) NOT NULL,
+                    description TEXT NOT NULL,
+                    old_value TEXT,
+                    new_value TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+                CREATE TABLE IF NOT EXISTS pendencia_comentario (
+                    id SERIAL PRIMARY KEY,
+                    pendencia_id INTEGER NOT NULL REFERENCES pendencias(id) ON DELETE CASCADE,
+                    user_id INTEGER NOT NULL REFERENCES "user"(id),
+                    comment TEXT NOT NULL,
+                    attachments_json TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                );
+            '''))
+            conn.commit()
+            _tables_ensured = True
+    except Exception as e:
+        print("⚠️ Erro ao assegurar tabelas de pendências:", e)
+
+
+def pendencias_allowed(f):
+    @wraps(f)
+    @login_required
+    def decorated_function(*args, **kwargs):
+        ensure_pendencias_tables()
+        if getattr(current_user, "is_admin", False) or getattr(current_user, "role", "") in ("admin", "supervisor", "gestor"):
+            return f(*args, **kwargs)
+        if hasattr(current_user, "has_permission") and current_user.has_permission("pendencias_supervisao"):
+            return f(*args, **kwargs)
+        # Permite que colaboradores com pendências atribuídas acessem a tela
+        my_count = Pendencia.query.filter_by(responsible_id=current_user.id).count()
+        if my_count > 0:
+            return f(*args, **kwargs)
+        flash("Acesso não autorizado ao módulo de Pendências.", "error")
+        return redirect(url_for("sem_permissao"))
+    return decorated_function
+
+
+def _save_pendencia_files(file_list):
+    saved = []
+    if not file_list:
+        return saved
+    for f in file_list:
+        if not f or not f.filename:
+            continue
+        ext = os.path.splitext(f.filename.lower())[1]
+        if ext not in ALLOWED_PENDENCIA_EXT:
+            continue
+        safe_name = f"{uuid.uuid4().hex[:10]}_{re.sub(r'[^a-zA-Z0-9_.-]', '_', f.filename)}"
+        target_path = PENDENCIAS_UPLOAD_DIR / safe_name
+        try:
+            f.save(target_path)
+            saved.append({
+                "filename": safe_name,
+                "original_name": f.filename,
+                "ext": ext,
+                "is_image": ext in {".png", ".jpg", ".jpeg", ".webp"}
+            })
+        except Exception as ex:
+            print("⚠️ Erro ao salvar anexo de pendência:", ex)
+    return saved
+
+
+# -------------------------------------------------------------------------
+# ROTAS PRINCIPAIS: CONTROLE DE PENDÊNCIAS
+# -------------------------------------------------------------------------
+
+@technical_bp.route("/gestao/pendencias")
+@pendencias_allowed
+def pendencias_supervisao():
+    ensure_pendencias_tables()
+    is_supervisor = getattr(current_user, "is_admin", False) or getattr(current_user, "role", "") in ("admin", "supervisor", "gestor")
+    tecnicos = User.query.filter(User.username != "admin").order_by(User.username.asc()).all()
+    return render_template(
+        "pendencias.html",
+        tecnicos=tecnicos,
+        is_supervisor=is_supervisor
+    )
+
+
+@technical_bp.route("/api/gestao/pendencias", methods=["GET", "POST"])
+@pendencias_allowed
+def api_pendencias():
+    ensure_pendencias_tables()
+    is_supervisor = getattr(current_user, "is_admin", False) or getattr(current_user, "role", "") in ("admin", "supervisor", "gestor")
+
+    if request.method == "POST":
+        if not is_supervisor and not (hasattr(current_user, "has_permission") and current_user.has_permission("pendencias_supervisao")):
+            return jsonify({"error": "Apenas supervisores podem registrar novas pendências."}), 403
+
+        data = request.form if not request.is_json else request.json
+        title = (data.get("title") or "").strip()
+        description = (data.get("description") or "").strip()
+        responsible_id = data.get("responsible_id", type=int) if hasattr(data, "get") else None
+        deadline_str = data.get("deadline")
+
+        if not title:
+            return jsonify({"error": "O título da pendência é obrigatório."}), 400
+        if not description:
+            return jsonify({"error": "A descrição detalhada é obrigatória."}), 400
+        if not responsible_id:
+            return jsonify({"error": "Selecione o responsável pela pendência."}), 400
+        if not deadline_str:
+            return jsonify({"error": "Informe o prazo limite para resolução."}), 400
+
+        try:
+            deadline = datetime.strptime(deadline_str, "%Y-%m-%d").date()
+        except Exception:
+            return jsonify({"error": "Formato de data inválido para o prazo."}), 400
+
+        resp_user = User.query.get(responsible_id)
+        if not resp_user:
+            return jsonify({"error": "Colaborador responsável não encontrado."}), 404
+
+        # Upload de arquivos anexos
+        uploaded_files = []
+        if not request.is_json:
+            files = request.files.getlist("attachments") or request.files.getlist("attachments[]")
+            uploaded_files = _save_pendencia_files(files)
+
+        p = Pendencia(
+            title=title,
+            description=description,
+            responsible_id=responsible_id,
+            creator_id=current_user.id,
+            deadline=deadline,
+            category=data.get("category") or "Operacional",
+            priority=data.get("priority") or "Média",
+            status="Aberta",
+            obs=data.get("obs") or "",
+            attachments_json=json.dumps(uploaded_files) if uploaded_files else None
+        )
+        db.session.add(p)
+        db.session.flush()
+
+        # Registro no Histórico Auditado
+        h = PendenciaHistorico(
+            pendencia_id=p.id,
+            user_id=current_user.id,
+            action_type="Abertura",
+            description=f"Pendência registrada por {current_user.username.upper()} com prazo para {deadline.strftime('%d/%m/%Y')}. Atribuída a {resp_user.username.upper()}."
+        )
+        db.session.add(h)
+        db.session.commit()
+
+        return jsonify({
+            "status": "ok",
+            "message": "Pendência registrada com sucesso!",
+            "id": p.id,
+            "protocol": p.protocol
+        })
+
+    # GET: Listagem e Filtros
+    q = Pendencia.query
+
+    # Se técnico comum sem perfil de supervisão, restringe apenas às dele
+    if not is_supervisor and not (hasattr(current_user, "has_permission") and current_user.has_permission("pendencias_supervisao")):
+        q = q.filter(Pendencia.responsible_id == current_user.id)
+
+    # Filtros
+    search = request.args.get("search", "").strip()
+    if search:
+        s_term = f"%{search}%"
+        q = q.filter(
+            db.or_(
+                Pendencia.title.ilike(s_term),
+                Pendencia.description.ilike(s_term),
+                Pendencia.obs.ilike(s_term),
+                Pendencia.id.cast(db.String).ilike(s_term)
+            )
+        )
+
+    status_filter = request.args.get("status", "").strip()
+    if status_filter and status_filter.lower() != "todas":
+        q = q.filter(Pendencia.status == status_filter)
+
+    category_filter = request.args.get("category", "").strip()
+    if category_filter and category_filter.lower() != "todas":
+        q = q.filter(Pendencia.category == category_filter)
+
+    priority_filter = request.args.get("priority", "").strip()
+    if priority_filter and priority_filter.lower() != "todas":
+        q = q.filter(Pendencia.priority == priority_filter)
+
+    resp_filter = request.args.get("responsible_id", type=int)
+    if resp_filter:
+        q = q.filter(Pendencia.responsible_id == resp_filter)
+
+    data_ini = request.args.get("data_ini", "").strip()
+    if data_ini:
+        try:
+            d_ini = datetime.strptime(data_ini, "%Y-%m-%d").date()
+            q = q.filter(Pendencia.created_at >= datetime.combine(d_ini, datetime.min.time()))
+        except Exception:
+            pass
+
+    data_fim = request.args.get("data_fim", "").strip()
+    if data_fim:
+        try:
+            d_fim = datetime.strptime(data_fim, "%Y-%m-%d").date()
+            q = q.filter(Pendencia.created_at <= datetime.combine(d_fim, datetime.max.time()))
+        except Exception:
+            pass
+
+    only_overdue = request.args.get("atrasadas", "").strip().lower() in ("true", "1", "yes")
+
+    all_items = q.order_by(Pendencia.created_at.desc()).all()
+    results = []
+
+    # Estatísticas Globais dos itens filtrados
+    today = agora().date()
+    stats = {
+        "total": len(all_items),
+        "abertas": 0,
+        "em_andamento": 0,
+        "concluidas": 0,
+        "canceladas": 0,
+        "atrasadas": 0,
+        "vence_hoje": 0,
+        "taxa_conclusao": 0.0
+    }
+
+    for item in all_items:
+        d = item.to_dict()
+        if d["status"] == "Aberta":
+            stats["abertas"] += 1
+        elif d["status"] == "Em andamento":
+            stats["em_andamento"] += 1
+        elif d["status"] == "Concluída":
+            stats["concluidas"] += 1
+        elif d["status"] == "Cancelada":
+            stats["canceladas"] += 1
+
+        if d["is_overdue"]:
+            stats["atrasadas"] += 1
+        if d["is_due_soon"]:
+            stats["vence_hoje"] += 1
+
+        if only_overdue and not d["is_overdue"]:
+            continue
+        results.append(d)
+
+    if stats["total"] > 0:
+        stats["taxa_conclusao"] = round((stats["concluidas"] / stats["total"]) * 100, 1)
+
+    return jsonify({"items": results, "stats": stats})
+
+
+@technical_bp.route("/api/gestao/pendencias/<int:id>", methods=["GET", "PUT", "DELETE"])
+@pendencias_allowed
+def api_pendencia_detail(id):
+    ensure_pendencias_tables()
+    p = Pendencia.query.get_or_404(id)
+    is_supervisor = getattr(current_user, "is_admin", False) or getattr(current_user, "role", "") in ("admin", "supervisor", "gestor")
+
+    if request.method == "GET":
+        detail = p.to_dict()
+        detail["history"] = [h.to_dict() for h in p.historico]
+        detail["comments"] = [c.to_dict() for c in p.comentarios]
+        return jsonify(detail)
+
+    if request.method == "DELETE":
+        if not is_supervisor:
+            return jsonify({"error": "Apenas supervisores podem excluir pendências."}), 403
+        db.session.delete(p)
+        db.session.commit()
+        return jsonify({"status": "ok", "message": "Pendência excluída com sucesso."})
+
+    if request.method == "PUT":
+        if not is_supervisor:
+            return jsonify({"error": "Apenas supervisores podem editar dados cadastrais."}), 403
+        data = request.json or {}
+        changes = []
+        if "title" in data and data["title"].strip() and data["title"] != p.title:
+            changes.append(f"Título alterado de '{p.title}' para '{data['title']}'")
+            p.title = data["title"].strip()
+        if "description" in data and data["description"].strip() and data["description"] != p.description:
+            changes.append("Descrição atualizada")
+            p.description = data["description"].strip()
+        if "category" in data and data["category"] != p.category:
+            changes.append(f"Categoria alterada para {data['category']}")
+            p.category = data["category"]
+        if "priority" in data and data["priority"] != p.priority:
+            changes.append(f"Prioridade alterada de {p.priority} para {data['priority']}")
+            p.priority = data["priority"]
+        if "obs" in data:
+            p.obs = data["obs"]
+
+        if changes:
+            h = PendenciaHistorico(
+                pendencia_id=p.id,
+                user_id=current_user.id,
+                action_type="Edição",
+                description=f"Edição por {current_user.username.upper()}: " + "; ".join(changes)
+            )
+            db.session.add(h)
+        db.session.commit()
+        return jsonify({"status": "ok", "message": "Pendência atualizada com sucesso."})
+
+
+@technical_bp.route("/api/gestao/pendencias/<int:id>/status", methods=["POST"])
+@pendencias_allowed
+def api_pendencia_change_status(id):
+    ensure_pendencias_tables()
+    p = Pendencia.query.get_or_404(id)
+    data = request.json or {}
+    new_status = data.get("status")
+
+    if new_status not in ("Aberta", "Em andamento"):
+        return jsonify({"error": "Status inválido para esta operação."}), 400
+
+    old_status = p.status
+    p.status = new_status
+    h = PendenciaHistorico(
+        pendencia_id=p.id,
+        user_id=current_user.id,
+        action_type="Mudança de Status",
+        description=f"Status alterado de '{old_status}' para '{new_status}' por {current_user.username.upper()}.",
+        old_value=old_status,
+        new_value=new_status
+    )
+    db.session.add(h)
+    db.session.commit()
+    return jsonify({"status": "ok", "message": f"Status alterado para {new_status}."})
+
+
+@technical_bp.route("/api/gestao/pendencias/<int:id>/concluir", methods=["POST"])
+@pendencias_allowed
+def api_pendencia_concluir(id):
+    ensure_pendencias_tables()
+    p = Pendencia.query.get_or_404(id)
+    data = request.form if not request.is_json else request.json
+    solution = (data.get("solution_description") or "").strip()
+    closing_notes = (data.get("closing_notes") or "").strip()
+
+    if not solution:
+        return jsonify({"error": "A descrição da solução aplicada é obrigatória."}), 400
+
+    now_dt = agora()
+    p.status = "Concluída"
+    p.closed_at = now_dt
+    p.closed_by_id = current_user.id
+    p.solution_description = solution
+    p.closing_notes = closing_notes
+
+    # Uploads de evidências
+    closing_files = request.files.getlist("closing_attachments")
+    if closing_files:
+        saved = _save_pendencia_files(closing_files)
+        if saved:
+            curr = []
+            if p.closing_attachments_json:
+                try:
+                    curr = json.loads(p.closing_attachments_json)
+                except Exception:
+                    curr = []
+            curr.extend(saved)
+            p.closing_attachments_json = json.dumps(curr)
+
+    h = PendenciaHistorico(
+        pendencia_id=p.id,
+        user_id=current_user.id,
+        action_type="Conclusão",
+        description=f"Pendência concluída por {current_user.username.upper()}. Solução: {solution[:120]}...",
+        old_value="Em andamento/Aberta",
+        new_value="Concluída"
+    )
+    db.session.add(h)
+    db.session.commit()
+    return jsonify({"status": "ok", "message": "Pendência concluída com sucesso!"})
+
+
+@technical_bp.route("/api/gestao/pendencias/<int:id>/reabrir", methods=["POST"])
+@pendencias_allowed
+def api_pendencia_reabrir(id):
+    ensure_pendencias_tables()
+    p = Pendencia.query.get_or_404(id)
+    data = request.json or {}
+    justification = (data.get("justification") or "").strip()
+
+    if not justification:
+        return jsonify({"error": "A justificativa para reabertura é obrigatória."}), 400
+
+    old_status = p.status
+    p.status = "Em andamento"
+    p.closed_at = None
+    p.closed_by_id = None
+
+    h = PendenciaHistorico(
+        pendencia_id=p.id,
+        user_id=current_user.id,
+        action_type="Reabertura",
+        description=f"Pendência reaberta por {current_user.username.upper()}. Motivo: {justification}",
+        old_value=old_status,
+        new_value="Em andamento"
+    )
+    db.session.add(h)
+    db.session.commit()
+    return jsonify({"status": "ok", "message": "Pendência reaberta com sucesso."})
+
+
+@technical_bp.route("/api/gestao/pendencias/<int:id>/cancelar", methods=["POST"])
+@pendencias_allowed
+def api_pendencia_cancelar(id):
+    ensure_pendencias_tables()
+    p = Pendencia.query.get_or_404(id)
+    data = request.json or {}
+    justification = (data.get("justification") or "").strip()
+
+    if not justification:
+        return jsonify({"error": "A justificativa para cancelamento é obrigatória."}), 400
+
+    old_status = p.status
+    p.status = "Cancelada"
+    p.cancelled_at = agora()
+    p.cancelled_by_id = current_user.id
+    p.cancel_justification = justification
+
+    h = PendenciaHistorico(
+        pendencia_id=p.id,
+        user_id=current_user.id,
+        action_type="Cancelamento",
+        description=f"Pendência cancelada por {current_user.username.upper()}. Motivo: {justification}",
+        old_value=old_status,
+        new_value="Cancelada"
+    )
+    db.session.add(h)
+    db.session.commit()
+    return jsonify({"status": "ok", "message": "Pendência cancelada com sucesso."})
+
+
+@technical_bp.route("/api/gestao/pendencias/<int:id>/reatribuir", methods=["POST"])
+@pendencias_allowed
+def api_pendencia_reatribuir(id):
+    ensure_pendencias_tables()
+    p = Pendencia.query.get_or_404(id)
+    data = request.json or {}
+    new_resp_id = data.get("responsible_id")
+    reason = (data.get("reason") or "").strip()
+
+    if not new_resp_id:
+        return jsonify({"error": "Selecione o novo colaborador responsável."}), 400
+
+    new_user = User.query.get_or_404(new_resp_id)
+    old_user_name = p.responsible.username.upper() if p.responsible else "N/A"
+    new_user_name = new_user.username.upper()
+
+    p.responsible_id = new_resp_id
+
+    desc = f"Responsável transferido de {old_user_name} para {new_user_name} por {current_user.username.upper()}."
+    if reason:
+        desc += f" Motivo: {reason}"
+
+    h = PendenciaHistorico(
+        pendencia_id=p.id,
+        user_id=current_user.id,
+        action_type="Reatribuição",
+        description=desc,
+        old_value=old_user_name,
+        new_value=new_user_name
+    )
+    db.session.add(h)
+    db.session.commit()
+    return jsonify({"status": "ok", "message": f"Pendência reatribuída para {new_user_name}."})
+
+
+@technical_bp.route("/api/gestao/pendencias/<int:id>/prorrogar", methods=["POST"])
+@pendencias_allowed
+def api_pendencia_prorrogar(id):
+    ensure_pendencias_tables()
+    p = Pendencia.query.get_or_404(id)
+    data = request.json or {}
+    new_deadline_str = data.get("deadline")
+    justification = (data.get("justification") or "").strip()
+
+    if not new_deadline_str:
+        return jsonify({"error": "Informe o novo prazo para conclusão."}), 400
+    if not justification:
+        return jsonify({"error": "A justificativa para alteração de prazo é obrigatória."}), 400
+
+    try:
+        new_deadline = datetime.strptime(new_deadline_str, "%Y-%m-%d").date()
+    except Exception:
+        return jsonify({"error": "Formato de data inválido. Use AAAA-MM-DD."}), 400
+
+    old_deadline_str = p.deadline.strftime("%d/%m/%Y") if p.deadline else "N/A"
+    new_deadline_formatted = new_deadline.strftime("%d/%m/%Y")
+
+    p.deadline = new_deadline
+
+    h = PendenciaHistorico(
+        pendencia_id=p.id,
+        user_id=current_user.id,
+        action_type="Prorrogação de Prazo",
+        description=f"Prazo alterado de {old_deadline_str} para {new_deadline_formatted} por {current_user.username.upper()}. Justificativa: {justification}",
+        old_value=old_deadline_str,
+        new_value=new_deadline_formatted
+    )
+    db.session.add(h)
+    db.session.commit()
+    return jsonify({"status": "ok", "message": "Prazo prorrogado com sucesso."})
+
+
+@technical_bp.route("/api/gestao/pendencias/<int:id>/comentarios", methods=["POST"])
+@pendencias_allowed
+def api_pendencia_add_comentario(id):
+    ensure_pendencias_tables()
+    p = Pendencia.query.get_or_404(id)
+    data = request.form if not request.is_json else request.json
+    comment_text = (data.get("comment") or "").strip()
+
+    if not comment_text:
+        return jsonify({"error": "O texto do comentário não pode ser vazio."}), 400
+
+    saved_files = []
+    files = request.files.getlist("comment_attachments")
+    if files:
+        saved_files = _save_pendencia_files(files)
+
+    c = PendenciaComentario(
+        pendencia_id=p.id,
+        user_id=current_user.id,
+        comment=comment_text,
+        attachments_json=json.dumps(saved_files) if saved_files else None
+    )
+    db.session.add(c)
+
+    h = PendenciaHistorico(
+        pendencia_id=p.id,
+        user_id=current_user.id,
+        action_type="Comentário",
+        description=f"Novo comentário adicionado por {current_user.username.upper()}."
+    )
+    db.session.add(h)
+    db.session.commit()
+
+    return jsonify({"status": "ok", "message": "Comentário registrado com sucesso!", "comment": c.to_dict()})
+
+
+@technical_bp.route("/gestao/pendencias/<int:id>/pdf")
+@pendencias_allowed
+def pendencia_pdf(id):
+    ensure_pendencias_tables()
+    p = Pendencia.query.get_or_404(id)
+
+    status_badge = p.status.upper()
+    if p.is_overdue:
+        status_badge += " (ATRASADA)"
+
+    buffer = io.BytesIO()
+    metadata = {
+        "__ref_id__": p.protocol,
+        "Protocolo": p.protocol,
+        "Título": p.title,
+        "Categoria": p.category,
+        "Prioridade": p.priority,
+        "Status": status_badge,
+        "Responsável": p.responsible.username.upper() if p.responsible else "NÃO INFORMADO",
+        "Aberto por": p.creator.username.upper() if p.creator else "SISTEMA",
+        "Data de Abertura": p.created_at.strftime("%d/%m/%Y %H:%M") if p.created_at else "N/A",
+        "Prazo Limite": p.deadline.strftime("%d/%m/%Y") if p.deadline else "N/A"
+    }
+
+    if p.status == "Concluída":
+        metadata["Concluído em"] = p.closed_at.strftime("%d/%m/%Y %H:%M") if p.closed_at else "N/A"
+        metadata["Concluído por"] = p.closed_by.username.upper() if p.closed_by else "N/A"
+    elif p.status == "Cancelada":
+        metadata["Cancelado em"] = p.cancelled_at.strftime("%d/%m/%Y %H:%M") if p.cancelled_at else "N/A"
+        metadata["Cancelado por"] = p.cancelled_by.username.upper() if p.cancelled_by else "N/A"
+        metadata["Justificativa Cancelamento"] = p.cancel_justification or "N/A"
+
+    table_lines = [
+        ("Descrição da Pendência", p.description or "Sem descrição detalhada."),
+    ]
+
+    if p.obs:
+        table_lines.append(("Observações Gerais", p.obs))
+
+    if p.status == "Concluída" and p.solution_description:
+        table_lines.append(("Solução Aplicada", p.solution_description))
+        if p.closing_notes:
+            table_lines.append(("Notas de Conclusão", p.closing_notes))
+
+    hist_entries = list(p.historico) if p.historico else []
+    hist_entries.sort(key=lambda h: h.created_at or datetime.min, reverse=True)
+    if hist_entries:
+        hist_text = "<br/>".join([
+            f"• <b>[{h.created_at.strftime('%d/%m/%Y %H:%M') if h.created_at else 'N/A'}] {h.action_type}</b> ({h.user.username.upper() if h.user else 'Sistema'}): {h.description}"
+            for h in hist_entries
+        ])
+        table_lines.append(("Histórico de Rastreabilidade", hist_text))
+
+    comments = list(p.comentarios) if p.comentarios else []
+    comments.sort(key=lambda c: c.created_at or datetime.min)
+    if comments:
+        comms_text = "<br/>".join([
+            f"• <b>[{c.created_at.strftime('%d/%m/%Y %H:%M') if c.created_at else 'N/A'} - {c.user.username.upper() if c.user else 'Sistema'}]:</b> {c.comment}"
+            for c in comments
+        ])
+        table_lines.append(("Interações e Atualizações", comms_text))
+
+    make_premium_pdf(
+        buffer,
+        f"Controle de Pendência: {p.protocol}",
+        metadata,
+        table_lines
+    )
+    buffer.seek(0)
+
+    return send_file(
+        buffer,
+        mimetype="application/pdf",
+        as_attachment=False,
+        download_name=f"pendencia_{p.protocol}.pdf"
+    )
+
+
+@technical_bp.route("/gestao/pendencias/relatorio/pdf")
+@pendencias_allowed
+def pendencias_relatorio_pdf():
+    ensure_pendencias_tables()
+    q = Pendencia.query
+
+    status_filter = request.args.get("status", "").strip()
+    if status_filter and status_filter.lower() != "todas":
+        q = q.filter(Pendencia.status == status_filter)
+
+    category_filter = request.args.get("category", "").strip()
+    if category_filter and category_filter.lower() != "todas":
+        q = q.filter(Pendencia.category == category_filter)
+
+    priority_filter = request.args.get("priority", "").strip()
+    if priority_filter and priority_filter.lower() != "todas":
+        q = q.filter(Pendencia.priority == priority_filter)
+
+    resp_filter = request.args.get("responsible_id", type=int)
+    if resp_filter:
+        q = q.filter(Pendencia.responsible_id == resp_filter)
+
+    items = q.order_by(Pendencia.created_at.desc()).all()
+
+    total = len(items)
+    abertas = sum(1 for x in items if x.status == "Aberta")
+    em_andamento = sum(1 for x in items if x.status == "Em andamento")
+    concluidas = sum(1 for x in items if x.status == "Concluída")
+    atrasadas = sum(1 for x in items if x.is_overdue)
+    taxa = round((concluidas / total * 100), 1) if total > 0 else 100.0
+
+    now_dt = agora()
+    protocol_rel = f"REL-PEN-{now_dt.year}-{now_dt.strftime('%m%d')}"
+
+    buffer = io.BytesIO()
+    metadata = {
+        "__ref_id__": protocol_rel,
+        "Protocolo": protocol_rel,
+        "Emissão": now_dt.strftime("%d/%m/%Y %H:%M"),
+        "Solicitante": current_user.username.upper(),
+        "Total de Pendências": str(total),
+        "Abertas": str(abertas),
+        "Em Andamento": str(em_andamento),
+        "Concluídas": f"{concluidas} ({taxa}%)",
+        "Atrasadas": str(atrasadas)
+    }
+
+    table_lines = []
+    for p in items:
+        prazo_str = p.deadline.strftime("%d/%m/%Y") if p.deadline else "N/A"
+        if p.is_overdue:
+            prazo_str += " (ATRASADA)"
+        resp_str = p.responsible.username.upper() if p.responsible else "N/A"
+        sol_str = f"<br/><b>Solução:</b> {p.solution_description}" if p.solution_description else ""
+        table_lines.append((
+            f"<b>{p.protocol}</b><br/>{p.category} | {p.priority}",
+            f"<b>{p.title}</b><br/><b>Responsável:</b> {resp_str} | <b>Prazo:</b> {prazo_str} | <b>Status:</b> {p.status.upper()}<br/>{p.description}{sol_str}"
+        ))
+
+    if not table_lines:
+        table_lines.append(("Informação", "Nenhuma pendência encontrada para os filtros selecionados."))
+
+    make_premium_pdf(
+        buffer,
+        "Relatório Gerencial de Pendências Operacionais",
+        metadata,
+        table_lines
+    )
+    buffer.seek(0)
+
+    return send_file(
+        buffer,
+        mimetype="application/pdf",
+        as_attachment=False,
+        download_name=f"relatorio_pendencias_{protocol_rel}.pdf"
+    )
+
+
+@technical_bp.route("/gestao/pendencias/relatorio/excel")
+@pendencias_allowed
+def pendencias_export_excel():
+    ensure_pendencias_tables()
+    import csv
+
+    q = Pendencia.query
+    status_filter = request.args.get("status", "").strip()
+    if status_filter and status_filter.lower() != "todas":
+        q = q.filter(Pendencia.status == status_filter)
+
+    category_filter = request.args.get("category", "").strip()
+    if category_filter and category_filter.lower() != "todas":
+        q = q.filter(Pendencia.category == category_filter)
+
+    resp_filter = request.args.get("responsible_id", type=int)
+    if resp_filter:
+        q = q.filter(Pendencia.responsible_id == resp_filter)
+
+    items = q.order_by(Pendencia.created_at.desc()).all()
+
+    output = io.StringIO()
+    output.write("\ufeff")
+    writer = csv.writer(output, delimiter=";", quoting=csv.QUOTE_MINIMAL)
+
+    writer.writerow([
+        "Protocolo", "Título", "Categoria", "Prioridade", "Status",
+        "Responsável", "Criador", "Data Abertura", "Prazo", "Data Conclusão",
+        "Solução Aplicada", "Observações", "Atrasada", "Cancelada"
+    ])
+
+    for p in items:
+        writer.writerow([
+            p.protocol,
+            p.title or "",
+            p.category or "",
+            p.priority or "",
+            p.status or "",
+            p.responsible.username.upper() if p.responsible else "",
+            p.creator.username.upper() if p.creator else "",
+            p.created_at.strftime("%d/%m/%Y %H:%M") if p.created_at else "",
+            p.deadline.strftime("%d/%m/%Y") if p.deadline else "",
+            p.closed_at.strftime("%d/%m/%Y %H:%M") if p.closed_at else "",
+            p.solution_description or "",
+            p.obs or "",
+            "SIM" if p.is_overdue else "NÃO",
+            "SIM" if p.status == "Cancelada" else "NÃO"
+        ])
+
+    csv_data = output.getvalue()
+    output.close()
+
+    response = Response(
+        csv_data,
+        mimetype="text/csv; charset=utf-8-sig",
+        headers={"Content-Disposition": f"attachment; filename=pendencias_supervisao_{agora().strftime('%Y%m%d_%H%M')}.csv"}
+    )
+    return response

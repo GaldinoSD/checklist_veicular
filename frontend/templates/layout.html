@@ -14,7 +14,7 @@
     {% endif %}
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>ADAPT LINK</title>
+    <title>{{ sys_config.login_title_text or 'Painel de Frota & Supervisão' }}</title>
     <meta name="csrf-token" content="{{ csrf_token }}">
     <script>
       // 🛡️ Injetor Global de Proteção contra CSRF para Formulários e Requisições AJAX (Fetch)
@@ -70,10 +70,19 @@
 
     <!-- ✅ Tailwind config + dark mode -->
     <script>
+      const brandPrimary = "{% if sys_config and sys_config.login_primary_color %}{{ sys_config.login_primary_color }}{% else %}#10b981{% endif %}";
+      const brandSecondary = "{% if sys_config and sys_config.login_secondary_color %}{{ sys_config.login_secondary_color }}{% else %}#064e3b{% endif %}";
       tailwind.config = {
         darkMode: "class",
         theme: {
           extend: {
+            colors: {
+              brand: {
+                DEFAULT: brandPrimary,
+                primary: brandPrimary,
+                secondary: brandSecondary,
+              }
+            },
             fontFamily: {
               sans: ['"Plus Jakarta Sans"', 'Inter', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
             },
@@ -426,6 +435,17 @@
         background-color: {{ sys_config.sidebar_bg_color }} !important;
         border-right-color: rgba(255, 255, 255, 0.08) !important;
       }
+      #sidebar div.border-b,
+      #sidebar div.border-t,
+      #sidebar .border-slate-100,
+      #sidebar .dark\:border-slate-800\/80,
+      #sidebar .border-slate-200 {
+        border-color: rgba(255, 255, 255, 0.08) !important;
+      }
+      #sidebar .bg-slate-50,
+      #sidebar .dark\:bg-slate-800\/60 {
+        background-color: rgba(255, 255, 255, 0.05) !important;
+      }
       {% endif %}
       {% if sys_config.sidebar_text_color %}
       #sidebar a:not([class*="bg-slate-900"]),
@@ -459,7 +479,7 @@
         <!-- TOP: LOGO -->
         <div class="px-4 flex items-center justify-between h-16 shrink-0 border-b border-slate-100 dark:border-slate-800/80">
           <a href="{{ url_for('index') }}" class="flex items-center gap-3 overflow-hidden cursor-pointer" title="Início">
-            <img src="{% if sys_config and sys_config.sidebar_logo %}{{ url_for('static', filename='uploads/layout/' ~ sys_config.sidebar_logo, v='2') }}{% else %}{{ url_for('static', filename='imgsidebar.png', v='2') }}{% endif %}" class="w-auto max-w-[180px] object-contain hover:opacity-90 transition-opacity" style="height: {{ sys_config.sidebar_logo_height or 36 }}px;" alt="Logo">
+            <img src="{% if sys_config and sys_config.sidebar_logo %}{{ url_for('static', filename='uploads/layout/' ~ sys_config.sidebar_logo, v='2') }}{% else %}{{ url_for('static', filename='imgsidebar.png', v='2') }}{% endif %}" class="w-auto max-w-[200px] object-contain hover:opacity-90 transition-opacity" style="height: {{ sys_config.sidebar_logo_height or 44 }}px;" alt="Logo">
           </a>
           <!-- Mobile Close Button inside sidebar -->
           <button onclick="window.closeMobileSidebar ? window.closeMobileSidebar() : document.getElementById('sidebar').classList.remove('mobile-open')" class="lg:hidden p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200" aria-label="Fechar menu">
@@ -479,7 +499,8 @@
               ('Relatórios', 'reports', 'fa-file-invoice', 'relatorios'),
               ('Avarias / O.S.', 'avarias_registro', 'fa-wrench', 'avarias'),
               ('Controle Ferramentas', 'controle_ferramentas_atual', 'fa-toolbox', 'controle_ferramentas_atual'),
-              ('APRs de Campo', 'apr_gerenciamento', 'fa-shield-halved', 'apr_gerenciamento')
+              ('APRs de Campo', 'apr_gerenciamento', 'fa-shield-halved', 'apr_gerenciamento'),
+              ('Pendências', 'pendencias_supervisao', 'fa-clock-rotate-left', 'pendencias_supervisao')
             ] %}
             
             {% set ns_gerenc = namespace(has_any=false) %}
@@ -887,7 +908,7 @@
             </button>
             
             <div class="hidden sm:flex flex-col whitespace-nowrap flex-shrink-0">
-              <div class="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Painel de Controle</div>
+              <div class="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">{{ sys_config.login_title_text or 'Painel de Controle' }}</div>
               <div class="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate max-w-[240px]" title="{{ page_title or 'Checklist Veicular' }}">{{ page_title or 'Checklist Veicular' }}</div>
             </div>
           </div>

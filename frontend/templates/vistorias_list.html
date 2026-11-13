@@ -63,6 +63,7 @@
     <table class="w-full text-left text-xs text-slate-600 dark:text-slate-300">
       <thead class="bg-slate-50/80 dark:bg-slate-800/80 border-b border-slate-200/80 dark:border-slate-800 text-[11px] font-extrabold text-slate-400 dark:text-slate-400 uppercase tracking-wider">
         <tr>
+          <th class="px-4 py-4 w-32">Protocolo</th>
           <th class="px-6 py-4">Data</th>
           <th class="px-4 py-4">Placa</th>
           <th class="px-4 py-4">KM</th>
@@ -121,7 +122,7 @@
             <tbody>
               <tr class="bg-slate-50/90 dark:bg-slate-800/90 border-y border-slate-200/80 dark:border-slate-800 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-all select-none" 
                   onclick="toggleMonthGroup({{ ns.group_index }})">
-                <td colspan="6" class="px-6 py-3.5 text-blue-700 dark:text-blue-300 font-extrabold uppercase tracking-wider text-xs">
+                <td colspan="7" class="px-6 py-3.5 text-blue-700 dark:text-blue-300 font-extrabold uppercase tracking-wider text-xs">
                   <div class="flex items-center justify-between">
                     <span class="flex items-center gap-2.5">
                       <div class="w-7 h-7 rounded-lg bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center border border-blue-200 dark:border-blue-900/50">
@@ -145,6 +146,11 @@
           {% endif %}
 
           <tr class="border-b border-slate-200/80 dark:border-slate-800 hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition">
+            <td class="px-4 py-4 whitespace-nowrap font-mono font-bold">
+              <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-900/50 text-[11px] text-blue-600 dark:text-blue-400 font-semibold tracking-wide">
+                {{ r.protocol }}
+              </span>
+            </td>
             <td class="px-6 py-4 whitespace-nowrap font-semibold">{{ r.created_at.strftime('%d/%m/%Y %H:%M') }}</td>
             <td class="px-4 py-4 font-mono font-bold">{{ r.vehicle.plate }}</td>
             <td class="px-4 py-4 font-mono text-slate-500">{{ r.km or '-' }}</td>
@@ -178,7 +184,7 @@
         {% else %}
           <tbody>
             <tr>
-              <td class="py-3 text-slate-500 dark:text-gray-400 text-center uppercase text-[10px] font-black tracking-widest" colspan="6">Sem registros.</td>
+              <td class="py-3 text-slate-500 dark:text-gray-400 text-center uppercase text-[10px] font-black tracking-widest" colspan="7">Sem registros.</td>
             </tr>
           </tbody>
         {% endfor %}
@@ -512,30 +518,30 @@
 </dialog>
 
 <!-- ===================================
-     ✅ MODAL: VISUALIZAR VISTORIA (DISCRETO & EXECUTIVO)
+     ✅ MODAL: VISUALIZAR VISTORIA (DESIGN EXECUTIVO PREMIUM)
      =================================== -->
 <div id="modalVerVistoria" class="fixed inset-0 hidden items-center justify-center z-[100] p-4">
-    <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="closeVerVistoriaModal()"></div>
-    <div class="relative w-full max-w-4xl rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 shadow-2xl overflow-hidden flex flex-col max-h-[90vh] text-left animate-fade-in">
+    <div class="absolute inset-0 bg-slate-950/70 backdrop-blur-md" onclick="closeVerVistoriaModal()"></div>
+    <div class="relative w-full max-w-4xl rounded-[2rem] bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-white/10 shadow-2xl overflow-hidden flex flex-col max-h-[92vh] text-left animate-scale-in p-6">
         
-        <!-- Header Discreto -->
-        <div class="flex items-start justify-between pb-4 border-b border-slate-100 dark:border-white/5 mb-4 shrink-0 gap-4">
-            <div class="flex items-center gap-3">
-                <div class="w-10 h-10 rounded-xl bg-slate-100 dark:bg-white/5 flex items-center justify-center text-slate-700 dark:text-slate-300 shrink-0">
-                    <i class="fa-solid fa-car-side"></i>
+        <!-- Header Executivo -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between pb-5 border-b border-slate-100 dark:border-white/5 mb-4 shrink-0 gap-4">
+            <div class="flex items-center gap-3.5">
+                <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-700 text-white flex items-center justify-center shadow-lg shadow-emerald-500/20 shrink-0">
+                    <i class="fa-solid fa-car-side text-lg"></i>
                 </div>
                 <div>
                     <div class="flex items-center gap-2 flex-wrap">
                         <h3 class="text-base font-black text-slate-800 dark:text-white" id="verModalTitle">Vistoria #---</h3>
-                        <span id="verModalStatusBadge" class="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border"></span>
+                        <span id="verModalStatusBadge" class="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full border shadow-sm"></span>
                     </div>
-                    <p class="text-xs text-slate-400 mt-0.5" id="verModalSubtitle">Carregando informações...</p>
+                    <p class="text-xs text-slate-400 mt-1" id="verModalSubtitle">Carregando informações...</p>
                 </div>
             </div>
-            <div class="flex items-center gap-3">
+            <div class="flex items-center gap-3 self-end sm:self-center">
                 <div id="verModalSummaryPills" class="hidden sm:flex items-center gap-1.5"></div>
-                <button type="button" onclick="closeVerVistoriaModal()" class="w-8 h-8 rounded-lg hover:bg-slate-100 dark:hover:bg-white/5 flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-white transition-all">
-                    <i class="fa-solid fa-xmark text-sm"></i>
+                <button type="button" onclick="closeVerVistoriaModal()" class="w-9 h-9 rounded-xl hover:bg-slate-100 dark:hover:bg-white/10 flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-white transition-all">
+                    <i class="fa-solid fa-xmark text-base"></i>
                 </button>
             </div>
         </div>
@@ -1362,7 +1368,8 @@ window.onerror = function(message, source, lineno, colno, error) {
         };
 
         window.renderVistoriaDetail = function(data) {
-            document.getElementById('verModalTitle').textContent = `Vistoria #${data.id} • ${data.plate}`;
+            const proto = data.protocol || `VIS-${data.id}`;
+            document.getElementById('verModalTitle').innerHTML = `<span class="font-mono text-blue-600 dark:text-blue-400 font-bold">${proto}</span> • ${data.plate}`;
             
             const turnoFormatted = data.turno === 'inicio' ? 'Início do Expediente' : (data.turno === 'durante' ? 'Durante Expediente' : 'Fim do Expediente');
             const localFormatted = data.local ? ` • ${data.local}` : '';

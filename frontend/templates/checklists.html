@@ -38,6 +38,11 @@
                     <i class="fa-solid fa-file-import text-xs"></i> Importar
                 </button>
             </form>
+
+            <!-- BOTÃO RELATÓRIO MENSAL PDF -->
+            <button onclick="abrirModalRelatorioMensal()" type="button" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-semibold text-xs shadow-sm shadow-rose-500/20 transition-all flex items-center gap-2 cursor-pointer active:scale-95">
+                <i class="fa-solid fa-file-pdf text-xs"></i> Relatório Mensal
+            </button>
         </div>
     </div>
 </div>
@@ -50,6 +55,7 @@
 
       <thead class="bg-slate-50/80 dark:bg-slate-800/80 border-b border-slate-200/80 dark:border-slate-800 text-[11px] font-extrabold text-slate-400 dark:text-slate-400 uppercase tracking-wider">
         <tr>
+          <th class="px-4 py-4 w-32">Protocolo</th>
           <th class="px-6 py-4 w-40">Data</th>
           <th class="px-4 py-4 w-32">Placa</th>
           <th class="px-4 py-4 w-40">Técnico</th>
@@ -109,7 +115,7 @@
             <tbody>
               <tr class="bg-slate-50/90 dark:bg-slate-800/90 border-y border-slate-200/80 dark:border-slate-800 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-all select-none" 
                   onclick="toggleMonthGroup({{ ns.group_index }})">
-                <td colspan="6" class="px-6 py-3.5 text-blue-700 dark:text-blue-300 font-extrabold uppercase tracking-wider text-xs">
+                <td colspan="7" class="px-6 py-3.5 text-blue-700 dark:text-blue-300 font-extrabold uppercase tracking-wider text-xs">
                   <div class="flex items-center justify-between">
                     <span class="flex items-center gap-2.5">
                       <div class="w-7 h-7 rounded-lg bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center border border-blue-200 dark:border-blue-900/50">
@@ -133,6 +139,13 @@
           {% endif %}
 
           <tr class="border-b border-slate-200/80 dark:border-slate-800 hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition">
+
+            <!-- Protocolo -->
+            <td class="px-4 py-4 whitespace-nowrap font-mono font-bold">
+              <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-900/50 text-[11px] text-blue-600 dark:text-blue-400 font-semibold tracking-wide">
+                {{ c.protocol }}
+              </span>
+            </td>
 
             <!-- Data -->
             <td class="px-6 py-4 whitespace-nowrap font-semibold">
@@ -188,7 +201,7 @@
         {% else %}
           <tbody>
             <tr>
-              <td class="py-6 text-slate-500 dark:text-gray-400 text-center uppercase text-[10px] font-black tracking-widest" colspan="6">
+              <td class="py-6 text-slate-500 dark:text-gray-400 text-center uppercase text-[10px] font-black tracking-widest" colspan="7">
                 Sem registros.
               </td>
             </tr>
@@ -207,84 +220,266 @@
 
 </div>
 
-<!-- ✅ MODAL CHECKLIST DETAIL (DISCRETO & EXECUTIVO) -->
+<!-- ========================================================= -->
+<!-- 📄 MODAL: DETALHES DO CHECKLIST (DESIGN EXECUTIVO PREMIUM) -->
+<!-- ========================================================= -->
 <div id="modalChecklistDetail" class="fixed inset-0 hidden items-center justify-center z-[100] p-4">
-  <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-sm" onclick="closeModal('modalChecklistDetail')"></div>
-  <div class="relative w-full max-w-4xl rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 shadow-2xl overflow-hidden flex flex-col max-h-[90vh] text-left">
+  <div class="absolute inset-0 bg-slate-950/70 backdrop-blur-md" onclick="closeModal('modalChecklistDetail')"></div>
+  <div class="relative w-full max-w-4xl rounded-[2rem] bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-white/10 shadow-2xl overflow-hidden flex flex-col max-h-[92vh] text-left animate-scale-in">
     
-    <!-- Header Discreto -->
-    <div class="p-6 border-b border-slate-100 dark:border-white/5 flex items-start justify-between gap-4 shrink-0">
-      <div class="flex items-center gap-3">
-        <div class="w-10 h-10 rounded-xl bg-slate-100 dark:bg-white/5 flex items-center justify-center text-slate-700 dark:text-slate-300 shrink-0">
-          <i class="fa-solid fa-clipboard-check"></i>
+    <!-- Header Executivo -->
+    <div class="px-6 py-5 border-b border-slate-100 dark:border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-50/60 dark:bg-slate-900/40 shrink-0">
+      <div class="flex items-center gap-3.5">
+        <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center shadow-lg shadow-blue-500/20 shrink-0">
+          <i class="fa-solid fa-clipboard-check text-lg"></i>
         </div>
         <div>
           <div class="flex items-center gap-2 flex-wrap">
-            <h3 id="modalChecklistTitle" class="text-base font-black text-slate-800 dark:text-white">Checklist #---</h3>
-            <span id="modalChecklistStatusBadge" class="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border"></span>
+            <span id="modalChecklistProtocolBadge" class="font-mono text-xs font-black px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-900/50 flex items-center gap-1.5 shadow-sm">
+              <span id="modalChecklistProtoText">CHK-0000</span>
+              <button type="button" onclick="copiarProtocoloChecklist()" class="hover:text-blue-900 dark:hover:text-white transition" title="Copiar Protocolo">
+                <i class="fa-regular fa-copy text-[10px]"></i>
+              </button>
+            </span>
+            <span id="modalChecklistPlateBadge" class="font-mono text-xs font-bold text-slate-800 dark:text-white px-2 py-0.5 rounded-md bg-slate-200/70 dark:bg-white/10"></span>
+            <span id="modalChecklistVehicleModel" class="text-xs text-slate-500 dark:text-slate-400 font-medium hidden sm:inline"></span>
+            <span id="modalChecklistStatusBadge" class="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full border shadow-sm"></span>
           </div>
-          <p id="modalChecklistSubtitle" class="text-xs text-slate-400 mt-0.5">Carregando informações...</p>
+          <p id="modalChecklistSubtitle" class="text-xs text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-3 flex-wrap">
+            <!-- Injetado dinamicamente -->
+          </p>
         </div>
       </div>
-      <div class="flex items-center gap-3">
-        <div id="modalChecklistSummaryPills" class="hidden sm:flex items-center gap-1.5"></div>
-        <button type="button" onclick="closeModal('modalChecklistDetail')" class="w-8 h-8 rounded-lg hover:bg-slate-100 dark:hover:bg-white/5 flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-white transition-all">
-          <i class="fa-solid fa-xmark text-sm"></i>
+      
+      <div class="flex items-center gap-2 self-end sm:self-center">
+        <a id="modalChecklistPdfBtn" href="#" target="_blank"
+           class="px-3.5 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold text-xs shadow-md shadow-rose-500/20 transition-all flex items-center gap-2 cursor-pointer active:scale-95">
+          <i class="fa-solid fa-file-pdf"></i>
+          <span>PDF Oficial</span>
+        </a>
+        <button type="button" onclick="closeModal('modalChecklistDetail')" class="w-9 h-9 rounded-xl hover:bg-slate-200 dark:hover:bg-white/10 flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-white transition-all">
+          <i class="fa-solid fa-xmark text-base"></i>
         </button>
       </div>
     </div>
 
-    <!-- Content: Tabela Estruturada & Limpa -->
-    <div class="flex-1 overflow-y-auto p-6 custom-scrollbar space-y-4">
-      
-      <!-- Tabela Compacta de Itens -->
-      <div class="overflow-x-auto max-h-[50vh] custom-scrollbar border border-slate-200/80 dark:border-white/10 rounded-xl">
-        <table class="w-full text-left text-xs border-collapse">
-          <thead class="bg-slate-50 dark:bg-slate-800/80 text-slate-500 dark:text-slate-400 font-bold uppercase text-[10px] tracking-wider sticky top-0 z-10 border-b border-slate-200/80 dark:border-white/10">
-            <tr>
-              <th class="py-2.5 px-3 w-10 text-center">#</th>
-              <th class="py-2.5 px-3">Item Inspecionado</th>
-              <th class="py-2.5 px-3 w-40">Resposta / Situação</th>
-              <th class="py-2.5 px-3">Justificativa / Observação</th>
-            </tr>
-          </thead>
-          <tbody id="modalChecklistItemsTbody" class="divide-y divide-slate-100 dark:divide-white/5 bg-white dark:bg-slate-900">
-            <tr>
-              <td colspan="4" class="text-center py-8 text-slate-400 text-xs">
-                <i class="fa-solid fa-spinner animate-spin mr-2"></i> Carregando itens...
-              </td>
-            </tr>
-          </tbody>
-        </table>
+    <!-- KPI Summary Strip -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 px-6 py-4 bg-slate-100/50 dark:bg-white/[0.02] border-b border-slate-100 dark:border-white/5 shrink-0 text-xs">
+      <div class="p-3 bg-white dark:bg-slate-800/80 rounded-2xl border border-slate-200/60 dark:border-white/5 flex items-center justify-between shadow-sm">
+        <div>
+          <span class="text-[10px] font-black uppercase text-slate-400 block tracking-wider">Total Itens</span>
+          <span id="kpi-chk-total" class="text-base font-black text-slate-800 dark:text-white">0</span>
+        </div>
+        <div class="w-8 h-8 rounded-xl bg-slate-100 dark:bg-white/5 text-slate-500 flex items-center justify-center">
+          <i class="fa-solid fa-list-check text-xs"></i>
+        </div>
       </div>
 
-      <!-- Observações Gerais (se houver) -->
-      <div id="modalChecklistNotesContainer" class="hidden p-3 bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 rounded-xl text-xs">
-        <span class="font-bold text-slate-700 dark:text-slate-300 block mb-1 text-[11px] uppercase tracking-wider">
-          <i class="fa-regular fa-comment-dots mr-1"></i> Observações Gerais:
-        </span>
-        <p id="modalChecklistNotes" class="text-slate-600 dark:text-slate-400 italic"></p>
+      <div class="p-3 bg-white dark:bg-slate-800/80 rounded-2xl border border-slate-200/60 dark:border-white/5 flex items-center justify-between shadow-sm">
+        <div>
+          <span class="text-[10px] font-black uppercase text-emerald-600 dark:text-emerald-400 block tracking-wider">Conformes</span>
+          <span id="kpi-chk-ok" class="text-base font-black text-emerald-600 dark:text-emerald-400">0</span>
+        </div>
+        <div class="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 flex items-center justify-center">
+          <i class="fa-solid fa-circle-check text-xs"></i>
+        </div>
       </div>
 
-      <!-- Photos Gallery (se houver) -->
-      <div id="modalChecklistPhotosContainer" class="hidden pt-2">
-        <span class="font-bold text-slate-700 dark:text-slate-300 block mb-2 text-[11px] uppercase tracking-wider">
-          <i class="fa-solid fa-camera mr-1"></i> Registros Fotográficos:
-        </span>
-        <div id="modalChecklistPhotos" class="grid grid-cols-3 sm:grid-cols-6 gap-2.5">
-          <!-- Injetado dinamicamente -->
+      <div class="p-3 bg-white dark:bg-slate-800/80 rounded-2xl border border-slate-200/60 dark:border-white/5 flex items-center justify-between shadow-sm">
+        <div>
+          <span class="text-[10px] font-black uppercase text-rose-600 dark:text-rose-400 block tracking-wider">Não Conformes</span>
+          <span id="kpi-chk-non-ok" class="text-base font-black text-rose-600 dark:text-rose-400">0</span>
+        </div>
+        <div class="w-8 h-8 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-600 flex items-center justify-center">
+          <i class="fa-solid fa-triangle-exclamation text-xs"></i>
+        </div>
+      </div>
+
+      <div class="p-3 bg-white dark:bg-slate-800/80 rounded-2xl border border-slate-200/60 dark:border-white/5 flex items-center justify-between shadow-sm">
+        <div>
+          <span class="text-[10px] font-black uppercase text-blue-600 dark:text-blue-400 block tracking-wider">Quilometragem</span>
+          <span id="kpi-chk-km" class="text-base font-black text-blue-600 dark:text-blue-400">-</span>
+        </div>
+        <div class="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 flex items-center justify-center">
+          <i class="fa-solid fa-gauge-high text-xs"></i>
         </div>
       </div>
     </div>
 
+    <!-- Tab Bar -->
+    <div class="flex items-center gap-2 px-6 pt-3 border-b border-slate-100 dark:border-white/5 bg-slate-50/30 dark:bg-slate-900/20 shrink-0">
+      <button type="button" onclick="switchChecklistDetailTab('itens')" id="tab-btn-chk-itens"
+              class="px-4 py-2.5 font-black text-xs uppercase tracking-wider border-b-2 border-blue-600 text-blue-600 dark:text-blue-400 transition-all flex items-center gap-2">
+        <i class="fa-solid fa-clipboard-list text-xs"></i>
+        <span>Itens Inspecionados</span>
+        <span id="tab-chk-itens-badge" class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300">0</span>
+      </button>
+
+      <button type="button" onclick="switchChecklistDetailTab('fotos')" id="tab-btn-chk-fotos"
+              class="px-4 py-2.5 font-bold text-xs uppercase tracking-wider border-b-2 border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white transition-all flex items-center gap-2">
+        <i class="fa-solid fa-camera text-xs"></i>
+        <span>Fotos & Evidências</span>
+        <span id="tab-chk-fotos-badge" class="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-slate-200/70 dark:bg-white/10 text-slate-600 dark:text-slate-300">0</span>
+      </button>
+
+      <button type="button" onclick="switchChecklistDetailTab('resumo')" id="tab-btn-chk-resumo"
+              class="px-4 py-2.5 font-bold text-xs uppercase tracking-wider border-b-2 border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white transition-all flex items-center gap-2">
+        <i class="fa-solid fa-car text-xs"></i>
+        <span>Veículo & Assinatura</span>
+      </button>
+    </div>
+
+    <!-- Content Tabs -->
+    <div class="flex-1 overflow-y-auto p-6 custom-scrollbar">
+      
+      <!-- ABA 1: ITENS INSPECIONADOS -->
+      <div id="pane-chk-itens" class="space-y-4">
+        <!-- Filtros Rápidos da Inspeção -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2">
+          <div class="flex items-center gap-2">
+            <button type="button" onclick="filterChecklistItems('todos')" id="filter-chk-btn-todos"
+                    class="px-3 py-1.5 rounded-xl font-bold text-xs bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm transition">
+              Todos os Itens
+            </button>
+            <button type="button" onclick="filterChecklistItems('problemas')" id="filter-chk-btn-problemas"
+                    class="px-3 py-1.5 rounded-xl font-bold text-xs text-rose-600 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/50 border border-rose-200/60 dark:border-rose-900/50 transition flex items-center gap-1.5">
+              <i class="fa-solid fa-triangle-exclamation text-[10px]"></i>
+              <span>Apenas Não Conformes</span>
+              <span id="badge-filter-problemas-count" class="w-4 h-4 rounded-full bg-rose-600 text-white text-[9px] flex items-center justify-center font-black">0</span>
+            </button>
+          </div>
+
+          <div class="relative w-full sm:w-64">
+            <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
+            <input type="text" id="chk-item-search-input" oninput="searchChecklistItems()" placeholder="Buscar item..."
+                   class="w-full pl-8 pr-3 py-1.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-800 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-blue-500">
+          </div>
+        </div>
+
+        <!-- Lista Estruturada de Itens -->
+        <div class="overflow-x-auto rounded-2xl border border-slate-200/80 dark:border-white/10 shadow-sm">
+          <table class="w-full text-left text-xs border-collapse">
+            <thead class="bg-slate-50 dark:bg-slate-800/90 text-slate-500 dark:text-slate-400 font-extrabold uppercase text-[10px] tracking-wider sticky top-0 z-10 border-b border-slate-200/80 dark:border-white/10">
+              <tr>
+                <th class="py-3 px-3.5 w-12 text-center">#</th>
+                <th class="py-3 px-4">Item Inspecionado</th>
+                <th class="py-3 px-4 w-44">Situação / Resposta</th>
+                <th class="py-3 px-4">Justificativa / Observação</th>
+              </tr>
+            </thead>
+            <tbody id="modalChecklistItemsTbody" class="divide-y divide-slate-100 dark:divide-white/5 bg-white dark:bg-slate-900">
+              <tr>
+                <td colspan="4" class="text-center py-8 text-slate-400 text-xs">
+                  <i class="fa-solid fa-spinner animate-spin mr-2"></i> Carregando itens...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ABA 2: FOTOS & EVIDÊNCIAS -->
+      <div id="pane-chk-fotos" class="hidden space-y-4">
+        <div class="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-white/5">
+          <span class="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider flex items-center gap-2">
+            <i class="fa-solid fa-images text-blue-500"></i> Fotos Registradas no Checklist
+          </span>
+          <span class="text-[11px] text-slate-400">Clique na foto para ampliar</span>
+        </div>
+
+        <div id="modalChecklistPhotosGrid" class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-5 gap-3.5">
+          <!-- Injetado dinamicamente -->
+        </div>
+
+        <div id="modalChecklistNoPhotos" class="hidden py-12 text-center text-slate-400">
+          <i class="fa-solid fa-camera-slash text-3xl mb-2 opacity-50 block"></i>
+          <p class="text-xs font-semibold">Nenhuma fotografia anexada a este checklist.</p>
+        </div>
+      </div>
+
+      <!-- ABA 3: VEÍCULO & ASSINATURA -->
+      <div id="pane-chk-resumo" class="hidden space-y-4">
+        <!-- Ficha Técnica do Veículo -->
+        <div class="p-4 bg-slate-50 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/5 rounded-2xl space-y-3">
+          <h4 class="font-extrabold text-xs text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-2">
+            <i class="fa-solid fa-car-side text-blue-500"></i> Ficha do Veículo Inspecionado
+          </h4>
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+            <div class="p-3 bg-white dark:bg-slate-800/70 rounded-xl border border-slate-200/60 dark:border-white/5">
+              <span class="text-[10px] font-black uppercase text-slate-400 block mb-0.5">Placa</span>
+              <span id="resumo-chk-placa" class="font-mono font-bold text-slate-800 dark:text-white"></span>
+            </div>
+            <div class="p-3 bg-white dark:bg-slate-800/70 rounded-xl border border-slate-200/60 dark:border-white/5">
+              <span class="text-[10px] font-black uppercase text-slate-400 block mb-0.5">Modelo</span>
+              <span id="resumo-chk-modelo" class="font-bold text-slate-800 dark:text-white"></span>
+            </div>
+            <div class="p-3 bg-white dark:bg-slate-800/70 rounded-xl border border-slate-200/60 dark:border-white/5">
+              <span class="text-[10px] font-black uppercase text-slate-400 block mb-0.5">Técnico Condutor</span>
+              <span id="resumo-chk-tecnico" class="font-bold text-slate-800 dark:text-white"></span>
+            </div>
+            <div class="p-3 bg-white dark:bg-slate-800/70 rounded-xl border border-slate-200/60 dark:border-white/5">
+              <span class="text-[10px] font-black uppercase text-slate-400 block mb-0.5">Quilometragem</span>
+              <span id="resumo-chk-km" class="font-bold text-slate-800 dark:text-white"></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Observações Gerais -->
+        <div id="modalChecklistNotesContainer" class="p-4 bg-slate-50 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/5 rounded-2xl">
+          <h4 class="font-extrabold text-xs text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2 flex items-center gap-2">
+            <i class="fa-regular fa-comment-dots text-blue-500"></i> Observações Gerais do Colaborador
+          </h4>
+          <p id="modalChecklistNotes" class="text-xs text-slate-600 dark:text-slate-300 italic leading-relaxed"></p>
+        </div>
+
+        <!-- Assinatura Digital -->
+        <div class="p-4 bg-slate-50 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/5 rounded-2xl">
+          <h4 class="font-extrabold text-xs text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2.5 flex items-center gap-2">
+            <i class="fa-solid fa-signature text-blue-500"></i> Termo de Responsabilidade & Assinatura Digital
+          </h4>
+          <div id="modalChecklistSignatureBox" class="p-4 bg-white dark:bg-slate-800/80 rounded-xl border border-slate-200/60 dark:border-white/5 flex flex-col sm:flex-row items-center gap-4">
+            <div id="modalChecklistSigImgWrapper" class="h-20 w-48 border border-slate-200/80 dark:border-white/10 rounded-lg p-1 bg-slate-50/50 dark:bg-white/5 flex items-center justify-center shrink-0">
+              <img id="modalChecklistSignatureImg" src="" alt="Assinatura" class="max-h-full max-w-full object-contain">
+              <span id="modalChecklistNoSigText" class="text-[11px] text-slate-400 italic hidden">Sem assinatura gráfica</span>
+            </div>
+            <div class="text-xs space-y-1">
+              <p class="font-bold text-slate-800 dark:text-white flex items-center gap-1.5">
+                <i class="fa-solid fa-shield-halved text-emerald-600 text-xs"></i> Assinado digitalmente pelo colaborador
+              </p>
+              <p class="text-slate-500 dark:text-slate-400 text-[11px]">
+                O condutor declarou conformidade e responsabilidade pelas informações inseridas neste checklist.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
     <!-- Footer Discreto -->
-    <div class="px-6 py-4 bg-slate-50 dark:bg-white/[0.02] border-t border-slate-100 dark:border-white/5 flex items-center justify-end gap-3 shrink-0">
-      <a id="modalChecklistPdfBtn" href="#" target="_blank"
-         class="px-4 py-2 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 rounded-xl font-bold text-xs tracking-wider shadow-sm transition-all flex items-center gap-1.5">
-        <i class="fa-solid fa-file-pdf text-xs"></i> Gerar PDF Completo
-      </a>
+    <div class="px-6 py-4 bg-slate-50 dark:bg-slate-900/60 border-t border-slate-100 dark:border-white/5 flex items-center justify-between shrink-0">
+      <span class="text-[11px] text-slate-400">
+        <i class="fa-solid fa-clock-rotate-left mr-1"></i> Dados auditados pelo sistema
+      </span>
       <button type="button" onclick="closeModal('modalChecklistDetail')"
-              class="px-4 py-2 bg-slate-200 hover:bg-slate-300 dark:bg-white/10 dark:hover:bg-white/20 text-slate-700 dark:text-slate-200 rounded-xl font-bold text-xs tracking-wider transition-all">
+              class="px-5 py-2.5 bg-slate-200 hover:bg-slate-300 dark:bg-white/10 dark:hover:bg-white/20 text-slate-700 dark:text-slate-200 rounded-xl font-bold text-xs tracking-wider transition-all cursor-pointer">
+        Fechar Detalhes
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================== -->
+<!-- 🔍 LIGHTBOX PARA FOTOS DO CHECKLIST -->
+<!-- ============================================== -->
+<div id="modalChecklistLightbox" class="fixed inset-0 hidden items-center justify-center z-[150] p-4 bg-slate-950/90 backdrop-blur-lg" onclick="closeChecklistLightbox()">
+  <div class="relative max-w-5xl max-h-[90vh] flex flex-col items-center" onclick="event.stopPropagation()">
+    <img id="modalChecklistLightboxImg" src="" class="max-w-full max-h-[80vh] rounded-2xl shadow-2xl object-contain border border-white/10" alt="Foto ampliada">
+    <div class="mt-4 flex items-center gap-3">
+      <a id="modalChecklistLightboxDownload" href="#" download class="px-4 py-2 bg-white/20 hover:bg-white/30 text-white rounded-xl text-xs font-bold transition flex items-center gap-1.5">
+        <i class="fa-solid fa-download"></i> Baixar Imagem
+      </a>
+      <button type="button" onclick="closeChecklistLightbox()" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-bold transition">
         Fechar
       </button>
     </div>
@@ -292,6 +487,128 @@
 </div>
 
 <script>
+// Estado de Itens do Checklist para filtro
+let currentChecklistItems = [];
+let currentChecklistFilter = 'todos';
+let currentChecklistProto = '';
+
+function switchChecklistDetailTab(tab) {
+    const tabs = ['itens', 'fotos', 'resumo'];
+    tabs.forEach(t => {
+        const btn = document.getElementById(`tab-btn-chk-${t}`);
+        const pane = document.getElementById(`pane-chk-${t}`);
+        if (t === tab) {
+            pane.classList.remove('hidden');
+            btn.className = "px-4 py-2.5 font-black text-xs uppercase tracking-wider border-b-2 border-blue-600 text-blue-600 dark:text-blue-400 transition-all flex items-center gap-2";
+        } else {
+            pane.classList.add('hidden');
+            btn.className = "px-4 py-2.5 font-bold text-xs uppercase tracking-wider border-b-2 border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white transition-all flex items-center gap-2";
+        }
+    });
+}
+
+function copiarProtocoloChecklist() {
+    if (!currentChecklistProto) return;
+    navigator.clipboard.writeText(currentChecklistProto).then(() => {
+        const el = document.getElementById('modalChecklistProtoText');
+        const orig = el.innerText;
+        el.innerText = 'Copiado!';
+        setTimeout(() => { el.innerText = orig; }, 1500);
+    });
+}
+
+function openChecklistLightbox(src) {
+    document.getElementById('modalChecklistLightboxImg').src = src;
+    document.getElementById('modalChecklistLightboxDownload').href = src;
+    document.getElementById('modalChecklistLightbox').classList.remove('hidden');
+    document.getElementById('modalChecklistLightbox').classList.add('flex');
+}
+
+function closeChecklistLightbox() {
+    document.getElementById('modalChecklistLightbox').classList.add('hidden');
+    document.getElementById('modalChecklistLightbox').classList.remove('flex');
+}
+
+function filterChecklistItems(tipo) {
+    currentChecklistFilter = tipo;
+    const btnTodos = document.getElementById('filter-chk-btn-todos');
+    const btnProb = document.getElementById('filter-chk-btn-problemas');
+
+    if (tipo === 'problemas') {
+        btnProb.className = "px-3 py-1.5 rounded-xl font-bold text-xs bg-rose-600 text-white shadow-sm transition flex items-center gap-1.5";
+        btnTodos.className = "px-3 py-1.5 rounded-xl font-bold text-xs text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition";
+    } else {
+        btnTodos.className = "px-3 py-1.5 rounded-xl font-bold text-xs bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm transition";
+        btnProb.className = "px-3 py-1.5 rounded-xl font-bold text-xs text-rose-600 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/50 border border-rose-200/60 dark:border-rose-900/50 transition flex items-center gap-1.5";
+    }
+    renderChecklistItemsTable();
+}
+
+function searchChecklistItems() {
+    renderChecklistItemsTable();
+}
+
+function renderChecklistItemsTable() {
+    const tbody = document.getElementById('modalChecklistItemsTbody');
+    const searchVal = (document.getElementById('chk-item-search-input').value || '').toLowerCase().trim();
+
+    let filtered = currentChecklistItems;
+    if (currentChecklistFilter === 'problemas') {
+        filtered = filtered.filter(item => item.isNonOk);
+    }
+    if (searchVal) {
+        filtered = filtered.filter(item => 
+            item.nome.toLowerCase().includes(searchVal) || 
+            item.respText.toLowerCase().includes(searchVal) || 
+            item.justificativa.toLowerCase().includes(searchVal)
+        );
+    }
+
+    if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" class="text-center py-10 text-slate-400 text-xs">
+            <i class="fa-solid fa-filter-circle-xmark text-2xl mb-1.5 block opacity-40"></i>
+            Nenhum item corresponde ao filtro selecionado.
+        </td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = filtered.map((item, idx) => {
+        const bgRow = item.isNonOk 
+            ? 'bg-rose-50/60 dark:bg-rose-950/20 border-l-4 border-l-rose-500' 
+            : 'hover:bg-slate-50/80 dark:hover:bg-white/[0.02]';
+            
+        let chip = '';
+        if (item.isNonOk) {
+            chip = `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-black bg-rose-100 text-rose-800 dark:bg-rose-900/60 dark:text-rose-200 border border-rose-300 dark:border-rose-800">
+                <i class="fa-solid fa-triangle-exclamation text-[9px]"></i> ${item.respText}
+            </span>`;
+        } else if (item.isGood) {
+            chip = `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400 border border-emerald-200/80 dark:border-emerald-800/40">
+                <i class="fa-solid fa-circle-check text-[9px]"></i> ${item.respText}
+            </span>`;
+        } else {
+            chip = `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-semibold bg-slate-100 text-slate-700 dark:bg-white/5 dark:text-slate-300 border border-slate-200 dark:border-white/10">
+                ${item.respText}
+            </span>`;
+        }
+
+        const justifHtml = item.justificativa 
+            ? `<div class="p-2 rounded-xl bg-white dark:bg-slate-900 border border-rose-200 dark:border-rose-900/40 text-rose-700 dark:text-rose-300 text-[11px] font-medium leading-snug">
+                 <i class="fa-solid fa-quote-left text-[9px] mr-1 text-rose-400"></i>${item.justificativa}
+               </div>`
+            : `<span class="text-slate-300 dark:text-slate-600">-</span>`;
+
+        return `
+            <tr class="${bgRow} transition-colors">
+                <td class="py-3 px-3.5 text-center text-slate-400 font-mono text-[11px]">${idx + 1}</td>
+                <td class="py-3 px-4 font-bold text-slate-800 dark:text-slate-100 text-xs">${item.nome}</td>
+                <td class="py-3 px-4">${chip}</td>
+                <td class="py-3 px-4">${justifHtml}</td>
+            </tr>
+        `;
+    }).join('');
+}
+
 function toggleMonthGroup(index) {
     const tbody = document.getElementById(`tbody-group-${index}`);
     const chevron = document.getElementById(`chevron-group-${index}`);
@@ -307,92 +624,111 @@ async function showChecklistDetail(cid) {
         if (!response.ok) throw new Error("Erro ao carregar detalhes");
         const data = await response.json();
         
-        // Fill header
-        document.getElementById('modalChecklistTitle').innerText = `Checklist #${data.id} • ${data.plate}`;
-        document.getElementById('modalChecklistSubtitle').innerText = `Técnico: ${data.technician} • Data: ${data.date} • KM: ${data.km}`;
+        currentChecklistProto = data.protocol || `CHK-${data.id}`;
+        document.getElementById('modalChecklistProtoText').innerText = currentChecklistProto;
+        document.getElementById('modalChecklistPlateBadge').innerText = data.plate || 'VEÍCULO';
+        document.getElementById('modalChecklistVehicleModel').innerText = data.vehicle_model ? `(${data.vehicle_model})` : '';
+
+        document.getElementById('modalChecklistSubtitle').innerHTML = `
+            <span><i class="fa-solid fa-user-gear mr-1 text-blue-500"></i><b>Técnico:</b> ${data.technician}</span>
+            <span><i class="fa-regular fa-calendar-days mr-1 text-blue-500"></i><b>Data:</b> ${data.date}</span>
+            <span><i class="fa-solid fa-gauge mr-1 text-blue-500"></i><b>KM:</b> ${data.km ? data.km.toLocaleString('pt-BR') + ' km' : 'N/I'}</span>
+        `;
         
         // Status Badge
         const badge = document.getElementById('modalChecklistStatusBadge');
-        if (data.status === 'OK') {
-            badge.className = "text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/40";
-            badge.innerHTML = '<i class="fa-solid fa-circle-check text-[8px] mr-0.5"></i> Conforme (OK)';
+        if (data.status === 'OK' || data.status === 'Aprovado' || data.status === 'Conforme') {
+            badge.className = "text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 flex items-center gap-1.5";
+            badge.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Conforme (OK)';
         } else {
-            badge.className = "text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400 border border-rose-200 dark:border-rose-800/40";
-            badge.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-[8px] mr-0.5"></i> ${data.status}`;
+            badge.className = "text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-300 dark:border-rose-800 flex items-center gap-1.5";
+            badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span> ${data.status || 'Com Avarias'}`;
         }
         
-        // Set PDF Link
+        // PDF Link
         document.getElementById('modalChecklistPdfBtn').href = `/checklists/${data.id}/pdf`;
         
-        // Fill Items Table
-        const tbody = document.getElementById('modalChecklistItemsTbody');
-        tbody.innerHTML = '';
-        
+        // Process Items
         const items = data.items || {};
         const entries = Object.entries(items);
         let countOk = 0;
         let countNonOk = 0;
-        
-        if (entries.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="4" class="text-center py-6 text-slate-400 text-xs">Nenhum item registrado.</td></tr>`;
-        } else {
-            entries.forEach(([nome, val], idx) => {
-                const hasJustification = val.justificativa && val.justificativa.trim() !== '';
-                const respText = Array.isArray(val.resposta) ? val.resposta.join(', ') : (val.resposta || '-');
-                
-                let isGood = (!hasJustification) && (
-                    respText === 'Sim' || respText === 'Bom' || respText === 'OK' || 
-                    respText === 'No nível' || respText === 'Sem avaria' || respText === 'Boa'
-                );
-                
-                let chipHtml = '';
-                if (hasJustification || respText === 'Não' || respText === 'Ruim' || respText === 'Com avaria') {
-                    countNonOk++;
-                    chipHtml = `
-                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400 border border-rose-200/60 dark:border-rose-800/40">
-                            <i class="fa-solid fa-triangle-exclamation text-[8px]"></i> ${respText}
-                        </span>
-                    `;
-                } else if (isGood) {
-                    countOk++;
-                    chipHtml = `
-                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/40">
-                            <i class="fa-solid fa-circle-check text-[8px]"></i> ${respText}
-                        </span>
-                    `;
-                } else {
-                    countOk++;
-                    chipHtml = `
-                        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-700 dark:bg-white/5 dark:text-slate-300 border border-slate-200/60 dark:border-white/10">
-                            ${respText}
-                        </span>
-                    `;
-                }
-                
-                const tr = document.createElement('tr');
-                tr.className = 'hover:bg-slate-50/70 dark:hover:bg-white/[0.02] transition-colors';
-                tr.innerHTML = `
-                    <td class="py-2.5 px-3 text-center text-slate-400 font-mono text-[11px]">${idx + 1}</td>
-                    <td class="py-2.5 px-3 font-bold text-slate-800 dark:text-slate-100">${nome}</td>
-                    <td class="py-2.5 px-3">${chipHtml}</td>
-                    <td class="py-2.5 px-3 text-slate-600 dark:text-slate-300 text-[11px]">
-                        ${hasJustification ? `<span class="text-rose-600 dark:text-rose-400 font-medium">${val.justificativa}</span>` : '<span class="text-slate-300 dark:text-slate-600">-</span>'}
-                    </td>
-                `;
-                tbody.appendChild(tr);
+        currentChecklistItems = [];
+
+        entries.forEach(([nome, val]) => {
+            const hasJustification = val.justificativa && val.justificativa.trim() !== '';
+            const respText = Array.isArray(val.resposta) ? val.resposta.join(', ') : (val.resposta || '-');
+            
+            const isNonOk = hasJustification || respText === 'Não' || respText === 'Ruim' || respText === 'Com avaria' || respText === 'Reprovado';
+            const isGood = (!hasJustification) && (
+                respText === 'Sim' || respText === 'Bom' || respText === 'OK' || 
+                respText === 'No nível' || respText === 'Sem avaria' || respText === 'Boa'
+            );
+
+            if (isNonOk) {
+                countNonOk++;
+            } else {
+                countOk++;
+            }
+
+            currentChecklistItems.push({
+                nome: nome,
+                respText: respText,
+                justificativa: val.justificativa || '',
+                isNonOk: isNonOk,
+                isGood: isGood
             });
+        });
+
+        // KPIs
+        document.getElementById('kpi-chk-total').innerText = entries.length;
+        document.getElementById('kpi-chk-ok').innerText = countOk;
+        document.getElementById('kpi-chk-non-ok').innerText = countNonOk;
+        document.getElementById('kpi-chk-km').innerText = data.km ? `${data.km.toLocaleString('pt-BR')} km` : '-';
+        
+        document.getElementById('tab-chk-itens-badge').innerText = entries.length;
+        document.getElementById('badge-filter-problemas-count').innerText = countNonOk;
+
+        // Reset filter & search
+        document.getElementById('chk-item-search-input').value = '';
+        currentChecklistFilter = 'todos';
+        filterChecklistItems('todos');
+
+        // Photos Tab
+        const photos = data.photos || [];
+        document.getElementById('tab-chk-fotos-badge').innerText = photos.length;
+        const photosGrid = document.getElementById('modalChecklistPhotosGrid');
+        const noPhotos = document.getElementById('modalChecklistNoPhotos');
+        photosGrid.innerHTML = '';
+
+        if (photos.length > 0) {
+            noPhotos.classList.add('hidden');
+            photosGrid.classList.remove('hidden');
+            photos.forEach(p => {
+                const photoCard = `
+                    <div onclick="openChecklistLightbox('${p}')" class="group relative block overflow-hidden rounded-2xl aspect-square border border-slate-200 dark:border-white/10 shadow-sm hover:border-blue-500 cursor-pointer transition-all">
+                        <img src="${p}" class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" alt="Foto">
+                        <div class="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
+                            <div class="w-9 h-9 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center shadow-lg">
+                                <i class="fa-solid fa-magnifying-glass-plus text-sm"></i>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                photosGrid.insertAdjacentHTML('beforeend', photoCard);
+            });
+        } else {
+            photosGrid.classList.add('hidden');
+            noPhotos.classList.remove('hidden');
         }
-        
-        // Summary Pills in Header
-        const pillsContainer = document.getElementById('modalChecklistSummaryPills');
-        pillsContainer.classList.remove('hidden');
-        pillsContainer.innerHTML = `
-            <span class="px-2 py-0.5 bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 rounded-lg text-[10px] font-bold">${entries.length} itens</span>
-            <span class="px-2 py-0.5 bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 rounded-lg text-[10px] font-bold">${countOk} Conforme</span>
-            ${countNonOk > 0 ? `<span class="px-2 py-0.5 bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-400 rounded-lg text-[10px] font-bold">${countNonOk} Não Conforme</span>` : ''}
-        `;
-        
-        // Notes
+
+        // Resumo Tab
+        document.getElementById('resumo-chk-placa').innerText = data.plate || '-';
+        document.getElementById('resumo-chk-modelo').innerText = data.vehicle_model || '-';
+        document.getElementById('resumo-chk-tecnico').innerText = data.technician || '-';
+        document.getElementById('resumo-chk-km').innerText = data.km ? `${data.km.toLocaleString('pt-BR')} km` : '-';
+
+        // Observações
         const notesContainer = document.getElementById('modalChecklistNotesContainer');
         if (data.notes && data.notes.trim() !== '') {
             notesContainer.classList.remove('hidden');
@@ -400,28 +736,28 @@ async function showChecklistDetail(cid) {
         } else {
             notesContainer.classList.add('hidden');
         }
-        
-        // Photos
-        const photosContainer = document.getElementById('modalChecklistPhotosContainer');
-        const photosGrid = document.getElementById('modalChecklistPhotos');
-        photosGrid.innerHTML = '';
-        
-        if (data.photos && data.photos.length > 0) {
-            photosContainer.classList.remove('hidden');
-            data.photos.forEach(p => {
-                const photoHtml = `
-                    <a href="${p}" target="_blank" rel="noopener" class="group relative block overflow-hidden rounded-xl aspect-square border border-slate-200 dark:border-white/10 shadow-sm hover:border-slate-400 transition-all">
-                        <img src="${p}" class="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105" alt="Foto checklist">
-                        <div class="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white">
-                            <i class="fa-solid fa-up-right-and-down-left-from-center text-xs"></i>
-                        </div>
-                    </a>
-                `;
-                photosGrid.insertAdjacentHTML('beforeend', photoHtml);
-            });
+
+        // Assinatura
+        const sigImg = document.getElementById('modalChecklistSignatureImg');
+        const noSigText = document.getElementById('modalChecklistNoSigText');
+        if (data.signature) {
+            sigImg.src = data.signature;
+            sigImg.classList.remove('hidden');
+            noSigText.classList.add('hidden');
         } else {
-            photosContainer.classList.add('hidden');
+            sigImg.classList.add('hidden');
+            noSigText.classList.remove('hidden');
         }
+
+        // Default: inicia na aba de itens
+        switchChecklistDetailTab('itens');
+
+        openModal('modalChecklistDetail');
+    } catch (e) {
+        console.error(e);
+        alert("Erro ao carregar detalhes do checklist.");
+    }
+}
         
         openModal('modalChecklistDetail');
     } catch (e) {
@@ -429,7 +765,102 @@ async function showChecklistDetail(cid) {
         alert("Erro ao carregar detalhes do checklist.");
     }
 }
+
+// -----------------------------------------------------------------
+// 📄 FUNÇÕES: RELATÓRIO MENSAL DE CHECKLISTS
+// -----------------------------------------------------------------
+function abrirModalRelatorioMensal() {
+    const inputMes = document.getElementById('relatorio-mes-input');
+    if (inputMes && !inputMes.value) {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        inputMes.value = `${year}-${month}`;
+        inputMes.max = `${year}-${month}`;
+    }
+    const modal = document.getElementById('modalRelatorioMensalChecklist');
+    if (modal) {
+        modal.classList.remove('hidden');
+    }
+}
+
+function fecharModalRelatorioMensal() {
+    const modal = document.getElementById('modalRelatorioMensalChecklist');
+    if (modal) {
+        modal.classList.add('hidden');
+    }
+}
+
+function gerarRelatorioMensalPdf() {
+    const mes = document.getElementById('relatorio-mes-input').value;
+    if (!mes) {
+        alert('Por favor, selecione o mês de referência.');
+        return;
+    }
+    const tech = document.getElementById('relatorio-tecnico-select').value;
+    const url = `/checklists/relatorio/mensal/pdf?mes=${encodeURIComponent(mes)}&technician=${encodeURIComponent(tech)}`;
+    window.open(url, '_blank');
+    fecharModalRelatorioMensal();
+}
 </script>
+
+<!-- ========================================== -->
+<!-- 📄 MODAL: RELATÓRIO MENSAL DE CHECKLISTS -->
+<!-- ========================================== -->
+<div id="modalRelatorioMensalChecklist" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-scale-in">
+        <!-- Header -->
+        <div class="px-6 py-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 flex items-center justify-center text-lg">
+                    <i class="fa-solid fa-file-pdf"></i>
+                </div>
+                <div>
+                    <h3 class="text-base font-black text-slate-800 dark:text-white">Relatório Mensal</h3>
+                    <p class="text-[11px] text-slate-400 font-medium">Exportar histórico de checklists em PDF</p>
+                </div>
+            </div>
+            <button onclick="fecharModalRelatorioMensal()" type="button" class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+                <i class="fa-solid fa-xmark text-sm"></i>
+            </button>
+        </div>
+
+        <!-- Body -->
+        <div class="p-6 space-y-4">
+            <div>
+                <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                    Mês de Referência <span class="text-rose-500">*</span>
+                </label>
+                <input type="month" id="relatorio-mes-input" class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition">
+            </div>
+
+            <div>
+                <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                    Filtrar por Técnico
+                </label>
+                <select id="relatorio-tecnico-select" class="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 transition">
+                    <option value="todos">Todos os Técnicos (Geral do Mês)</option>
+                    {% if tecnicos %}
+                        {% for t in tecnicos %}
+                            <option value="{{ t }}">{{ t }}</option>
+                        {% endfor %}
+                    {% endif %}
+                </select>
+                <p class="text-[10px] text-slate-400 mt-1">Deixe em "Todos os Técnicos" para consolidar toda a equipe.</p>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="px-6 py-4 bg-slate-50/50 dark:bg-slate-800/30 border-t border-slate-100 dark:border-slate-800 flex items-center justify-end gap-2.5">
+            <button onclick="fecharModalRelatorioMensal()" type="button" class="px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition">
+                Cancelar
+            </button>
+            <button onclick="gerarRelatorioMensalPdf()" type="button" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl shadow-md shadow-rose-500/20 transition flex items-center gap-2 cursor-pointer">
+                <i class="fa-solid fa-file-pdf"></i> Gerar PDF
+            </button>
+        </div>
+    </div>
+</div>
 
 {% endblock %}
 
