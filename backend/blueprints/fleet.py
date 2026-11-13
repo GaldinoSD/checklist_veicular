@@ -311,7 +311,7 @@ def generate_maintenance_request_pdf_buffer(req_obj):
             [Paragraph("<b>TIPO DE INTERVENÇÃO:</b>", style_label), Paragraph(f"<b>{req_obj.service_type}</b>", style_val),
              Paragraph("<b>STATUS ATUAL:</b>", style_label), Paragraph(status_html, style_val)],
             [Paragraph("<b>SOLICITANTE:</b>", style_label), Paragraph(solicitante_nome.upper(), style_val),
-             Paragraph("<b>EMPRESA SOLICITANTE:</b>", style_label), Paragraph("ADAPT LINK COMUNICAÇÃO", style_val)]
+             Paragraph("<b>EMPRESA:</b>", style_label), Paragraph("ADAPT LINK", style_val)]
         ]
     t_solic = Table(t_solic_data, colWidths=[32*mm, 61*mm, 38*mm, 55*mm])
     t_solic.setStyle(TableStyle([
