@@ -2673,9 +2673,9 @@ def config_layout():
         if card_pos in allowed_card_positions:
             config.login_card_position = card_pos
 
-        layout_mode = request.form.get("login_layout_mode", "split").strip()
-        if layout_mode in {"split", "card", "split_reverse"}:
-            config.login_layout_mode = layout_mode
+        layout_mode = request.form.get("login_layout_mode")
+        if layout_mode and layout_mode.strip() in {"split", "card", "split_reverse"}:
+            config.login_layout_mode = layout_mode.strip()
 
         hero_title = request.form.get("login_hero_title", "").strip()
         config.login_hero_title = hero_title[:255] if hero_title else "Gestão Inteligente de Frotas e Equipes"
@@ -2688,6 +2688,23 @@ def config_layout():
 
         footer_text = request.form.get("login_footer_text", "").strip()
         config.login_footer_text = footer_text[:255] if footer_text else "© 2026 Painel de Frota. Todos os direitos reservados."
+
+        # Processar upload da propaganda / banner lateral do login
+        hero_file = request.files.get("login_hero_image")
+        if hero_file and hero_file.filename != "":
+            ext = os.path.splitext(hero_file.filename.lower())[1]
+            if ext in {".png", ".jpg", ".jpeg", ".webp"}:
+                old_hero = config.login_layout_mode
+                if old_hero and old_hero.startswith("hero_"):
+                    try:
+                        old_p = LAYOUT_UPLOAD_DIR / old_hero
+                        if old_p.exists():
+                            old_p.unlink()
+                    except Exception as e:
+                        print(f"⚠️ Erro ao deletar imagem de propaganda antiga: {e}")
+                fname = f"hero_{uuid.uuid4().hex[:8]}{ext}"
+                hero_file.save(LAYOUT_UPLOAD_DIR / fname)
+                config.login_layout_mode = fname
 
         # Processar uploads
 
@@ -2737,6 +2754,7 @@ def reset_layout_field(field):
 
     allowed_fields = {
         "login_bg_desktop", "login_bg_mobile", "login_logo", "sidebar_logo", "pdf_logo",
+        "login_hero_image",
         "pdf_footer", "login_primary_color", "powerbi_url", "login_logo_height",
         "sidebar_logo_height", "pdf_logo_height", "login_bg_zoom", "login_bg_blur",
         "login_bg_opacity", "login_bg_size_desktop", "login_bg_size_mobile",
@@ -2751,6 +2769,21 @@ def reset_layout_field(field):
     }
     if field not in allowed_fields:
         flash("Campo inválido.", "error")
+        return redirect(url_for("config_layout"))
+
+    if field == "login_hero_image":
+        old_hero = config.login_layout_mode
+        if old_hero and old_hero.startswith("hero_"):
+            try:
+                old_p = LAYOUT_UPLOAD_DIR / old_hero
+                if old_p.exists():
+                    old_p.unlink()
+            except Exception as e:
+                print(f"⚠️ Erro ao deletar imagem de propaganda: {e}")
+        config.login_layout_mode = "split"
+        db.session.commit()
+        registrar_log("Imagem de propaganda da tela de login removida.")
+        flash("Imagem de propaganda removida. O banner com textos foi reativado com sucesso!", "success")
         return redirect(url_for("config_layout"))
 
     # Map fields to their default values for simple resets

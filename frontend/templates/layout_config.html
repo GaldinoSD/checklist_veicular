@@ -25,98 +25,78 @@
     </div>
   </div>
 
-  <!-- MAIN TABBED CONTAINER -->
-  <div class="flex flex-col lg:flex-row gap-6">
-
-    <!-- TAB NAVIGATION -->
-    <div class="w-full lg:w-72 shrink-0 flex flex-col gap-4">
-      <div class="bg-white/60 dark:bg-slate-900/40 backdrop-blur-md border border-slate-200/50 dark:border-white/10 rounded-2xl p-4 shadow-sm">
-        <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest px-3 mb-3">Seções de Layout</p>
-        <nav class="space-y-1">
-          <button type="button" onclick="switchTab('geral')" id="tabBtn-geral"
-                  class="tab-btn w-full text-left px-4 py-3 rounded-xl font-bold text-sm transition-all duration-300 flex items-center gap-3 border-l-4 active-tab">
-            <i class="fa-solid fa-sliders text-emerald-500"></i>
-            <span>Geral & Cores</span>
-          </button>
-          
-          <button type="button" onclick="switchTab('login')" id="tabBtn-login"
-                  class="tab-btn w-full text-left px-4 py-3 rounded-xl font-bold text-sm transition-all duration-300 flex items-center gap-3 border-l-4 inactive-tab">
-            <i class="fa-solid fa-right-to-bracket text-emerald-500"></i>
-            <span>Tela de Login</span>
-          </button>
-
-          <button type="button" onclick="switchTab('efeitos')" id="tabBtn-efeitos"
-                  class="tab-btn w-full text-left px-4 py-3 rounded-xl font-bold text-sm transition-all duration-300 flex items-center gap-3 border-l-4 inactive-tab">
-            <i class="fa-solid fa-wand-magic-sparkles text-emerald-500"></i>
-            <span>Efeitos Visuais</span>
-          </button>
-
-          <button type="button" onclick="switchTab('identidade')" id="tabBtn-identidade"
-                  class="tab-btn w-full text-left px-4 py-3 rounded-xl font-bold text-sm transition-all duration-300 flex items-center gap-3 border-l-4 inactive-tab">
-            <i class="fa-solid fa-fingerprint text-emerald-500"></i>
-            <span>Identidade & Textos</span>
-          </button>
-          
-          <button type="button" onclick="switchTab('sidebar')" id="tabBtn-sidebar"
-                  class="tab-btn w-full text-left px-4 py-3 rounded-xl font-bold text-sm transition-all duration-300 flex items-center gap-3 border-l-4 inactive-tab">
-            <i class="fa-solid fa-desktop text-emerald-500"></i>
-            <span>Menu Lateral</span>
-          </button>
-          
-          <button type="button" onclick="switchTab('pdf')" id="tabBtn-pdf"
-                  class="tab-btn w-full text-left px-4 py-3 rounded-xl font-bold text-sm transition-all duration-300 flex items-center gap-3 border-l-4 inactive-tab">
-            <i class="fa-solid fa-file-pdf text-emerald-500"></i>
-            <span>Relatórios PDF</span>
-          </button>
-        </nav>
+  <!-- SEÇÕES DE LAYOUT (NA PARTE SUPERIOR - UMA AO LADO DA OUTRA) -->
+  <div class="bg-white/70 dark:bg-slate-900/60 backdrop-blur-md border border-slate-200/60 dark:border-white/10 rounded-2xl p-3 shadow-sm">
+    <div class="flex items-center justify-between px-2 pb-2.5 border-b border-slate-100 dark:border-white/5 mb-2.5">
+      <div class="flex items-center gap-2">
+        <span class="w-6 h-6 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-xs">
+          <i class="fa-solid fa-layer-group"></i>
+        </span>
+        <span class="text-xs font-black text-slate-700 dark:text-slate-200 uppercase tracking-wider">Seções de Layout & Customização</span>
       </div>
-
-      <!-- TIP BOX -->
-      <div class="hidden lg:block bg-gradient-to-br from-emerald-500/5 to-teal-500/5 dark:from-emerald-500/10 dark:to-teal-500/10 border border-emerald-500/20 rounded-2xl p-5">
-        <h4 class="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-2 mb-2">
-          <i class="fa-solid fa-lightbulb"></i> Dica de Designer
-        </h4>
-        <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-          Logotipos com fundo transparente (.png ou .svg) garantem um visual muito mais limpo e profissional, integrando-se suavemente ao layout do sistema.
-        </p>
-      </div>
-
-      <!-- QUICK STATS -->
-      <div class="hidden lg:block bg-white/60 dark:bg-slate-900/40 backdrop-blur-md border border-slate-200/50 dark:border-white/10 rounded-2xl p-5 space-y-3">
-        <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Resumo Atual</h4>
-        <div class="space-y-2 text-xs">
-          <div class="flex items-center justify-between">
-            <span class="text-slate-500 dark:text-slate-400">Cor Primária</span>
-            <div class="flex items-center gap-1.5">
-              <div class="w-4 h-4 rounded-full border border-white/20 shadow-sm" style="background: {{ config.login_primary_color or '#10b981' }}"></div>
-              <span class="font-mono font-bold text-slate-700 dark:text-slate-200">{{ config.login_primary_color or '#10b981' }}</span>
-            </div>
-          </div>
-          <div class="flex items-center justify-between">
-            <span class="text-slate-500 dark:text-slate-400">BG Desktop</span>
-            <span class="font-bold text-slate-700 dark:text-slate-200">{{ 'Personalizado' if config.login_bg_desktop else 'Padrão' }}</span>
-          </div>
-          <div class="flex items-center justify-between">
-            <span class="text-slate-500 dark:text-slate-400">BG Mobile</span>
-            <span class="font-bold text-slate-700 dark:text-slate-200">{{ 'Personalizado' if config.login_bg_mobile else 'Padrão' }}</span>
-          </div>
-          <div class="flex items-center justify-between">
-            <span class="text-slate-500 dark:text-slate-400">Zoom</span>
-            <span class="font-mono font-bold text-slate-700 dark:text-slate-200">{{ config.login_bg_zoom or 100 }}%</span>
-          </div>
-        </div>
-      </div>
+      <span class="text-[11px] text-slate-400 font-medium hidden sm:inline">Navegue pelas abas abaixo para configurar cada área do sistema</span>
     </div>
 
-    <!-- TAB PANEL CONTENT -->
-    <div class="flex-1">
-      <form id="layoutForm" method="post" enctype="multipart/form-data" class="space-y-6">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-        
-        <div class="flex flex-col xl:flex-row gap-6 items-start">
-          
-          <!-- Coluna Esquerda: Formulários de Ajustes -->
-          <div class="flex-1 space-y-6 w-full">
+    <!-- ABAS LADO A LADO EM GRID RESPONSIVO -->
+    <nav class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
+      <!-- 1. Geral & Cores -->
+      <button type="button" onclick="switchTab('geral')" id="tabBtn-geral"
+              class="tab-btn w-full text-center px-3 py-3 rounded-xl font-bold text-xs transition-all duration-200 flex flex-col items-center justify-center gap-1 active-tab cursor-pointer">
+        <i class="fa-solid fa-sliders text-base text-emerald-500"></i>
+        <span class="font-bold text-xs">Geral & Cores</span>
+        <span class="text-[10px] opacity-70 font-normal">Paleta & Acentos</span>
+      </button>
+
+      <!-- 2. Tela de Login -->
+      <button type="button" onclick="switchTab('login')" id="tabBtn-login"
+              class="tab-btn w-full text-center px-3 py-3 rounded-xl font-bold text-xs transition-all duration-200 flex flex-col items-center justify-center gap-1 inactive-tab cursor-pointer">
+        <i class="fa-solid fa-right-to-bracket text-base text-emerald-500"></i>
+        <span class="font-bold text-xs">Tela de Login</span>
+        <span class="text-[10px] opacity-70 font-normal">Fundos & Logo</span>
+      </button>
+
+      <!-- 3. Efeitos Visuais -->
+      <button type="button" onclick="switchTab('efeitos')" id="tabBtn-efeitos"
+              class="tab-btn w-full text-center px-3 py-3 rounded-xl font-bold text-xs transition-all duration-200 flex flex-col items-center justify-center gap-1 inactive-tab cursor-pointer">
+        <i class="fa-solid fa-wand-magic-sparkles text-base text-emerald-500"></i>
+        <span class="font-bold text-xs">Efeitos Visuais</span>
+        <span class="text-[10px] opacity-70 font-normal">Blur & Vidro</span>
+      </button>
+
+      <!-- 4. Identidade & Textos -->
+      <button type="button" onclick="switchTab('identidade')" id="tabBtn-identidade"
+              class="tab-btn w-full text-center px-3 py-3 rounded-xl font-bold text-xs transition-all duration-200 flex flex-col items-center justify-center gap-1 inactive-tab cursor-pointer">
+        <i class="fa-solid fa-fingerprint text-base text-emerald-500"></i>
+        <span class="font-bold text-xs">Identidade & Textos</span>
+        <span class="text-[10px] opacity-70 font-normal">Propaganda & Banner</span>
+      </button>
+
+      <!-- 5. Menu Lateral -->
+      <button type="button" onclick="switchTab('sidebar')" id="tabBtn-sidebar"
+              class="tab-btn w-full text-center px-3 py-3 rounded-xl font-bold text-xs transition-all duration-200 flex flex-col items-center justify-center gap-1 inactive-tab cursor-pointer">
+        <i class="fa-solid fa-desktop text-base text-emerald-500"></i>
+        <span class="font-bold text-xs">Menu Lateral</span>
+        <span class="text-[10px] opacity-70 font-normal">Cores & Logo Menu</span>
+      </button>
+
+      <!-- 6. Relatórios PDF -->
+      <button type="button" onclick="switchTab('pdf')" id="tabBtn-pdf"
+              class="tab-btn w-full text-center px-3 py-3 rounded-xl font-bold text-xs transition-all duration-200 flex flex-col items-center justify-center gap-1 inactive-tab cursor-pointer">
+        <i class="fa-solid fa-file-pdf text-base text-emerald-500"></i>
+        <span class="font-bold text-xs">Relatórios PDF</span>
+        <span class="text-[10px] opacity-70 font-normal">Logo & Rodapé PDF</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- CONTEÚDO PRINCIPAL (FORMULÁRIO COM ABAS + SIMULADOR LADO A LADO) -->
+  <form id="layoutForm" method="post" enctype="multipart/form-data" class="space-y-6">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+    
+    <div class="flex flex-col xl:flex-row gap-6 items-start">
+      
+      <!-- Coluna Principal: Conteúdo da Aba Selecionada -->
+      <div class="flex-1 space-y-6 w-full min-w-0">
             
             <!-- ================= TAB: GERAL ================= -->
             <div id="tabPanel-geral" class="tab-panel bg-white/60 dark:bg-slate-900/40 backdrop-blur-md border border-slate-200/50 dark:border-white/10 rounded-2xl p-6 shadow-sm space-y-6">
@@ -697,11 +677,86 @@
               </div>
 
               <!-- 3. Personalização do Banner Hero (Painel Lateral de Login) -->
-              <div class="border-t border-slate-200 dark:border-white/5 pt-5 space-y-4">
-                <h3 class="text-sm font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2">
-                  <i class="fa-solid fa-rectangle-ad text-emerald-500"></i> Banner Hero da Tela de Login (Apresentação Lateral)
-                </h3>
-                <p class="text-xs text-slate-400">Personalize o título principal, subtítulo e lista de destaques exibidos no painel lateral em telas Desktop.</p>
+              <div class="border-t border-slate-200 dark:border-white/5 pt-5 space-y-5">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                  <div>
+                    <h3 class="text-sm font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                      <i class="fa-solid fa-rectangle-ad text-emerald-500"></i> Propaganda & Apresentação Lateral (Banner Hero)
+                    </h3>
+                    <p class="text-xs text-slate-400 mt-0.5">Envie uma imagem de propaganda pronta para preencher o cartão lateral, ou personalize os títulos e tópicos informativos.</p>
+                  </div>
+
+                  <!-- Status da Propaganda Lateral -->
+                  {% set has_hero_custom = config and config.login_layout_mode and config.login_layout_mode.startswith('hero_') %}
+                  <div class="shrink-0">
+                    <span id="hero_image_badge_active" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 {% if not has_hero_custom %}hidden{% endif %}">
+                      <i class="fa-solid fa-image"></i> Imagem de Propaganda Ativa
+                    </span>
+                    <span id="hero_text_badge_active" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 {% if has_hero_custom %}hidden{% endif %}">
+                      <i class="fa-solid fa-list-check"></i> Banner com Textos & Tópicos
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Box de Upload da Imagem de Propaganda -->
+                <div class="bg-slate-50/50 dark:bg-slate-950/40 border border-slate-200/80 dark:border-white/5 rounded-2xl p-4 space-y-4">
+                  <div class="flex items-center justify-between">
+                    <div>
+                      <label class="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-2">
+                        <i class="fa-solid fa-cloud-arrow-up text-blue-500"></i> Upload da Imagem de Propaganda
+                      </label>
+                      <p class="text-[10px] text-slate-400">Dimensão recomendada: 600x750px (proporção vertical). A imagem se ajustará perfeitamente ao cartão lateral.</p>
+                    </div>
+                    {% if has_hero_custom %}
+                    <button type="button" onclick="triggerReset('login_hero_image')" class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-rose-500 hover:text-rose-600 bg-rose-500/10 hover:bg-rose-500/20 rounded-xl transition-all" title="Remove a imagem e volta para os textos">
+                      <i class="fa-solid fa-trash-can"></i> Remover Propaganda
+                    </button>
+                    {% endif %}
+                  </div>
+
+                  <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+                    <div class="md:col-span-2 relative group border-2 border-dashed border-slate-200 dark:border-white/10 rounded-xl p-3 flex flex-col items-center justify-center transition-all duration-300 hover:border-emerald-500 dark:hover:border-emerald-500">
+                      <input id="login_hero_image" type="file" name="login_hero_image" accept="image/*" class="absolute inset-0 opacity-0 cursor-pointer" onchange="previewImage(this, 'preview_login_hero_image')">
+                      
+                      <div class="w-full h-40 rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-950 flex items-center justify-center relative shadow-inner">
+                        <button type="button" onclick="openVisualizer('preview_login_hero_image', 'Propaganda / Banner Lateral')" class="absolute top-2 right-2 w-8 h-8 rounded-lg bg-slate-900/60 hover:bg-slate-900 text-white flex items-center justify-center transition-all shadow-md z-10" title="Visualizar Ampliado">
+                          <i class="fa-solid fa-expand text-xs"></i>
+                        </button>
+
+                        <div id="hero_placeholder_box" class="w-full h-full flex flex-col items-center justify-center text-slate-400 gap-1.5 p-4 text-center {% if has_hero_custom %}hidden{% endif %}">
+                          <div class="w-10 h-10 rounded-2xl bg-slate-200/60 dark:bg-slate-800 flex items-center justify-center text-slate-400 text-lg">
+                            <i class="fa-solid fa-image"></i>
+                          </div>
+                          <span class="text-xs font-bold text-slate-600 dark:text-slate-300">Nenhuma imagem de propaganda enviada</span>
+                          <span class="text-[10px] text-slate-400">Clique para enviar uma arte ou foto de propaganda da sua empresa</span>
+                        </div>
+
+                        <img id="preview_login_hero_image" 
+                             src="{% if has_hero_custom %}{{ url_for('static', filename='uploads/layout/' ~ config.login_layout_mode) }}{% else %}#{% endif %}" 
+                             class="w-full h-full object-cover {% if not has_hero_custom %}hidden{% endif %}" 
+                             alt="Preview Propaganda">
+                      </div>
+                      <div class="mt-2 text-xs font-semibold text-emerald-500 dark:text-emerald-400 group-hover:underline">Clique para selecionar imagem de propaganda</div>
+                    </div>
+
+                    <div class="flex flex-col gap-2">
+                      <div class="p-3 rounded-xl bg-slate-100/80 dark:bg-slate-800/60 border border-slate-200/50 dark:border-white/5 space-y-1">
+                        <span class="text-[10px] font-black uppercase text-slate-400 tracking-wider">Como funciona:</span>
+                        <p class="text-xs text-slate-600 dark:text-slate-300 leading-snug">
+                          • Ao enviar uma imagem, ela cobrirá todo o espaço lateral na tela de login.<br>
+                          • Se preferir voltar a exibir os textos e tópicos com checkmarks, basta clicar em <b>"Remover Propaganda"</b>.<br>
+                          • Os campos de textos abaixo continuam salvos como alternativa.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="border-t border-slate-200/50 dark:border-white/5 pt-3">
+                  <p class="text-xs font-bold text-slate-600 dark:text-slate-300 mb-3 flex items-center gap-2">
+                    <i class="fa-solid fa-font text-blue-500"></i> Textos do Banner Informativo (Exibidos quando não houver imagem)
+                  </p>
+                </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <!-- Hero Title -->
@@ -1097,7 +1152,15 @@ WWW.ADAPTLINK.COM.BR{% endif %}</textarea>
 
                   <!-- Direita: Banner Hero (Desktop Mode) -->
                   <div id="simHeroCard" class="hidden lg:flex w-1/2 p-1 shrink-0">
-                    <div class="w-full h-full relative rounded-lg overflow-hidden p-2.5 flex flex-col justify-between text-white" style="background-image: linear-gradient(135deg, rgba(15, 23, 42, 0.85), {{ config.login_secondary_color or '#064e3b' }}), url('{% if config and config.login_bg_desktop %}{{ url_for('static', filename='uploads/layout/' ~ config.login_bg_desktop) }}{% else %}{{ url_for('static', filename='img.png') }}{% endif %}'); background-size: cover;">
+                    {% set has_hero = config and config.login_layout_mode and config.login_layout_mode.startswith('hero_') %}
+                    
+                    <!-- Sim Propaganda Image Container -->
+                    <div id="simHeroPropaganda" class="w-full h-full relative rounded-lg overflow-hidden {% if not has_hero %}hidden{% endif %}">
+                      <img id="simHeroImg" src="{% if has_hero %}{{ url_for('static', filename='uploads/layout/' ~ config.login_layout_mode) }}{% else %}#{% endif %}" class="w-full h-full object-cover rounded-lg" alt="Propaganda">
+                    </div>
+
+                    <!-- Sim Text & Bullets Container -->
+                    <div id="simHeroTextCard" class="w-full h-full relative rounded-lg overflow-hidden p-2.5 flex flex-col justify-between text-white {% if has_hero %}hidden{% endif %}" style="background-image: linear-gradient(135deg, rgba(15, 23, 42, 0.85), {{ config.login_secondary_color or '#064e3b' }}), url('{% if config and config.login_bg_desktop %}{{ url_for('static', filename='uploads/layout/' ~ config.login_bg_desktop) }}{% else %}{{ url_for('static', filename='img.png') }}{% endif %}'); background-size: cover;">
                       <!-- Background & Overlay references for live JS manipulation -->
                       <div id="simBgImage" class="absolute inset-0 bg-cover bg-center transition-all opacity-0 pointer-events-none"></div>
                       <div id="simOverlay" class="absolute inset-0 transition-all opacity-0 pointer-events-none"></div>
@@ -1126,27 +1189,76 @@ WWW.ADAPTLINK.COM.BR{% endif %}</textarea>
 
             </div>
             
-            <div class="bg-gradient-to-br from-blue-500/5 to-indigo-500/5 dark:from-blue-500/10 dark:to-indigo-500/10 border border-blue-500/15 rounded-2xl p-4">
-              <p class="text-[10px] font-black uppercase text-blue-600 dark:text-blue-400 tracking-wider mb-1">Simulador Ativo</p>
+            <!-- QUICK STATS (RESUMO ATUALIZADO) -->
+            <div class="bg-white/60 dark:bg-slate-900/40 backdrop-blur-md border border-slate-200/50 dark:border-white/10 rounded-2xl p-4 space-y-3 shadow-sm">
+              <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                <i class="fa-solid fa-chart-pie text-emerald-500"></i> Resumo Atual
+              </h4>
+              <div class="space-y-2 text-xs">
+                <div class="flex items-center justify-between">
+                  <span class="text-slate-500 dark:text-slate-400">Cor Primária</span>
+                  <div class="flex items-center gap-1.5">
+                    <div class="w-3.5 h-3.5 rounded-full border border-white/20 shadow-sm" style="background: {{ config.login_primary_color or '#10b981' }}"></div>
+                    <span class="font-mono font-bold text-slate-700 dark:text-slate-200">{{ config.login_primary_color or '#10b981' }}</span>
+                  </div>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-slate-500 dark:text-slate-400">BG Desktop</span>
+                  <span class="font-bold text-slate-700 dark:text-slate-200">{{ 'Personalizado' if config.login_bg_desktop else 'Padrão' }}</span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-slate-500 dark:text-slate-400">BG Mobile</span>
+                  <span class="font-bold text-slate-700 dark:text-slate-200">{{ 'Personalizado' if config.login_bg_mobile else 'Padrão' }}</span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-slate-500 dark:text-slate-400">Propaganda Lateral</span>
+                  <span class="font-bold text-slate-700 dark:text-slate-200">{% if has_hero_custom %}Imagem Ativa{% else %}Banner com Textos{% endif %}</span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-slate-500 dark:text-slate-400">Zoom do Fundo</span>
+                  <span class="font-mono font-bold text-slate-700 dark:text-slate-200">{{ config.login_bg_zoom or 100 }}%</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- TIP BOX (DICA DE DESIGNER) -->
+            <div class="bg-gradient-to-br from-emerald-500/5 to-teal-500/5 dark:from-emerald-500/10 dark:to-teal-500/10 border border-emerald-500/20 rounded-2xl p-4 shadow-sm">
+              <h4 class="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-2 mb-1.5">
+                <i class="fa-solid fa-lightbulb"></i> Dica de Designer
+              </h4>
               <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-                Qualquer alteração em cores, tamanhos, posições, arredondamentos ou textos reflete instantaneamente neste mockup, permitindo visualizar com precisão como a tela de login ficará antes de salvar.
+                Logotipos com fundo transparente (.png ou .svg) garantem um visual muito mais limpo e profissional, integrando-se suavemente ao layout do sistema.
+              </p>
+            </div>
+
+            <!-- SIMULATOR NOTE -->
+            <div class="bg-gradient-to-br from-blue-500/5 to-indigo-500/5 dark:from-blue-500/10 dark:to-indigo-500/10 border border-blue-500/15 rounded-2xl p-4">
+              <p class="text-[10px] font-black uppercase text-blue-600 dark:text-blue-400 tracking-wider mb-1">Simulador em Tempo Real</p>
+              <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                Qualquer alteração em cores, tamanhos, posições, arredondamentos ou textos reflete instantaneamente neste mockup, permitindo conferir o resultado antes de salvar.
               </p>
             </div>
           </div>
           
-        </div> <!-- Fim do flex container de duas colunas -->
+        </div> <!-- Fim do flex container de duas colunas (Formulário + Simulador) -->
 
-        <!-- SAVE BUTTON BAR -->
-        <div class="flex items-center justify-between bg-white/60 dark:bg-slate-900/40 backdrop-blur-md border border-slate-200/50 dark:border-white/10 rounded-2xl p-4 shadow-sm mt-6">
-          <p class="text-xs text-slate-400 px-2 hidden sm:block">Clique para salvar todas as abas de configurações modificadas de uma só vez.</p>
-          <button type="submit" class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-7 py-3 rounded-xl font-bold text-sm bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-600/20 transition-all duration-300 transform active:scale-95">
-            <i class="fa-solid fa-floppy-disk"></i> Salvar Todas as Configurações
+        <!-- BARRA DE SALVAMENTO -->
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-4 bg-white/70 dark:bg-slate-900/60 backdrop-blur-md border border-slate-200/60 dark:border-white/10 rounded-2xl p-5 shadow-sm mt-6">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center shrink-0">
+              <i class="fa-solid fa-cloud-arrow-up text-lg"></i>
+            </div>
+            <div>
+              <p class="text-sm font-bold text-slate-800 dark:text-white">Pronto para aplicar as alterações?</p>
+              <p class="text-xs text-slate-400">Ao clicar em salvar, todas as abas e opções configuradas serão atualizadas no sistema.</p>
+            </div>
+          </div>
+          <button type="submit" class="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-8 py-3.5 rounded-xl font-bold text-sm bg-emerald-600 hover:bg-emerald-500 text-white shadow-lg shadow-emerald-600/25 transition-all duration-300 transform active:scale-95 cursor-pointer">
+            <i class="fa-solid fa-floppy-disk text-base"></i> Salvar Todas as Configurações
           </button>
         </div>
 
       </form>
-    </div>
-  </div>
 
   <!-- HIDDEN RESET FORMS -->
   <form id="resetForm" method="post" action="" class="hidden">
@@ -1182,29 +1294,38 @@ WWW.ADAPTLINK.COM.BR{% endif %}</textarea>
 <!-- CSS ADICIONAL PARA GERENCIAMENTO DE ABAS E ACCENT -->
 <style>
   .tab-btn.active-tab {
-    background-color: rgba(16, 185, 129, 0.08);
-    color: #10b981;
-    border-color: #10b981;
+    background-color: rgba(16, 185, 129, 0.12);
+    border: 2px solid #10b981;
+    color: #059669;
+    box-shadow: 0 4px 12px -2px rgba(16, 185, 129, 0.25);
   }
   .dark .tab-btn.active-tab {
-    background-color: rgba(16, 185, 129, 0.04);
+    background-color: rgba(16, 185, 129, 0.18);
+    border: 2px solid #10b981;
     color: #34d399;
-    border-color: #34d399;
+    box-shadow: 0 4px 12px -2px rgba(16, 185, 129, 0.35);
   }
   .tab-btn.inactive-tab {
-    border-color: transparent;
+    background-color: rgba(248, 250, 252, 0.7);
+    border: 1px solid rgba(226, 232, 240, 0.9);
     color: #64748b;
   }
   .dark .tab-btn.inactive-tab {
+    background-color: rgba(15, 23, 42, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.06);
     color: #94a3b8;
   }
   .tab-btn.inactive-tab:hover {
-    background-color: rgba(100, 116, 139, 0.05);
+    background-color: rgba(241, 245, 249, 1);
+    border-color: rgba(203, 213, 225, 1);
     color: #1e293b;
+    transform: translateY(-1px);
   }
   .dark .tab-btn.inactive-tab:hover {
-    background-color: rgba(255, 255, 255, 0.02);
-    color: #f1f5f9;
+    background-color: rgba(30, 41, 59, 0.6);
+    border-color: rgba(255, 255, 255, 0.15);
+    color: #f8fafc;
+    transform: translateY(-1px);
   }
   /* Radio card visual fix */
   input[type="radio"]:checked + div {
@@ -1342,9 +1463,10 @@ WWW.ADAPTLINK.COM.BR{% endif %}</textarea>
     if (simHeroTitle) simHeroTitle.textContent = heroTitleText;
     if (simHeroSubtitle) simHeroSubtitle.textContent = heroSubtitleText;
 
-    if (simHeroCard) {
+    const simHeroTextCard = document.getElementById('simHeroTextCard');
+    if (simHeroTextCard) {
       const bgImgSrc = document.getElementById('preview_bg_desktop')?.src || '';
-      simHeroCard.firstElementChild.style.backgroundImage = `linear-gradient(135deg, rgba(15, 23, 42, 0.85), ${secondaryColor}), url('${bgImgSrc}')`;
+      simHeroTextCard.style.backgroundImage = `linear-gradient(135deg, rgba(15, 23, 42, 0.88), ${secondaryColor}), url('${bgImgSrc}')`;
     }
 
     if (simBulletsContainer && heroBulletsRaw) {
@@ -1376,6 +1498,21 @@ WWW.ADAPTLINK.COM.BR{% endif %}</textarea>
         if (previewId === 'preview_login_logo') {
           const simLogo = document.getElementById('simLogo');
           if (simLogo) simLogo.src = e.target.result;
+        }
+        if (previewId === 'preview_login_hero_image') {
+          const simHeroPropaganda = document.getElementById('simHeroPropaganda');
+          const simHeroTextCard = document.getElementById('simHeroTextCard');
+          const simHeroImg = document.getElementById('simHeroImg');
+          const placeholderBox = document.getElementById('hero_placeholder_box');
+          const badgeActive = document.getElementById('hero_image_badge_active');
+          const badgeInactive = document.getElementById('hero_text_badge_active');
+
+          if (simHeroImg) simHeroImg.src = e.target.result;
+          if (simHeroPropaganda) simHeroPropaganda.classList.remove('hidden');
+          if (simHeroTextCard) simHeroTextCard.classList.add('hidden');
+          if (placeholderBox) placeholderBox.classList.add('hidden');
+          if (badgeActive) badgeActive.classList.remove('hidden');
+          if (badgeInactive) badgeInactive.classList.add('hidden');
         }
         updateEffectsPreview();
       };
@@ -1471,7 +1608,11 @@ WWW.ADAPTLINK.COM.BR{% endif %}</textarea>
 
   // RESET HANDLER
   function triggerReset(field) {
-    if (confirm('Tem certeza de que deseja restaurar esta configuração para o padrão do sistema?')) {
+    let msg = 'Tem certeza de que deseja restaurar esta configuração para o padrão do sistema?';
+    if (field === 'login_hero_image') {
+      msg = 'Tem certeza de que deseja remover a imagem de propaganda e voltar a exibir o banner com os tópicos e textos informativos?';
+    }
+    if (confirm(msg)) {
       const form = document.getElementById('resetForm');
       form.action = `/configuracoes/layout/reset/${field}`;
       let csrfInput = form.querySelector('input[name="csrf_token"]');

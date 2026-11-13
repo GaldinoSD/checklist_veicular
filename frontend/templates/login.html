@@ -190,8 +190,19 @@
 
     </div>
 
-    <!-- COLUNA DA DIREITA: BANNER CARD HERO (INSPIRADO NA REFERÊNCIA) -->
+    <!-- COLUNA DA DIREITA: BANNER CARD HERO (PROPAGANDA / APRESENTAÇÃO) -->
     <div class="hidden lg:flex lg:w-1/2 p-3">
+      {% set has_hero_image = sys_config and sys_config.login_layout_mode and sys_config.login_layout_mode.startswith('hero_') %}
+      
+      {% if has_hero_image %}
+      <!-- MODO PROPAGANDA PERSONALIZADA (IMAGEM COMPLETA) -->
+      <div class="w-full h-full relative rounded-[2rem] overflow-hidden shadow-md bg-slate-950 flex items-center justify-center group">
+        <img src="{{ url_for('static', filename='uploads/layout/' ~ sys_config.login_layout_mode, v='4') }}"
+             alt="Propaganda / Apresentação"
+             class="w-full h-full object-cover rounded-[2rem] transition-all duration-300 group-hover:scale-105">
+      </div>
+      {% else %}
+      <!-- MODO BANNER INFORMATIVO (TEXTOS, TÓPICOS & GRADIENTE DA MARCA) -->
       <div class="w-full h-full hero-card-bg relative p-10 lg:p-12 flex flex-col justify-between rounded-[2rem] overflow-hidden shadow-md text-white">
         
         <!-- DESTAQUE SUPERIOR -->
@@ -229,6 +240,7 @@
         </div>
 
       </div>
+      {% endif %}
     </div>
 
   </div>
