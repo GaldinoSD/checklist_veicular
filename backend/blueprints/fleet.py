@@ -52,6 +52,30 @@ from backend.utils import (
 
 
 
+# --- PADRONIZAÇÃO DE PROTOCOLOS AUTOMÁTICOS (FROTA) ---
+def _checklist_protocol(self):
+    d = getattr(self, "date", None)
+    y = d.year if d else agora().year
+    return f"CK-{y}-{self.id:04d}"
+
+def _vistoria_protocol(self):
+    d = getattr(self, "created_at", None)
+    y = d.year if d else agora().year
+    return f"VIS-{y}-{self.id:04d}"
+
+def _avaria_protocol(self):
+    d = getattr(self, "data_abertura", None)
+    y = d.year if d else agora().year
+    return f"AV-{y}-{self.id:04d}"
+
+if not hasattr(Checklist, "protocol"):
+    Checklist.protocol = property(_checklist_protocol)
+if not hasattr(Vistoria, "protocol"):
+    Vistoria.protocol = property(_vistoria_protocol)
+if not hasattr(AvariaOS, "protocol"):
+    AvariaOS.protocol = property(_avaria_protocol)
+
+
 # ----------------- SOLICITAÇÃO DE REVISÃO E MANUTENÇÃO VEICULAR -----------------
 class VehicleMaintenanceRequest(db.Model):
     __tablename__ = "vehicle_maintenance_request"
@@ -2317,8 +2341,10 @@ def api_checklist_detail(cid):
 
     return jsonify({
         "id": c.id,
+        "protocol": c.protocol,
         "date": c.date.strftime("%d/%m/%Y %H:%M"),
         "plate": c.vehicle.plate if c.vehicle else "-",
+        "vehicle_model": f"{c.vehicle.brand or ''} {c.vehicle.model or ''}".strip() if c.vehicle else "",
         "technician": c.technician or "-",
         "km": c.km,
         "status": c.status,
@@ -2342,12 +2368,13 @@ def checklist_pdf_download(cid):
         raw = {}
         
     pdf_path_str = generate_checklist_pdf(c, raw)
+    plate = c.vehicle.plate if c.vehicle else "SEM_PLACA"
     
     return send_file(
         pdf_path_str,
         mimetype="application/pdf",
         as_attachment=False,
-        download_name=f"checklist_{datetime.now().strftime('%d_%m_%Y')}.pdf"
+        download_name=f"checklist_{c.protocol}_{plate}.pdf"
     )
 
 
@@ -2944,7 +2971,7 @@ def generate_checklist_pdf(checklist_obj: Checklist, raw: dict) -> str:
     dt_str = dt_brt.strftime("%Y-%m-%d_%Hh%M")
     now_brt_str = datetime.datetime.now(BRT).strftime("%d/%m/%Y %H:%M")
 
-    filename = f"checklist_{safe_user}_{plate}_{dt_str}.pdf"
+    filename = f"checklist_{checklist_obj.protocol}_{safe_user}_{plate}_{dt_str}.pdf"
     out_path = RELATORIOS_DIR / filename
 
     styles = getSampleStyleSheet()
@@ -3033,9 +3060,10 @@ def generate_checklist_pdf(checklist_obj: Checklist, raw: dict) -> str:
     # Cabeçalho / meta
     elements.append(Paragraph("<b>Informações do Checklist</b>", styles["SectionTitle"]))
     meta_data = [
-        ["Técnico:", (checklist_obj.technician or "-").upper(), "Placa:", plate],
-        ["Veículo:", f"{checklist_obj.vehicle.brand or ''} {checklist_obj.vehicle.model or ''}".strip(), "KM:", str(checklist_obj.km)],
-        ["Data:", dt_brt.strftime("%d/%m/%Y %H:%M"), "Status:", checklist_obj.status],
+        ["Protocolo:", checklist_obj.protocol, "Técnico:", (checklist_obj.technician or "-").upper()],
+        ["Veículo:", f"{checklist_obj.vehicle.brand or ''} {checklist_obj.vehicle.model or ''}".strip(), "Placa:", plate],
+        ["Data:", dt_brt.strftime("%d/%m/%Y %H:%M"), "KM:", str(checklist_obj.km)],
+        ["Status Geral:", checklist_obj.status, "Emitido em:", now_brt_str]
     ]
 
     t = Table(meta_data, colWidths=[22 * mm, 71 * mm, 22 * mm, 71 * mm])
@@ -3158,11 +3186,11 @@ def generate_checklist_pdf(checklist_obj: Checklist, raw: dict) -> str:
         elements,
         onFirstPage=header_footer_factory(
             "RELATÓRIO DE CHECKLIST VEICULAR",
-            f"Veículo: {plate}  |  Técnico: {checklist_obj.technician or '-'}",
+            f"PROTOCOLO: {checklist_obj.protocol}   |   VEÍCULO: {plate}   |   TÉCNICO: {checklist_obj.technician or '-'}",
         ),
         onLaterPages=header_footer_factory(
             "RELATÓRIO DE CHECKLIST VEICULAR",
-            f"Veículo: {plate}  |  Técnico: {checklist_obj.technician or '-'}",
+            f"PROTOCOLO: {checklist_obj.protocol}   |   VEÍCULO: {plate}   |   TÉCNICO: {checklist_obj.technician or '-'}",
         )
     )
 
@@ -3506,7 +3534,7 @@ def generate_vistoria_pdf(vistoria_obj: Vistoria) -> str:
     dt_str = dt_brt.strftime("%Y-%m-%d_%Hh%M")
     now_brt_str = datetime.datetime.now(BRT).strftime("%d/%m/%Y %H:%M")
 
-    filename = f"relatorio_vistoria_{safe_user}_{plate}_{dt_str}.pdf"
+    filename = f"relatorio_vistoria_{vistoria_obj.protocol}_{safe_user}_{plate}_{dt_str}.pdf"
     out_path = RELATORIOS_DIR / filename
 
     styles = getSampleStyleSheet()
@@ -3598,11 +3626,11 @@ def generate_vistoria_pdf(vistoria_obj: Vistoria) -> str:
     turno_formatted = "Início do Expediente" if vistoria_obj.turno == "inicio" else ("Durante Expediente" if vistoria_obj.turno == "durante" else "Fim do Expediente")
     
     meta_data = [
-        ["Vistoria ID:", f"#{vistoria_obj.id}", "Supervisor/Técnico:", (vistoria_obj.created_by_user.username if vistoria_obj.created_by_user else "-").upper()],
+        ["Protocolo:", vistoria_obj.protocol, "Supervisor/Técnico:", (vistoria_obj.created_by_user.username if vistoria_obj.created_by_user else "-").upper()],
         ["Veículo:", f"{vistoria_obj.vehicle.brand or ''} {vistoria_obj.vehicle.model or ''}".strip(), "Placa:", plate],
         ["KM:", str(vistoria_obj.km or "-"), "Turno:", turno_formatted],
         ["Data:", dt_brt.strftime("%d/%m/%Y %H:%M"), "Status Geral:", status_text],
-        ["Local:", vistoria_obj.local or "-", "", ""]
+        ["Local:", vistoria_obj.local or "-", "Emitido em:", now_brt_str]
     ]
 
     t = Table(meta_data, colWidths=[24 * mm, 69 * mm, 30 * mm, 63 * mm])
@@ -3806,11 +3834,11 @@ def generate_vistoria_pdf(vistoria_obj: Vistoria) -> str:
         elements,
         onFirstPage=header_footer_factory(
             "RELATÓRIO DE VISTORIA VEICULAR",
-            f"Veículo: {plate}  |  Supervisor: {vistoria_obj.created_by_user.username if vistoria_obj.created_by_user else '-'}",
+            f"PROTOCOLO: {vistoria_obj.protocol}   |   VEÍCULO: {plate}   |   SUPERVISOR: {vistoria_obj.created_by_user.username if vistoria_obj.created_by_user else '-'}",
         ),
         onLaterPages=header_footer_factory(
             "RELATÓRIO DE VISTORIA VEICULAR",
-            f"Veículo: {plate}  |  Supervisor: {vistoria_obj.created_by_user.username if vistoria_obj.created_by_user else '-'}",
+            f"PROTOCOLO: {vistoria_obj.protocol}   |   VEÍCULO: {plate}   |   SUPERVISOR: {vistoria_obj.created_by_user.username if vistoria_obj.created_by_user else '-'}",
         )
     )
 
@@ -3835,11 +3863,12 @@ def vistoria_pdf_download(vistoria_id):
         flash("❌ Erro interno ao compilar o PDF.", "error")
         return redirect(url_for("vistorias_list"))
         
+    plate = v.vehicle.plate if v.vehicle else "SEM_PLACA"
     return send_file(
         pdf_path_str,
         mimetype="application/pdf",
         as_attachment=False,
-        download_name=f"vistoria_{datetime.now().strftime('%d_%m_%Y')}.pdf"
+        download_name=f"vistoria_{v.protocol}_{plate}.pdf"
     )
 
 
@@ -4377,6 +4406,7 @@ def vistorias_detail(vistoria_id):
             
         return jsonify({
             "id": v.id,
+            "protocol": v.protocol,
             "created_at": v.created_at.strftime('%d/%m/%Y %H:%M'),
             "plate": v.vehicle.plate if v.vehicle else "-",
             "vehicle_type": v.vehicle.type if v.vehicle else "carro",
