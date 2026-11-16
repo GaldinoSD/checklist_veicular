@@ -771,9 +771,31 @@ function abrirModalRelatorioMensal() {
         inputMes.value = `${year}-${month}`;
         inputMes.max = `${year}-${month}`;
     }
+
+    // Auto-popular técnicos presentes na tela caso não estejam no select
+    const selectTech = document.getElementById('relatorio-tecnico-select');
+    if (selectTech) {
+        const existingValues = new Set(Array.from(selectTech.options).map(o => o.value.trim().toUpperCase()));
+        document.querySelectorAll('tbody tr').forEach(tr => {
+            const tds = tr.querySelectorAll('td');
+            // Coluna 4 (índice 3) é o Técnico na tabela de checklists
+            if (tds.length >= 4) {
+                const name = tds[3].textContent.trim();
+                if (name && name !== '-' && name !== 'Sem registros.' && !existingValues.has(name.toUpperCase())) {
+                    const opt = document.createElement('option');
+                    opt.value = name;
+                    opt.textContent = name;
+                    selectTech.appendChild(opt);
+                    existingValues.add(name.toUpperCase());
+                }
+            }
+        });
+    }
+
     const modal = document.getElementById('modalRelatorioMensalChecklist');
     if (modal) {
         modal.classList.remove('hidden');
+        modal.style.display = 'flex';
     }
 }
 
@@ -781,6 +803,7 @@ function fecharModalRelatorioMensal() {
     const modal = document.getElementById('modalRelatorioMensalChecklist');
     if (modal) {
         modal.classList.add('hidden');
+        modal.style.display = 'none';
     }
 }
 
@@ -800,7 +823,7 @@ function gerarRelatorioMensalPdf() {
 <!-- ========================================== -->
 <!-- 📄 MODAL: RELATÓRIO MENSAL DE CHECKLISTS -->
 <!-- ========================================== -->
-<div id="modalRelatorioMensalChecklist" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+<div id="modalRelatorioMensalChecklist" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4" onclick="if(event.target === this) fecharModalRelatorioMensal()">
     <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden animate-scale-in">
         <!-- Header -->
         <div class="px-6 py-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">

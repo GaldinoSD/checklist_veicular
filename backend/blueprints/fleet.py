@@ -2,7 +2,7 @@
 from backend.utils import GlobalBlueprint
 fleet_bp = GlobalBlueprint("fleet", __name__)
 
-import os, json, uuid, requests, pytz, holidays
+import os, json, uuid, requests, pytz, holidays, io, calendar
 from datetime import datetime, timedelta, date
 from pathlib import Path
 from collections import defaultdict
@@ -2310,7 +2310,171 @@ def checklists():
         )
 
     itens = query.order_by(Checklist.date.desc()).all()
-    return render_template("checklists.html", itens=itens, q=q)
+
+    # Lista de técnicos para o modal do relatório mensal
+    tech_set = set()
+    try:
+        for t in db.session.query(Checklist.technician).filter(Checklist.technician != None, Checklist.technician != "").distinct().all():
+            if t[0] and t[0].strip():
+                tech_set.add(t[0].strip())
+        for u in User.query.filter(User.active == True).all():
+            if getattr(u, "role", "") in ("tecnico", "technician") or not getattr(u, "is_admin", False):
+                tech_set.add(u.username.strip())
+                if hasattr(u, "display_name") and u.display_name and u.display_name.strip():
+                    tech_set.add(u.display_name.strip())
+    except Exception as e_tech:
+        print("⚠️ Erro ao listar técnicos para checklists:", e_tech)
+
+    tecnicos = sorted(list(tech_set), key=lambda x: x.upper())
+    return render_template("checklists.html", itens=itens, q=q, tecnicos=tecnicos)
+
+
+@fleet_bp.route("/checklists/relatorio/mensal/pdf")
+@login_required
+def checklists_relatorio_mensal_pdf():
+    if not (current_user.is_admin or current_user.is_supervisor or (hasattr(current_user, "has_permission") and current_user.has_permission("checklists_view"))):
+        abort(403)
+
+    mes_param = request.args.get("mes", "").strip()
+    if not mes_param:
+        mes_param = agora().strftime("%Y-%m")
+
+    try:
+        ano_str, mes_str = mes_param.split("-")
+        ano = int(ano_str)
+        mes_num = int(mes_str)
+    except Exception:
+        ano = agora().year
+        mes_num = agora().month
+        mes_param = f"{ano:04d}-{mes_num:02d}"
+
+    meses_pt = {
+        1: "Janeiro", 2: "Fevereiro", 3: "Março", 4: "Abril",
+        5: "Maio", 6: "Junho", 7: "Julho", 8: "Agosto",
+        9: "Setembro", 10: "Outubro", 11: "Novembro", 12: "Dezembro"
+    }
+    mes_nome = meses_pt.get(mes_num, str(mes_num))
+
+    _, last_day = calendar.monthrange(ano, mes_num)
+    start_dt = datetime(ano, mes_num, 1, 0, 0, 0)
+    end_dt = datetime(ano, mes_num, last_day, 23, 59, 59)
+
+    technician_param = request.args.get("technician", "").strip()
+    if technician_param.lower() in ("todos", "todas", "all", ""):
+        technician_filter = None
+    else:
+        technician_filter = technician_param
+
+    query = Checklist.query.join(Vehicle, Checklist.vehicle_id == Vehicle.id)
+    query = query.filter(Checklist.date >= start_dt, Checklist.date <= end_dt)
+
+    if technician_filter:
+        query = query.filter(Checklist.technician.ilike(f"%{technician_filter}%"))
+
+    # Ordenação cronológica crescente conforme alinhado
+    itens = query.order_by(Checklist.date.asc()).all()
+
+    total_checklists = len(itens)
+    aprovados = sum(1 for c in itens if (c.status or "").upper() in ("OK", "APROVADO", "CONFORME"))
+    atencao_reprovados = total_checklists - aprovados
+    taxa_conformidade = round((aprovados / total_checklists * 100), 1) if total_checklists > 0 else 100.0
+
+    veiculos_unicos = len(set([c.vehicle.plate for c in itens if c.vehicle]))
+    kms = [c.km for c in itens if c.km and c.km > 0]
+    km_min = min(kms) if kms else 0
+    km_max = max(kms) if kms else 0
+    km_dif = (km_max - km_min) if (kms and km_max > km_min) else 0
+
+    protocol_rel = f"REL-CHK-{ano}-{mes_num:02d}"
+    tech_slug = ""
+    if technician_filter:
+        tech_slug = "".join(ch for ch in technician_filter.upper() if ch.isalnum())[:10]
+        protocol_rel += f"-{tech_slug}"
+
+    now_dt = agora()
+    buffer = io.BytesIO()
+
+    metadata = {
+        "__ref_id__": protocol_rel,
+        "Protocolo": protocol_rel,
+        "Mês de Referência": f"{mes_nome} de {ano}",
+        "Técnico": technician_filter.upper() if technician_filter else "TODOS OS TÉCNICOS",
+        "Emissão": now_dt.strftime("%d/%m/%Y %H:%M"),
+        "Emitido por": current_user.username.upper(),
+        "Total de Checklists": str(total_checklists),
+        "Conformidade": f"{aprovados} de {total_checklists} ({taxa_conformidade}%)",
+        "Com Ressalvas / Reprovados": str(atencao_reprovados),
+        "Veículos Distintos": str(veiculos_unicos)
+    }
+
+    if km_dif > 0:
+        metadata["KM Percorrido (Aprox.)"] = f"{km_dif:,} km".replace(",", ".")
+
+    table_lines = []
+    for c in itens:
+        placa = c.vehicle.plate if c.vehicle else "N/A"
+        modelo = c.vehicle.model if (c.vehicle and hasattr(c.vehicle, "model") and c.vehicle.model) else ""
+        data_str = c.date.strftime("%d/%m/%Y %H:%M") if c.date else "N/A"
+        km_str = f"{c.km:,} km".replace(",", ".") if c.km else "Não inf."
+
+        status_txt = (c.status or "OK").upper()
+        if status_txt in ("OK", "APROVADO", "CONFORME"):
+            status_badge = f"<font color='#059669'><b>✔ {status_txt}</b></font>"
+        else:
+            status_badge = f"<font color='#DC2626'><b>⚠ {status_txt}</b></font>"
+
+        detalhes_extra = []
+        if c.notes and c.notes.strip():
+            detalhes_extra.append(f"<b>Obs:</b> {c.notes.strip()}")
+
+        if c.raw_json:
+            try:
+                raw_data = json.loads(c.raw_json)
+                items_data = raw_data.get("items", {})
+                reprovados = []
+                for k, v in items_data.items():
+                    val = str(v).strip().lower()
+                    if val in ("nao", "não", "reprovado", "ruim", "com avaria", "com_defeito"):
+                        reprovados.append(k)
+                if reprovados:
+                    detalhes_extra.append(f"<b>Itens em Atenção:</b> {', '.join(reprovados[:5])}")
+            except Exception:
+                pass
+
+        detalhes_str = "<br/>".join(detalhes_extra)
+        if detalhes_str:
+            detalhes_str = f"<br/>{detalhes_str}"
+
+        col1 = f"<b>{c.protocol}</b><br/>{data_str}<br/><b>Placa:</b> {placa}"
+        if modelo:
+            col1 += f" ({modelo})"
+
+        col2 = f"<b>Técnico:</b> {c.technician or 'Não informado'}<br/><b>KM:</b> {km_str} | <b>Status:</b> {status_badge}{detalhes_str}"
+
+        table_lines.append((col1, col2))
+
+    if not table_lines:
+        table_lines.append(("Informação", "Nenhum checklist registrado para o período e técnico selecionados."))
+
+    make_premium_pdf(
+        buffer,
+        f"Relatório Mensal de Checklists - {mes_nome}/{ano}",
+        metadata,
+        table_lines
+    )
+    buffer.seek(0)
+
+    filename_safe = f"relatorio_checklists_{ano}_{mes_num:02d}"
+    if tech_slug:
+        filename_safe += f"_{tech_slug.lower()}"
+    filename_safe += f"_{now_dt.strftime('%d%m%Y')}.pdf"
+
+    return send_file(
+        buffer,
+        mimetype="application/pdf",
+        as_attachment=False,
+        download_name=filename_safe
+    )
 
 
 
