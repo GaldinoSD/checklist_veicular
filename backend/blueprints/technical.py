@@ -12172,17 +12172,37 @@ def ensure_pendencias_tables():
         print("⚠️ Erro ao assegurar tabelas de pendências:", e)
 
 
+def _is_pendencias_supervisor(user):
+    if not user or not getattr(user, "is_authenticated", False):
+        return False
+    if getattr(user, "is_admin", False):
+        return True
+    if (getattr(user, "username", "") or "").lower() in ("admin", "administrador"):
+        return True
+    role = (getattr(user, "role", "") or "").lower()
+    if role in ("admin", "supervisor", "gestor", "coordenador", "gerente", "diretor", "lider"):
+        return True
+    if getattr(user, "is_supervisor_or_admin", False) or getattr(user, "is_supervisor", False):
+        return True
+    if hasattr(user, "has_permission") and (user.has_permission("pendencias_supervisao") or user.has_permission("pendencias")):
+        return True
+    return False
+
+
 def pendencias_allowed(f):
     @wraps(f)
     @login_required
     def decorated_function(*args, **kwargs):
         ensure_pendencias_tables()
-        if getattr(current_user, "is_admin", False) or getattr(current_user, "role", "") in ("admin", "supervisor", "gestor"):
+        if _is_pendencias_supervisor(current_user):
             return f(*args, **kwargs)
-        if hasattr(current_user, "has_permission") and current_user.has_permission("pendencias_supervisao"):
-            return f(*args, **kwargs)
-        # Permite que colaboradores com pendências atribuídas acessem a tela
-        my_count = Pendencia.query.filter_by(responsible_id=current_user.id).count()
+        # Permite que colaboradores com pendências atribuídas ou criadas acessem a tela
+        my_count = Pendencia.query.filter(
+            db.or_(
+                Pendencia.responsible_id == current_user.id,
+                Pendencia.creator_id == current_user.id
+            )
+        ).count()
         if my_count > 0:
             return f(*args, **kwargs)
         flash("Acesso não autorizado ao módulo de Pendências.", "error")
@@ -12223,7 +12243,7 @@ def _save_pendencia_files(file_list):
 @pendencias_allowed
 def pendencias_supervisao():
     ensure_pendencias_tables()
-    is_supervisor = getattr(current_user, "is_admin", False) or getattr(current_user, "role", "") in ("admin", "supervisor", "gestor")
+    is_supervisor = _is_pendencias_supervisor(current_user)
     tecnicos = User.query.filter(User.username != "admin").order_by(User.username.asc()).all()
     return render_template(
         "pendencias.html",
@@ -12236,12 +12256,9 @@ def pendencias_supervisao():
 @pendencias_allowed
 def api_pendencias():
     ensure_pendencias_tables()
-    is_supervisor = getattr(current_user, "is_admin", False) or getattr(current_user, "role", "") in ("admin", "supervisor", "gestor")
+    is_supervisor = _is_pendencias_supervisor(current_user)
 
     if request.method == "POST":
-        if not is_supervisor and not (hasattr(current_user, "has_permission") and current_user.has_permission("pendencias_supervisao")):
-            return jsonify({"error": "Apenas supervisores podem registrar novas pendências."}), 403
-
         data = request.form if not request.is_json else request.json
         title = (data.get("title") or "").strip()
         description = (data.get("description") or "").strip()
@@ -12307,9 +12324,14 @@ def api_pendencias():
     # GET: Listagem e Filtros
     q = Pendencia.query
 
-    # Se técnico comum sem perfil de supervisão, restringe apenas às dele
-    if not is_supervisor and not (hasattr(current_user, "has_permission") and current_user.has_permission("pendencias_supervisao")):
-        q = q.filter(Pendencia.responsible_id == current_user.id)
+    # Se usuário não tiver perfil de supervisão, visualiza as dele (onde é responsável ou criador)
+    if not is_supervisor:
+        q = q.filter(
+            db.or_(
+                Pendencia.responsible_id == current_user.id,
+                Pendencia.creator_id == current_user.id
+            )
+        )
 
     # Filtros
     search = request.args.get("search", "").strip()
@@ -12405,20 +12427,24 @@ def api_pendencias():
 def api_pendencia_detail(id):
     ensure_pendencias_tables()
     p = Pendencia.query.get_or_404(id)
-    is_supervisor = getattr(current_user, "is_admin", False) or getattr(current_user, "role", "") in ("admin", "supervisor", "gestor")
+    is_supervisor = _is_pendencias_supervisor(current_user)
 
     if request.method == "GET":
         detail = p.to_dict()
         detail["history"] = [h.to_dict() for h in p.historico]
         detail["comments"] = [c.to_dict() for c in p.comentarios]
+        detail["can_delete"] = bool(is_supervisor or p.creator_id == current_user.id)
         return jsonify(detail)
 
     if request.method == "DELETE":
-        if not is_supervisor:
-            return jsonify({"error": "Apenas supervisores podem excluir pendências."}), 403
+        if not is_supervisor and p.creator_id != current_user.id:
+            return jsonify({"error": "Permissão insuficiente para excluir esta pendência."}), 403
+        protocol_num = p.protocol
+        title_str = p.title
         db.session.delete(p)
         db.session.commit()
-        return jsonify({"status": "ok", "message": "Pendência excluída com sucesso."})
+        registrar_log(f"Pendência excluída: {protocol_num} ({title_str}) por {current_user.username.upper()}")
+        return jsonify({"status": "ok", "message": f"Pendência {protocol_num} excluída com sucesso."})
 
     if request.method == "PUT":
         if not is_supervisor:
@@ -12450,6 +12476,23 @@ def api_pendencia_detail(id):
             db.session.add(h)
         db.session.commit()
         return jsonify({"status": "ok", "message": "Pendência atualizada com sucesso."})
+
+
+
+@technical_bp.route("/api/gestao/pendencias/<int:id>/excluir", methods=["POST", "DELETE"])
+@pendencias_allowed
+def api_pendencia_excluir(id):
+    ensure_pendencias_tables()
+    p = Pendencia.query.get_or_404(id)
+    is_supervisor = _is_pendencias_supervisor(current_user)
+    if not is_supervisor and p.creator_id != current_user.id:
+        return jsonify({"error": "Permissão insuficiente para excluir esta pendência."}), 403
+    protocol_num = p.protocol
+    title_str = p.title
+    db.session.delete(p)
+    db.session.commit()
+    registrar_log(f"Pendência excluída: {protocol_num} ({title_str}) por {current_user.username.upper()}")
+    return jsonify({"status": "ok", "message": f"Pendência {protocol_num} excluída com sucesso."})
 
 
 @technical_bp.route("/api/gestao/pendencias/<int:id>/status", methods=["POST"])

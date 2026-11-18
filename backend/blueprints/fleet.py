@@ -2503,18 +2503,34 @@ def api_checklist_detail(cid):
     except Exception:
         data = {}
 
+    sig = c.signature or data.get("signature") or data.get("signature_data")
+    sig_url = None
+    if sig:
+        if sig.startswith("data:image") or sig.startswith("/"):
+            sig_url = sig
+        else:
+            sig_url = url_for("static", filename=f"assinaturas/{sig}")
+
+    v = c.vehicle
     return jsonify({
         "id": c.id,
         "protocol": c.protocol,
         "date": c.date.strftime("%d/%m/%Y %H:%M"),
-        "plate": c.vehicle.plate if c.vehicle else "-",
-        "vehicle_model": f"{c.vehicle.brand or ''} {c.vehicle.model or ''}".strip() if c.vehicle else "",
+        "plate": v.plate if v else "-",
+        "brand": v.brand if v else "",
+        "model": v.model if v else "",
+        "vehicle_model": f"{v.brand or ''} {v.model or ''}".strip() if v else "",
+        "year": v.year if (v and v.year) else "-",
+        "type": (v.type or "carro").upper() if v else "-",
+        "vehicle_current_km": v.km if v else None,
         "technician": c.technician or "-",
         "km": c.km,
         "status": c.status,
         "notes": c.notes,
         "photos": data.get("photos", []),
-        "items": data.get("items", {})
+        "items": data.get("items", {}),
+        "signature": sig_url,
+        "signature_filename": sig if sig and not sig.startswith("data:") else None
     })
 
 

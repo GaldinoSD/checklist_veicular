@@ -23,8 +23,8 @@
     }
 
     .logo-adjust {
-      max-height: {{ sys_config.login_logo_height or 120 }}px;
-      max-width: 280px;
+      max-height: clamp(44px, 9vh, {{ sys_config.login_logo_height or 100 }}px);
+      max-width: clamp(160px, 35vw, 260px);
       object-fit: contain;
     }
 
@@ -46,6 +46,14 @@
     .custom-login-btn:hover {
       background: linear-gradient(135deg, color-mix(in srgb, var(--login-primary) 85%, #000), color-mix(in srgb, var(--login-secondary) 85%, #000)) !important;
       box-shadow: 0 14px 25px -3px color-mix(in srgb, var(--login-primary) 45%, transparent) !important;
+    }
+
+    @media (max-height: 720px), (max-width: 640px) {
+      .custom-login-btn {
+        padding-top: max(8px, calc({{ sys_config.login_btn_padding_y or 12 }}px * 0.75)) !important;
+        padding-bottom: max(8px, calc({{ sys_config.login_btn_padding_y or 12 }}px * 0.75)) !important;
+        font-size: max(13px, calc({{ sys_config.login_btn_font_size or 16 }}px * 0.9)) !important;
+      }
     }
 
     .custom-login-accent {
@@ -76,11 +84,11 @@
   </style>
 </head>
 
-<body class="min-h-screen clean-bg flex items-center justify-center p-4 lg:p-8 relative overflow-y-auto text-slate-800 selection:bg-emerald-500 selection:text-white">
+<body class="h-screen h-[100dvh] clean-bg flex items-center justify-center p-2 sm:p-4 lg:p-6 xl:p-8 relative overflow-hidden text-slate-800 selection:bg-emerald-500 selection:text-white">
 
   {% if is_preview %}
   <!-- BANNER DE PRÉ-VISUALIZAÇÃO DE LAYOUT -->
-  <div class="fixed top-0 left-0 right-0 z-[999] bg-slate-900/95 backdrop-blur-md border-b border-white/10 px-6 py-3.5 flex items-center justify-between shadow-2xl">
+  <div class="fixed top-0 left-0 right-0 z-[999] bg-slate-900/95 backdrop-blur-md border-b border-white/10 px-6 py-2.5 sm:py-3.5 flex items-center justify-between shadow-2xl">
     <div class="flex items-center gap-3">
       <span class="relative flex h-3 w-3">
         <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
@@ -99,58 +107,58 @@
   {% endif %}
 
   <!-- CONTAINER PRINCIPAL BRANCO CLEAN (SPLIT SCREEN) -->
-  <div class="relative z-10 w-full max-w-6xl flex flex-col lg:flex-row items-stretch rounded-[2.5rem] overflow-hidden shadow-xl border border-slate-200/80 bg-white min-h-[620px] {% if is_preview %}preview-offset{% endif %}">
+  <div class="relative z-10 w-full max-w-5xl xl:max-w-6xl flex flex-col lg:flex-row items-stretch rounded-2xl sm:rounded-[2rem] lg:rounded-[2.5rem] overflow-hidden shadow-xl border border-slate-200/80 bg-white min-h-0 lg:min-h-[520px] xl:min-h-[580px] max-h-[96dvh] {% if is_preview %}preview-offset{% endif %}">
     
     <!-- COLUNA DA ESQUERDA: FORMULÁRIO DE LOGIN (FUNDO BRANCO CLEAN) -->
-    <div class="w-full lg:w-1/2 p-8 sm:p-12 lg:p-16 flex flex-col justify-between bg-white relative">
+    <div class="w-full lg:w-1/2 p-4 sm:p-6 md:p-8 lg:p-10 xl:p-12 flex flex-col justify-between bg-white relative overflow-y-auto lg:overflow-visible">
       
       <!-- TOP LOGO E TÍTULOS -->
       <div>
-        <div class="mb-8 flex justify-center">
+        <div class="mb-2 sm:mb-4 lg:mb-6 flex justify-center">
           <img src="{% if sys_config and sys_config.login_logo %}{{ url_for('static', filename='uploads/layout/' ~ sys_config.login_logo, v='2') }}{% else %}{{ url_for('static', filename='logo.png', v='2') }}{% endif %}"
             alt="Logo do Sistema" class="logo-adjust">
         </div>
         
-        <h1 class="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
+        <h1 class="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900 tracking-tight leading-tight">
           {{ sys_config.login_title_text or 'Acesse sua conta' }}
         </h1>
-        <p class="text-xs sm:text-sm text-slate-500 mt-1.5 font-medium leading-relaxed">
+        <p class="text-xs sm:text-sm text-slate-500 mt-1 font-medium leading-relaxed">
           {{ sys_config.login_subtitle_text or 'Entre com seu usuário e senha para continuar' }}
         </p>
       </div>
 
       <!-- FORMULÁRIO -->
-      <form method="post" autocomplete="off" {% if is_preview %}onsubmit="event.preventDefault(); alert('Modo Pré-visualização: a autenticação foi desativada temporariamente.'); return false;"{% else %}onsubmit="sessionStorage.setItem('session_active', 'true');"{% endif %} class="space-y-5 my-6">
+      <form method="post" autocomplete="off" {% if is_preview %}onsubmit="event.preventDefault(); alert('Modo Pré-visualização: a autenticação foi desativada temporariamente.'); return false;"{% else %}onsubmit="sessionStorage.setItem('session_active', 'true');"{% endif %} class="space-y-2.5 sm:space-y-4 my-2.5 sm:my-4 lg:my-6">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
 
         <!-- CAMPO USUÁRIO -->
         <div>
-          <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1.5">
+          <label class="block text-[11px] sm:text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1 sm:mb-1.5">
             Usuário
           </label>
-          <div class="flex items-center bg-slate-100/90 border border-slate-200 rounded-xl px-4 py-3 shadow-sm transition-all custom-login-focus">
-            <i class="fa-solid fa-user text-slate-400 text-sm mr-3"></i>
+          <div class="flex items-center bg-slate-100/90 border border-slate-200 rounded-xl px-3.5 py-2 sm:px-4 sm:py-2.5 lg:py-3 shadow-sm transition-all custom-login-focus">
+            <i class="fa-solid fa-user text-slate-400 text-sm mr-2.5 sm:mr-3"></i>
             <input id="username" name="username" type="text" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false"
-              class="bg-transparent w-full text-slate-800 text-sm placeholder-slate-400 focus:outline-none font-medium"
+              class="bg-transparent w-full text-slate-800 text-xs sm:text-sm placeholder-slate-400 focus:outline-none font-medium"
               placeholder="{{ sys_config.login_username_placeholder or 'Digite seu usuário' }}" required>
           </div>
         </div>
 
         <!-- CAMPO SENHA -->
         <div>
-          <div class="flex items-center justify-between mb-1.5">
-            <label class="block text-xs font-semibold text-slate-600 uppercase tracking-wider">
+          <div class="flex items-center justify-between mb-1 sm:mb-1.5">
+            <label class="block text-[11px] sm:text-xs font-semibold text-slate-600 uppercase tracking-wider">
               Senha
             </label>
-            <a href="javascript:void(0)" onclick="showForgotPasswordModal()" class="text-xs font-semibold custom-login-accent hover:underline transition-colors">
+            <a href="javascript:void(0)" onclick="showForgotPasswordModal()" class="text-[11px] sm:text-xs font-semibold custom-login-accent hover:underline transition-colors">
               Esqueceu a senha?
             </a>
 
           </div>
-          <div class="flex items-center bg-slate-100/90 border border-slate-200 rounded-xl px-4 py-3 shadow-sm transition-all custom-login-focus">
-            <i class="fa-solid fa-lock text-slate-400 text-sm mr-3"></i>
+          <div class="flex items-center bg-slate-100/90 border border-slate-200 rounded-xl px-3.5 py-2 sm:px-4 sm:py-2.5 lg:py-3 shadow-sm transition-all custom-login-focus">
+            <i class="fa-solid fa-lock text-slate-400 text-sm mr-2.5 sm:mr-3"></i>
             <input id="password" name="password" type="password" autocomplete="new-password"
-              class="bg-transparent w-full text-slate-800 text-sm placeholder-slate-400 focus:outline-none font-medium"
+              class="bg-transparent w-full text-slate-800 text-xs sm:text-sm placeholder-slate-400 focus:outline-none font-medium"
               placeholder="{{ sys_config.login_password_placeholder or 'Digite sua senha' }}" required>
             <button type="button" onclick="togglePasswordVisibility()" class="text-slate-400 hover:text-slate-600 focus:outline-none ml-2 transition-colors" title="Mostrar/Ocultar Senha">
               <i id="togglePasswordIcon" class="fa-solid fa-eye text-xs"></i>
@@ -167,7 +175,7 @@
         {% with msgs = get_flashed_messages(category_filter=["login_error"]) %}
         {% if msgs %}
         {% for msg in msgs %}
-        <div class="p-3 bg-red-50 border border-red-200 rounded-xl flex items-center gap-2.5 text-red-600 text-xs font-semibold">
+        <div class="p-2.5 sm:p-3 bg-red-50 border border-red-200 rounded-xl flex items-center gap-2 text-red-600 text-xs font-semibold">
           <i class="fa-solid fa-circle-exclamation shrink-0"></i>
           <span>{{ msg }}</span>
         </div>
@@ -177,9 +185,9 @@
       </form>
 
       <!-- RODAPÉ DO LOGIN -->
-      <div class="pt-6 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] text-slate-400 font-medium">
+      <div class="pt-3 sm:pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-1.5 sm:gap-3 text-[10px] sm:text-[11px] text-slate-400 font-medium">
         <span>{{ sys_config.login_footer_text or '© 2026 Painel de Frota. Todos os direitos reservados.' }}</span>
-        <div class="flex gap-3">
+        <div class="flex gap-2 sm:gap-3">
           <a href="javascript:void(0)" onclick="alert('Suporte Técnico')" class="hover:text-slate-600 transition-colors">Fale conosco</a>
           <span>•</span>
           <a href="{{ url_for('seguranca_privacidade') }}" class="hover:text-slate-600 transition-colors font-semibold">Segurança e privacidade</a>
@@ -191,52 +199,52 @@
     </div>
 
     <!-- COLUNA DA DIREITA: BANNER CARD HERO (PROPAGANDA / APRESENTAÇÃO) -->
-    <div class="hidden lg:flex lg:w-1/2 p-3">
+    <div class="hidden lg:flex lg:w-1/2 p-2.5 xl:p-3">
       {% set has_hero_image = sys_config and sys_config.login_layout_mode and sys_config.login_layout_mode.startswith('hero_') %}
       
       {% if has_hero_image %}
       <!-- MODO PROPAGANDA PERSONALIZADA (IMAGEM COMPLETA) -->
-      <div class="w-full h-full relative rounded-[2rem] overflow-hidden shadow-md bg-slate-950 flex items-center justify-center group">
+      <div class="w-full h-full relative rounded-2xl sm:rounded-[2rem] overflow-hidden shadow-md bg-slate-950 flex items-center justify-center group">
         <img src="{{ url_for('static', filename='uploads/layout/' ~ sys_config.login_layout_mode, v='4') }}"
              alt="Propaganda / Apresentação"
-             class="w-full h-full object-cover rounded-[2rem] transition-all duration-300 group-hover:scale-105">
+             class="w-full h-full object-cover rounded-2xl sm:rounded-[2rem] transition-all duration-300 group-hover:scale-105">
       </div>
       {% else %}
       <!-- MODO BANNER INFORMATIVO (TEXTOS, TÓPICOS & GRADIENTE DA MARCA) -->
-      <div class="w-full h-full hero-card-bg relative p-10 lg:p-12 flex flex-col justify-between rounded-[2rem] overflow-hidden shadow-md text-white">
+      <div class="w-full h-full hero-card-bg relative p-6 lg:p-8 xl:p-10 flex flex-col justify-between rounded-2xl sm:rounded-[2rem] overflow-hidden shadow-md text-white">
         
         <!-- DESTAQUE SUPERIOR -->
-        <div class="relative z-10 space-y-4">
-          <h2 class="text-3xl lg:text-4xl font-bold text-white leading-tight tracking-tight drop-shadow-sm">
+        <div class="relative z-10 space-y-2 lg:space-y-3">
+          <h2 class="text-2xl lg:text-3xl xl:text-4xl font-bold text-white leading-tight tracking-tight drop-shadow-sm">
             {{ sys_config.login_hero_title or 'Gestão Inteligente de Frotas e Equipes' }}
           </h2>
           
-          <p class="text-sm text-slate-200 font-medium leading-relaxed max-w-lg">
+          <p class="text-xs sm:text-sm text-slate-200 font-medium leading-relaxed max-w-lg">
             {{ sys_config.login_hero_subtitle or 'Controle total da sua operação, com mais eficiência, produtividade e segurança.' }}
           </p>
         </div>
 
         <!-- BULLETS COM CHECKMARKS (EXATAMENTE COMO NO MODELO DA IMAGEM) -->
-        <div class="relative z-10 space-y-3 my-8">
+        <div class="relative z-10 space-y-2 sm:space-y-2.5 my-3 lg:my-6">
           {% set bullets_raw = sys_config.login_hero_bullets if (sys_config and sys_config.login_hero_bullets) else 'Gestão completa de frotas e veículos|Controle de equipes e produtividade|Vistorias e checklists digitais em tempo real|Gestão de Ordens de Serviço (O.S.) e avarias|Monitoramento operacional e indicadores|Automação de processos e redução de custos' %}
           {% set bullets = bullets_raw.split('|') if '|' in bullets_raw else bullets_raw.split('\n') %}
 
           {% for item in bullets %}
             {% if item.strip() %}
-            <div class="flex items-center gap-3">
-              <div class="w-6 h-6 rounded-full custom-login-accent-bg flex items-center justify-center shrink-0 text-white shadow-sm">
-                <i class="fa-solid fa-check text-xs font-black"></i>
+            <div class="flex items-center gap-2.5 sm:gap-3">
+              <div class="w-5 h-5 sm:w-6 sm:h-6 rounded-full custom-login-accent-bg flex items-center justify-center shrink-0 text-white shadow-sm text-[10px] sm:text-xs">
+                <i class="fa-solid fa-check font-black"></i>
               </div>
-              <span class="text-sm font-semibold text-slate-100 leading-snug">{{ item.strip() }}</span>
+              <span class="text-xs sm:text-sm font-semibold text-slate-100 leading-snug">{{ item.strip() }}</span>
             </div>
             {% endif %}
           {% endfor %}
         </div>
 
         <!-- MARCA DA EMPRESA NO CANTO INFERIOR DIREITO -->
-        <div class="relative z-10 flex items-center justify-end pt-4">
+        <div class="relative z-10 flex items-center justify-end pt-2">
           <img src="{% if sys_config and sys_config.login_logo %}{{ url_for('static', filename='uploads/layout/' ~ sys_config.login_logo, v='2') }}{% else %}{{ url_for('static', filename='logo.png', v='2') }}{% endif %}"
-            alt="Logo Secundária" class="h-9 object-contain opacity-90 drop-shadow-md">
+            alt="Logo Secundária" class="h-7 sm:h-8 lg:h-9 object-contain opacity-90 drop-shadow-md">
         </div>
 
       </div>

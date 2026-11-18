@@ -1,399 +1,364 @@
 {% extends "layout.html" %}
 {% block content %}
 
-<div class="max-w-7xl mx-auto">
+<div class="animate-premium space-y-6">
 
-<!-- ✅ HEADER PREMIUM AVARIAS COMPACT -->
+<!-- ==========================================
+     ✅ HEADER PREMIUM AVARIAS COMPACT (ALINHADO COM VISTORIAS)
+     ========================================== -->
 <div class="mb-8 animate-premium">
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-4 border-b border-slate-200 dark:border-white/5 mb-6">
+    <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-4 border-b border-slate-200 dark:border-white/5 mb-6">
 
         <div class="flex items-center gap-5 relative z-10">
-            <div class="w-12 h-12 rounded-[1.25rem] bg-gradient-to-br from-red-500 to-orange-600 flex items-center justify-center text-white shadow-2xl shadow-red-500/20">
-                <i class="fa-solid fa-car-burst text-xl"></i>
+            <div class="w-12 h-12 rounded-[1.25rem] bg-gradient-to-br from-rose-500 to-amber-600 flex items-center justify-center text-white shadow-2xl shadow-rose-500/20">
+                <i class="fa-solid fa-wrench text-xl"></i>
             </div>
             <div>
                 <nav class="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-0.5">
                     <span>Manutenção</span>
                     <i class="fa-solid fa-chevron-right text-[8px] opacity-30"></i>
-                    <span class="text-red-500">Avarias & O.S.</span>
+                    <span class="text-rose-500">Gestão de Frotas</span>
                 </nav>
-                <h2 class="text-2xl font-black text-slate-800 dark:text-white tracking-tight">Ordens de Serviço</h2>
+                <h2 class="text-2xl font-black text-slate-800 dark:text-white tracking-tight">Avarias & Ordens de Serviço</h2>
             </div>
         </div>
 
-        <div class="flex items-center gap-4 relative z-10">
+        <div class="flex flex-wrap items-center gap-3 relative z-10">
             <button onclick="document.getElementById('modalNovaAvaria').showModal()"
-                    class="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-red-500/20 transition-all active:scale-95 flex items-center gap-2">
-                <i class="fa-solid fa-plus text-xs"></i> Nova Avaria
+                    class="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 rounded-xl font-bold text-xs shadow-sm transition-all flex items-center gap-2 cursor-pointer active:scale-95">
+                <i class="fa-solid fa-plus text-xs"></i>
+                <span>Nova Avaria</span>
             </button>
         </div>
     </div>
 </div>
 
-<!-- ✅ CARDS DE ESTATÍSTICAS PREMIUM -->
-<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 animate-premium">
+<!-- ==========================================
+     ✅ CARDS DE INDICADORES (KPIs COMPACTOS)
+     ========================================== -->
+<div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
     <!-- Total O.S -->
-    <div class="glass-premium p-6 rounded-3xl relative overflow-hidden group shadow-lg">
-        <div class="absolute -top-12 -right-12 w-24 h-24 bg-blue-500/10 rounded-full blur-2xl group-hover:scale-150 transition-all duration-500"></div>
-        <div class="flex justify-between items-start mb-4">
-            <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total de Registros</span>
-            <div class="w-8 h-8 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-500">
-                <i class="fa-solid fa-folder-open text-xs"></i>
-            </div>
+    <div class="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 shadow-sm flex items-center justify-between">
+        <div>
+            <span class="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-0.5">Total de Registros</span>
+            <span class="text-2xl font-black text-slate-800 dark:text-white">{{ total_avarias }}</span>
+            <span class="text-[10px] text-slate-400 block mt-0.5">Ordens de serviço</span>
         </div>
-        <h3 class="text-3xl font-black text-slate-800 dark:text-white tracking-tight mb-1">{{ total_avarias }}</h3>
-        <p class="text-xs text-slate-400 font-bold">Ordens de serviço criadas</p>
+        <div class="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center border border-blue-200 dark:border-blue-900/50 text-base shrink-0">
+            <i class="fa-solid fa-folder-open"></i>
+        </div>
     </div>
 
     <!-- O.S Abertas -->
-    <div class="glass-premium p-6 rounded-3xl relative overflow-hidden group shadow-lg">
-        <div class="absolute -top-12 -right-12 w-24 h-24 bg-yellow-500/10 rounded-full blur-2xl group-hover:scale-150 transition-all duration-500"></div>
-        <div class="flex justify-between items-start mb-4">
-            <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">O.S. Abertas</span>
-            <div class="w-8 h-8 rounded-xl bg-yellow-500/10 flex items-center justify-center text-yellow-500">
-                <i class="fa-solid fa-triangle-exclamation text-xs"></i>
-            </div>
+    <div class="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 shadow-sm flex items-center justify-between">
+        <div>
+            <span class="text-[10px] font-black uppercase tracking-wider text-amber-600 dark:text-amber-400 block mb-0.5">O.S. Abertas</span>
+            <span class="text-2xl font-black text-amber-600 dark:text-amber-400">{{ abertas }}</span>
+            <span class="text-[10px] text-slate-400 block mt-0.5">Aguardando reparo</span>
         </div>
-        <h3 class="text-3xl font-black text-slate-800 dark:text-white tracking-tight mb-1">{{ abertas }}</h3>
-        <p class="text-xs text-slate-400 font-bold">Aguardando manutenção</p>
+        <div class="w-10 h-10 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-200 dark:border-amber-900/50 text-base shrink-0">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+        </div>
     </div>
 
     <!-- O.S Finalizadas -->
-    <div class="glass-premium p-6 rounded-3xl relative overflow-hidden group shadow-lg">
-        <div class="absolute -top-12 -right-12 w-24 h-24 bg-green-500/10 rounded-full blur-2xl group-hover:scale-150 transition-all duration-500"></div>
-        <div class="flex justify-between items-start mb-4">
-            <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">O.S. Finalizadas</span>
-            <div class="w-8 h-8 rounded-xl bg-green-500/10 flex items-center justify-center text-green-500">
-                <i class="fa-solid fa-circle-check text-xs"></i>
-            </div>
+    <div class="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 shadow-sm flex items-center justify-between">
+        <div>
+            <span class="text-[10px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400 block mb-0.5">O.S. Finalizadas</span>
+            <span class="text-2xl font-black text-emerald-600 dark:text-emerald-400">{{ resolvidas }}</span>
+            <span class="text-[10px] text-slate-400 block mt-0.5">Veículos prontos</span>
         </div>
-        <h3 class="text-3xl font-black text-slate-800 dark:text-white tracking-tight mb-1">{{ resolvidas }}</h3>
-        <p class="text-xs text-slate-400 font-bold">Veículos prontos p/ uso</p>
+        <div class="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-200 dark:border-emerald-900/50 text-base shrink-0">
+            <i class="fa-solid fa-circle-check"></i>
+        </div>
     </div>
 
-    <!-- Custo Total -->
-    <div class="glass-premium p-6 rounded-3xl relative overflow-hidden group shadow-lg">
-        <div class="absolute -top-12 -right-12 w-24 h-24 bg-emerald-500/10 rounded-full blur-2xl group-hover:scale-150 transition-all duration-500"></div>
-        <div class="flex justify-between items-start mb-4">
-            <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Custo Operacional</span>
-            <div class="w-8 h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center text-emerald-500">
-                <i class="fa-solid fa-brazilian-real-sign text-xs"></i>
-            </div>
+    <!-- Custo Operacional -->
+    <div class="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 shadow-sm flex items-center justify-between">
+        <div>
+            <span class="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-0.5">Custo Operacional</span>
+            <span class="text-2xl font-black text-slate-800 dark:text-white">R$ {{ "%.2f"|format(total_gasto) }}</span>
+            <span class="text-[10px] text-slate-400 block mt-0.5">Total investido</span>
         </div>
-        <h3 class="text-2xl font-black text-slate-800 dark:text-white tracking-tight mb-1">R$ {{ "%.2f"|format(total_gasto) }}</h3>
-        <p class="text-xs text-slate-400 font-bold">Total investido em reparos</p>
+        <div class="w-10 h-10 rounded-xl bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center border border-rose-200 dark:border-rose-900/50 text-base shrink-0">
+            <i class="fa-solid fa-brazilian-real-sign"></i>
+        </div>
     </div>
 </div>
 
-<!-- ✅ BARRA DE FILTROS AVANÇADA PREMIUM COM TABS EMBUTIDAS -->
-<div class="mb-8 animate-premium">
-    <form method="GET" action="{{ url_for('avarias_registro') }}" class="glass-premium p-5 rounded-[2rem] shadow-xl relative overflow-hidden">
-        <div class="flex flex-col lg:flex-row items-end justify-between gap-6">
-            
-            <!-- Lado Esquerdo: Filtros de Busca e Gravidade -->
-            <div class="flex flex-col md:flex-row items-end gap-4 flex-1 w-full">
-                <!-- Busca por Texto -->
-                <div class="flex-1 w-full">
-                    <label class="text-[10px] font-black text-slate-400 dark:text-slate-300 uppercase tracking-widest block mb-1.5 flex items-center gap-1">
-                        <i class="fa-solid fa-magnifying-glass text-blue-500"></i> Buscar O.S.
-                    </label>
-                    <input id="q" type="text" name="q" value="{{ request.args.get('q', '') }}" 
-                           placeholder="Digite Placa, Modelo, Descrição..." 
-                           class="w-full text-xs font-bold text-slate-700 dark:text-white bg-slate-900/5 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 px-4 py-3 rounded-xl focus:border-blue-500 outline-none transition-all duration-300">
-                </div>
-                
-                <!-- Filtro de Gravidade -->
-                <div class="w-full md:w-44">
-                    <label class="text-[10px] font-black text-slate-400 dark:text-slate-300 uppercase tracking-widest block mb-1.5 flex items-center gap-1">
-                        <i class="fa-solid fa-triangle-exclamation text-blue-500"></i> Gravidade
-                    </label>
-                    <select name="gravidade" class="w-full text-xs font-bold text-slate-700 dark:text-white bg-slate-900/5 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 px-4 py-3 rounded-xl focus:border-blue-500 outline-none transition-all duration-300">
-                        <option value="">Todas</option>
-                        <option value="baixa" {% if request.args.get('gravidade') == 'baixa' %}selected{% endif %}>Baixa</option>
-                        <option value="media" {% if request.args.get('gravidade') == 'media' %}selected{% endif %}>Média</option>
-                        <option value="alta" {% if request.args.get('gravidade') == 'alta' %}selected{% endif %}>Alta</option>
-                        <option value="critica" {% if request.args.get('gravidade') == 'critica' %}selected{% endif %}>Crítica</option>
-                    </select>
-                </div>
-                
-                <!-- Botões de Ação -->
-                <div class="flex items-center gap-2 w-full md:w-auto h-[42px] md:self-end">
-                    <button type="submit" 
-                            class="flex-1 md:flex-none px-5 py-3 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-blue-500/20 transition-all flex items-center justify-center gap-2 h-full whitespace-nowrap">
-                        <i class="fa-solid fa-filter text-xs"></i>
-                    </button>
-                    <a href="{{ url_for('avarias_registro') }}" 
-                       class="flex-1 md:flex-none px-5 py-3 bg-slate-900/5 hover:bg-slate-900/10 dark:bg-white/5 dark:hover:bg-white/10 active:scale-95 text-slate-800 dark:text-white rounded-xl font-black text-[10px] uppercase tracking-widest transition-all text-center flex items-center justify-center gap-2 h-full whitespace-nowrap"
-                       title="Limpar Filtros">
-                        <i class="fa-solid fa-eraser text-xs"></i>
-                    </a>
-                </div>
+<!-- ==========================================
+     ✅ BARRA DE FILTROS AVANÇADA
+     ========================================== -->
+<div class="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-5 shadow-sm">
+    <form method="GET" action="{{ url_for('avarias_registro') }}" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 items-end">
+        <div class="lg:col-span-2">
+            <label class="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-1">Buscar O.S.</label>
+            <div class="relative">
+                <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-xs text-slate-400"></i>
+                <input id="q" type="text" name="q" value="{{ request.args.get('q', '') }}" 
+                       placeholder="Placa, Modelo, Descrição..." 
+                       class="w-full bg-slate-900/5 dark:bg-white/5 border border-slate-900/5 dark:border-white/10 rounded-xl pl-9 pr-3.5 py-2 text-xs font-bold text-slate-800 dark:text-white outline-none focus:ring-2 focus:ring-rose-500/30 transition-all">
             </div>
-            
-            <!-- Lado Direito: Seletor de Status (Tabs Abertas / Finalizadas) -->
-            <div class="w-full lg:w-auto">
-                <label class="text-[10px] font-black text-slate-400 dark:text-slate-300 uppercase tracking-widest block mb-1.5 flex items-center gap-1">
-                    <i class="fa-solid fa-list-check text-blue-500"></i> Status O.S.
-                </label>
-                <div class="flex items-center bg-slate-900/5 dark:bg-white/5 p-1 rounded-2xl border border-slate-900/5 dark:border-white/5 h-[42px] w-full lg:w-[260px]">
-                    <!-- Botão O.S. Abertas -->
-                    <button type="button" id="btnTabAbertas" onclick="switchTab('abertas')"
-                            class="flex-1 py-1.5 px-3 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-1.5 h-full active:scale-95">
-                        <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse shadow-[0_0_6px_rgba(245,158,11,0.5)]"></span>
-                        <span>Abertas</span>
-                        <span id="badgeAbertas" class="px-1.5 py-0.5 rounded text-[8px] font-black transition-colors">
-                            {{ abertas }}
-                        </span>
-                    </button>
-                    
-                    <!-- Botão O.S. Finalizadas -->
-                    <button type="button" id="btnTabFinalizadas" onclick="switchTab('finalizadas')"
-                            class="flex-1 py-1.5 px-3 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-1.5 h-full active:scale-95">
-                        <span class="w-1.5 h-1.5 rounded-full bg-green-500 shadow-[0_0_6px_rgba(34,197,94,0.5)]"></span>
-                        <span>Concluídas</span>
-                        <span id="badgeFinalizadas" class="px-1.5 py-0.5 rounded text-[8px] font-black transition-colors">
-                            {{ resolvidas }}
-                        </span>
-                    </button>
-                </div>
-            </div>
-            
+        </div>
+
+        <div>
+            <label class="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-1">Gravidade</label>
+            <select name="gravidade" class="w-full bg-slate-900/5 dark:bg-white/5 border border-slate-900/5 dark:border-white/10 rounded-xl px-3.5 py-2 text-xs font-bold text-slate-800 dark:text-white outline-none cursor-pointer focus:ring-2 focus:ring-rose-500/30 transition-all">
+                <option value="">Todas</option>
+                <option value="baixa" {% if request.args.get('gravidade') == 'baixa' %}selected{% endif %}>Baixa</option>
+                <option value="media" {% if request.args.get('gravidade') == 'media' %}selected{% endif %}>Média</option>
+                <option value="alta" {% if request.args.get('gravidade') == 'alta' %}selected{% endif %}>Alta</option>
+                <option value="critica" {% if request.args.get('gravidade') == 'critica' %}selected{% endif %}>Crítica</option>
+            </select>
+        </div>
+
+        <div>
+            <label class="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-1">Status O.S.</label>
+            <select name="status" class="w-full bg-slate-900/5 dark:bg-white/5 border border-slate-900/5 dark:border-white/10 rounded-xl px-3.5 py-2 text-xs font-bold text-slate-800 dark:text-white outline-none cursor-pointer focus:ring-2 focus:ring-rose-500/30 transition-all">
+                <option value="">Todos os Status</option>
+                <option value="aberta" {% if request.args.get('status') == 'aberta' %}selected{% endif %}>Abertas ({{ abertas }})</option>
+                <option value="finalizada" {% if request.args.get('status') == 'finalizada' %}selected{% endif %}>Finalizadas ({{ resolvidas }})</option>
+            </select>
+        </div>
+
+        <div class="flex items-center gap-2">
+            <button type="submit" class="flex-1 py-2 px-4 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold tracking-wider transition-all active:scale-95 shadow-md shadow-rose-600/20 flex items-center justify-center gap-2 cursor-pointer">
+                <i class="fa-solid fa-filter text-xs"></i>
+                <span>Filtrar</span>
+            </button>
+            <a href="{{ url_for('avarias_registro') }}" class="p-2 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold transition-all" title="Limpar Filtros">
+                <i class="fa-solid fa-rotate-left"></i>
+            </a>
         </div>
     </form>
 </div>
 
-<!-- ============================================
-     SEÇÃO: ORDENS DE SERVIÇO ABERTAS (PENDENTES)
-     ============================================ -->
-<div id="tabAbertas" class="mb-12 animate-premium">
-    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-      {% for os in ordens if os.status == 'aberta' %}
-      <div class="backdrop-blur-md bg-white/70 dark:bg-white/10 p-5 rounded-[2rem]
-                  border border-slate-900/10 dark:border-white/10 shadow-xl hover:shadow-2xl hover:scale-[1.02] transition-all duration-300 relative overflow-hidden flex flex-col justify-between">
-        
-        <!-- Efeito decorativo sutil dependendo da gravidade -->
-        {% if os.gravidade == 'critica' %}
-          <div class="absolute top-0 left-0 w-full h-[4px] bg-gradient-to-r from-red-600 to-rose-500"></div>
-        {% elif os.gravidade == 'alta' %}
-          <div class="absolute top-0 left-0 w-full h-[4px] bg-gradient-to-r from-orange-600 to-amber-500"></div>
-        {% elif os.gravidade == 'media' %}
-          <div class="absolute top-0 left-0 w-full h-[4px] bg-gradient-to-r from-yellow-600 to-yellow-400"></div>
-        {% else %}
-          <div class="absolute top-0 left-0 w-full h-[4px] bg-gradient-to-r from-blue-600 to-sky-500"></div>
-        {% endif %}
+<!-- ==========================================
+     ✅ TABELA DE ORDENS DE SERVIÇO (ESTILO VISTORIAS)
+     ========================================== -->
+<div class="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl shadow-sm overflow-hidden">
+    <div class="p-6 border-b border-slate-200/80 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 flex items-center justify-between">
+        <h3 class="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-2">
+            <i class="fa-solid fa-wrench text-rose-500"></i> Últimas Ordens de Serviço & Avarias
+        </h3>
+        <span class="px-2.5 py-1 rounded-full bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 font-mono text-[10px] font-black border border-rose-200 dark:border-rose-900/50">
+            {{ ordens|length }} {% if ordens|length == 1 %}registro{% else %}registros{% endif %}
+        </span>
+    </div>
 
-        <div>
-          <div class="flex justify-between items-center mb-3">
-            <h2 class="text-lg font-black text-slate-800 dark:text-white flex items-center gap-1.5">
-              <i class="fa-solid fa-file-contract text-blue-500"></i>
-              #{{ os.id }}
-            </h2>
+    <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs text-slate-600 dark:text-slate-300 border-collapse">
+            <thead class="bg-slate-50/80 dark:bg-slate-800/80 border-b border-slate-200/80 dark:border-slate-800 text-[11px] font-extrabold text-slate-400 dark:text-slate-400 uppercase tracking-wider">
+                <tr>
+                    <th class="px-5 py-4 w-28">O.S.</th>
+                    <th class="px-5 py-4 w-36">Data Abertura</th>
+                    <th class="px-4 py-4 min-w-[180px]">Veículo</th>
+                    <th class="px-4 py-4 w-24">KM</th>
+                    <th class="px-4 py-4 w-28">Gravidade</th>
+                    <th class="px-4 py-4 w-32">Status</th>
+                    <th class="px-4 py-4 min-w-[200px]">Descrição / Reparo</th>
+                    <th class="px-6 py-4 w-44 text-center">Ações</th>
+                </tr>
+            </thead>
 
-            <div class="flex items-center gap-1.5">
-              <!-- Badge Gravidade -->
-              {% if os.gravidade == 'critica' %}
-                <span class="px-2 py-0.5 rounded bg-red-500/10 border border-red-500/30 text-red-600 dark:text-red-400 text-[8px] font-black uppercase tracking-wider animate-pulse">
-                  Crítica
-                </span>
-              {% elif os.gravidade == 'alta' %}
-                <span class="px-2 py-0.5 rounded bg-orange-500/10 border border-orange-500/30 text-orange-600 dark:text-orange-400 text-[8px] font-black uppercase tracking-wider">
-                  Alta
-                </span>
-              {% elif os.gravidade == 'media' %}
-                <span class="px-2 py-0.5 rounded bg-yellow-500/10 border border-yellow-500/30 text-yellow-600 dark:text-yellow-400 text-[8px] font-black uppercase tracking-wider">
-                  Média
-                </span>
+            {# --- AGRUPAMENTO POR MÊS/ANO (ESTILO VISTORIAS) --- #}
+            {% set ns = namespace(last_group=None, is_first=true, group_index=0) %}
+
+            {% for os in ordens %}
+              {% set d_obj = os.data_abertura or os.data_fechamento %}
+              {% if d_obj %}
+                {% set mes_num = d_obj.strftime('%m') %}
+                {% set ano_num = d_obj.strftime('%Y') %}
               {% else %}
-                <span class="px-2 py-0.5 rounded bg-blue-500/10 border border-blue-500/30 text-blue-600 dark:text-blue-400 text-[8px] font-black uppercase tracking-wider">
-                  Baixa
-                </span>
+                {% set mes_num = '00' %}
+                {% set ano_num = '' %}
               {% endif %}
 
-              <!-- Badge Status -->
-              <span class="px-2 py-0.5 rounded bg-amber-500/15 border border-amber-500/30 text-amber-800 dark:text-amber-300 text-[8px] font-black uppercase tracking-wider">
-                Aberta
-              </span>
-            </div>
-          </div>
+              {% if mes_num == '01' %}
+                {% set mes_pt = 'Janeiro' %}
+              {% elif mes_num == '02' %}
+                {% set mes_pt = 'Fevereiro' %}
+              {% elif mes_num == '03' %}
+                {% set mes_pt = 'Março' %}
+              {% elif mes_num == '04' %}
+                {% set mes_pt = 'Abril' %}
+              {% elif mes_num == '05' %}
+                {% set mes_pt = 'Maio' %}
+              {% elif mes_num == '06' %}
+                {% set mes_pt = 'Junho' %}
+              {% elif mes_num == '07' %}
+                {% set mes_pt = 'Julho' %}
+              {% elif mes_num == '08' %}
+                {% set mes_pt = 'Agosto' %}
+              {% elif mes_num == '09' %}
+                {% set mes_pt = 'Setembro' %}
+              {% elif mes_num == '10' %}
+                {% set mes_pt = 'Outubro' %}
+              {% elif mes_num == '11' %}
+                {% set mes_pt = 'Novembro' %}
+              {% elif mes_num == '12' %}
+                {% set mes_pt = 'Dezembro' %}
+              {% else %}
+                {% set mes_pt = 'Geral' %}
+              {% endif %}
 
-          <div class="space-y-1.5 mb-4">
-            <p class="text-slate-700 dark:text-slate-200 text-xs font-bold flex items-center gap-1.5">
-              <i class="fa-solid fa-car text-[10px] text-slate-400 w-3 text-center"></i>
-              {{ os.vehicle.brand }} {{ os.vehicle.model }} - <span class="bg-slate-900/5 dark:bg-white/5 px-1.5 py-0.5 rounded text-[10px] font-black text-slate-800 dark:text-white">{{ os.vehicle.plate }}</span>
-            </p>
+              {% set grupo = mes_pt ~ (' de ' ~ ano_num if ano_num else '') %}
 
-            <p class="text-slate-700 dark:text-slate-200 text-xs font-medium flex items-center gap-1.5">
-              <i class="fa-solid fa-gauge text-[10px] text-slate-400 w-3 text-center"></i>
-              <span>{{ os.km or 0 }} KM</span>
-            </p>
+              {# só mostra o cabeçalho quando mudar mês/ano #}
+              {% if grupo != ns.last_group %}
+                {% if ns.last_group is not none %}
+                  </tbody>
+                {% endif %}
 
-            {% if os.responsavel %}
-            <p class="text-slate-700 dark:text-slate-200 text-xs font-medium flex items-center gap-1.5">
-              <i class="fa-solid fa-user-gear text-[10px] text-slate-400 w-3 text-center"></i>
-              <span>{{ os.responsavel.username }}</span>
-            </p>
+                {% set ns.group_index = ns.group_index + 1 %}
+
+                <!-- Tbody para o cabeçalho do grupo (sempre visível) -->
+                <tbody>
+                  <tr class="bg-slate-50/90 dark:bg-slate-800/90 border-y border-slate-200/80 dark:border-slate-800 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-all select-none" 
+                      onclick="toggleMonthGroup({{ ns.group_index }})">
+                    <td colspan="8" class="px-6 py-3.5 text-rose-700 dark:text-rose-300 font-extrabold uppercase tracking-wider text-xs">
+                      <div class="flex items-center justify-between">
+                        <span class="flex items-center gap-2.5">
+                          <div class="w-7 h-7 rounded-lg bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center border border-rose-200 dark:border-rose-900/50">
+                            <i class="fa-solid fa-calendar-days text-xs"></i>
+                          </div>
+                          <span>{{ grupo }}</span>
+                        </span>
+                        <div class="w-6 h-6 rounded-full bg-slate-200/60 dark:bg-slate-700/60 flex items-center justify-center text-slate-500 dark:text-slate-400">
+                          <i id="chevron-group-{{ ns.group_index }}" class="fa-solid fa-chevron-down text-[10px] transition-transform duration-300 {% if ns.is_first %}rotate-180{% endif %}"></i>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                </tbody>
+
+                <!-- Tbody para os itens do grupo (colapsável) -->
+                <tbody id="tbody-group-{{ ns.group_index }}" class="divide-y divide-slate-100 dark:divide-slate-800/60 text-slate-900 dark:text-gray-200 font-medium {% if not ns.is_first %}hidden{% endif %}">
+
+                {% set ns.last_group = grupo %}
+                {% set ns.is_first = false %}
+              {% endif %}
+
+              <tr class="border-b border-slate-200/80 dark:border-slate-800 hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition">
+                <td class="px-5 py-3.5 whitespace-nowrap font-mono font-bold">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-md bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-900/50 text-[11px] text-rose-700 dark:text-rose-400 font-semibold tracking-wide">
+                        #{{ os.id }}
+                    </span>
+                </td>
+                <td class="px-5 py-3.5 whitespace-nowrap font-semibold text-slate-700 dark:text-slate-300">
+                    {{ os.data_abertura|br_datetime if os.data_abertura else '-' }}
+                </td>
+                <td class="px-4 py-3.5 whitespace-nowrap">
+                    <div>
+                        <span class="font-bold text-slate-800 dark:text-white block">{{ os.vehicle.brand }} {{ os.vehicle.model }}</span>
+                        <span class="font-mono text-[10px] font-bold text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700">{{ os.vehicle.plate }}</span>
+                    </div>
+                </td>
+                <td class="px-4 py-3.5 whitespace-nowrap font-mono font-semibold text-slate-700 dark:text-slate-300">
+                    {{ os.km or 0 }} km
+                </td>
+                <td class="px-4 py-3.5 whitespace-nowrap">
+                    {% if os.gravidade == 'critica' %}
+                      <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-500 text-white shadow-xs animate-pulse">
+                        Crítica
+                      </span>
+                    {% elif os.gravidade == 'alta' %}
+                      <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-orange-50 text-orange-700 dark:bg-orange-950/40 dark:text-orange-300 border border-orange-200 dark:border-orange-800/40">
+                        Alta
+                      </span>
+                    {% elif os.gravidade == 'media' %}
+                      <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200 dark:border-amber-800/40">
+                        Média
+                      </span>
+                    {% else %}
+                      <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
+                        Baixa
+                      </span>
+                    {% endif %}
+                </td>
+                <td class="px-4 py-3.5 whitespace-nowrap">
+                    {% if os.status == 'finalizada' %}
+                      <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/40">
+                        <i class="fa-solid fa-circle-check text-emerald-500"></i> Finalizada
+                      </span>
+                    {% else %}
+                      <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-200 dark:border-amber-800/40 animate-pulse">
+                        <i class="fa-solid fa-clock text-amber-500"></i> Aberta
+                      </span>
+                    {% endif %}
+                </td>
+                <td class="px-4 py-3.5">
+                    <div class="line-clamp-2 leading-relaxed max-w-xs" title="{{ os.servico_realizado if os.status == 'finalizada' and os.servico_realizado else os.descricao }}">
+                      {% if os.status == 'finalizada' and os.servico_realizado %}
+                        <span class="font-bold text-slate-800 dark:text-slate-200">{{ os.servico_realizado }}</span>
+                      {% else %}
+                        <span class="text-slate-700 dark:text-slate-300 font-medium">{{ os.descricao }}</span>
+                      {% endif %}
+                    </div>
+                </td>
+                <td class="px-6 py-3.5 text-center whitespace-nowrap">
+                    <div class="flex items-center justify-center gap-1.5">
+                      {% if os.status == 'aberta' %}
+                        <button onclick="openFinalizar({{ os.id }})"
+                                class="px-2 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 dark:hover:bg-emerald-900/60 border border-emerald-200 dark:border-emerald-800/40 text-[11px] font-bold transition flex items-center gap-1 cursor-pointer" title="Finalizar Manutenção">
+                          <i class="fa-solid fa-check text-[10px]"></i> Finalizar
+                        </button>
+                      {% endif %}
+
+                      <button onclick="openDetalhes({{ os.id }})"
+                              class="px-2.5 py-1.5 text-slate-600 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-slate-100 dark:hover:bg-slate-800 font-semibold rounded-lg transition text-xs inline-flex items-center gap-1 cursor-pointer" title="Ver Detalhes">
+                        <i class="fa-solid fa-eye text-[11px]"></i> Ver
+                      </button>
+
+                      <a href="/avarias/{{ os.id }}/pdf" target="_blank"
+                         class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition cursor-pointer" title="Baixar O.S. em PDF">
+                        <i class="fa-solid fa-file-pdf text-xs"></i>
+                      </a>
+
+                      <form method="POST" action="{{ url_for('avarias_excluir', avaria_id=os.id) }}" class="inline" 
+                            onsubmit="return confirm('⚠️ Tem certeza que deseja excluir permanentemente esta Avaria / O.S. #{{ os.id }}?');">
+                        <button type="submit" 
+                                class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition cursor-pointer" title="Excluir O.S.">
+                          <i class="fa-solid fa-trash-can text-xs"></i>
+                        </button>
+                      </form>
+                    </div>
+
+                    <!-- JSON com dados da O.S para o modal de detalhes -->
+                    <script type="application/json" id="os_data_{{ os.id }}">
+                      {
+                        "veiculo": {{ (os.vehicle.brand ~ " " ~ os.vehicle.model ~ " - " ~ os.vehicle.plate)|tojson }},
+                        "responsavel": {{ (os.responsavel.username if os.responsavel else '')|tojson }},
+                        "descricao": {{ (os.descricao if os.descricao else '')|tojson }},
+                        "gravidade": {{ (os.gravidade if os.gravidade else '')|tojson }},
+                        "km": {{ (os.km|string if os.km else '')|tojson }},
+                        "valor_gasto": {{ (os.valor_gasto|string if os.valor_gasto else '')|tojson }},
+                        "pecas_trocadas": {{ (os.pecas_trocadas if os.pecas_trocadas else '')|tojson }},
+                        "servico_realizado": {{ (os.servico_realizado if os.servico_realizado else '')|tojson }},
+                        "data_abertura": {{ (os.data_abertura|br_datetime if os.data_abertura else '')|tojson }},
+                        "data_fechamento": {{ (os.data_fechamento|br_datetime if os.data_fechamento else '')|tojson }},
+                        "foto": {{ (os.foto if os.foto else '')|tojson }}
+                      }
+                    </script>
+                </td>
+              </tr>
+            {% endfor %}
+
+            {% if ns.last_group is not none %}
+              </tbody>
             {% endif %}
 
-            <p class="text-slate-700 dark:text-slate-200 text-xs font-medium flex items-center gap-1.5">
-              <i class="fa-solid fa-calendar text-[10px] text-slate-400 w-3 text-center"></i>
-              <span>{{ os.data_abertura|br_datetime if os.data_abertura else 'N/A' }}</span>
-            </p>
-          </div>
-
-          <div class="bg-slate-900/5 dark:bg-white/5 p-3 rounded-xl border border-slate-900/5 dark:border-white/5 mb-4">
-            <p class="text-slate-500 dark:text-slate-400 text-[10px] font-black uppercase tracking-wider mb-1">Descrição da Avaria</p>
-            <p class="text-slate-700 dark:text-slate-300 text-xs leading-relaxed font-medium line-clamp-3">
-              {{ os.descricao }}
-            </p>
-          </div>
-        </div>
-
-        <div class="flex items-center gap-2 pt-2 border-t border-slate-900/10 dark:border-white/10 mt-auto">
-          <button class="flex-1 py-2 rounded-xl bg-green-600 hover:bg-green-700 active:scale-95 text-white font-black text-[10px] uppercase tracking-wider shadow-lg shadow-green-500/10 transition-all flex items-center justify-center gap-1"
-                  onclick="openFinalizar({{ os.id }})">
-            <i class="fa-solid fa-check text-xs"></i> Finalizar
-          </button>
-
-          <!-- FORMULÁRIO DE EXCLUSÃO SEGURO -->
-          <form method="POST" action="{{ url_for('avarias_excluir', avaria_id=os.id) }}" class="inline" 
-                onsubmit="return confirm('⚠️ Tem certeza que deseja excluir permanentemente esta Avaria / O.S. #{{ os.id }}?');">
-            <button type="submit" 
-                    class="p-2 bg-red-500/10 hover:bg-red-500/20 active:scale-95 text-red-600 dark:text-red-400 border border-red-500/20 hover:border-red-500/30 rounded-xl transition-all"
-                    title="Excluir O.S.">
-              <i class="fa-solid fa-trash-can text-xs"></i>
-            </button>
-          </form>
-        </div>
-
-      </div>
-
-      <!-- JSON INVISÍVEL COM DADOS DA O.S -->
-      <script type="application/json" id="os_data_{{ os.id }}">
-        {
-          "veiculo": {{ (os.vehicle.brand ~ " " ~ os.vehicle.model ~ " - " ~ os.vehicle.plate)|tojson }},
-          "responsavel": {{ (os.responsavel.username if os.responsavel else '')|tojson }},
-          "descricao": {{ (os.descricao if os.descricao else '')|tojson }},
-          "gravidade": {{ (os.gravidade if os.gravidade else '')|tojson }},
-          "km": {{ (os.km|string if os.km else '')|tojson }},
-          "valor_gasto": {{ (os.valor_gasto|string if os.valor_gasto else '')|tojson }},
-          "pecas_trocadas": {{ (os.pecas_trocadas if os.pecas_trocadas else '')|tojson }},
-          "servico_realizado": {{ (os.servico_realizado if os.servico_realizado else '')|tojson }},
-          "data_abertura": {{ (os.data_abertura|br_datetime if os.data_abertura else '')|tojson }},
-          "data_fechamento": {{ (os.data_fechamento|br_datetime if os.data_fechamento else '')|tojson }},
-          "foto": {{ (os.foto if os.foto else '')|tojson }}
-        }
-      </script>
-      {% endfor %}
-      
-      {% if abertas == 0 %}
-      <div class="col-span-full py-8 text-center bg-slate-900/5 dark:bg-white/5 border border-dashed border-slate-900/10 dark:border-white/10 rounded-[2rem]">
-          <p class="text-slate-400 text-xs font-bold uppercase tracking-wider">Nenhuma O.S. aberta no momento.</p>
-      </div>
-      {% endif %}
-    </div>
-</div>
-
-<!-- ============================================
-     SEÇÃO: ORDENS DE SERVIÇO FINALIZADAS (CONCLUÍDAS)
-     ============================================ -->
-<div id="tabFinalizadas" class="mb-8 animate-premium hidden">
-    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-      {% for os in ordens if os.status == 'finalizada' %}
-      <div class="backdrop-blur-md bg-white/70 dark:bg-white/10 p-5 rounded-[2rem]
-                  border border-slate-900/10 dark:border-white/10 shadow-xl hover:shadow-2xl hover:scale-[1.02] transition-all duration-300 relative overflow-hidden flex flex-col justify-between opacity-85 hover:opacity-100 transition-opacity">
-        
-        <!-- Top border indicator -->
-        <div class="absolute top-0 left-0 w-full h-[4px] bg-gradient-to-r from-green-600 to-emerald-500"></div>
-
-        <div>
-          <div class="flex justify-between items-center mb-3">
-            <h2 class="text-lg font-black text-slate-800 dark:text-white flex items-center gap-1.5">
-              <i class="fa-solid fa-circle-check text-green-500"></i>
-              #{{ os.id }}
-            </h2>
-
-            <div class="flex items-center gap-1.5">
-              <!-- Badge Status -->
-              <span class="px-2 py-0.5 rounded bg-green-500/15 border border-green-500/30 text-green-800 dark:text-green-300 text-[8px] font-black uppercase tracking-wider">
-                Pronto
-              </span>
-            </div>
-          </div>
-
-          <div class="space-y-1.5 mb-4">
-            <p class="text-slate-700 dark:text-slate-200 text-xs font-bold flex items-center gap-1.5">
-              <i class="fa-solid fa-car text-[10px] text-slate-400 w-3 text-center"></i>
-              {{ os.vehicle.brand }} {{ os.vehicle.model }} - <span class="bg-slate-900/5 dark:bg-white/5 px-1.5 py-0.5 rounded text-[10px] font-black text-slate-800 dark:text-white">{{ os.vehicle.plate }}</span>
-            </p>
-
-            <p class="text-slate-700 dark:text-slate-200 text-xs font-medium flex items-center gap-1.5">
-              <i class="fa-solid fa-gauge text-[10px] text-slate-400 w-3 text-center"></i>
-              <span>{{ os.km or 0 }} KM</span>
-            </p>
-
-            {% if os.responsavel %}
-            <p class="text-slate-700 dark:text-slate-200 text-xs font-medium flex items-center gap-1.5">
-              <i class="fa-solid fa-user-gear text-[10px] text-slate-400 w-3 text-center"></i>
-              <span>{{ os.responsavel.username }}</span>
-            </p>
+            {% if not ordens %}
+              <tbody>
+                <tr>
+                    <td colspan="8" class="py-12 text-center text-slate-400 text-xs">
+                        <i class="fa-solid fa-wrench text-3xl mb-2 text-slate-300 dark:text-slate-600 block"></i>
+                        Nenhuma ordem de serviço encontrada com os filtros selecionados.
+                    </td>
+                </tr>
+              </tbody>
             {% endif %}
-
-            <p class="text-slate-700 dark:text-slate-200 text-xs font-medium flex items-center gap-1.5">
-              <i class="fa-solid fa-calendar text-[10px] text-slate-400 w-3 text-center"></i>
-              <span>{{ os.data_abertura|br_datetime if os.data_abertura else 'N/A' }}</span>
-            </p>
-          </div>
-
-          <div class="bg-slate-900/5 dark:bg-white/5 p-3 rounded-xl border border-slate-900/5 dark:border-white/5 mb-4">
-            <p class="text-slate-500 dark:text-slate-400 text-[10px] font-black uppercase tracking-wider mb-1">Serviço Realizado</p>
-            <p class="text-slate-700 dark:text-slate-300 text-xs leading-relaxed font-medium line-clamp-3">
-              {{ os.servico_realizado or 'Nenhuma descrição fornecida.' }}
-            </p>
-          </div>
-        </div>
-
-        <div class="flex items-center gap-2 pt-2 border-t border-slate-900/10 dark:border-white/10 mt-auto">
-          <button class="flex-1 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-black text-[10px] uppercase tracking-wider shadow-lg shadow-blue-500/10 transition-all flex items-center justify-center gap-1"
-                  onclick="openDetalhes({{ os.id }})">
-            <i class="fa-solid fa-eye text-xs"></i> Detalhes
-          </button>
-
-          <!-- FORMULÁRIO DE EXCLUSÃO SEGURO -->
-          <form method="POST" action="{{ url_for('avarias_excluir', avaria_id=os.id) }}" class="inline" 
-                onsubmit="return confirm('⚠️ Tem certeza que deseja excluir permanentemente esta Avaria / O.S. #{{ os.id }}?');">
-            <button type="submit" 
-                    class="p-2 bg-red-500/10 hover:bg-red-500/20 active:scale-95 text-red-600 dark:text-red-400 border border-red-500/20 hover:border-red-500/30 rounded-xl transition-all"
-                    title="Excluir O.S.">
-              <i class="fa-solid fa-trash-can text-xs"></i>
-            </button>
-          </form>
-        </div>
-
-      </div>
-
-      <!-- JSON INVISÍVEL COM DADOS DA O.S -->
-      <script type="application/json" id="os_data_{{ os.id }}">
-        {
-          "veiculo": {{ (os.vehicle.brand ~ " " ~ os.vehicle.model ~ " - " ~ os.vehicle.plate)|tojson }},
-          "responsavel": {{ (os.responsavel.username if os.responsavel else '')|tojson }},
-          "descricao": {{ (os.descricao if os.descricao else '')|tojson }},
-          "gravidade": {{ (os.gravidade if os.gravidade else '')|tojson }},
-          "km": {{ (os.km|string if os.km else '')|tojson }},
-          "valor_gasto": {{ (os.valor_gasto|string if os.valor_gasto else '')|tojson }},
-          "pecas_trocadas": {{ (os.pecas_trocadas if os.pecas_trocadas else '')|tojson }},
-          "servico_realizado": {{ (os.servico_realizado if os.servico_realizado else '')|tojson }},
-          "data_abertura": {{ (os.data_abertura|br_datetime if os.data_abertura else '')|tojson }},
-          "data_fechamento": {{ (os.data_fechamento|br_datetime if os.data_fechamento else '')|tojson }},
-          "foto": {{ (os.foto if os.foto else '')|tojson }}
-        }
-      </script>
-      {% endfor %}
-      
-      {% if resolvidas == 0 %}
-      <div class="col-span-full py-8 text-center bg-slate-900/5 dark:bg-white/5 border border-dashed border-slate-900/10 dark:border-white/10 rounded-[2rem]">
-          <p class="text-slate-400 text-xs font-bold uppercase tracking-wider">Nenhuma O.S. finalizada no momento.</p>
-      </div>
-      {% endif %}
+        </table>
     </div>
 </div>
 
@@ -403,20 +368,33 @@
       MODAL: NOVA AVARIA (KM AUTOMÁTICO)
 ===================================== -->
 <dialog id="modalNovaAvaria"
-        class="rounded-3xl bg-white dark:bg-gray-900 border border-slate-900/10 dark:border-gray-700 p-6 shadow-2xl max-w-[95vw] w-[520px] overflow-y-auto max-h-[90vh]">
+        class="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-2xl max-w-[95vw] w-[520px] overflow-y-auto max-h-[90vh] backdrop:bg-slate-950/60 backdrop:backdrop-blur-md animate-premium">
 
-  <h2 class="text-xl font-black text-slate-800 dark:text-white mb-5">Registrar Nova Avaria</h2>
+  <div class="flex items-center justify-between pb-3 mb-4 border-b border-slate-100 dark:border-slate-800">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-rose-500/10 text-rose-600 dark:text-rose-400 flex items-center justify-center text-lg">
+        <i class="fa-solid fa-wrench"></i>
+      </div>
+      <div>
+        <h2 class="text-base font-black text-slate-800 dark:text-white">Registrar Nova Avaria</h2>
+        <p class="text-[11px] text-slate-400">Abertura de O.S. para manutenção veicular</p>
+      </div>
+    </div>
+    <button type="button" onclick="document.getElementById('modalNovaAvaria').close()" class="w-8 h-8 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-white flex items-center justify-center transition-all cursor-pointer">
+      <i class="fa-solid fa-xmark text-sm"></i>
+    </button>
+  </div>
 
   <form action="{{ url_for('avarias_registro') }}" method="POST" class="space-y-4" enctype="multipart/form-data">
     <input type="hidden" name="acao" value="nova">
 
     <!-- VEÍCULO -->
     <div>
-      <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-1">Veículo</label>
+      <label class="text-[11px] font-black text-slate-400 uppercase tracking-wider block mb-1">Veículo <span class="text-rose-500">*</span></label>
       <select name="veiculo_id"
               id="veiculo_id"
               onchange="atualizarKM()"
-              class="w-full text-xs font-bold text-slate-700 dark:text-white bg-slate-900/5 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 p-3 rounded-xl focus:border-blue-500 transition-all outline-none"
+              class="w-full text-xs font-semibold text-slate-800 dark:text-slate-100 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500/30 transition-all cursor-pointer"
               required>
         {% for v in veiculos %}
         <option value="{{ v.id }}" data-km="{{ v.km }}">
@@ -428,22 +406,22 @@
 
     <!-- KM AUTOMÁTICO -->
     <div>
-      <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-1">KM Atual</label>
+      <label class="text-[11px] font-black text-slate-400 uppercase tracking-wider block mb-1">KM Atual</label>
       <input type="number"
              name="km"
              id="km"
              readonly
-             class="w-full text-xs font-bold text-slate-500 dark:text-slate-400 bg-slate-900/5 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 p-3 rounded-xl outline-none cursor-not-allowed">
+             class="w-full text-xs font-bold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-white/5 p-3 rounded-xl outline-none cursor-not-allowed">
     </div>
 
     <!-- GRAVIDADE -->
     <div>
-      <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-1">Gravidade</label>
+      <label class="text-[11px] font-black text-slate-400 uppercase tracking-wider block mb-1">Gravidade <span class="text-rose-500">*</span></label>
       <select name="gravidade"
-              class="w-full text-xs font-bold text-slate-700 dark:text-white bg-slate-900/5 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 p-3 rounded-xl focus:border-blue-500 transition-all outline-none"
+              class="w-full text-xs font-semibold text-slate-800 dark:text-slate-100 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500/30 transition-all cursor-pointer"
               required>
         <option value="baixa">Baixa</option>
-        <option value="media">Média</option>
+        <option value="media" selected>Média</option>
         <option value="alta">Alta</option>
         <option value="critica">Crítica</option>
       </select>
@@ -451,30 +429,30 @@
 
     <!-- DESCRIÇÃO -->
     <div>
-      <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-1">Descrição</label>
-      <textarea name="descricao" rows="4"
-                class="w-full text-xs font-bold text-slate-700 dark:text-white bg-slate-900/5 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 p-3 rounded-xl focus:border-blue-500 transition-all outline-none"
-                placeholder="Descreva a avaria ou peças com defeito..."
+      <label class="text-[11px] font-black text-slate-400 uppercase tracking-wider block mb-1">Descrição Detalhada <span class="text-rose-500">*</span></label>
+      <textarea name="descricao" rows="3"
+                class="w-full text-xs font-medium text-slate-800 dark:text-slate-100 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-rose-500/30 transition-all"
+                placeholder="Descreva a avaria, barulhos, peças ou sintomas com defeito..."
                 required></textarea>
     </div>
 
     <!-- FOTO EVIDÊNCIA -->
     <div>
-      <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-1">Foto de Evidência (Opcional)</label>
+      <label class="text-[11px] font-black text-slate-400 uppercase tracking-wider block mb-1">Foto de Evidência (Opcional)</label>
       <input id="foto" type="file" name="foto" accept="image/*"
-             class="w-full text-xs font-bold text-slate-700 dark:text-white bg-slate-900/5 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 p-3 rounded-xl focus:border-blue-500 transition-all outline-none file:mr-4 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-[10px] file:font-black file:uppercase file:tracking-widest file:bg-blue-600 file:text-white hover:file:bg-blue-700 file:cursor-pointer cursor-pointer">
+             class="w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-3.5 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-rose-50 file:text-rose-700 dark:file:bg-rose-950/40 dark:file:text-rose-300 hover:file:bg-rose-100 cursor-pointer">
     </div>
 
-    <div class="flex justify-end gap-2 pt-2">
+    <div class="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
       <button type="button"
               onclick="document.getElementById('modalNovaAvaria').close()"
-              class="px-4 py-2.5 bg-slate-900/5 hover:bg-slate-900/10 dark:bg-white/5 dark:hover:bg-white/10 rounded-xl text-slate-800 dark:text-white font-black text-[10px] uppercase tracking-widest transition-all">
+              class="px-4 py-2 bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-xl text-slate-700 dark:text-slate-200 font-bold text-xs transition-all cursor-pointer">
         Cancelar
       </button>
 
       <button type="submit"
-              class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 rounded-xl text-white font-black text-[10px] uppercase tracking-widest shadow-lg shadow-blue-500/20 active:scale-95 transition-all">
-        Registrar
+              class="px-5 py-2 bg-rose-600 hover:bg-rose-700 rounded-xl text-white font-bold text-xs shadow-md shadow-rose-500/20 active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer">
+        <i class="fa-solid fa-check text-xs"></i> Registrar Avaria
       </button>
     </div>
   </form>
@@ -484,42 +462,55 @@
       MODAL FINALIZAR (MENOR)
 ===================================== -->
 <dialog id="modalFinalizarOS"
-        class="rounded-3xl bg-white dark:bg-gray-900 border border-slate-900/10 dark:border-gray-700 p-6 shadow-2xl w-[400px]">
+        class="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-2xl max-w-[95vw] w-[440px] overflow-y-auto max-h-[90vh] backdrop:bg-slate-950/60 backdrop:backdrop-blur-md animate-premium">
 
-  <h2 class="text-xl font-black text-slate-800 dark:text-white mb-4">Finalizar O.S</h2>
+  <div class="flex items-center justify-between pb-3 mb-4 border-b border-slate-100 dark:border-slate-800">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center text-lg">
+        <i class="fa-solid fa-circle-check"></i>
+      </div>
+      <div>
+        <h2 class="text-base font-black text-slate-800 dark:text-white">Finalizar Manutenção</h2>
+        <p class="text-[11px] text-slate-400">Encerramento da Ordem de Serviço</p>
+      </div>
+    </div>
+    <button type="button" onclick="document.getElementById('modalFinalizarOS').close()" class="w-8 h-8 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-white flex items-center justify-center transition-all cursor-pointer">
+      <i class="fa-solid fa-xmark text-sm"></i>
+    </button>
+  </div>
 
   <form id="formFinalizarOS" method="POST" action="{{ url_for('avarias_registro') }}" class="space-y-4">
     <input type="hidden" name="acao" value="finalizar">
     <input type="hidden" id="os_id_hidden" name="os_id">
 
     <div>
-      <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-1">Valor gasto (R$)</label>
+      <label class="text-[11px] font-black text-slate-400 uppercase tracking-wider block mb-1">Valor Gasto (R$)</label>
       <input id="valor" type="number" name="valor" step="0.01" placeholder="0,00"
-             class="w-full text-xs font-bold text-slate-700 dark:text-white bg-slate-900/5 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 p-3 rounded-xl focus:border-blue-500 transition-all outline-none">
+             class="w-full text-xs font-semibold text-slate-800 dark:text-slate-100 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/30 transition-all">
     </div>
 
     <div>
-      <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-1">Peças trocadas</label>
+      <label class="text-[11px] font-black text-slate-400 uppercase tracking-wider block mb-1">Peças Trocadas</label>
       <textarea name="pecas" rows="2" placeholder="Liste as peças trocadas ou insumos..."
-                class="w-full text-xs font-bold text-slate-700 dark:text-white bg-slate-900/5 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 p-3 rounded-xl focus:border-blue-500 transition-all outline-none"></textarea>
+                class="w-full text-xs font-medium text-slate-800 dark:text-slate-100 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/30 transition-all"></textarea>
     </div>
 
     <div>
-      <label class="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-1">Serviço realizado</label>
-      <textarea name="servico" rows="2" placeholder="Detalhes do serviço mecânico..."
-                class="w-full text-xs font-bold text-slate-700 dark:text-white bg-slate-900/5 dark:bg-white/5 border border-slate-900/5 dark:border-white/5 p-3 rounded-xl focus:border-blue-500 transition-all outline-none"></textarea>
+      <label class="text-[11px] font-black text-slate-400 uppercase tracking-wider block mb-1">Serviço Realizado <span class="text-rose-500">*</span></label>
+      <textarea name="servico" rows="3" required placeholder="Detalhes do serviço executado pelo mecânico..."
+                class="w-full text-xs font-medium text-slate-800 dark:text-slate-100 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-white/10 p-3 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/30 transition-all"></textarea>
     </div>
 
-    <div class="flex justify-end gap-2 pt-2">
+    <div class="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
       <button type="button"
               onclick="document.getElementById('modalFinalizarOS').close()"
-              class="px-4 py-2.5 bg-slate-900/5 hover:bg-slate-900/10 dark:bg-white/5 dark:hover:bg-white/10 rounded-xl text-slate-800 dark:text-white font-black text-[10px] uppercase tracking-widest transition-all">
+              class="px-4 py-2 bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-xl text-slate-700 dark:text-slate-200 font-bold text-xs transition-all cursor-pointer">
         Cancelar
       </button>
 
       <button type="submit"
-              class="px-5 py-2.5 bg-green-600 hover:bg-green-700 rounded-xl text-white font-black text-[10px] uppercase tracking-widest shadow-lg shadow-green-500/20 active:scale-95 transition-all">
-        Finalizar
+              class="px-5 py-2 bg-emerald-600 hover:bg-emerald-700 rounded-xl text-white font-bold text-xs shadow-md shadow-emerald-500/20 active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer">
+        <i class="fa-solid fa-check text-xs"></i> Concluir O.S.
       </button>
     </div>
   </form>
@@ -529,80 +520,93 @@
       MODAL DETALHES O.S
 ===================================== -->
 <dialog id="modalDetalhesOS"
-        class="rounded-3xl bg-white dark:bg-gray-900 border border-slate-900/10 dark:border-gray-700 p-6 shadow-2xl w-[450px]">
+        class="rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 shadow-2xl max-w-[95vw] w-[480px] overflow-y-auto max-h-[90vh] backdrop:bg-slate-950/60 backdrop:backdrop-blur-md animate-premium">
 
-  <h2 class="text-xl font-black text-slate-800 dark:text-white mb-4">Detalhes da O.S #<span id="det_id"></span></h2>
+  <div class="flex items-center justify-between pb-3 mb-4 border-b border-slate-100 dark:border-slate-800">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-lg">
+        <i class="fa-solid fa-file-contract"></i>
+      </div>
+      <div>
+        <h2 class="text-base font-black text-slate-800 dark:text-white">Detalhes da O.S #<span id="det_id"></span></h2>
+        <p class="text-[11px] text-slate-400">Histórico completo e dados do reparo</p>
+      </div>
+    </div>
+    <button type="button" onclick="document.getElementById('modalDetalhesOS').close()" class="w-8 h-8 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-white flex items-center justify-center transition-all cursor-pointer">
+      <i class="fa-solid fa-xmark text-sm"></i>
+    </button>
+  </div>
 
-  <div class="space-y-4 text-xs font-bold text-slate-700 dark:text-slate-200">
+  <div class="space-y-3.5 text-xs font-semibold text-slate-700 dark:text-slate-200">
 
-    <div class="flex justify-between border-b border-slate-900/10 dark:border-white/10 pb-2">
+    <div class="flex justify-between border-b border-slate-100 dark:border-slate-800 pb-2">
       <span class="text-slate-400 font-medium">Veículo</span>
-      <span id="det_veiculo"></span>
+      <span id="det_veiculo" class="font-bold text-slate-800 dark:text-white"></span>
     </div>
 
-    <div class="flex justify-between border-b border-slate-900/10 dark:border-white/10 pb-2">
+    <div class="flex justify-between border-b border-slate-100 dark:border-slate-800 pb-2">
       <span class="text-slate-400 font-medium">Responsável</span>
       <span id="det_resp"></span>
     </div>
 
-    <div class="flex justify-between border-b border-slate-900/10 dark:border-white/10 pb-2">
+    <div class="flex justify-between border-b border-slate-100 dark:border-slate-800 pb-2">
       <span class="text-slate-400 font-medium">KM de Registro</span>
-      <span id="det_km"></span>
+      <span id="det_km" class="font-mono"></span>
     </div>
 
-    <div class="flex justify-between border-b border-slate-900/10 dark:border-white/10 pb-2">
+    <div class="flex justify-between border-b border-slate-100 dark:border-slate-800 pb-2">
       <span class="text-slate-400 font-medium">Gravidade</span>
-      <span id="det_grav" class="uppercase"></span>
+      <span id="det_grav" class="uppercase font-bold"></span>
     </div>
 
-    <div class="flex justify-between border-b border-slate-900/10 dark:border-white/10 pb-2">
+    <div class="flex justify-between border-b border-slate-100 dark:border-slate-800 pb-2">
       <span class="text-slate-400 font-medium">Custo Gasto</span>
-      <span class="text-emerald-600 dark:text-emerald-400">R$ <span id="det_valor"></span></span>
+      <span class="text-emerald-600 dark:text-emerald-400 font-bold">R$ <span id="det_valor"></span></span>
     </div>
 
-    <div class="flex justify-between border-b border-slate-900/10 dark:border-white/10 pb-2">
+    <div class="flex justify-between border-b border-slate-100 dark:border-slate-800 pb-2">
       <span class="text-slate-400 font-medium">Data Abertura</span>
       <span id="det_abertura"></span>
     </div>
 
-    <div class="flex justify-between border-b border-slate-900/10 dark:border-white/10 pb-2">
+    <div class="flex justify-between border-b border-slate-100 dark:border-slate-800 pb-2">
       <span class="text-slate-400 font-medium">Data Fechamento</span>
       <span id="det_fechamento"></span>
     </div>
 
-    <div class="bg-slate-900/5 dark:bg-white/5 p-3 rounded-xl border border-slate-900/5 dark:border-white/5">
+    <div class="bg-slate-50 dark:bg-slate-800/50 p-3.5 rounded-2xl border border-slate-200/80 dark:border-white/5">
       <span class="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-1">Descrição do Problema</span>
       <p id="det_desc" class="text-slate-700 dark:text-slate-300 font-medium leading-relaxed"></p>
     </div>
 
-    <div class="bg-slate-900/5 dark:bg-white/5 p-3 rounded-xl border border-slate-900/5 dark:border-white/5">
+    <div class="bg-slate-50 dark:bg-slate-800/50 p-3.5 rounded-2xl border border-slate-200/80 dark:border-white/5">
       <span class="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-1">Peças Trocadas</span>
       <p id="det_pecas" class="text-slate-700 dark:text-slate-300 font-medium leading-relaxed"></p>
     </div>
 
-    <div class="bg-slate-900/5 dark:bg-white/5 p-3 rounded-xl border border-slate-900/5 dark:border-white/5">
+    <div class="bg-slate-50 dark:bg-slate-800/50 p-3.5 rounded-2xl border border-slate-200/80 dark:border-white/5">
       <span class="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-1">Serviço Realizado</span>
       <p id="det_servico" class="text-slate-700 dark:text-slate-300 font-medium leading-relaxed"></p>
     </div>
 
     <!-- FOTO REGISTRADA -->
-    <div id="det_foto_container" class="bg-slate-900/5 dark:bg-white/5 p-3 rounded-xl border border-slate-900/5 dark:border-white/5 hidden">
+    <div id="det_foto_container" class="bg-slate-50 dark:bg-slate-800/50 p-3.5 rounded-2xl border border-slate-200/80 dark:border-white/5 hidden">
       <span class="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-2">Foto de Evidência</span>
-      <div class="relative rounded-lg overflow-hidden border border-slate-900/10 dark:border-white/10 aspect-video flex items-center justify-center bg-black/5">
+      <div class="relative rounded-xl overflow-hidden border border-slate-200 dark:border-white/10 aspect-video flex items-center justify-center bg-black/5">
         <img id="det_foto" src="" class="w-full h-full object-cover" alt="Evidência da Avaria">
       </div>
     </div>
 
   </div>
 
-  <div class="flex justify-between items-center mt-6">
+  <div class="flex justify-between items-center mt-6 pt-3 border-t border-slate-100 dark:border-slate-800">
     <a id="btn_imprimir_pdf" href="" target="_blank"
-       class="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-red-500/20 active:scale-95 transition-all flex items-center gap-1.5">
+       class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold text-xs shadow-md shadow-rose-500/20 active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer">
       <i class="fa-solid fa-file-pdf text-xs"></i> Imprimir O.S.
     </a>
 
     <button onclick="document.getElementById('modalDetalhesOS').close()"
-            class="px-5 py-2.5 bg-slate-900/5 hover:bg-slate-900/10 dark:bg-white/5 dark:hover:bg-white/10 rounded-xl text-slate-800 dark:text-white font-black text-[10px] uppercase tracking-widest transition-all">
+            class="px-4 py-2 bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-xl text-slate-700 dark:text-slate-200 font-bold text-xs transition-all cursor-pointer">
       Fechar
     </button>
   </div>
@@ -610,6 +614,17 @@
 </dialog>
 
 <script>
+function toggleMonthGroup(groupId) {
+  const tbody = document.getElementById(`tbody-group-${groupId}`);
+  const chevron = document.getElementById(`chevron-group-${groupId}`);
+  if (tbody) {
+    tbody.classList.toggle('hidden');
+  }
+  if (chevron) {
+    chevron.classList.toggle('rotate-180');
+  }
+}
+
 function openFinalizar(id) {
   document.getElementById("os_id_hidden").value = id;
   document.getElementById("modalFinalizarOS").showModal();
@@ -656,9 +671,6 @@ function openDetalhes(id) {
   document.getElementById("modalDetalhesOS").showModal();
 }
 
-/////////////////////////////////////////////////////
-// 🔥 NOVO: KM AUTOMÁTICO
-/////////////////////////////////////////////////////
 function atualizarKM() {
   const select = document.getElementById("veiculo_id");
   if (!select) return;
@@ -667,65 +679,9 @@ function atualizarKM() {
   document.getElementById("km").value = km || 0;
 }
 
-/////////////////////////////////////////////////////
-// 🔥 NAVEGAÇÃO DE TABS (ABERTAS VS FINALIZADAS)
-/////////////////////////////////////////////////////
-function switchTab(tab) {
-  const tabAbertas = document.getElementById("tabAbertas");
-  const tabFinalizadas = document.getElementById("tabFinalizadas");
-  const btnAbertas = document.getElementById("btnTabAbertas");
-  const btnFinalizadas = document.getElementById("btnTabFinalizadas");
-  const badgeAbertas = document.getElementById("badgeAbertas");
-  const badgeFinalizadas = document.getElementById("badgeFinalizadas");
-
-  if (!tabAbertas || !tabFinalizadas || !btnAbertas || !btnFinalizadas) return;
-
-  if (tab === "abertas") {
-    tabAbertas.classList.remove("hidden");
-    tabFinalizadas.classList.add("hidden");
-
-    // Abertas Active (Amber Style)
-    btnAbertas.className = "flex-1 py-1.5 px-3 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-1.5 h-full active:scale-95 bg-amber-500 text-white shadow-md shadow-amber-500/25";
-    if (badgeAbertas) {
-      badgeAbertas.className = "px-1.5 py-0.5 rounded text-[8px] font-black bg-white/20 text-white";
-    }
-
-    // Finalizadas Inactive
-    btnFinalizadas.className = "flex-1 py-1.5 px-3 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-1.5 h-full active:scale-95 text-slate-400 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-200";
-    if (badgeFinalizadas) {
-      badgeFinalizadas.className = "px-1.5 py-0.5 rounded text-[8px] font-black bg-slate-900/5 dark:bg-white/5 text-slate-400 dark:text-slate-400";
-    }
-  } else {
-    tabAbertas.classList.add("hidden");
-    tabFinalizadas.classList.remove("hidden");
-
-    // Finalizadas Active (Green Style)
-    btnFinalizadas.className = "flex-1 py-1.5 px-3 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-1.5 h-full active:scale-95 bg-green-600 text-white shadow-md shadow-green-500/25";
-    if (badgeFinalizadas) {
-      badgeFinalizadas.className = "px-1.5 py-0.5 rounded text-[8px] font-black bg-white/20 text-white";
-    }
-
-    // Abertas Inactive
-    btnAbertas.className = "flex-1 py-1.5 px-3 rounded-xl font-black text-[9px] uppercase tracking-widest transition-all duration-300 flex items-center justify-center gap-1.5 h-full active:scale-95 text-slate-400 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-200";
-    if (badgeAbertas) {
-      badgeAbertas.className = "px-1.5 py-0.5 rounded text-[8px] font-black bg-slate-900/5 dark:bg-white/5 text-slate-400 dark:text-slate-400";
-    }
-  }
-}
-
-// quando abrir a página
 document.addEventListener("DOMContentLoaded", () => {
   atualizarKM();
-  switchTab('abertas');
 });
-
-// quando abrir o modal
-const btnNova = document.querySelector('[onclick*="modalNovaAvaria"]');
-if (btnNova) {
-  btnNova.addEventListener("click", () => {
-    setTimeout(() => atualizarKM(), 100);
-  });
-}
 </script>
 
 {% endblock %}

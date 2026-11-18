@@ -1127,8 +1127,8 @@
 
       <button type="submit" id="btnSubmitSolicitacao"
               class="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl font-black text-[10px] uppercase tracking-widest shadow-lg shadow-blue-500/20 transition-all active:scale-95 flex items-center gap-2">
-        <i class="fa-solid fa-file-pdf text-xs text-red-300"></i>
-        <span>Salvar e Emitir PDF</span>
+        <i class="fa-solid fa-check text-xs"></i>
+        <span>Salvar Solicitação</span>
       </button>
     </div>
 
@@ -1458,7 +1458,7 @@
     const btn = document.getElementById('btnSubmitSolicitacao');
     const origHtml = btn.innerHTML;
     btn.disabled = true;
-    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-xs"></i> Gerando Documento...';
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-xs"></i> Salvando Solicitação...';
 
     const formData = new FormData(form);
 
@@ -1472,14 +1472,9 @@
 
       if (res.ok && data.success) {
         document.getElementById('modalSolicitacaoManutencao').close();
-        if (data.pdf_url) {
-          window.open(data.pdf_url, '_blank');
-        }
-        setTimeout(() => {
-          window.location.href = '/veiculos?tab=solicitacoes';
-        }, 350);
+        window.location.href = '/veiculos?tab=solicitacoes';
       } else {
-        alert(data.error || 'Erro ao gerar solicitação.');
+        alert(data.error || 'Erro ao salvar solicitação.');
         btn.disabled = false;
         btn.innerHTML = origHtml;
       }
@@ -1533,8 +1528,13 @@
     const modal = document.getElementById('modalSolicitacaoDetail');
     if (!modal) return;
 
-    modal.classList.remove('hidden');
-    modal.classList.add('flex');
+    if (typeof openModal === 'function') {
+      openModal('modalSolicitacaoDetail');
+    } else {
+      modal.classList.remove('hidden');
+      modal.classList.add('flex');
+      modal.style.display = 'flex';
+    }
 
     document.getElementById('modalSolicProtoText').innerText = '...';
     document.getElementById('modalSolicDetailSubtitle').innerText = 'Buscando informações da solicitação...';
@@ -1660,6 +1660,8 @@
     if (modal) {
       modal.classList.add('hidden');
       modal.classList.remove('flex');
+      modal.classList.remove('open');
+      modal.style.display = 'none';
     }
   }
 </script>

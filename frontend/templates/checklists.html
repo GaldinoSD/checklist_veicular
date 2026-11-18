@@ -223,86 +223,112 @@
 <!-- ========================================================= -->
 <!-- 📄 MODAL: DETALHES DO CHECKLIST (DESIGN EXECUTIVO PREMIUM) -->
 <!-- ========================================================= -->
-<div id="modalChecklistDetail" class="fixed inset-0 hidden items-center justify-center z-[100] p-4">
-  <div class="absolute inset-0 bg-slate-950/70 backdrop-blur-md" onclick="closeModal('modalChecklistDetail')"></div>
-  <div class="relative w-full max-w-4xl rounded-[2rem] bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-white/10 shadow-2xl overflow-hidden flex flex-col max-h-[92vh] text-left animate-scale-in">
+<div id="modalChecklistDetail" class="fixed inset-0 hidden items-center justify-center z-[100] p-3 sm:p-4">
+  <div class="absolute inset-0 bg-slate-950/75 backdrop-blur-md" onclick="closeModal('modalChecklistDetail')"></div>
+  <div class="relative w-full max-w-5xl rounded-[2rem] bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-white/10 shadow-2xl overflow-hidden flex flex-col max-h-[94vh] text-left animate-scale-in">
     
-    <!-- Header Executivo -->
-    <div class="px-6 py-5 border-b border-slate-100 dark:border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-50/60 dark:bg-slate-900/40 shrink-0">
-      <div class="flex items-center gap-3.5">
-        <div class="w-11 h-11 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white flex items-center justify-center shadow-lg shadow-blue-500/20 shrink-0">
-          <i class="fa-solid fa-clipboard-check text-lg"></i>
+    <!-- Header Principal (Limpo, Espaçado e Elegante) -->
+    <div class="px-6 py-4.5 border-b border-slate-100 dark:border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-50/70 dark:bg-slate-900/60 shrink-0">
+      <div class="flex items-center gap-3.5 min-w-0">
+        <div class="w-11 h-11 rounded-2xl bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400 flex items-center justify-center shrink-0 text-lg shadow-sm">
+          <i class="fa-solid fa-clipboard-check"></i>
         </div>
-        <div>
-          <div class="flex items-center gap-2 flex-wrap">
-            <span id="modalChecklistProtocolBadge" class="font-mono text-xs font-black px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-900/50 flex items-center gap-1.5 shadow-sm">
+        <div class="min-w-0">
+          <div class="flex items-center gap-2.5 flex-wrap">
+            <h3 class="text-base font-black text-slate-900 dark:text-white tracking-tight">Checklist de Inspeção</h3>
+            <span id="modalChecklistProtocolBadge" class="font-mono text-xs font-bold px-2.5 py-0.5 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-900/50 flex items-center gap-1.5 cursor-pointer hover:bg-blue-100 dark:hover:bg-blue-900/40 transition shadow-2xs" onclick="copiarProtocoloChecklist()" title="Clique para copiar">
               <span id="modalChecklistProtoText">CHK-0000</span>
-              <button type="button" onclick="copiarProtocoloChecklist()" class="hover:text-blue-900 dark:hover:text-white transition" title="Copiar Protocolo">
-                <i class="fa-regular fa-copy text-[10px]"></i>
-              </button>
+              <i class="fa-regular fa-copy text-[10px] opacity-70"></i>
             </span>
-            <span id="modalChecklistPlateBadge" class="font-mono text-xs font-bold text-slate-800 dark:text-white px-2 py-0.5 rounded-md bg-slate-200/70 dark:bg-white/10"></span>
-            <span id="modalChecklistVehicleModel" class="text-xs text-slate-500 dark:text-slate-400 font-medium hidden sm:inline"></span>
-            <span id="modalChecklistStatusBadge" class="text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full border shadow-sm"></span>
+            <span id="modalChecklistStatusBadge" class="text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full border shadow-2xs flex items-center gap-1.5"></span>
           </div>
-          <p id="modalChecklistSubtitle" class="text-xs text-slate-500 dark:text-slate-400 mt-1 flex items-center gap-3 flex-wrap">
-            <!-- Injetado dinamicamente -->
-          </p>
+          <p class="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Relatório técnico de conformidade e condições veiculares</p>
         </div>
       </div>
       
-      <div class="flex items-center gap-2 self-end sm:self-center">
+      <div class="flex items-center gap-2.5 self-end sm:self-center shrink-0">
         <a id="modalChecklistPdfBtn" href="#" target="_blank"
-           class="px-3.5 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold text-xs shadow-md shadow-rose-500/20 transition-all flex items-center gap-2 cursor-pointer active:scale-95">
-          <i class="fa-solid fa-file-pdf"></i>
+           class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold text-xs shadow-sm shadow-rose-500/20 transition-all flex items-center gap-2 cursor-pointer active:scale-95">
+          <i class="fa-solid fa-file-pdf text-sm"></i>
           <span>PDF Oficial</span>
         </a>
-        <button type="button" onclick="closeModal('modalChecklistDetail')" class="w-9 h-9 rounded-xl hover:bg-slate-200 dark:hover:bg-white/10 flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-white transition-all">
+        <button type="button" onclick="closeModal('modalChecklistDetail')" class="w-9 h-9 rounded-xl hover:bg-slate-200/80 dark:hover:bg-white/10 flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-white transition-all cursor-pointer">
           <i class="fa-solid fa-xmark text-base"></i>
         </button>
       </div>
     </div>
 
-    <!-- KPI Summary Strip -->
-    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 px-6 py-4 bg-slate-100/50 dark:bg-white/[0.02] border-b border-slate-100 dark:border-white/5 shrink-0 text-xs">
-      <div class="p-3 bg-white dark:bg-slate-800/80 rounded-2xl border border-slate-200/60 dark:border-white/5 flex items-center justify-between shadow-sm">
-        <div>
-          <span class="text-[10px] font-black uppercase text-slate-400 block tracking-wider">Total Itens</span>
-          <span id="kpi-chk-total" class="text-base font-black text-slate-800 dark:text-white">0</span>
-        </div>
-        <div class="w-8 h-8 rounded-xl bg-slate-100 dark:bg-white/5 text-slate-500 flex items-center justify-center">
-          <i class="fa-solid fa-list-check text-xs"></i>
-        </div>
-      </div>
+    <!-- Container invisível para manter retrocompatibilidade com qualquer script -->
+    <p id="modalChecklistSubtitle" class="hidden"></p>
 
-      <div class="p-3 bg-white dark:bg-slate-800/80 rounded-2xl border border-slate-200/60 dark:border-white/5 flex items-center justify-between shadow-sm">
-        <div>
-          <span class="text-[10px] font-black uppercase text-emerald-600 dark:text-emerald-400 block tracking-wider">Conformes</span>
-          <span id="kpi-chk-ok" class="text-base font-black text-emerald-600 dark:text-emerald-400">0</span>
+    <!-- Barra de Informações & Métricas (4 Colunas Arejadas e Bem Espaçadas) -->
+    <div class="px-6 py-4 bg-slate-100/40 dark:bg-white/[0.015] border-b border-slate-100 dark:border-white/5 shrink-0">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 text-xs">
+        
+        <!-- Bloco 1: Veículo Inspecionado -->
+        <div class="p-3.5 bg-white dark:bg-slate-800/80 rounded-2xl border border-slate-200/70 dark:border-white/5 shadow-2xs flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-slate-100 dark:bg-white/5 text-slate-600 dark:text-slate-300 flex items-center justify-center shrink-0 text-sm">
+            <i class="fa-solid fa-car-side"></i>
+          </div>
+          <div class="min-w-0 flex-1">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Veículo Inspecionado</span>
+            <div class="flex items-center gap-1.5 mt-0.5">
+              <span id="modalChecklistPlateBadge" class="font-mono font-black text-slate-900 dark:text-white text-xs">
+                <span id="modalChecklistPlateText">-</span>
+              </span>
+            </div>
+            <span id="modalChecklistVehicleModel" class="text-[11px] text-slate-500 dark:text-slate-400 font-medium truncate block"></span>
+          </div>
         </div>
-        <div class="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 flex items-center justify-center">
-          <i class="fa-solid fa-circle-check text-xs"></i>
-        </div>
-      </div>
 
-      <div class="p-3 bg-white dark:bg-slate-800/80 rounded-2xl border border-slate-200/60 dark:border-white/5 flex items-center justify-between shadow-sm">
-        <div>
-          <span class="text-[10px] font-black uppercase text-rose-600 dark:text-rose-400 block tracking-wider">Não Conformes</span>
-          <span id="kpi-chk-non-ok" class="text-base font-black text-rose-600 dark:text-rose-400">0</span>
+        <!-- Bloco 2: Técnico Condutor & Data -->
+        <div class="p-3.5 bg-white dark:bg-slate-800/80 rounded-2xl border border-slate-200/70 dark:border-white/5 shadow-2xs flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 text-sm">
+            <i class="fa-solid fa-user-gear"></i>
+          </div>
+          <div class="min-w-0 flex-1">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Condutor Responsável</span>
+            <span id="top-card-tecnico" class="font-bold text-slate-900 dark:text-white text-xs truncate block mt-0.5">-</span>
+            <span id="top-card-data" class="text-[11px] text-slate-500 dark:text-slate-400 font-medium truncate block">Data: -</span>
+          </div>
         </div>
-        <div class="w-8 h-8 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-600 flex items-center justify-center">
-          <i class="fa-solid fa-triangle-exclamation text-xs"></i>
-        </div>
-      </div>
 
-      <div class="p-3 bg-white dark:bg-slate-800/80 rounded-2xl border border-slate-200/60 dark:border-white/5 flex items-center justify-between shadow-sm">
-        <div>
-          <span class="text-[10px] font-black uppercase text-blue-600 dark:text-blue-400 block tracking-wider">Quilometragem</span>
-          <span id="kpi-chk-km" class="text-base font-black text-blue-600 dark:text-blue-400">-</span>
+        <!-- Bloco 3: Quilometragem Registrada -->
+        <div class="p-3.5 bg-white dark:bg-slate-800/80 rounded-2xl border border-slate-200/70 dark:border-white/5 shadow-2xs flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 text-sm">
+            <i class="fa-solid fa-gauge-high"></i>
+          </div>
+          <div class="min-w-0 flex-1">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">KM no Checklist</span>
+            <span id="kpi-chk-km" class="text-sm font-black text-indigo-600 dark:text-indigo-400 block mt-0.5">-</span>
+            <span id="top-card-categoria" class="text-[11px] text-slate-500 dark:text-slate-400 font-medium truncate block">Categoria: -</span>
+          </div>
         </div>
-        <div class="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 flex items-center justify-center">
-          <i class="fa-solid fa-gauge-high text-xs"></i>
+
+        <!-- Bloco 4: Itens & Conformidade -->
+        <div class="p-3.5 bg-white dark:bg-slate-800/80 rounded-2xl border border-slate-200/70 dark:border-white/5 shadow-2xs flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 text-sm">
+            <i class="fa-solid fa-list-check"></i>
+          </div>
+          <div class="min-w-0 flex-1">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Itens Inspecionados</span>
+            <div class="flex items-center gap-1.5 mt-0.5">
+              <span class="text-xs font-bold text-slate-800 dark:text-slate-200">
+                <span id="kpi-chk-total" class="font-black text-sm">0</span> itens
+              </span>
+            </div>
+            <div class="flex items-center gap-2 mt-0.5 text-[11px] font-bold">
+              <span class="text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+                <i class="fa-solid fa-check text-[9px]"></i> <span id="kpi-chk-ok">0</span> conf.
+              </span>
+              <span class="text-slate-300 dark:text-slate-600">•</span>
+              <span class="text-rose-600 dark:text-rose-400 flex items-center gap-1">
+                <i class="fa-solid fa-triangle-exclamation text-[9px]"></i> <span id="kpi-chk-non-ok">0</span> avarias
+              </span>
+            </div>
+          </div>
         </div>
+
       </div>
     </div>
 
@@ -336,23 +362,29 @@
       <div id="pane-chk-itens" class="space-y-4">
         <!-- Filtros Rápidos da Inspeção -->
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-2">
-          <div class="flex items-center gap-2">
+          <div class="flex items-center gap-2 flex-wrap">
             <button type="button" onclick="filterChecklistItems('todos')" id="filter-chk-btn-todos"
-                    class="px-3 py-1.5 rounded-xl font-bold text-xs bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm transition">
+                    class="px-3.5 py-1.5 rounded-xl font-bold text-xs bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm transition">
               Todos os Itens
             </button>
             <button type="button" onclick="filterChecklistItems('problemas')" id="filter-chk-btn-problemas"
                     class="px-3 py-1.5 rounded-xl font-bold text-xs text-rose-600 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/50 border border-rose-200/60 dark:border-rose-900/50 transition flex items-center gap-1.5">
               <i class="fa-solid fa-triangle-exclamation text-[10px]"></i>
-              <span>Apenas Não Conformes</span>
+              <span>Não Conformes</span>
               <span id="badge-filter-problemas-count" class="w-4 h-4 rounded-full bg-rose-600 text-white text-[9px] flex items-center justify-center font-black">0</span>
+            </button>
+            <button type="button" onclick="filterChecklistItems('conformes')" id="filter-chk-btn-conformes"
+                    class="px-3 py-1.5 rounded-xl font-bold text-xs text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 border border-emerald-200/60 dark:border-emerald-900/50 transition flex items-center gap-1.5">
+              <i class="fa-solid fa-circle-check text-[10px]"></i>
+              <span>Conformes</span>
+              <span id="badge-filter-conformes-count" class="w-4 h-4 rounded-full bg-emerald-600 text-white text-[9px] flex items-center justify-center font-black">0</span>
             </button>
           </div>
 
           <div class="relative w-full sm:w-64">
             <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs"></i>
-            <input type="text" id="chk-item-search-input" oninput="searchChecklistItems()" placeholder="Buscar item..."
-                   class="w-full pl-8 pr-3 py-1.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-800 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-blue-500">
+            <input type="text" id="chk-item-search-input" oninput="searchChecklistItems()" placeholder="Buscar item, resposta..."
+                   class="w-full pl-8 pr-3 py-1.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-800 dark:text-white placeholder:text-slate-400 focus:outline-none focus:border-blue-500 transition">
           </div>
         </div>
 
@@ -398,57 +430,119 @@
       </div>
 
       <!-- ABA 3: VEÍCULO & ASSINATURA -->
-      <div id="pane-chk-resumo" class="hidden space-y-4">
-        <!-- Ficha Técnica do Veículo -->
-        <div class="p-4 bg-slate-50 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/5 rounded-2xl space-y-3">
-          <h4 class="font-extrabold text-xs text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-2">
-            <i class="fa-solid fa-car-side text-blue-500"></i> Ficha do Veículo Inspecionado
-          </h4>
-          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+      <div id="pane-chk-resumo" class="hidden space-y-5">
+        <!-- Ficha Técnica do Veículo Inspecionado -->
+        <div class="p-4 bg-slate-50/80 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/5 rounded-2xl space-y-3">
+          <div class="flex items-center justify-between border-b border-slate-200/60 dark:border-white/5 pb-2.5">
+            <h4 class="font-extrabold text-xs text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-2">
+              <i class="fa-solid fa-car-side text-blue-500"></i> Ficha Cadastral do Veículo Inspecionado
+            </h4>
+            <span id="resumo-chk-tipo-badge" class="px-2.5 py-0.5 rounded-lg text-[10px] font-black uppercase bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200/80 dark:border-blue-900/50">CARRO</span>
+          </div>
+          <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 text-xs">
             <div class="p-3 bg-white dark:bg-slate-800/70 rounded-xl border border-slate-200/60 dark:border-white/5">
-              <span class="text-[10px] font-black uppercase text-slate-400 block mb-0.5">Placa</span>
+              <span class="text-[10px] font-black uppercase text-slate-400 block mb-0.5">Placa Oficial</span>
               <span id="resumo-chk-placa" class="font-mono font-bold text-slate-800 dark:text-white"></span>
             </div>
             <div class="p-3 bg-white dark:bg-slate-800/70 rounded-xl border border-slate-200/60 dark:border-white/5">
-              <span class="text-[10px] font-black uppercase text-slate-400 block mb-0.5">Modelo</span>
-              <span id="resumo-chk-modelo" class="font-bold text-slate-800 dark:text-white"></span>
+              <span class="text-[10px] font-black uppercase text-slate-400 block mb-0.5">Marca / Modelo</span>
+              <span id="resumo-chk-modelo" class="font-bold text-slate-800 dark:text-white truncate block"></span>
+            </div>
+            <div class="p-3 bg-white dark:bg-slate-800/70 rounded-xl border border-slate-200/60 dark:border-white/5">
+              <span class="text-[10px] font-black uppercase text-slate-400 block mb-0.5">Ano / Categoria</span>
+              <span id="resumo-chk-ano" class="font-bold text-slate-800 dark:text-white"></span>
+            </div>
+            <div class="p-3 bg-white dark:bg-slate-800/70 rounded-xl border border-slate-200/60 dark:border-white/5">
+              <span class="text-[10px] font-black uppercase text-slate-400 block mb-0.5">KM no Checklist</span>
+              <span id="resumo-chk-km" class="font-bold text-blue-600 dark:text-blue-400"></span>
             </div>
             <div class="p-3 bg-white dark:bg-slate-800/70 rounded-xl border border-slate-200/60 dark:border-white/5">
               <span class="text-[10px] font-black uppercase text-slate-400 block mb-0.5">Técnico Condutor</span>
-              <span id="resumo-chk-tecnico" class="font-bold text-slate-800 dark:text-white"></span>
+              <span id="resumo-chk-tecnico" class="font-bold text-slate-800 dark:text-white truncate block"></span>
             </div>
             <div class="p-3 bg-white dark:bg-slate-800/70 rounded-xl border border-slate-200/60 dark:border-white/5">
-              <span class="text-[10px] font-black uppercase text-slate-400 block mb-0.5">Quilometragem</span>
-              <span id="resumo-chk-km" class="font-bold text-slate-800 dark:text-white"></span>
+              <span class="text-[10px] font-black uppercase text-slate-400 block mb-0.5">Data / Horário</span>
+              <span id="resumo-chk-data" class="font-bold text-slate-800 dark:text-white"></span>
             </div>
           </div>
         </div>
 
         <!-- Observações Gerais -->
-        <div id="modalChecklistNotesContainer" class="p-4 bg-slate-50 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/5 rounded-2xl">
+        <div id="modalChecklistNotesContainer" class="p-4 bg-slate-50/80 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/5 rounded-2xl">
           <h4 class="font-extrabold text-xs text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2 flex items-center gap-2">
             <i class="fa-regular fa-comment-dots text-blue-500"></i> Observações Gerais do Colaborador
           </h4>
           <p id="modalChecklistNotes" class="text-xs text-slate-600 dark:text-slate-300 italic leading-relaxed"></p>
         </div>
 
-        <!-- Assinatura Digital -->
-        <div class="p-4 bg-slate-50 dark:bg-white/[0.02] border border-slate-200/80 dark:border-white/5 rounded-2xl">
-          <h4 class="font-extrabold text-xs text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2.5 flex items-center gap-2">
-            <i class="fa-solid fa-signature text-blue-500"></i> Termo de Responsabilidade & Assinatura Digital
-          </h4>
-          <div id="modalChecklistSignatureBox" class="p-4 bg-white dark:bg-slate-800/80 rounded-xl border border-slate-200/60 dark:border-white/5 flex flex-col sm:flex-row items-center gap-4">
-            <div id="modalChecklistSigImgWrapper" class="h-20 w-48 border border-slate-200/80 dark:border-white/10 rounded-lg p-1 bg-slate-50/50 dark:bg-white/5 flex items-center justify-center shrink-0">
-              <img id="modalChecklistSignatureImg" src="" alt="Assinatura" class="max-h-full max-w-full object-contain">
-              <span id="modalChecklistNoSigText" class="text-[11px] text-slate-400 italic hidden">Sem assinatura gráfica</span>
+        <!-- Assinatura Digital & Termo de Responsabilidade -->
+        <div class="p-5 bg-gradient-to-br from-slate-50 to-slate-100/60 dark:from-white/[0.03] dark:to-white/[0.01] border border-slate-200/80 dark:border-white/10 rounded-2xl space-y-4 shadow-sm">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200/70 dark:border-white/5 pb-3">
+            <h4 class="font-extrabold text-xs text-slate-800 dark:text-slate-200 uppercase tracking-wider flex items-center gap-2">
+              <i class="fa-solid fa-signature text-blue-500"></i> Termo de Responsabilidade & Assinatura Digital
+            </h4>
+            <div id="modalChecklistSigStatusPill" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 self-start sm:self-auto">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+              <span id="modalChecklistSigStatusText">Autenticado com Assinatura</span>
             </div>
-            <div class="text-xs space-y-1">
-              <p class="font-bold text-slate-800 dark:text-white flex items-center gap-1.5">
-                <i class="fa-solid fa-shield-halved text-emerald-600 text-xs"></i> Assinado digitalmente pelo colaborador
-              </p>
-              <p class="text-slate-500 dark:text-slate-400 text-[11px]">
-                O condutor declarou conformidade e responsabilidade pelas informações inseridas neste checklist.
-              </p>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-stretch">
+            <!-- Painel da Assinatura Gráfica -->
+            <div class="md:col-span-5 flex flex-col">
+              <div class="h-full bg-white dark:bg-slate-900 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded-2xl p-4 shadow-sm flex flex-col items-center justify-between min-h-[160px] relative overflow-hidden group">
+                <!-- Marca d'água de fundo -->
+                <div class="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.03] dark:opacity-[0.05] select-none text-slate-900 dark:text-white font-black text-4xl -rotate-12 uppercase tracking-widest">
+                  ADAPT LINK
+                </div>
+
+                <div id="modalChecklistSigImgWrapper" class="relative z-10 w-full flex-1 flex items-center justify-center py-2">
+                  <img id="modalChecklistSignatureImg" src="" alt="Assinatura Gráfica" 
+                       class="max-h-24 max-w-full object-contain filter drop-shadow-sm transition-transform duration-200 group-hover:scale-105">
+                  <div id="modalChecklistNoSigText" class="hidden flex flex-col items-center justify-center text-center py-4 text-slate-400">
+                    <div class="w-10 h-10 rounded-full bg-slate-100 dark:bg-white/5 flex items-center justify-center mb-1.5 text-slate-400">
+                      <i class="fa-solid fa-signature text-lg"></i>
+                    </div>
+                    <span class="text-xs font-bold text-slate-500 dark:text-slate-400">Sem assinatura gráfica</span>
+                    <span class="text-[10px] text-slate-400">Checklist concluído sem traçado touch</span>
+                  </div>
+                </div>
+
+                <div class="w-full border-t border-slate-200 dark:border-white/10 pt-2 flex items-center justify-between text-[10px] text-slate-400 relative z-10">
+                  <span class="font-mono flex items-center gap-1">
+                    <i class="fa-solid fa-pen-nib text-[9px] text-blue-500"></i> Traçado Gráfico
+                  </span>
+                  <span id="modalChecklistSigSignerName" class="font-semibold text-slate-600 dark:text-slate-300 truncate max-w-[150px]"></span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Dados do Termo & Declaração -->
+            <div class="md:col-span-7 flex flex-col justify-between space-y-3">
+              <div class="p-3.5 bg-white dark:bg-slate-800/80 rounded-xl border border-slate-200/70 dark:border-white/5 space-y-2 text-xs">
+                <div class="flex items-center justify-between border-b border-slate-100 dark:border-white/5 pb-2">
+                  <span class="text-slate-400 font-medium">Protocolo Vinculado:</span>
+                  <span id="resumo-sig-protocolo" class="font-mono font-bold text-blue-600 dark:text-blue-400">CHK-0000</span>
+                </div>
+                <div class="flex items-center justify-between border-b border-slate-100 dark:border-white/5 pb-2">
+                  <span class="text-slate-400 font-medium">Condutor Vistoriador:</span>
+                  <span id="resumo-sig-tecnico" class="font-bold text-slate-800 dark:text-white">-</span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-slate-400 font-medium">Registro / Data e Hora:</span>
+                  <span id="resumo-sig-data" class="font-bold text-slate-800 dark:text-white">-</span>
+                </div>
+              </div>
+
+              <div class="p-3.5 bg-blue-50/70 dark:bg-blue-950/30 rounded-xl border border-blue-200/60 dark:border-blue-900/40 text-[11px] text-blue-900 dark:text-blue-200 leading-relaxed flex items-start gap-2.5">
+                <i class="fa-solid fa-shield-halved text-blue-600 dark:text-blue-400 text-sm mt-0.5 shrink-0"></i>
+                <div>
+                  <p class="font-bold text-slate-800 dark:text-white mb-0.5">Declaração de Conformidade & Autenticidade</p>
+                  <p class="text-slate-600 dark:text-slate-300">
+                    O condutor identificado declarou a veracidade dos dados informados e realizou a inspeção técnica presencial dos componentes de segurança do veículo conforme procedimentos padrão da frota.
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -533,13 +627,21 @@ function filterChecklistItems(tipo) {
     currentChecklistFilter = tipo;
     const btnTodos = document.getElementById('filter-chk-btn-todos');
     const btnProb = document.getElementById('filter-chk-btn-problemas');
+    const btnOk = document.getElementById('filter-chk-btn-conformes');
 
-    if (tipo === 'problemas') {
-        btnProb.className = "px-3 py-1.5 rounded-xl font-bold text-xs bg-rose-600 text-white shadow-sm transition flex items-center gap-1.5";
-        btnTodos.className = "px-3 py-1.5 rounded-xl font-bold text-xs text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition";
-    } else {
-        btnTodos.className = "px-3 py-1.5 rounded-xl font-bold text-xs bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm transition";
-        btnProb.className = "px-3 py-1.5 rounded-xl font-bold text-xs text-rose-600 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/50 border border-rose-200/60 dark:border-rose-900/50 transition flex items-center gap-1.5";
+    const baseClass = "px-3.5 py-1.5 rounded-xl font-bold text-xs transition flex items-center gap-1.5 cursor-pointer";
+    const inactiveClass = "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800";
+
+    if (btnTodos) btnTodos.className = `${baseClass} ${inactiveClass}`;
+    if (btnProb) btnProb.className = `${baseClass} text-rose-600 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/50 border border-rose-200/60 dark:border-rose-900/50`;
+    if (btnOk) btnOk.className = `${baseClass} text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 border border-emerald-200/60 dark:border-emerald-900/50`;
+
+    if (tipo === 'problemas' && btnProb) {
+        btnProb.className = `${baseClass} bg-rose-600 text-white shadow-sm`;
+    } else if (tipo === 'conformes' && btnOk) {
+        btnOk.className = `${baseClass} bg-emerald-600 text-white shadow-sm`;
+    } else if (btnTodos) {
+        btnTodos.className = `${baseClass} bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm`;
     }
     renderChecklistItemsTable();
 }
@@ -555,7 +657,10 @@ function renderChecklistItemsTable() {
     let filtered = currentChecklistItems;
     if (currentChecklistFilter === 'problemas') {
         filtered = filtered.filter(item => item.isNonOk);
+    } else if (currentChecklistFilter === 'conformes') {
+        filtered = filtered.filter(item => !item.isNonOk);
     }
+
     if (searchVal) {
         filtered = filtered.filter(item => 
             item.nome.toLowerCase().includes(searchVal) || 
@@ -567,23 +672,23 @@ function renderChecklistItemsTable() {
     if (filtered.length === 0) {
         tbody.innerHTML = `<tr><td colspan="4" class="text-center py-10 text-slate-400 text-xs">
             <i class="fa-solid fa-filter-circle-xmark text-2xl mb-1.5 block opacity-40"></i>
-            Nenhum item corresponde ao filtro selecionado.
+            Nenhum item corresponde ao filtro ou busca selecionada.
         </td></tr>`;
         return;
     }
 
     tbody.innerHTML = filtered.map((item, idx) => {
         const bgRow = item.isNonOk 
-            ? 'bg-rose-50/60 dark:bg-rose-950/20 border-l-4 border-l-rose-500' 
+            ? 'bg-rose-50/70 dark:bg-rose-950/25 border-l-4 border-l-rose-500' 
             : 'hover:bg-slate-50/80 dark:hover:bg-white/[0.02]';
             
         let chip = '';
         if (item.isNonOk) {
-            chip = `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-black bg-rose-100 text-rose-800 dark:bg-rose-900/60 dark:text-rose-200 border border-rose-300 dark:border-rose-800">
+            chip = `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-black bg-rose-100 text-rose-800 dark:bg-rose-900/60 dark:text-rose-200 border border-rose-300 dark:border-rose-800 shadow-sm">
                 <i class="fa-solid fa-triangle-exclamation text-[9px]"></i> ${item.respText}
             </span>`;
         } else if (item.isGood) {
-            chip = `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400 border border-emerald-200/80 dark:border-emerald-800/40">
+            chip = `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400 border border-emerald-200/80 dark:border-emerald-800/40 shadow-sm">
                 <i class="fa-solid fa-circle-check text-[9px]"></i> ${item.respText}
             </span>`;
         } else {
@@ -593,7 +698,7 @@ function renderChecklistItemsTable() {
         }
 
         const justifHtml = item.justificativa 
-            ? `<div class="p-2 rounded-xl bg-white dark:bg-slate-900 border border-rose-200 dark:border-rose-900/40 text-rose-700 dark:text-rose-300 text-[11px] font-medium leading-snug">
+            ? `<div class="p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-rose-200 dark:border-rose-900/40 text-rose-700 dark:text-rose-300 text-[11px] font-medium leading-snug shadow-xs">
                  <i class="fa-solid fa-quote-left text-[9px] mr-1 text-rose-400"></i>${item.justificativa}
                </div>`
             : `<span class="text-slate-300 dark:text-slate-600">-</span>`;
@@ -626,22 +731,44 @@ async function showChecklistDetail(cid) {
         
         currentChecklistProto = data.protocol || `CHK-${data.id}`;
         document.getElementById('modalChecklistProtoText').innerText = currentChecklistProto;
-        document.getElementById('modalChecklistPlateBadge').innerText = data.plate || 'VEÍCULO';
-        document.getElementById('modalChecklistVehicleModel').innerText = data.vehicle_model ? `(${data.vehicle_model})` : '';
+        
+        const plateTextEl = document.getElementById('modalChecklistPlateText');
+        if (plateTextEl) {
+            plateTextEl.innerText = data.plate || 'VEÍCULO';
+        } else {
+            const plateBadge = document.getElementById('modalChecklistPlateBadge');
+            if (plateBadge) plateBadge.innerText = data.plate || 'VEÍCULO';
+        }
+        
+        document.getElementById('modalChecklistVehicleModel').innerText = data.vehicle_model ? `${data.vehicle_model}` : '';
 
-        document.getElementById('modalChecklistSubtitle').innerHTML = `
-            <span><i class="fa-solid fa-user-gear mr-1 text-blue-500"></i><b>Técnico:</b> ${data.technician}</span>
-            <span><i class="fa-regular fa-calendar-days mr-1 text-blue-500"></i><b>Data:</b> ${data.date}</span>
-            <span><i class="fa-solid fa-gauge mr-1 text-blue-500"></i><b>KM:</b> ${data.km ? data.km.toLocaleString('pt-BR') + ' km' : 'N/I'}</span>
-        `;
+        const subEl = document.getElementById('modalChecklistSubtitle');
+        if (subEl) {
+            subEl.innerHTML = `
+                <span><i class="fa-solid fa-user-gear mr-1 text-blue-500"></i><b>Técnico:</b> ${data.technician}</span>
+                <span><i class="fa-regular fa-calendar-days mr-1 text-blue-500"></i><b>Data:</b> ${data.date}</span>
+                <span><i class="fa-solid fa-gauge mr-1 text-blue-500"></i><b>KM:</b> ${data.km ? data.km.toLocaleString('pt-BR') + ' km' : 'N/I'}</span>
+                <span><i class="fa-solid fa-shapes mr-1 text-blue-500"></i><b>Tipo:</b> ${data.type || 'Carro'}</span>
+            `;
+        }
+        
+        // Novos cards superiores espaçados
+        const topTech = document.getElementById('top-card-tecnico');
+        if (topTech) topTech.innerText = data.technician || '-';
+        
+        const topData = document.getElementById('top-card-data');
+        if (topData) topData.innerText = `${data.date || '-'}`;
+
+        const topCat = document.getElementById('top-card-categoria');
+        if (topCat) topCat.innerText = `Categoria: ${(data.type || 'Carro').toUpperCase()}`;
         
         // Status Badge
         const badge = document.getElementById('modalChecklistStatusBadge');
         if (data.status === 'OK' || data.status === 'Aprovado' || data.status === 'Conforme') {
-            badge.className = "text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 flex items-center gap-1.5";
+            badge.className = "text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 flex items-center gap-1.5 shadow-sm";
             badge.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span> Conforme (OK)';
         } else {
-            badge.className = "text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-300 dark:border-rose-800 flex items-center gap-1.5";
+            badge.className = "text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border border-rose-300 dark:border-rose-800 flex items-center gap-1.5 shadow-sm";
             badge.innerHTML = `<span class="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span> ${data.status || 'Com Avarias'}`;
         }
         
@@ -687,7 +814,10 @@ async function showChecklistDetail(cid) {
         document.getElementById('kpi-chk-km').innerText = data.km ? `${data.km.toLocaleString('pt-BR')} km` : '-';
         
         document.getElementById('tab-chk-itens-badge').innerText = entries.length;
-        document.getElementById('badge-filter-problemas-count').innerText = countNonOk;
+        const badgeProbCount = document.getElementById('badge-filter-problemas-count');
+        if (badgeProbCount) badgeProbCount.innerText = countNonOk;
+        const badgeOkCount = document.getElementById('badge-filter-conformes-count');
+        if (badgeOkCount) badgeOkCount.innerText = countOk;
 
         // Reset filter & search
         document.getElementById('chk-item-search-input').value = '';
@@ -723,30 +853,73 @@ async function showChecklistDetail(cid) {
         }
 
         // Resumo Tab
-        document.getElementById('resumo-chk-placa').innerText = data.plate || '-';
-        document.getElementById('resumo-chk-modelo').innerText = data.vehicle_model || '-';
-        document.getElementById('resumo-chk-tecnico').innerText = data.technician || '-';
-        document.getElementById('resumo-chk-km').innerText = data.km ? `${data.km.toLocaleString('pt-BR')} km` : '-';
+        const elPlaca = document.getElementById('resumo-chk-placa');
+        if (elPlaca) elPlaca.innerText = data.plate || '-';
+
+        const elModelo = document.getElementById('resumo-chk-modelo');
+        if (elModelo) elModelo.innerText = data.vehicle_model || '-';
+
+        const elAno = document.getElementById('resumo-chk-ano');
+        if (elAno) elAno.innerText = (data.year && data.year !== '-') ? `${data.year} (${data.type || 'Carro'})` : (data.type || 'Carro');
+
+        const elKm = document.getElementById('resumo-chk-km');
+        if (elKm) elKm.innerText = data.km ? `${data.km.toLocaleString('pt-BR')} km` : '-';
+
+        const elTecnico = document.getElementById('resumo-chk-tecnico');
+        if (elTecnico) elTecnico.innerText = data.technician || '-';
+
+        const elData = document.getElementById('resumo-chk-data');
+        if (elData) elData.innerText = data.date || '-';
+
+        const elTipoBadge = document.getElementById('resumo-chk-tipo-badge');
+        if (elTipoBadge) elTipoBadge.innerText = (data.type || 'Carro').toUpperCase();
+
+        const elSigProto = document.getElementById('resumo-sig-protocolo');
+        if (elSigProto) elSigProto.innerText = currentChecklistProto;
+
+        const elSigTech = document.getElementById('resumo-sig-tecnico');
+        if (elSigTech) elSigTech.innerText = data.technician || '-';
+
+        const elSigData = document.getElementById('resumo-sig-data');
+        if (elSigData) elSigData.innerText = data.date || '-';
+
+        const elSignerName = document.getElementById('modalChecklistSigSignerName');
+        if (elSignerName) elSignerName.innerText = (data.technician || '-').toUpperCase();
 
         // Observações
         const notesContainer = document.getElementById('modalChecklistNotesContainer');
-        if (data.notes && data.notes.trim() !== '') {
+        const notesEl = document.getElementById('modalChecklistNotes');
+        if (data.notes && data.notes.trim() !== '' && data.notes !== 'Checklist via web') {
             notesContainer.classList.remove('hidden');
-            document.getElementById('modalChecklistNotes').innerText = data.notes;
+            notesEl.innerText = data.notes;
+        } else if (data.notes === 'Checklist via web') {
+            notesContainer.classList.remove('hidden');
+            notesEl.innerHTML = '<span class="text-slate-400 not-italic">Nenhuma observação adicional anotada pelo condutor (Checklist via web mobile).</span>';
         } else {
             notesContainer.classList.add('hidden');
         }
 
-        // Assinatura
+        // Assinatura Gráfica & Digital
         const sigImg = document.getElementById('modalChecklistSignatureImg');
         const noSigText = document.getElementById('modalChecklistNoSigText');
+        const sigStatusPill = document.getElementById('modalChecklistSigStatusPill');
+        const sigStatusText = document.getElementById('modalChecklistSigStatusText');
+
         if (data.signature) {
             sigImg.src = data.signature;
             sigImg.classList.remove('hidden');
             noSigText.classList.add('hidden');
+            if (sigStatusPill) {
+                sigStatusPill.className = "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 self-start sm:self-auto";
+            }
+            if (sigStatusText) sigStatusText.innerText = "Autenticado com Assinatura";
         } else {
             sigImg.classList.add('hidden');
             noSigText.classList.remove('hidden');
+            if (sigStatusPill) {
+                sigStatusPill.className = "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800 self-start sm:self-auto";
+            }
+            if (sigStatusText) sigStatusText.innerText = "Sem Assinatura Gráfica";
         }
 
         // Default: inicia na aba de itens
