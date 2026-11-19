@@ -23,8 +23,8 @@
     }
 
     .logo-adjust {
-      max-height: clamp(44px, 9vh, {{ sys_config.login_logo_height or 100 }}px);
-      max-width: clamp(160px, 35vw, 260px);
+      max-height: clamp(48px, 10vh, {{ sys_config.login_logo_height or 100 }}px);
+      max-width: clamp(160px, 60vw, 260px);
       object-fit: contain;
     }
 
@@ -48,11 +48,11 @@
       box-shadow: 0 14px 25px -3px color-mix(in srgb, var(--login-primary) 45%, transparent) !important;
     }
 
-    @media (max-height: 720px), (max-width: 640px) {
+    @media (max-width: 640px) {
       .custom-login-btn {
-        padding-top: max(8px, calc({{ sys_config.login_btn_padding_y or 12 }}px * 0.75)) !important;
-        padding-bottom: max(8px, calc({{ sys_config.login_btn_padding_y or 12 }}px * 0.75)) !important;
-        font-size: max(13px, calc({{ sys_config.login_btn_font_size or 16 }}px * 0.9)) !important;
+        padding-top: 12px !important;
+        padding-bottom: 12px !important;
+        font-size: 14px !important;
       }
     }
 
@@ -84,7 +84,7 @@
   </style>
 </head>
 
-<body class="h-screen h-[100dvh] clean-bg flex items-center justify-center p-2 sm:p-4 lg:p-6 xl:p-8 relative overflow-hidden text-slate-800 selection:bg-emerald-500 selection:text-white">
+<body class="min-h-screen min-h-[100dvh] clean-bg flex items-center justify-center p-4 sm:p-6 lg:p-8 relative overflow-y-auto text-slate-800 selection:bg-emerald-500 selection:text-white">
 
   {% if is_preview %}
   <!-- BANNER DE PRÉ-VISUALIZAÇÃO DE LAYOUT -->
@@ -107,14 +107,14 @@
   {% endif %}
 
   <!-- CONTAINER PRINCIPAL BRANCO CLEAN (SPLIT SCREEN) -->
-  <div class="relative z-10 w-full max-w-5xl xl:max-w-6xl flex flex-col lg:flex-row items-stretch rounded-2xl sm:rounded-[2rem] lg:rounded-[2.5rem] overflow-hidden shadow-xl border border-slate-200/80 bg-white min-h-0 lg:min-h-[520px] xl:min-h-[580px] max-h-[96dvh] {% if is_preview %}preview-offset{% endif %}">
+  <div class="relative z-10 w-full max-w-md sm:max-w-lg lg:max-w-5xl xl:max-w-6xl flex flex-col lg:flex-row items-stretch rounded-2xl sm:rounded-[2rem] lg:rounded-[2.5rem] overflow-hidden shadow-2xl border border-slate-200/80 bg-white min-h-0 lg:min-h-[520px] xl:min-h-[580px] {% if is_preview %}preview-offset{% endif %}">
     
     <!-- COLUNA DA ESQUERDA: FORMULÁRIO DE LOGIN (FUNDO BRANCO CLEAN) -->
-    <div class="w-full lg:w-1/2 p-4 sm:p-6 md:p-8 lg:p-10 xl:p-12 flex flex-col justify-between bg-white relative overflow-y-auto lg:overflow-visible">
+    <div class="w-full lg:w-1/2 p-6 sm:p-8 md:p-10 lg:p-10 xl:p-12 flex flex-col justify-between bg-white relative">
       
-      <!-- TOP LOGO E TÍTULOS -->
-      <div>
-        <div class="mb-2 sm:mb-4 lg:mb-6 flex justify-center">
+      <!-- TOP LOGO E TÍTULOS (CENTRALIZADOS) -->
+      <div class="text-center">
+        <div class="mb-3 sm:mb-4 lg:mb-6 flex justify-center">
           <img src="{% if sys_config and sys_config.login_logo %}{{ url_for('static', filename='uploads/layout/' ~ sys_config.login_logo, v='2') }}{% else %}{{ url_for('static', filename='logo.png', v='2') }}{% endif %}"
             alt="Logo do Sistema" class="logo-adjust">
         </div>
@@ -122,13 +122,13 @@
         <h1 class="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900 tracking-tight leading-tight">
           {{ sys_config.login_title_text or 'Acesse sua conta' }}
         </h1>
-        <p class="text-xs sm:text-sm text-slate-500 mt-1 font-medium leading-relaxed">
+        <p class="text-xs sm:text-sm text-slate-500 mt-1.5 sm:mt-2 font-medium leading-relaxed max-w-xs sm:max-w-sm mx-auto">
           {{ sys_config.login_subtitle_text or 'Entre com seu usuário e senha para continuar' }}
         </p>
       </div>
 
       <!-- FORMULÁRIO -->
-      <form method="post" autocomplete="off" {% if is_preview %}onsubmit="event.preventDefault(); alert('Modo Pré-visualização: a autenticação foi desativada temporariamente.'); return false;"{% else %}onsubmit="sessionStorage.setItem('session_active', 'true');"{% endif %} class="space-y-2.5 sm:space-y-4 my-2.5 sm:my-4 lg:my-6">
+      <form method="post" autocomplete="off" {% if is_preview %}onsubmit="event.preventDefault(); alert('Modo Pré-visualização: a autenticação foi desativada temporariamente.'); return false;"{% else %}onsubmit="sessionStorage.setItem('session_active', 'true');"{% endif %} class="space-y-3 sm:space-y-4 my-4 sm:my-5 lg:my-6">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
 
         <!-- CAMPO USUÁRIO -->
@@ -136,7 +136,7 @@
           <label class="block text-[11px] sm:text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1 sm:mb-1.5">
             Usuário
           </label>
-          <div class="flex items-center bg-slate-100/90 border border-slate-200 rounded-xl px-3.5 py-2 sm:px-4 sm:py-2.5 lg:py-3 shadow-sm transition-all custom-login-focus">
+          <div class="flex items-center bg-slate-100/90 border border-slate-200 rounded-xl px-3.5 py-2.5 sm:px-4 sm:py-2.5 lg:py-3 shadow-sm transition-all custom-login-focus">
             <i class="fa-solid fa-user text-slate-400 text-sm mr-2.5 sm:mr-3"></i>
             <input id="username" name="username" type="text" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false"
               class="bg-transparent w-full text-slate-800 text-xs sm:text-sm placeholder-slate-400 focus:outline-none font-medium"
@@ -155,7 +155,7 @@
             </a>
 
           </div>
-          <div class="flex items-center bg-slate-100/90 border border-slate-200 rounded-xl px-3.5 py-2 sm:px-4 sm:py-2.5 lg:py-3 shadow-sm transition-all custom-login-focus">
+          <div class="flex items-center bg-slate-100/90 border border-slate-200 rounded-xl px-3.5 py-2.5 sm:px-4 sm:py-2.5 lg:py-3 shadow-sm transition-all custom-login-focus">
             <i class="fa-solid fa-lock text-slate-400 text-sm mr-2.5 sm:mr-3"></i>
             <input id="password" name="password" type="password" autocomplete="new-password"
               class="bg-transparent w-full text-slate-800 text-xs sm:text-sm placeholder-slate-400 focus:outline-none font-medium"
@@ -167,7 +167,7 @@
         </div>
 
         <!-- BOTÃO ENTRAR -->
-        <button type="submit" class="w-full font-bold text-white uppercase tracking-wider custom-login-btn transition-all duration-300 transform hover:-translate-y-0.5 active:scale-95 flex items-center justify-center gap-2 shadow-lg">
+        <button type="submit" class="w-full font-bold text-white uppercase tracking-wider custom-login-btn transition-all duration-300 transform hover:-translate-y-0.5 active:scale-95 flex items-center justify-center gap-2 shadow-lg mt-1 sm:mt-2">
           <span>{{ sys_config.login_btn_text or 'Entrar' }}</span>
         </button>
 
@@ -185,7 +185,7 @@
       </form>
 
       <!-- RODAPÉ DO LOGIN -->
-      <div class="pt-3 sm:pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-1.5 sm:gap-3 text-[10px] sm:text-[11px] text-slate-400 font-medium">
+      <div class="pt-3 sm:pt-4 border-t border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-1.5 sm:gap-3 text-[10px] sm:text-[11px] text-slate-400 font-medium text-center sm:text-left">
         <span>{{ sys_config.login_footer_text or '© 2026 Painel de Frota. Todos os direitos reservados.' }}</span>
         <div class="flex gap-2 sm:gap-3">
           <a href="javascript:void(0)" onclick="alert('Suporte Técnico')" class="hover:text-slate-600 transition-colors">Fale conosco</a>
@@ -198,7 +198,7 @@
 
     </div>
 
-    <!-- COLUNA DA DIREITA: BANNER CARD HERO (PROPAGANDA / APRESENTAÇÃO) -->
+    <!-- COLUNA DA DIREITA: BANNER CARD HERO (PROPAGANDA / APRESENTAÇÃO - APENAS DESKTOP) -->
     <div class="hidden lg:flex lg:w-1/2 p-2.5 xl:p-3">
       {% set has_hero_image = sys_config and sys_config.login_layout_mode and sys_config.login_layout_mode.startswith('hero_') %}
       
